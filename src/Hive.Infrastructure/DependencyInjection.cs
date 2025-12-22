@@ -26,6 +26,8 @@ public static class DependencyInjection
         // Register repositories
         services.AddScoped<IDirectReportRepository, DirectReportRepository>();
         services.AddScoped<IPerformanceReviewRepository, PerformanceReviewRepository>();
+        services.AddScoped<ISkillRepository, SkillRepository>();
+        services.AddScoped<ISkillAssessmentRepository, SkillAssessmentRepository>();
 
         return services;
     }
