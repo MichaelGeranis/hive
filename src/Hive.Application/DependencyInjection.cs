@@ -15,6 +15,8 @@ public static class DependencyInjection
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
         services.AddScoped<ISkillService, SkillService>();
         services.AddScoped<ISkillAssessmentService, SkillAssessmentService>();
+        services.AddScoped<IOneOnOneMeetingService, OneOnOneMeetingService>();
+        services.AddScoped<IMeetingNoteService, MeetingNoteService>();
         return services;
     }
 }

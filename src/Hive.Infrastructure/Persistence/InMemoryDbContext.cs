@@ -13,6 +13,8 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, PerformanceReview> PerformanceReviews { get; } = new();
     public ConcurrentDictionary<Guid, Skill> Skills { get; } = new();
     public ConcurrentDictionary<Guid, SkillAssessment> SkillAssessments { get; } = new();
+    public ConcurrentDictionary<Guid, OneOnOneMeeting> OneOnOneMeetings { get; } = new();
+    public ConcurrentDictionary<Guid, MeetingNote> MeetingNotes { get; } = new();
 
     /// <summary>
     /// Seeds the database with sample data for development.
@@ -36,6 +38,9 @@ public class InMemoryDbContext
 
         // Seed skills and assessments
         SeedSkills();
+
+        // Seed 1:1 meetings
+        SeedOneOnOneMeetings();
     }
 
     private void SeedPerformanceReviews()
@@ -131,6 +136,85 @@ public class InMemoryDbContext
                 new SkillAssessment(directReportIds[2], docker.Id, ProficiencyLevel.Advanced, ProficiencyLevel.Advanced)
             };
             foreach (var a in carolAssessments) SkillAssessments.TryAdd(a.Id, a);
+        }
+    }
+
+    private void SeedOneOnOneMeetings()
+    {
+        var directReportIds = DirectReports.Keys.ToList();
+        if (directReportIds.Count == 0) return;
+
+        // Past completed meeting with Alice
+        var meeting1 = new OneOnOneMeeting(
+            directReportIds[0],
+            DateTime.UtcNow.AddDays(-7),
+            30,
+            "Zoom",
+            "Weekly sync - project updates, blockers");
+        meeting1.Complete();
+        OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
+
+        // Add notes to the completed meeting
+        var note1 = new MeetingNote(meeting1.Id, "Discussed progress on the API redesign project. On track for Q1 delivery.", NoteCategory.Discussion);
+        var note2 = new MeetingNote(meeting1.Id, "Review and approve architecture proposal", NoteCategory.ActionItem);
+        note2.SetActionDetails(DateTime.UtcNow.AddDays(-3), "Manager");
+        note2.CompleteAction();
+        var note3 = new MeetingNote(meeting1.Id, "Great job on mentoring the new team member!", NoteCategory.Achievement);
+        var note4 = new MeetingNote(meeting1.Id, "Schedule tech talk on Clean Architecture", NoteCategory.ActionItem);
+        note4.SetActionDetails(DateTime.UtcNow.AddDays(7), "Alice");
+
+        MeetingNotes.TryAdd(note1.Id, note1);
+        MeetingNotes.TryAdd(note2.Id, note2);
+        MeetingNotes.TryAdd(note3.Id, note3);
+        MeetingNotes.TryAdd(note4.Id, note4);
+
+        // Upcoming meeting with Alice
+        var meeting2 = new OneOnOneMeeting(
+            directReportIds[0],
+            DateTime.UtcNow.AddDays(2),
+            30,
+            "Conference Room A",
+            "Weekly sync - follow up on action items");
+        OneOnOneMeetings.TryAdd(meeting2.Id, meeting2);
+
+        // Upcoming meeting with Bob
+        if (directReportIds.Count > 1)
+        {
+            var meeting3 = new OneOnOneMeeting(
+                directReportIds[1],
+                DateTime.UtcNow.AddDays(1),
+                45,
+                "Zoom",
+                "Career development discussion");
+            OneOnOneMeetings.TryAdd(meeting3.Id, meeting3);
+
+            // Past meeting with Bob
+            var meeting4 = new OneOnOneMeeting(
+                directReportIds[1],
+                DateTime.UtcNow.AddDays(-14),
+                30,
+                "Zoom",
+                "Project check-in");
+            meeting4.Complete();
+            OneOnOneMeetings.TryAdd(meeting4.Id, meeting4);
+
+            var note5 = new MeetingNote(meeting4.Id, "Discussed .NET Core learning path", NoteCategory.CareerDevelopment);
+            var note6 = new MeetingNote(meeting4.Id, "Complete Pluralsight course on .NET Core", NoteCategory.ActionItem);
+            note6.SetActionDetails(DateTime.UtcNow.AddDays(-5), "Bob");
+            MeetingNotes.TryAdd(note5.Id, note5);
+            MeetingNotes.TryAdd(note6.Id, note6);
+        }
+
+        // Upcoming meeting with Carol
+        if (directReportIds.Count > 2)
+        {
+            var meeting5 = new OneOnOneMeeting(
+                directReportIds[2],
+                DateTime.UtcNow.AddDays(3),
+                30,
+                "Coffee Shop",
+                "Quarterly check-in");
+            OneOnOneMeetings.TryAdd(meeting5.Id, meeting5);
         }
     }
 }
