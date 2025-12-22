@@ -13,6 +13,8 @@ public static class DependencyInjection
     {
         services.AddScoped<IDirectReportService, DirectReportService>();
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
+        services.AddScoped<ISkillService, SkillService>();
+        services.AddScoped<ISkillAssessmentService, SkillAssessmentService>();
         return services;
     }
 }
