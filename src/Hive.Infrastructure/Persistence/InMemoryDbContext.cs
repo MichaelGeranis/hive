@@ -15,6 +15,8 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, SkillAssessment> SkillAssessments { get; } = new();
     public ConcurrentDictionary<Guid, OneOnOneMeeting> OneOnOneMeetings { get; } = new();
     public ConcurrentDictionary<Guid, MeetingNote> MeetingNotes { get; } = new();
+    public ConcurrentDictionary<Guid, Project> Projects { get; } = new();
+    public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
 
     /// <summary>
     /// Seeds the database with sample data for development.
@@ -41,6 +43,9 @@ public class InMemoryDbContext
 
         // Seed 1:1 meetings
         SeedOneOnOneMeetings();
+
+        // Seed projects and tasks
+        SeedProjectsAndTasks();
     }
 
     private void SeedPerformanceReviews()
@@ -216,5 +221,162 @@ public class InMemoryDbContext
                 "Quarterly check-in");
             OneOnOneMeetings.TryAdd(meeting5.Id, meeting5);
         }
+    }
+
+    private void SeedProjectsAndTasks()
+    {
+        var directReportIds = DirectReports.Keys.ToList();
+
+        // Create sample projects
+        var apiRedesign = new Project(
+            "API Redesign",
+            "Redesign the REST API to follow clean architecture patterns",
+            DateTime.UtcNow.AddDays(-30),
+            DateTime.UtcNow.AddDays(60));
+        apiRedesign.Activate();
+        Projects.TryAdd(apiRedesign.Id, apiRedesign);
+
+        var mobileApp = new Project(
+            "Mobile App MVP",
+            "Build minimum viable product for mobile application",
+            DateTime.UtcNow.AddDays(-14),
+            DateTime.UtcNow.AddDays(90));
+        mobileApp.Activate();
+        Projects.TryAdd(mobileApp.Id, mobileApp);
+
+        var documentation = new Project(
+            "Documentation Overhaul",
+            "Update and improve all technical documentation",
+            DateTime.UtcNow.AddDays(7),
+            DateTime.UtcNow.AddDays(45));
+        Projects.TryAdd(documentation.Id, documentation);
+
+        var techDebt = new Project(
+            "Tech Debt Sprint",
+            "Address accumulated technical debt",
+            DateTime.UtcNow.AddDays(-60),
+            DateTime.UtcNow.AddDays(-15));
+        techDebt.Activate();
+        techDebt.Complete();
+        Projects.TryAdd(techDebt.Id, techDebt);
+
+        // Create sample tasks for API Redesign project
+        var task1 = new TeamTask(
+            "Design new API endpoints",
+            "Create OpenAPI specification for the new endpoints",
+            TaskType.Feature,
+            TaskPriority.High,
+            directReportIds.Count > 2 ? directReportIds[2] : null,
+            apiRedesign.Id,
+            DateTime.UtcNow.AddDays(-5),
+            8,
+            string.Empty);
+        task1.Start();
+        task1.MoveToReview();
+        task1.Complete(10);
+        TeamTasks.TryAdd(task1.Id, task1);
+
+        var task2 = new TeamTask(
+            "Implement authentication middleware",
+            "Add JWT authentication to all protected endpoints",
+            TaskType.Feature,
+            TaskPriority.Critical,
+            directReportIds.Count > 0 ? directReportIds[0] : null,
+            apiRedesign.Id,
+            DateTime.UtcNow.AddDays(7),
+            16,
+            "security,auth");
+        task2.Start();
+        TeamTasks.TryAdd(task2.Id, task2);
+
+        var task3 = new TeamTask(
+            "Fix pagination bug",
+            "Pagination returns incorrect results for filtered queries",
+            TaskType.Bug,
+            TaskPriority.High,
+            directReportIds.Count > 1 ? directReportIds[1] : null,
+            apiRedesign.Id,
+            DateTime.UtcNow.AddDays(-2),
+            4,
+            "bug,urgent");
+        task3.MoveToTodo();
+        TeamTasks.TryAdd(task3.Id, task3);
+
+        var task4 = new TeamTask(
+            "Add rate limiting",
+            "Implement rate limiting for public endpoints",
+            TaskType.Improvement,
+            TaskPriority.Medium,
+            null,
+            apiRedesign.Id,
+            DateTime.UtcNow.AddDays(14),
+            8,
+            "performance,security");
+        TeamTasks.TryAdd(task4.Id, task4);
+
+        // Create sample tasks for Mobile App project
+        var task5 = new TeamTask(
+            "Setup React Native project",
+            "Initialize project with TypeScript template",
+            TaskType.Task,
+            TaskPriority.High,
+            directReportIds.Count > 1 ? directReportIds[1] : null,
+            mobileApp.Id,
+            DateTime.UtcNow.AddDays(-7),
+            4,
+            "mobile,setup");
+        task5.Start();
+        task5.Complete(3);
+        TeamTasks.TryAdd(task5.Id, task5);
+
+        var task6 = new TeamTask(
+            "Design login screen",
+            "Create UI/UX design for login and registration flow",
+            TaskType.Feature,
+            TaskPriority.High,
+            directReportIds.Count > 0 ? directReportIds[0] : null,
+            mobileApp.Id,
+            DateTime.UtcNow.AddDays(3),
+            6,
+            "mobile,ui");
+        task6.MoveToTodo();
+        TeamTasks.TryAdd(task6.Id, task6);
+
+        var task7 = new TeamTask(
+            "Research offline sync options",
+            "Evaluate options for offline data synchronization",
+            TaskType.Research,
+            TaskPriority.Medium,
+            directReportIds.Count > 2 ? directReportIds[2] : null,
+            mobileApp.Id,
+            DateTime.UtcNow.AddDays(10),
+            8,
+            "research,mobile");
+        TeamTasks.TryAdd(task7.Id, task7);
+
+        // Create unassigned backlog tasks
+        var task8 = new TeamTask(
+            "Update API documentation",
+            "Update Swagger documentation with new endpoints",
+            TaskType.Documentation,
+            TaskPriority.Low,
+            null,
+            documentation.Id,
+            DateTime.UtcNow.AddDays(21),
+            4,
+            "docs");
+        TeamTasks.TryAdd(task8.Id, task8);
+
+        var task9 = new TeamTask(
+            "Refactor database queries",
+            "Optimize slow database queries identified in profiling",
+            TaskType.Improvement,
+            TaskPriority.Medium,
+            null,
+            null,
+            DateTime.UtcNow.AddDays(14),
+            12,
+            "performance,database");
+        TeamTasks.TryAdd(task9.Id, task9);
     }
 }
