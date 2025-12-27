@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<ITeamTaskService, TeamTaskService>();
         services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<IAppSettingsService, AppSettingsService>();
         return services;
     }
 }

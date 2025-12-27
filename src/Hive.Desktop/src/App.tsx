@@ -6,6 +6,7 @@ import Reviews from './pages/Reviews'
 import Meetings from './pages/Meetings'
 import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

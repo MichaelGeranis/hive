@@ -17,6 +17,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, MeetingNote> MeetingNotes { get; } = new();
     public ConcurrentDictionary<Guid, Project> Projects { get; } = new();
     public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
+    public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>
     /// Seeds the database with sample data for development.

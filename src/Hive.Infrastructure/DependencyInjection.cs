@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IMeetingNoteRepository, MeetingNoteRepository>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ITeamTaskRepository, TeamTaskRepository>();
+        services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
 
         return services;
     }

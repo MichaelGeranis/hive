@@ -12,7 +12,9 @@ import type {
   TasksOverview,
   OneOnOneFrequency,
   ActionItemsSummary,
-  TasksByAssignee
+  TasksByAssignee,
+  AppSettings,
+  UpdateAppSettings
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -105,6 +107,12 @@ export const reportsApi = {
   getOneOnOneFrequency: () => api.get<OneOnOneFrequency[]>('/reports/one-on-one-frequency').then(r => r.data),
   getActionItemsSummary: () => api.get<ActionItemsSummary>('/reports/action-items').then(r => r.data),
   getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data)
+}
+
+// Settings
+export const settingsApi = {
+  get: () => api.get<AppSettings>('/settings').then(r => r.data),
+  update: (data: UpdateAppSettings) => api.put<AppSettings>('/settings', data).then(r => r.data)
 }
 
 export default api

@@ -295,3 +295,21 @@ export interface ProductivityMetrics {
   tasksCompletedThisWeek: number
   tasksCompletedThisMonth: number
 }
+
+// Settings
+export interface StoryPointMapping {
+  points: number
+  hours: number
+  label: string
+}
+
+export interface AppSettings {
+  id: string
+  storyPointMappings: StoryPointMapping[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface UpdateAppSettings {
+  storyPointMappings: StoryPointMapping[]
+}

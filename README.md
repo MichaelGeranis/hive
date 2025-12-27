@@ -487,12 +487,6 @@ const api = axios.create({
 - Final testing on macOS and Windows
 
 
-- Add in the settings a config that sets the map between story points ans hours for task estimation. Example:
-   - 1 SP = 4 hours
-   - 2 SP = 8 hours
-   - 3 SP = 1.5 days
-   - 5 SP = 3 days
-   - 8 SP = 1 week
 - Calculate teams velocity based on completed tasks per sprint
 - Integrate 1:1 meetings with apple calendar and google calendar APIs
 - Hive logo is hidden behind the macOS buttons.
