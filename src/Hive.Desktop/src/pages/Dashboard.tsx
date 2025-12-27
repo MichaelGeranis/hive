@@ -111,6 +111,12 @@ export default function Dashboard() {
     .sort((a, b) => b.value - a.value)
     .filter(d => d.value > 0)
 
+  const taskTypeData = dashboard.tasks.tasksByType.map(type => ({
+    name: type.typeName,
+    value: type.totalTasks,
+    completed: type.completedTasks
+  })).filter(d => d.value > 0)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -153,7 +159,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task Status Distribution */}
         <Card>
-          <CardHeader title="Task Distribution" subtitle="By status" />
+          <CardHeader title="Tasks Distribution" subtitle="By status" />
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -179,7 +185,7 @@ export default function Dashboard() {
 
         {/* Project Distribution by Assignee */}
         <Card>
-          <CardHeader title="Project Contributions" subtitle="Number of projects per assignee" />
+          <CardHeader title="Projects Distribution" subtitle="By member" />
           <CardContent className="h-64">
             {projectDistributionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -212,6 +218,38 @@ export default function Dashboard() {
 
       {/* Second Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Task Type Distribution */}
+        <Card>
+          <CardHeader title="Tasks Distribution" subtitle="By type" />
+          <CardContent className="h-64">
+            {taskTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskTypeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {taskTypeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                No tasks found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Rating Distribution */}
         <Card>
           <CardHeader title="Performance Ratings" subtitle="Distribution across reviews" />
@@ -231,7 +269,7 @@ export default function Dashboard() {
 
       {/* Task Distribution by Assignee */}
       <Card>
-        <CardHeader title="Task Distribution by Assignee" subtitle="Current workload across team members" />
+        <CardHeader title="Members Workload" subtitle="" />
         <CardContent className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={tasksByAssigneeData}>
@@ -250,7 +288,7 @@ export default function Dashboard() {
       {/* 1:1 Meeting Frequency */}
       <Card>
         <CardHeader
-          title="1:1 Meeting Frequency"
+          title="1:1 Meetings Frequency"
           subtitle="Track regular check-ins with your team"
           action={
             <div className="flex gap-2 text-xs">

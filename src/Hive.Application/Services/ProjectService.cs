@@ -105,6 +105,21 @@ public class ProjectService : IProjectService
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
+    public async Task<ProjectDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        if (entity.Status != ProjectStatus.Completed && entity.Status != ProjectStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Only completed or cancelled projects can be reopened.");
+        }
+
+        entity.Activate();
+        await _projectRepository.UpdateAsync(entity, cancellationToken);
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
     public async Task<ProjectDto> CancelAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);

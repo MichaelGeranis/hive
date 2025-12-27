@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2 } from 'lucide-react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -54,11 +54,12 @@ export default function Projects() {
     return projects.filter(p => p.status === filter)
   }
 
-  const handleAction = async (id: string, action: 'activate' | 'complete' | 'cancel' | 'hold') => {
+  const handleAction = async (id: string, action: 'activate' | 'complete' | 'cancel' | 'hold' | 'reopen') => {
     try {
       if (action === 'activate') await projectsApi.activate(id)
       else if (action === 'complete') await projectsApi.complete(id)
       else if (action === 'cancel') await projectsApi.cancel(id)
+      else if (action === 'reopen') await projectsApi.reopen(id)
       loadProjects()
     } catch (err) {
       console.error(err)
@@ -328,6 +329,15 @@ export default function Projects() {
                         Cancel
                       </button>
                     </>
+                  )}
+                  {(project.status === ProjectStatus.Completed || project.status === ProjectStatus.Cancelled) && (
+                    <button
+                      onClick={() => handleAction(project.id, 'reopen')}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reopen
+                    </button>
                   )}
                 </div>
               </CardContent>

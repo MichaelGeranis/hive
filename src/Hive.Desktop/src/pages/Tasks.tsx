@@ -156,6 +156,11 @@ export default function Tasks() {
   }
 
   const overdueCount = tasks.filter(t => t.isOverdue).length
+  const backlogCount = tasks.filter(t => t.status === TaskStatus.Backlog).length
+  const todoCount = tasks.filter(t => t.status === TaskStatus.Todo).length
+  const inProgressCount = tasks.filter(t => t.status === TaskStatus.InProgress).length
+  const inReviewCount = tasks.filter(t => t.status === TaskStatus.InReview).length
+  const doneCount = tasks.filter(t => t.status === TaskStatus.Done).length
 
   return (
     <div className="space-y-6">
@@ -311,13 +316,13 @@ export default function Tasks() {
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { value: 'all', label: 'All' },
+          { value: 'all', label: `All (${tasks.length})` },
           { value: 'overdue', label: `Overdue (${overdueCount})` },
-          { value: TaskStatus.Backlog, label: 'Backlog' },
-          { value: TaskStatus.Todo, label: 'Todo' },
-          { value: TaskStatus.InProgress, label: 'In Progress' },
-          { value: TaskStatus.InReview, label: 'In Review' },
-          { value: TaskStatus.Done, label: 'Done' },
+          { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})` },
+          { value: TaskStatus.Todo, label: `Todo (${todoCount})` },
+          { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})` },
+          { value: TaskStatus.InReview, label: `In Review (${inReviewCount})` },
+          { value: TaskStatus.Done, label: `Done (${doneCount})` },
         ].map((f) => (
           <button
             key={f.value}

@@ -241,6 +241,35 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
+    /// Reopens a completed or cancelled project.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated project.</returns>
+    [HttpPost("{id:guid}/reopen")]
+    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProjectDto>> Reopen(Guid id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Reopening project with ID: {Id}", id);
+
+        try
+        {
+            var updated = await _service.ReopenAsync(id, cancellationToken);
+            return Ok(updated);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Cancels a project.
     /// </summary>
     /// <param name="id">The project ID.</param>

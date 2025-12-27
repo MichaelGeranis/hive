@@ -17,6 +17,7 @@ public interface IProjectService
     Task<ProjectDto> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ProjectDto> PutOnHoldAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ProjectDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ProjectDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ProjectDto> CancelAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

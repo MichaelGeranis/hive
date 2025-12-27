@@ -12,11 +12,11 @@ import {
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { name: 'Team', to: '/team', icon: Users },
-  { name: 'Reviews', to: '/reviews', icon: Star },
-  { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
+  { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
+  { name: 'Reviews', to: '/reviews', icon: Star },
+  { name: 'Team', to: '/team', icon: Users },
 ]
 
 export default function Layout() {
