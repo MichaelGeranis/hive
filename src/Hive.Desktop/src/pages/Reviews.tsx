@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Plus, Star, Clock, CheckCircle, Send } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
-import type { PerformanceReview, DirectReport, ReviewStatus } from '../types'
+import { ReviewStatus } from '../types'
+import type { PerformanceReview, DirectReport } from '../types'
 
 const statusColors: Record<ReviewStatus, string> = {
   [ReviewStatus.Draft]: 'bg-slate-100 text-slate-700',

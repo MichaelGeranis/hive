@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, Pause } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
-import type { Project, ProjectStatus } from '../types'
+import { ProjectStatus } from '../types'
+import type { Project } from '../types'
 
 const statusColors: Record<ProjectStatus, string> = {
   [ProjectStatus.Planning]: 'bg-slate-100 text-slate-700',

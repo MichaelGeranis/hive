@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Plus, Calendar, Clock, MapPin, CheckCircle, XCircle } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi } from '../services/api'
-import type { OneOnOneMeeting, MeetingStatus } from '../types'
+import { MeetingStatus } from '../types'
+import type { OneOnOneMeeting } from '../types'
 
 const statusColors: Record<MeetingStatus, string> = {
   [MeetingStatus.Scheduled]: 'bg-blue-100 text-blue-700',

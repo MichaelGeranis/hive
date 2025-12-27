@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Plus, AlertTriangle, Clock, Play, CheckCircle } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi } from '../services/api'
-import type { TeamTask, TaskStatus, TaskPriority, DirectReport, Project } from '../types'
+import { TaskStatus, TaskPriority } from '../types'
+import type { TeamTask, DirectReport, Project } from '../types'
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 text-slate-700',

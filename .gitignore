@@ -78,3 +78,4 @@ publish/
 
 # dotnet tool
 .config/dotnet-tools.json
+src/Hive.Desktop/node_modules/*
