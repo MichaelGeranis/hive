@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IMeetingNoteService, MeetingNoteService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<ITeamTaskService, TeamTaskService>();
+        services.AddScoped<IReportingService, ReportingService>();
         return services;
     }
 }
