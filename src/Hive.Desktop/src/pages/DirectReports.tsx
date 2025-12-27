@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Mail, Building2, Briefcase, Calendar, MoreVertical, Trash2, Edit } from 'lucide-react'
+import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto } from '../types'

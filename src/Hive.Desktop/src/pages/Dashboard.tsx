@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Users,
-  Star,
-  Calendar,
   CheckSquare,
   AlertTriangle,
   TrendingUp,

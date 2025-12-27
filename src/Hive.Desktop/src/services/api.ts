@@ -90,6 +90,7 @@ export const tasksApi = {
   start: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/start`).then(r => r.data),
   complete: (id: string, actualHours?: number) =>
     api.post<TeamTask>(`/teamtasks/${id}/complete`, { actualHours }).then(r => r.data),
+  reopen: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/reopen`).then(r => r.data),
   delete: (id: string) => api.delete(`/teamtasks/${id}`)
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, AlertTriangle, Clock, Play, CheckCircle } from 'lucide-react'
+import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -28,6 +28,7 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>('all')
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -38,6 +39,19 @@ export default function Tasks() {
     dueDate: '',
     estimatedHours: ''
   })
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      type: 0,
+      priority: 1,
+      assigneeId: '',
+      projectId: '',
+      dueDate: '',
+      estimatedHours: ''
+    })
+  }
 
   useEffect(() => {
     loadData()
@@ -67,10 +81,11 @@ export default function Tasks() {
     return tasks.filter(t => t.status === filter)
   }
 
-  const handleAction = async (id: string, action: 'start' | 'complete') => {
+  const handleAction = async (id: string, action: 'start' | 'complete' | 'reopen') => {
     try {
       if (action === 'start') await tasksApi.start(id)
       else if (action === 'complete') await tasksApi.complete(id)
+      else if (action === 'reopen') await tasksApi.reopen(id)
       loadData()
     } catch (err) {
       console.error(err)
@@ -80,27 +95,50 @@ export default function Tasks() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await tasksApi.create({
+      const taskData = {
         ...formData,
         assigneeId: formData.assigneeId || null,
         projectId: formData.projectId || null,
         dueDate: formData.dueDate || null,
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null
-      })
+      }
+      if (editingId) {
+        await tasksApi.update(editingId, taskData)
+      } else {
+        await tasksApi.create(taskData)
+      }
       setShowForm(false)
-      setFormData({
-        title: '',
-        description: '',
-        type: 0,
-        priority: 1,
-        assigneeId: '',
-        projectId: '',
-        dueDate: '',
-        estimatedHours: ''
-      })
+      setEditingId(null)
+      resetForm()
       loadData()
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleEdit = (task: TeamTask) => {
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      type: task.type,
+      priority: task.priority,
+      assigneeId: task.assigneeId || '',
+      projectId: task.projectId || '',
+      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+      estimatedHours: task.estimatedHours?.toString() || ''
+    })
+    setEditingId(task.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      try {
+        await tasksApi.delete(id)
+        loadData()
+      } catch (err) {
+        console.error(err)
+      }
     }
   }
 
@@ -140,7 +178,7 @@ export default function Tasks() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-lg mx-4">
-            <CardHeader title="Create Task" />
+            <CardHeader title={editingId ? 'Edit Task' : 'Create Task'} />
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -244,7 +282,7 @@ export default function Tasks() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
+                    onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                   >
                     Cancel
@@ -253,7 +291,7 @@ export default function Tasks() {
                     type="submit"
                     className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                   >
-                    Create
+                    {editingId ? 'Update' : 'Create'}
                   </button>
                 </div>
               </form>
@@ -370,6 +408,36 @@ export default function Tasks() {
                         Done
                       </button>
                     )}
+                    {task.status === TaskStatus.Done && (
+                      <button
+                        onClick={() => handleAction(task.id, 'reopen')}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-500 text-white rounded-lg hover:bg-slate-600"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reopen
+                      </button>
+                    )}
+                    <div className="relative group">
+                      <button className="p-1 hover:bg-slate-100 rounded">
+                        <MoreVertical className="w-5 h-5 text-slate-400" />
+                      </button>
+                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                        <button
+                          onClick={() => handleEdit(task)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(task.id)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>

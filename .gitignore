@@ -81,12 +81,15 @@ publish/
 src/Hive.Desktop/node_modules/*
 
 # Electron build artifacts
+src/Hive.Desktop/dist/*
 src/Hive.Desktop/dist/
-src/Hive.Desktop/dist-electron/
-src/Hive.Desktop/release/
-src/Hive.Desktop/backend/
+src/Hive.Desktop/dist-electron/*
+src/Hive.Desktop/release/*
+src/Hive.Desktop/backend/*
 
 # SQLite database files
 *.db
 *.db-shm
 *.db-wal
+
+src/Hive.Desktop/dist/index.html

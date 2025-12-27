@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, Pause } from 'lucide-react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -18,12 +18,17 @@ export default function Projects() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | ProjectStatus>('all')
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     startDate: '',
     targetEndDate: ''
   })
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '', startDate: '', targetEndDate: '' })
+  }
 
   useEffect(() => {
     loadProjects()
@@ -63,12 +68,39 @@ export default function Projects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await projectsApi.create(formData)
+      if (editingId) {
+        await projectsApi.update(editingId, formData)
+      } else {
+        await projectsApi.create(formData)
+      }
       setShowForm(false)
-      setFormData({ name: '', description: '', startDate: '', targetEndDate: '' })
+      setEditingId(null)
+      resetForm()
       loadProjects()
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleEdit = (project: Project) => {
+    setFormData({
+      name: project.name,
+      description: project.description || '',
+      startDate: project.startDate ? project.startDate.split('T')[0] : '',
+      targetEndDate: project.targetEndDate ? project.targetEndDate.split('T')[0] : ''
+    })
+    setEditingId(project.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this project?')) {
+      try {
+        await projectsApi.delete(id)
+        loadProjects()
+      } catch (err) {
+        console.error(err)
+      }
     }
   }
 
@@ -106,7 +138,7 @@ export default function Projects() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-lg mx-4">
-            <CardHeader title="Create Project" />
+            <CardHeader title={editingId ? 'Edit Project' : 'Create Project'} />
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -151,7 +183,7 @@ export default function Projects() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
+                    onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                   >
                     Cancel
@@ -160,7 +192,7 @@ export default function Projects() {
                     type="submit"
                     className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                   >
-                    Create
+                    {editingId ? 'Update' : 'Create'}
                   </button>
                 </div>
               </form>
@@ -214,6 +246,27 @@ export default function Projects() {
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${statusColors[project.status]}`}>
                         {project.statusName}
                       </span>
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button className="p-1 hover:bg-slate-100 rounded">
+                      <MoreVertical className="w-5 h-5 text-slate-400" />
+                    </button>
+                    <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <button
+                        onClick={() => handleEdit(project)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>

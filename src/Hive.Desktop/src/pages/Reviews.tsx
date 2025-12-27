@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Star, Clock, CheckCircle, Send } from 'lucide-react'
+import { Plus, Star, CheckCircle, Send, MoreVertical, Edit, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
 import { ReviewStatus } from '../types'
@@ -26,6 +26,29 @@ export default function Reviews() {
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | ReviewStatus>('all')
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    directReportId: '',
+    reviewPeriod: '',
+    rating: '0',
+    strengths: '',
+    areasForImprovement: '',
+    goalsForNextPeriod: '',
+    managerNotes: ''
+  })
+
+  const resetForm = () => {
+    setFormData({
+      directReportId: '',
+      reviewPeriod: '',
+      rating: '0',
+      strengths: '',
+      areasForImprovement: '',
+      goalsForNextPeriod: '',
+      managerNotes: ''
+    })
+  }
 
   useEffect(() => {
     loadData()
@@ -47,6 +70,15 @@ export default function Reviews() {
     }
   }
 
+  const loadReviews = async () => {
+    try {
+      const data = await reviewsApi.getAll()
+      setReviews(data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const filteredReviews = filter === 'all'
     ? reviews
     : reviews.filter(r => r.status === filter)
@@ -56,9 +88,55 @@ export default function Reviews() {
       if (action === 'submit') await reviewsApi.submit(id)
       else if (action === 'acknowledge') await reviewsApi.acknowledge(id)
       else if (action === 'complete') await reviewsApi.complete(id)
-      loadData()
+      loadReviews()
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const reviewData = {
+        ...formData,
+        rating: parseInt(formData.rating)
+      }
+      if (editingId) {
+        await reviewsApi.update(editingId, reviewData)
+      } else {
+        await reviewsApi.create(reviewData)
+      }
+      setShowForm(false)
+      setEditingId(null)
+      resetForm()
+      loadReviews()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleEdit = (review: PerformanceReview) => {
+    setFormData({
+      directReportId: review.directReportId,
+      reviewPeriod: review.reviewPeriod,
+      rating: review.rating.toString(),
+      strengths: review.strengths || '',
+      areasForImprovement: review.areasForImprovement || '',
+      goalsForNextPeriod: review.goalsForNextPeriod || '',
+      managerNotes: review.managerNotes || ''
+    })
+    setEditingId(review.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this review?')) {
+      try {
+        await reviewsApi.delete(id)
+        loadReviews()
+      } catch (err) {
+        console.error(err)
+      }
     }
   }
 
@@ -78,11 +156,123 @@ export default function Reviews() {
           <h1 className="text-2xl font-bold text-slate-900">Performance Reviews</h1>
           <p className="text-slate-500 mt-1">Track and manage performance reviews</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+        >
           <Plus className="w-5 h-5" />
           New Review
         </button>
       </div>
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <CardHeader title={editingId ? 'Edit Review' : 'New Review'} />
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Team Member</label>
+                  <select
+                    value={formData.directReportId}
+                    onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    <option value="">Select team member</option>
+                    {directReports.map(dr => (
+                      <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Review Period</label>
+                    <input
+                      type="text"
+                      value={formData.reviewPeriod}
+                      onChange={(e) => setFormData({ ...formData, reviewPeriod: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      placeholder="e.g., 2024 Q1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Rating</label>
+                    <select
+                      value={formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="0">Not Rated</option>
+                      <option value="1">Needs Improvement</option>
+                      <option value="2">Meets Expectations</option>
+                      <option value="3">Exceeds Expectations</option>
+                      <option value="4">Outstanding</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Strengths</label>
+                  <textarea
+                    value={formData.strengths}
+                    onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    rows={2}
+                    placeholder="Key strengths and achievements..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Areas for Improvement</label>
+                  <textarea
+                    value={formData.areasForImprovement}
+                    onChange={(e) => setFormData({ ...formData, areasForImprovement: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    rows={2}
+                    placeholder="Areas to develop..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Goals for Next Period</label>
+                  <textarea
+                    value={formData.goalsForNextPeriod}
+                    onChange={(e) => setFormData({ ...formData, goalsForNextPeriod: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    rows={2}
+                    placeholder="Goals for next period..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Manager Notes</label>
+                  <textarea
+                    value={formData.managerNotes}
+                    onChange={(e) => setFormData({ ...formData, managerNotes: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    rows={2}
+                    placeholder="Additional notes..."
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
+                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                  >
+                    {editingId ? 'Update' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2">
@@ -164,6 +354,27 @@ export default function Reviews() {
                         Complete
                       </button>
                     )}
+                    <div className="relative group">
+                      <button className="p-1 hover:bg-slate-100 rounded">
+                        <MoreVertical className="w-5 h-5 text-slate-400" />
+                      </button>
+                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                        <button
+                          onClick={() => handleEdit(review)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(review.id)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 {(review.strengths || review.areasForImprovement) && (
