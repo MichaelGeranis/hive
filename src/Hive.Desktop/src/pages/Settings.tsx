@@ -44,7 +44,11 @@ export default function Settings() {
 
     const newMappings = [...mappings]
     newMappings[index] = { ...newMappings[index], hours }
-    setMappings(newMaasync () => {
+    setMappings(newMappings)
+    setSaved(false)
+  }
+
+  const handleSave = async () => {
     try {
       setSaving(true)
       setError(null)
@@ -60,31 +64,38 @@ export default function Settings() {
   }
 
   const handleReset = async () => {
-    setMappings(DEFAULT_MAPPINGS
-
-  const handleReset = () => {
-    setMappings(DEFAULT_MAPPINGS)
-    localStorage.removeItem(STORAGE_KEY)
-    setSaved(false)
+    try {
+      setSaving(true)
+      setError(null)
+      await settingsApi.update({ storyPointMappings: DEFAULT_MAPPINGS })
+      setMappings(DEFAULT_MAPPINGS)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to reset settings', err)
+      setError('Failed to reset settings. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getDaysLabel = (hours: number): string => {
     if (hours === 0) return '0 hours'
     if (hours < 8) return `${hours} hour${hours !== 1 ? 's' : ''}`
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-      </div>
-    )
-  }
-
     
     const days = hours / 8
     if (days === 1) return '1 day'
     if (days < 1) return `${hours} hours`
     if (Number.isInteger(days)) return `${days} days`
     return `${days.toFixed(1)} days`
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+      </div>
+    )
   }
 
   return (
@@ -119,19 +130,18 @@ export default function Settings() {
                       type="number"
                       value={mapping.hours}
                       onChange={(e) => handleHoursChange(index, e.target.value)}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-5 h-5" />
-                {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
-              </button>
-              <button
-                onClick={handleReset}
-                disabled={saving}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Reset to Defaults
-              </button>
+                      className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      min="0"
+                      step="0.5"
+                      disabled={saving}
+                    />
+                    <span className="text-slate-700">hours</span>
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm text-slate-500">({getDaysLabel(mapping.hours)})</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {error && (
@@ -143,14 +153,16 @@ export default function Settings() {
             <div className="pt-4 border-t flex gap-3">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-5 h-5" />
-                {saved ? 'Saved!' : 'Save Changes'}
+                {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
               </button>
               <button
                 onClick={handleReset}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={saving}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Reset to Defaults
               </button>
