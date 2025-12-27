@@ -8,7 +8,13 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "npm run build:backend && vite build && electron-builder",
+    "electron:build:mac": "npm run build:backend:mac && vite build && electron-builder --mac",
+    "electron:build:win": "npm run build:backend:win && vite build && electron-builder --win",
+    "build:backend": "../../scripts/build-backend.sh",
+    "build:backend:mac": "../../scripts/build-backend.sh osx-arm64",
+    "build:backend:win": "../../scripts/build-backend.sh win-x64",
+    "build:backend:all": "../../scripts/build-backend.sh all"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -43,17 +49,50 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      }
+    ],
     "mac": {
       "target": ["dmg", "zip"],
-      "icon": "src/assets/icon.icns"
+      "icon": "src/assets/icon.icns",
+      "extraResources": [
+        {
+          "from": "backend/osx-arm64",
+          "to": "backend/osx-arm64",
+          "filter": ["**/*"]
+        },
+        {
+          "from": "backend/osx-x64",
+          "to": "backend/osx-x64",
+          "filter": ["**/*"]
+        }
+      ]
     },
     "win": {
       "target": ["nsis", "zip"],
-      "icon": "src/assets/icon.ico"
+      "icon": "src/assets/icon.ico",
+      "extraResources": [
+        {
+          "from": "backend/win-x64",
+          "to": "backend/win-x64",
+          "filter": ["**/*"]
+        }
+      ]
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "icon": "src/assets/icon.png"
+      "icon": "src/assets/icon.png",
+      "extraResources": [
+        {
+          "from": "backend/linux-x64",
+          "to": "backend/linux-x64",
+          "filter": ["**/*"]
+        }
+      ]
     }
   }
 }

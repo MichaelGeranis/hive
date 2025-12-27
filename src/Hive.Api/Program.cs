@@ -22,7 +22,52 @@ builder.Services.AddAuthorization();
 builder.Services.AddApplicationServices();
 
 // Add Infrastructure Layer Services (Repositories, DbContext)
-builder.Services.AddInfrastructureServices(seedData: true);
+// Use SQLite in production, in-memory for development
+var useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase", defaultValue: builder.Environment.IsDevelopment());
+
+if (useInMemory)
+{
+    builder.Services.AddInfrastructureServices(seedData: true);
+}
+else
+{
+    var connectionString = $"Data Source={GetDatabasePath()}";
+    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: true);
+}
+
+static string GetDatabasePath()
+{
+    // Check for explicit path in environment variable
+    var explicitPath = Environment.GetEnvironmentVariable("HIVE_DATABASE_PATH");
+    if (!string.IsNullOrEmpty(explicitPath))
+    {
+        return explicitPath;
+    }
+
+    // Determine platform-specific user data folder
+    string appDataFolder;
+    if (OperatingSystem.IsMacOS())
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        appDataFolder = Path.Combine(home, "Library", "Application Support", "Hive");
+    }
+    else if (OperatingSystem.IsWindows())
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        appDataFolder = Path.Combine(appData, "Hive");
+    }
+    else
+    {
+        // Linux/other: use ~/.local/share/Hive
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        appDataFolder = Path.Combine(home, ".local", "share", "Hive");
+    }
+
+    // Ensure directory exists
+    Directory.CreateDirectory(appDataFolder);
+
+    return Path.Combine(appDataFolder, "hive.db");
+}
 
 // Add Controllers
 builder.Services.AddControllers();
@@ -109,5 +154,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoint for Electron to verify backend is running
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+   .AllowAnonymous();
 
 app.Run();

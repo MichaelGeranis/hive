@@ -79,3 +79,14 @@ publish/
 # dotnet tool
 .config/dotnet-tools.json
 src/Hive.Desktop/node_modules/*
+
+# Electron build artifacts
+src/Hive.Desktop/dist/
+src/Hive.Desktop/dist-electron/
+src/Hive.Desktop/release/
+src/Hive.Desktop/backend/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
