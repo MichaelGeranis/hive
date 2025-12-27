@@ -23,6 +23,7 @@ public record TeamTaskDto
     public string? ProjectName { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
+    public int? StoryPoints { get; init; }
     public int? ActualHours { get; init; }
     public string Tags { get; init; } = string.Empty;
     public bool IsOverdue { get; init; }
@@ -45,6 +46,7 @@ public record CreateTeamTaskDto
     public Guid? ProjectId { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
+    public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
 }
 
@@ -59,6 +61,7 @@ public record UpdateTeamTaskDto
     public TaskPriority Priority { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
+    public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
 }
 

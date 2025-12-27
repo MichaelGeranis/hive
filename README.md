@@ -486,8 +486,6 @@ const api = axios.create({
 - Handle backend crash gracefully
 - Final testing on macOS and Windows
 
-
-- Calculate teams velocity based on completed tasks per sprint
 - Integrate 1:1 meetings with apple calendar and google calendar APIs
 - Hive logo is hidden behind the macOS buttons.
 - App is not installed correctly in macOs and the app is starting and not showing anything.

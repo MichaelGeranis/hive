@@ -25,6 +25,7 @@ public class TeamTaskTests
             projectId,
             dueDate,
             8,
+            3,
             "api,feature");
 
         // Assert
@@ -97,7 +98,7 @@ public class TeamTaskTests
         var dueDate = DateTime.UtcNow.AddDays(14);
 
         // Act
-        task.Update("Updated", "New desc", TaskType.Bug, TaskPriority.Critical, dueDate, 16, "bug,urgent");
+        task.Update("Updated", "New desc", TaskType.Bug, TaskPriority.Critical, dueDate, 16, 5, "bug,urgent");
 
         // Assert
         task.Title.Should().Be("Updated");

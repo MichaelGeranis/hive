@@ -13,6 +13,7 @@ import type {
   OneOnOneFrequency,
   ActionItemsSummary,
   TasksByAssignee,
+  TeamVelocity,
   AppSettings,
   UpdateAppSettings
 } from '../types'
@@ -106,7 +107,8 @@ export const reportsApi = {
   getDirectReportAnalytics: (id: string) => api.get(`/reports/direct-reports/${id}`).then(r => r.data),
   getOneOnOneFrequency: () => api.get<OneOnOneFrequency[]>('/reports/one-on-one-frequency').then(r => r.data),
   getActionItemsSummary: () => api.get<ActionItemsSummary>('/reports/action-items').then(r => r.data),
-  getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data)
+  getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data),
+  getTeamVelocity: () => api.get<TeamVelocity>('/reports/team-velocity').then(r => r.data)
 }
 
 // Settings

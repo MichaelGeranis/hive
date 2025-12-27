@@ -125,6 +125,7 @@ public class TeamTaskService : ITeamTaskService
             dto.ProjectId,
             dto.DueDate,
             dto.EstimatedHours,
+            dto.StoryPoints,
             dto.Tags);
 
         var created = await _taskRepository.AddAsync(entity, cancellationToken);
@@ -135,7 +136,7 @@ public class TeamTaskService : ITeamTaskService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, dto.EstimatedHours, dto.Tags);
+        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, dto.EstimatedHours, dto.StoryPoints, dto.Tags);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -294,6 +295,7 @@ public class TeamTaskService : ITeamTaskService
             ProjectName = projectName,
             DueDate = entity.DueDate,
             EstimatedHours = entity.EstimatedHours,
+            StoryPoints = entity.StoryPoints,
             ActualHours = entity.ActualHours,
             Tags = entity.Tags,
             IsOverdue = entity.IsOverdue(),

@@ -299,3 +299,26 @@ public record TrendDataDto
     public int MeetingsHeld { get; init; }
     public int ReviewsCompleted { get; init; }
 }
+
+/// <summary>
+/// Team velocity metrics based on completed story points per sprint.
+/// </summary>
+public record TeamVelocityDto
+{
+    public IReadOnlyList<SprintVelocityDto> Sprints { get; init; } = [];
+    public double AverageVelocity { get; init; }
+    public int TotalStoryPointsCompleted { get; init; }
+    public double CompletionTrend { get; init; } // Percentage change from previous sprint
+}
+
+/// <summary>
+/// Velocity data for a single sprint.
+/// </summary>
+public record SprintVelocityDto
+{
+    public string SprintName { get; init; } = string.Empty;
+    public DateTime StartDate { get; init; }
+    public DateTime EndDate { get; init; }
+    public int StoryPointsCompleted { get; init; }
+    public int TasksCompleted { get; init; }
+}

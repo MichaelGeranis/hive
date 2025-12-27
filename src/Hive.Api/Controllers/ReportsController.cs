@@ -139,4 +139,17 @@ public class ReportsController : ControllerBase
         var report = await _service.GetTasksByAssigneeReportAsync(cancellationToken);
         return Ok(report);
     }
+
+    /// <summary>
+    /// Gets team velocity metrics based on completed story points per sprint.
+    /// </summary>
+    /// <returns>Sprint velocity data and averages.</returns>
+    [HttpGet("team-velocity")]
+    [ProducesResponseType(typeof(TeamVelocityDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TeamVelocityDto>> GetTeamVelocity(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Generating team velocity report");
+        var velocity = await _service.GetTeamVelocityAsync(cancellationToken);
+        return Ok(velocity);
+    }
 }

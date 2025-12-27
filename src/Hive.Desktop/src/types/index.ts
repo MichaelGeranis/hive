@@ -140,6 +140,7 @@ export interface TeamTask {
   projectName?: string
   dueDate?: string
   estimatedHours?: number
+  storyPoints?: number
   actualHours?: number
   tags: string
   isOverdue: boolean
@@ -294,6 +295,22 @@ export interface ProductivityMetrics {
   averageTaskCompletionDays: number
   tasksCompletedThisWeek: number
   tasksCompletedThisMonth: number
+}
+
+// Team Velocity
+export interface TeamVelocity {
+  sprints: SprintVelocity[]
+  averageVelocity: number
+  totalStoryPointsCompleted: number
+  completionTrend: number
+}
+
+export interface SprintVelocity {
+  sprintName: string
+  startDate: string
+  endDate: string
+  storyPointsCompleted: number
+  tasksCompleted: number
 }
 
 // Settings

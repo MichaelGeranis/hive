@@ -46,4 +46,9 @@ public interface IReportingService
     /// Gets tasks by assignee report.
     /// </summary>
     Task<IReadOnlyList<TasksByAssigneeDto>> GetTasksByAssigneeReportAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets team velocity metrics based on completed story points per sprint.
+    /// </summary>
+    Task<TeamVelocityDto> GetTeamVelocityAsync(CancellationToken cancellationToken = default);
 }

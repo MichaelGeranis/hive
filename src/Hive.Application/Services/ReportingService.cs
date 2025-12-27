@@ -508,4 +508,83 @@ public class ReportingService : IReportingService
 
         return Math.Round(intervals.Average(), 1);
     }
+
+    public async Task<TeamVelocityDto> GetTeamVelocityAsync(CancellationToken cancellationToken = default)
+    {
+        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var completedTasks = tasks
+            .Where(t => t.Status == TaskStatus.Done && t.CompletedAt.HasValue && t.StoryPoints.HasValue)
+            .OrderBy(t => t.CompletedAt!.Value)
+            .ToList();
+
+        if (completedTasks.Count == 0)
+        {
+            return new TeamVelocityDto
+            {
+                Sprints = [],
+                AverageVelocity = 0,
+                TotalStoryPointsCompleted = 0,
+                CompletionTrend = 0
+            };
+        }
+
+        // Calculate sprints based on 2-week periods from the earliest completed task
+        var firstCompletedDate = completedTasks.First().CompletedAt!.Value;
+        var lastCompletedDate = completedTasks.Last().CompletedAt!.Value;
+        
+        var sprints = new List<SprintVelocityDto>();
+        var currentSprintStart = firstCompletedDate.Date;
+        var sprintNumber = 1;
+
+        while (currentSprintStart <= lastCompletedDate)
+        {
+            var sprintEnd = currentSprintStart.AddDays(14);
+            
+            var sprintTasks = completedTasks
+                .Where(t => t.CompletedAt!.Value >= currentSprintStart && t.CompletedAt.Value < sprintEnd)
+                .ToList();
+
+            if (sprintTasks.Any())
+            {
+                var sprintVelocity = new SprintVelocityDto
+                {
+                    SprintName = $"Sprint {sprintNumber}",
+                    StartDate = currentSprintStart,
+                    EndDate = sprintEnd.AddDays(-1), // End date is inclusive
+                    StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints!.Value),
+                    TasksCompleted = sprintTasks.Count
+                };
+                sprints.Add(sprintVelocity);
+            }
+
+            currentSprintStart = sprintEnd;
+            sprintNumber++;
+        }
+
+        var totalStoryPoints = sprints.Sum(s => s.StoryPointsCompleted);
+        var averageVelocity = sprints.Count > 0 ? Math.Round((double)totalStoryPoints / sprints.Count, 1) : 0;
+
+        // Calculate trend (comparing last sprint to previous sprint)
+        double completionTrend = 0;
+        if (sprints.Count >= 2)
+        {
+            var lastSprint = sprints[^1];
+            var previousSprint = sprints[^2];
+            
+            if (previousSprint.StoryPointsCompleted > 0)
+            {
+                completionTrend = Math.Round(
+                    ((double)(lastSprint.StoryPointsCompleted - previousSprint.StoryPointsCompleted) / previousSprint.StoryPointsCompleted) * 100,
+                    1);
+            }
+        }
+
+        return new TeamVelocityDto
+        {
+            Sprints = sprints,
+            AverageVelocity = averageVelocity,
+            TotalStoryPointsCompleted = totalStoryPoints,
+            CompletionTrend = completionTrend
+        };
+    }
 }

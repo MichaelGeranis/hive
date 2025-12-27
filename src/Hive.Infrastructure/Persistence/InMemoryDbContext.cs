@@ -271,6 +271,7 @@ public class InMemoryDbContext
             apiRedesign.Id,
             DateTime.UtcNow.AddDays(-5),
             8,
+            2,
             string.Empty);
         task1.Start();
         task1.MoveToReview();
@@ -286,6 +287,7 @@ public class InMemoryDbContext
             apiRedesign.Id,
             DateTime.UtcNow.AddDays(7),
             16,
+            3,
             "security,auth");
         task2.Start();
         TeamTasks.TryAdd(task2.Id, task2);
@@ -299,6 +301,7 @@ public class InMemoryDbContext
             apiRedesign.Id,
             DateTime.UtcNow.AddDays(-2),
             4,
+            1,
             "bug,urgent");
         task3.MoveToTodo();
         TeamTasks.TryAdd(task3.Id, task3);
@@ -312,6 +315,7 @@ public class InMemoryDbContext
             apiRedesign.Id,
             DateTime.UtcNow.AddDays(14),
             8,
+            2,
             "performance,security");
         TeamTasks.TryAdd(task4.Id, task4);
 
@@ -325,6 +329,7 @@ public class InMemoryDbContext
             mobileApp.Id,
             DateTime.UtcNow.AddDays(-7),
             4,
+            1,
             "mobile,setup");
         task5.Start();
         task5.Complete(3);
@@ -339,6 +344,7 @@ public class InMemoryDbContext
             mobileApp.Id,
             DateTime.UtcNow.AddDays(3),
             6,
+            2,
             "mobile,ui");
         task6.MoveToTodo();
         TeamTasks.TryAdd(task6.Id, task6);
@@ -352,6 +358,7 @@ public class InMemoryDbContext
             mobileApp.Id,
             DateTime.UtcNow.AddDays(10),
             8,
+            2,
             "research,mobile");
         TeamTasks.TryAdd(task7.Id, task7);
 
@@ -365,6 +372,7 @@ public class InMemoryDbContext
             documentation.Id,
             DateTime.UtcNow.AddDays(21),
             4,
+            1,
             "docs");
         TeamTasks.TryAdd(task8.Id, task8);
 
@@ -377,6 +385,7 @@ public class InMemoryDbContext
             null,
             DateTime.UtcNow.AddDays(14),
             12,
+            3,
             "performance,database");
         TeamTasks.TryAdd(task9.Id, task9);
     }

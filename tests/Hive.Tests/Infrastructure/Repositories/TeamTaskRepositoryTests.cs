@@ -196,7 +196,7 @@ public class TeamTaskRepositoryTests
     {
         // Arrange
         var task = CreateAndAddTask();
-        task.Update("Updated", "Desc", TaskType.Bug, TaskPriority.Critical, null, null, null);
+        task.Update("Updated", "Desc", TaskType.Bug, TaskPriority.Critical, null, null, null, null);
 
         // Act
         await _repository.UpdateAsync(task);

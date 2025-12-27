@@ -37,7 +37,8 @@ export default function Tasks() {
     assigneeId: '',
     projectId: '',
     dueDate: '',
-    estimatedHours: ''
+    estimatedHours: '',
+    storyPoints: ''
   })
 
   const resetForm = () => {
@@ -49,7 +50,8 @@ export default function Tasks() {
       assigneeId: '',
       projectId: '',
       dueDate: '',
-      estimatedHours: ''
+      estimatedHours: '',
+      storyPoints: ''
     })
   }
 
@@ -100,7 +102,8 @@ export default function Tasks() {
         assigneeId: formData.assigneeId || null,
         projectId: formData.projectId || null,
         dueDate: formData.dueDate || null,
-        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null
+        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
+        storyPoints: formData.storyPoints ? parseInt(formData.storyPoints) : null
       }
       if (editingId) {
         await tasksApi.update(editingId, taskData)
@@ -125,7 +128,8 @@ export default function Tasks() {
       assigneeId: task.assigneeId || '',
       projectId: task.projectId || '',
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
-      estimatedHours: task.estimatedHours?.toString() || ''
+      estimatedHours: task.estimatedHours?.toString() || '',
+      storyPoints: task.storyPoints?.toString() || ''
     })
     setEditingId(task.id)
     setShowForm(true)
@@ -284,6 +288,17 @@ export default function Tasks() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Story Points</label>
+                  <input
+                    type="number"
+                    value={formData.storyPoints}
+                    onChange={(e) => setFormData({ ...formData, storyPoints: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    min="0"
+                    placeholder="1, 2, 3, 5, 8..."
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -391,6 +406,9 @@ export default function Tasks() {
                       )}
                       {task.estimatedHours && (
                         <span>{task.estimatedHours}h estimated</span>
+                      )}
+                      {task.storyPoints && (
+                        <span className="font-semibold text-amber-600">{task.storyPoints} SP</span>
                       )}
                     </div>
                   </div>

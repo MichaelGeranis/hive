@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { reportsApi, tasksApi } from '../services/api'
-import type { DashboardOverview, OneOnOneFrequency, TeamTask } from '../types'
+import type { DashboardOverview, OneOnOneFrequency, TeamTask, TeamVelocity } from '../types'
 import {
   BarChart,
   Bar,
@@ -20,7 +20,10 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  LineChart,
+  Line,
+  Legend
 } from 'recharts'
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
@@ -29,6 +32,7 @@ export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [frequency, setFrequency] = useState<OneOnOneFrequency[]>([])
   const [tasks, setTasks] = useState<TeamTask[]>([])
+  const [velocity, setVelocity] = useState<TeamVelocity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,14 +43,16 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, frequencyData, tasksData] = await Promise.all([
+      const [dashboardData, frequencyData, tasksData, velocityData] = await Promise.all([
         reportsApi.getDashboard(),
         reportsApi.getOneOnOneFrequency(),
-        tasksApi.getAll()
+        tasksApi.getAll(),
+        reportsApi.getTeamVelocity()
       ])
       setDashboard(dashboardData)
       setFrequency(frequencyData)
       setTasks(tasksData)
+      setVelocity(velocityData)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -80,8 +86,6 @@ export default function Dashboard() {
     { name: 'In Review', value: dashboard.tasks.tasks.inReviewTasks },
     { name: 'Done', value: dashboard.tasks.tasks.doneTasks },
   ].filter(d => d.value > 0)
-
-  const ratingData = dashboard.reviews.ratingDistribution.filter(r => r.count > 0)
 
   const tasksByAssigneeData = dashboard.tasks.tasksByAssignee.map(assignee => ({
     name: assignee.assigneeName || 'Unassigned',
@@ -247,22 +251,6 @@ export default function Dashboard() {
                 No tasks found
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Rating Distribution */}
-        <Card>
-          <CardHeader title="Performance Ratings" subtitle="Distribution across reviews" />
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={ratingData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="ratingName" type="category" width={120} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -439,6 +427,50 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Team Velocity */}
+      {velocity && velocity.sprints.length > 0 && (
+        <Card>
+          <CardHeader 
+            title="Team Velocity" 
+            subtitle={`Average: ${velocity.averageVelocity} SP per sprint | Trend: ${velocity.completionTrend > 0 ? '+' : ''}${velocity.completionTrend}%`}
+          />
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={velocity.sprints}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="sprintName" />
+                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="storyPointsCompleted" 
+                  stroke="#f59e0b" 
+                  strokeWidth={2}
+                  name="Story Points Completed"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-amber-500">{velocity.totalStoryPointsCompleted}</p>
+                <p className="text-sm text-slate-500">Total Story Points</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-500">{velocity.averageVelocity}</p>
+                <p className="text-sm text-slate-500">Avg Velocity</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${velocity.completionTrend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {velocity.completionTrend > 0 ? '+' : ''}{velocity.completionTrend}%
+                </p>
+                <p className="text-sm text-slate-500">Sprint Trend</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -15,6 +15,7 @@ public class TeamTask
     public Guid? ProjectId { get; private set; }
     public DateTime? DueDate { get; private set; }
     public int? EstimatedHours { get; private set; }
+    public int? StoryPoints { get; private set; }
     public int? ActualHours { get; private set; }
     public string Tags { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
@@ -33,6 +34,7 @@ public class TeamTask
         Guid? projectId = null,
         DateTime? dueDate = null,
         int? estimatedHours = null,
+        int? storyPoints = null,
         string? tags = null)
     {
         ValidateTitle(title);
@@ -47,6 +49,7 @@ public class TeamTask
         ProjectId = projectId;
         DueDate = dueDate;
         EstimatedHours = estimatedHours;
+        StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
         CreatedAt = DateTime.UtcNow;
     }
@@ -58,6 +61,7 @@ public class TeamTask
         TaskPriority priority,
         DateTime? dueDate,
         int? estimatedHours,
+        int? storyPoints,
         string? tags)
     {
         ValidateTitle(title);
@@ -68,6 +72,7 @@ public class TeamTask
         Priority = priority;
         DueDate = dueDate;
         EstimatedHours = estimatedHours;
+        StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
     }
