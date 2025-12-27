@@ -8,8 +8,8 @@ import {
   Target
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi } from '../services/api'
-import type { DashboardOverview, OneOnOneFrequency } from '../types'
+import { reportsApi, tasksApi } from '../services/api'
+import type { DashboardOverview, OneOnOneFrequency, TeamTask } from '../types'
 import {
   BarChart,
   Bar,
@@ -28,6 +28,7 @@ const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [frequency, setFrequency] = useState<OneOnOneFrequency[]>([])
+  const [tasks, setTasks] = useState<TeamTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,12 +39,14 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, frequencyData] = await Promise.all([
+      const [dashboardData, frequencyData, tasksData] = await Promise.all([
         reportsApi.getDashboard(),
-        reportsApi.getOneOnOneFrequency()
+        reportsApi.getOneOnOneFrequency(),
+        tasksApi.getAll()
       ])
       setDashboard(dashboardData)
       setFrequency(frequencyData)
+      setTasks(tasksData)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -79,6 +82,34 @@ export default function Dashboard() {
   ].filter(d => d.value > 0)
 
   const ratingData = dashboard.reviews.ratingDistribution.filter(r => r.count > 0)
+
+  const tasksByAssigneeData = dashboard.tasks.tasksByAssignee.map(assignee => ({
+    name: assignee.assigneeName || 'Unassigned',
+    total: assignee.totalTasks,
+    completed: assignee.completedTasks,
+    inProgress: assignee.inProgressTasks,
+    overdue: assignee.overdueTasks
+  }))
+
+  // Calculate project distribution by assignee
+  const projectsByAssignee = tasks
+    .filter(task => task.assigneeId && task.projectId) // Only tasks with both assignee and project
+    .reduce((acc, task) => {
+      const assigneeName = task.assigneeName || 'Unknown'
+      if (!acc[assigneeName]) {
+        acc[assigneeName] = new Set<string>()
+      }
+      acc[assigneeName].add(task.projectId!)
+      return acc
+    }, {} as Record<string, Set<string>>)
+
+  const projectDistributionData = Object.entries(projectsByAssignee)
+    .map(([name, projectIds]) => ({
+      name,
+      value: projectIds.size
+    }))
+    .sort((a, b) => b.value - a.value)
+    .filter(d => d.value > 0)
 
   return (
     <div className="space-y-6">
@@ -146,6 +177,41 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* Project Distribution by Assignee */}
+        <Card>
+          <CardHeader title="Project Contributions" subtitle="Number of projects per assignee" />
+          <CardContent className="h-64">
+            {projectDistributionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={projectDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {projectDistributionData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                No project assignments found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Rating Distribution */}
         <Card>
           <CardHeader title="Performance Ratings" subtitle="Distribution across reviews" />
@@ -162,6 +228,24 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Task Distribution by Assignee */}
+      <Card>
+        <CardHeader title="Task Distribution by Assignee" subtitle="Current workload across team members" />
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={tasksByAssigneeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="overdue" stackId="a" fill="#ef4444" name="Overdue" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* 1:1 Meeting Frequency */}
       <Card>
