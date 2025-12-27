@@ -477,9 +477,11 @@ const api = axios.create({
 ```
 
 ## Future Enhancements
-
-- Replace in-memory database with SQL Server/PostgreSQL
 - Add OAuth2/OIDC authentication
 - Add frontend testing suite (Vitest + Testing Library)
 - Implement real-time updates with SignalR
 - Add dark mode support
+- Add app icons (icns, ico, png)
+- Add loading screen while backend starts
+- Handle backend crash gracefully
+- Final testing on macOS and Windows

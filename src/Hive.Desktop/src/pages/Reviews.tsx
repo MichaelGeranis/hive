@@ -97,13 +97,22 @@ export default function Reviews() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const reviewData = {
-        ...formData,
-        rating: parseInt(formData.rating)
-      }
       if (editingId) {
-        await reviewsApi.update(editingId, reviewData)
+        // For updates, only send content fields (not directReportId or reviewPeriod)
+        const updateData = {
+          strengths: formData.strengths,
+          areasForImprovement: formData.areasForImprovement,
+          goalsForNextPeriod: formData.goalsForNextPeriod,
+          managerNotes: formData.managerNotes,
+          rating: parseInt(formData.rating)
+        }
+        await reviewsApi.update(editingId, updateData)
       } else {
+        const reviewData = {
+          directReportId: formData.directReportId,
+          reviewPeriod: formData.reviewPeriod,
+          reviewDate: new Date().toISOString()
+        }
         await reviewsApi.create(reviewData)
       }
       setShowForm(false)
@@ -177,14 +186,16 @@ export default function Reviews() {
                   <select
                     value={formData.directReportId}
                     onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    required={!editingId}
+                    disabled={!!editingId}
                   >
                     <option value="">Select team member</option>
                     {directReports.map(dr => (
                       <option key={dr.id} value={dr.id}>{dr.fullName}</option>
                     ))}
                   </select>
+                  {editingId && <p className="text-xs text-slate-500 mt-1">Team member cannot be changed when editing</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -193,10 +204,12 @@ export default function Reviews() {
                       type="text"
                       value={formData.reviewPeriod}
                       onChange={(e) => setFormData({ ...formData, reviewPeriod: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
                       placeholder="e.g., 2024 Q1"
-                      required
+                      required={!editingId}
+                      disabled={!!editingId}
                     />
+                    {editingId && <p className="text-xs text-slate-500 mt-1">Period cannot be changed</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Rating</label>
