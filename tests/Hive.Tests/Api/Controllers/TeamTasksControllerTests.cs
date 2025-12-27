@@ -217,8 +217,7 @@ public class TeamTasksControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = TaskStatus.InProgress;
+        var resultDto = CreateDto() with { Status = TaskStatus.InProgress };
         _serviceMock.Setup(s => s.StartAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -249,8 +248,7 @@ public class TeamTasksControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = TaskStatus.InReview;
+        var resultDto = CreateDto() with { Status = TaskStatus.InReview };
         _serviceMock.Setup(s => s.MoveToReviewAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -266,8 +264,7 @@ public class TeamTasksControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = TaskStatus.Done;
+        var resultDto = CreateDto() with { Status = TaskStatus.Done };
         _serviceMock.Setup(s => s.CompleteAsync(id, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -283,8 +280,7 @@ public class TeamTasksControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = TaskStatus.Cancelled;
+        var resultDto = CreateDto() with { Status = TaskStatus.Cancelled };
         _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -300,8 +296,7 @@ public class TeamTasksControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = TaskStatus.Todo;
+        var resultDto = CreateDto() with { Status = TaskStatus.Todo };
         _serviceMock.Setup(s => s.ReopenAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 

@@ -3,6 +3,7 @@ using Hive.Application.Interfaces;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Hive.Core.Interfaces;
+using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Application.Services;
 

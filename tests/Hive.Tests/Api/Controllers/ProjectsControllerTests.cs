@@ -168,8 +168,7 @@ public class ProjectsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = ProjectStatus.Active;
+        var resultDto = CreateDto() with { Status = ProjectStatus.Active };
         _serviceMock.Setup(s => s.ActivateAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -202,8 +201,7 @@ public class ProjectsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = ProjectStatus.OnHold;
+        var resultDto = CreateDto() with { Status = ProjectStatus.OnHold };
         _serviceMock.Setup(s => s.PutOnHoldAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -219,8 +217,7 @@ public class ProjectsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = ProjectStatus.Completed;
+        var resultDto = CreateDto() with { Status = ProjectStatus.Completed };
         _serviceMock.Setup(s => s.CompleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -236,8 +233,7 @@ public class ProjectsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var resultDto = CreateDto();
-        resultDto.Status = ProjectStatus.Cancelled;
+        var resultDto = CreateDto() with { Status = ProjectStatus.Cancelled };
         _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 

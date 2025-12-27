@@ -1,5 +1,6 @@
 using Hive.Core.Entities;
 using Hive.Core.Interfaces;
+using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Infrastructure.Persistence.Repositories;
 

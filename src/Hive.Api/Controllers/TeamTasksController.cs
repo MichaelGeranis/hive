@@ -4,6 +4,7 @@ using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Api.Controllers;
 

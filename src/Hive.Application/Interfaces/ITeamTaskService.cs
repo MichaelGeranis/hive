@@ -1,5 +1,6 @@
 using Hive.Application.DTOs;
 using Hive.Core.Entities;
+using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Application.Interfaces;
 
