@@ -44,9 +44,9 @@ export interface PerformanceReview {
   reviewPeriod: string
   reviewDate: string
   rating: PerformanceRating
-  ratingName: string
+  ratingDescription: string
   status: ReviewStatus
-  statusName: string
+  statusDescription: string
   strengths: string
   areasForImprovement: string
   goalsForNextPeriod: string

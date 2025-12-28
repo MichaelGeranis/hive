@@ -28,6 +28,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState<'all' | ReviewStatus>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     directReportId: '',
     reviewPeriod: '',
@@ -96,6 +97,7 @@ export default function Reviews() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     try {
       if (editingId) {
         // For updates, only send content fields (not directReportId or reviewPeriod)
@@ -119,12 +121,14 @@ export default function Reviews() {
       setEditingId(null)
       resetForm()
       loadReviews()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'An error occurred while saving the review.'
+      setError(message)
     }
   }
 
   const handleEdit = (review: PerformanceReview) => {
+    setError(null)
     setFormData({
       directReportId: review.directReportId,
       reviewPeriod: review.reviewPeriod,
@@ -266,10 +270,15 @@ export default function Reviews() {
                     placeholder="Additional notes..."
                   />
                 </div>
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
+                    onClick={() => { setShowForm(false); setEditingId(null); setError(null); resetForm() }}
                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                   >
                     Cancel
@@ -332,13 +341,13 @@ export default function Reviews() {
                       <p className="text-sm text-slate-500">{review.reviewPeriod}</p>
                       <div className="flex items-center gap-1 mt-2">
                         {ratingStars(review.rating)}
-                        <span className="ml-2 text-sm text-slate-500">{review.ratingName}</span>
+                        <span className="ml-2 text-sm text-slate-500">{review.ratingDescription}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[review.status]}`}>
-                      {review.statusName}
+                      {review.statusDescription}
                     </span>
                     {review.status === ReviewStatus.Draft && (
                       <button
@@ -372,13 +381,15 @@ export default function Reviews() {
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
                       <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                        <button
-                          onClick={() => handleEdit(review)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
+                        {review.status === ReviewStatus.Draft && (
+                          <button
+                            onClick={() => handleEdit(review)}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Edit
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(review.id)}
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
