@@ -8,6 +8,7 @@ import Reviews from './pages/Reviews'
 import Meetings from './pages/Meetings'
 import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
+import Leaves from './pages/Leaves'
 import Settings from './pages/Settings'
 
 type AppStatus = 'loading' | 'ready' | 'error'
@@ -93,6 +94,7 @@ function App() {
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
+        <Route path="leaves" element={<Leaves />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

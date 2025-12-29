@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<ITeamTaskService, TeamTaskService>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IAppSettingsService, AppSettingsService>();
+        services.AddScoped<ILeaveService, LeaveService>();
         return services;
     }
 }

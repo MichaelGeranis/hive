@@ -17,6 +17,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, MeetingNote> MeetingNotes { get; } = new();
     public ConcurrentDictionary<Guid, Project> Projects { get; } = new();
     public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
+    public ConcurrentDictionary<Guid, Leave> Leaves { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>
@@ -47,6 +48,86 @@ public class InMemoryDbContext
 
         // Seed projects and tasks
         SeedProjectsAndTasks();
+
+        // Seed leaves
+        SeedLeaves();
+    }
+
+    private void SeedLeaves()
+    {
+        var directReportIds = DirectReports.Keys.ToList();
+        if (directReportIds.Count == 0) return;
+
+        // Past approved vacation for Alice
+        var leave1 = new Leave(
+            directReportIds[0],
+            LeaveType.Vacation,
+            DateTime.UtcNow.AddDays(-30),
+            DateTime.UtcNow.AddDays(-25),
+            "Summer vacation",
+            null);
+        leave1.Approve("Manager");
+        Leaves.TryAdd(leave1.Id, leave1);
+
+        // Upcoming PTO for Alice
+        var leave2 = new Leave(
+            directReportIds[0],
+            LeaveType.PTO,
+            DateTime.UtcNow.AddDays(14),
+            DateTime.UtcNow.AddDays(15),
+            "Personal appointment",
+            null);
+        leave2.Approve("Manager");
+        Leaves.TryAdd(leave2.Id, leave2);
+
+        if (directReportIds.Count > 1)
+        {
+            // Sick leave for Bob (currently on leave)
+            var leave3 = new Leave(
+                directReportIds[1],
+                LeaveType.SickLeave,
+                DateTime.UtcNow.AddDays(-1),
+                DateTime.UtcNow.AddDays(1),
+                "Not feeling well",
+                null);
+            leave3.Approve("Manager");
+            Leaves.TryAdd(leave3.Id, leave3);
+
+            // Pending leave request for Bob
+            var leave4 = new Leave(
+                directReportIds[1],
+                LeaveType.Vacation,
+                DateTime.UtcNow.AddDays(30),
+                DateTime.UtcNow.AddDays(40),
+                "Winter holiday",
+                null);
+            Leaves.TryAdd(leave4.Id, leave4);
+        }
+
+        if (directReportIds.Count > 2)
+        {
+            // Past PTO for Carol
+            var leave5 = new Leave(
+                directReportIds[2],
+                LeaveType.PTO,
+                DateTime.UtcNow.AddDays(-60),
+                DateTime.UtcNow.AddDays(-58),
+                "Family event",
+                null);
+            leave5.Approve("Manager");
+            Leaves.TryAdd(leave5.Id, leave5);
+
+            // Upcoming conference
+            var leave6 = new Leave(
+                directReportIds[2],
+                LeaveType.Other,
+                DateTime.UtcNow.AddDays(7),
+                DateTime.UtcNow.AddDays(9),
+                "Tech conference",
+                "Attending as speaker");
+            leave6.Approve("Manager");
+            Leaves.TryAdd(leave6.Id, leave6);
+        }
     }
 
     private void SeedPerformanceReviews()
