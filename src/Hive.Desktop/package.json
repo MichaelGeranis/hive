@@ -59,6 +59,11 @@
     "mac": {
       "target": ["dmg", "zip"],
       "icon": "src/assets/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
       "extraResources": [
         {
           "from": "backend/osx-arm64",
