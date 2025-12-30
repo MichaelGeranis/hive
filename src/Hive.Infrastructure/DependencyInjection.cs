@@ -4,6 +4,7 @@ using Hive.Infrastructure.Persistence.Repositories;
 using Hive.Infrastructure.Persistence.Repositories.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Hive.Infrastructure;
 
@@ -67,11 +68,9 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsRepository, SqliteAppSettingsRepository>();
         services.AddScoped<ILeaveRepository, SqliteLeaveRepository>();
 
-        // Initialize database and seed data
-        if (seedData)
-        {
-            services.AddHostedService<DatabaseInitializer>();
-        }
+        // Always initialize database (creates tables), optionally seed data
+        services.AddSingleton<IHostedService>(sp =>
+            new DatabaseInitializer(sp, seedData));
 
         return services;
     }
@@ -80,13 +79,15 @@ public static class DependencyInjection
 /// <summary>
 /// Background service to initialize database on startup.
 /// </summary>
-public class DatabaseInitializer : Microsoft.Extensions.Hosting.IHostedService
+public class DatabaseInitializer : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly bool _seedData;
 
-    public DatabaseInitializer(IServiceProvider serviceProvider)
+    public DatabaseInitializer(IServiceProvider serviceProvider, bool seedData = true)
     {
         _serviceProvider = serviceProvider;
+        _seedData = seedData;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -97,8 +98,11 @@ public class DatabaseInitializer : Microsoft.Extensions.Hosting.IHostedService
         // Ensure database is created
         await context.Database.EnsureCreatedAsync(cancellationToken);
 
-        // Seed data if empty
-        context.SeedData();
+        // Seed data if enabled and database is empty
+        if (_seedData)
+        {
+            context.SeedData();
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
