@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, Upload, FileText, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { settingsApi } from '../services/api'
+import { settingsApi, jiraImportApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
-import type { StoryPointMapping } from '../types'
+import type { StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest } from '../types'
 
 const DEFAULT_MAPPINGS: StoryPointMapping[] = [
   { points: 1, hours: 4, label: '1 SP = 4 hours' },
@@ -20,6 +20,16 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Jira Import state
+  const [csvContent, setCsvContent] = useState<string>('')
+  const [preview, setPreview] = useState<JiraImportPreview | null>(null)
+  const [result, setResult] = useState<JiraImportResult | null>(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [updateExisting, setUpdateExisting] = useState(true)
+  const [matchField, setMatchField] = useState<'IssueKey' | 'Title'>('IssueKey')
+  const [importError, setImportError] = useState<string | null>(null)
 
   useEffect(() => {
     loadSettings()
@@ -90,6 +100,81 @@ export default function Settings() {
     if (days < 1) return `${hours} hours`
     if (Number.isInteger(days)) return `${days} days`
     return `${days.toFixed(1)} days`
+  }
+
+  // Jira Import handlers
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      setCsvContent(content)
+      setPreview(null)
+      setResult(null)
+      setImportError(null)
+    }
+    reader.onerror = () => {
+      setImportError('Failed to read file')
+    }
+    reader.readAsText(file)
+  }
+
+  const handlePreview = async () => {
+    if (!csvContent) {
+      setImportError('Please select a CSV file first')
+      return
+    }
+
+    try {
+      setImportLoading(true)
+      setImportError(null)
+      setResult(null)
+      const previewData = await jiraImportApi.preview(csvContent)
+      setPreview(previewData)
+    } catch (err: any) {
+      console.error('Failed to preview import', err)
+      setImportError(err.response?.data || err.message || 'Failed to preview CSV')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  const handleImport = async () => {
+    if (!csvContent) {
+      setImportError('Please select a CSV file first')
+      return
+    }
+
+    if (!confirm(`Import ${preview?.validRows || 0} tasks from Jira? ${updateExisting ? 'Existing tasks will be updated.' : 'Existing tasks will be skipped.'}`)) {
+      return
+    }
+
+    try {
+      setImporting(true)
+      setImportError(null)
+      const importRequest: JiraImportRequest = {
+        csvContent,
+        updateExisting,
+        matchField
+      }
+      const importResult = await jiraImportApi.import(importRequest)
+      setResult(importResult)
+      setPreview(null)
+    } catch (err: any) {
+      console.error('Failed to import', err)
+      setImportError(err.response?.data || err.message || 'Failed to import CSV')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleResetImport = () => {
+    setCsvContent('')
+    setPreview(null)
+    setResult(null)
+    setImportError(null)
   }
 
   if (loading) {
@@ -230,6 +315,254 @@ export default function Settings() {
             {saved && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 Settings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Jira Import */}
+      <Card>
+        <CardHeader
+          title="Import from Jira"
+          subtitle="Import tasks from Jira CSV export into Hive"
+        />
+        <CardContent>
+          <div className="space-y-4">
+            {/* Instructions */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">How to Export from Jira</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                <li>Go to your Jira project and navigate to Issues</li>
+                <li>Click on the "..." menu and select "Export"</li>
+                <li>Choose "Export CSV (all fields)" or "Export CSV (current fields)"</li>
+                <li>Save the exported CSV file and upload it below</li>
+              </ol>
+            </div>
+
+            {/* Upload Section */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Select Jira CSV Export
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-slate-500 dark:text-slate-400
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-lg file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-amber-50 dark:file:bg-amber-900/20 file:text-amber-700 dark:file:text-amber-400
+                    hover:file:bg-amber-100 dark:hover:file:bg-amber-900/30
+                    cursor-pointer"
+                  disabled={importLoading || importing}
+                />
+                {csvContent && (
+                  <button
+                    onClick={handleResetImport}
+                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    disabled={importLoading || importing}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {csvContent && !preview && !result && (
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePreview}
+                  disabled={importLoading || importing}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileText className="w-5 h-5" />
+                  {importLoading ? 'Loading Preview...' : 'Preview Import'}
+                </button>
+              </div>
+            )}
+
+            {/* Import Options */}
+            {csvContent && (
+              <div className="space-y-3 pt-4 border-t dark:border-slate-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Import Options</h3>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="updateExisting"
+                    checked={updateExisting}
+                    onChange={(e) => setUpdateExisting(e.target.checked)}
+                    className="w-4 h-4 text-amber-500 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded focus:ring-amber-500"
+                    disabled={importLoading || importing}
+                  />
+                  <label htmlFor="updateExisting" className="text-sm text-slate-700 dark:text-slate-300">
+                    Update existing tasks (if unchecked, existing tasks will be skipped)
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Match existing tasks by:
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setMatchField('IssueKey')}
+                      disabled={importLoading || importing}
+                      className={`px-4 py-2 rounded-lg border transition-colors ${
+                        matchField === 'IssueKey'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                          : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      Issue Key (Recommended)
+                    </button>
+                    <button
+                      onClick={() => setMatchField('Title')}
+                      disabled={importLoading || importing}
+                      className={`px-4 py-2 rounded-lg border transition-colors ${
+                        matchField === 'Title'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                          : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      Title
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {importError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {importError}
+              </div>
+            )}
+
+            {/* Preview Section */}
+            {preview && (
+              <div className="space-y-4 pt-4 border-t dark:border-slate-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Import Preview - {preview.totalRows} rows ({preview.validRows} valid, {preview.invalidRows} invalid)
+                </h3>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{preview.totalRows}</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Total Rows</div>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-green-700 dark:text-green-400">{preview.validRows}</div>
+                    <div className="text-sm text-green-600 dark:text-green-500">Valid</div>
+                  </div>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-red-700 dark:text-red-400">{preview.invalidRows}</div>
+                    <div className="text-sm text-red-600 dark:text-red-500">Invalid</div>
+                  </div>
+                </div>
+
+                {preview.mappingWarnings.length > 0 && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-400 mb-2">Warnings:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700 dark:text-yellow-500">
+                      {preview.mappingWarnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleImport}
+                  disabled={importing || preview.validRows === 0}
+                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-5 h-5" />
+                  {importing ? 'Importing...' : `Import ${preview.validRows} Tasks`}
+                </button>
+              </div>
+            )}
+
+            {/* Result Section */}
+            {result && (
+              <div className="space-y-4 pt-4 border-t dark:border-slate-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Import Results</h3>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{result.totalRows}</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Total</div>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-green-700 dark:text-green-400">{result.successCount}</div>
+                    <div className="text-sm text-green-600 dark:text-green-500">Imported</div>
+                  </div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{result.skippedCount}</div>
+                    <div className="text-sm text-yellow-600 dark:text-yellow-500">Skipped</div>
+                  </div>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-red-700 dark:text-red-400">{result.errorCount}</div>
+                    <div className="text-sm text-red-600 dark:text-red-500">Errors</div>
+                  </div>
+                </div>
+
+                {result.successCount > 0 && (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-medium">Successfully imported {result.successCount} tasks!</span>
+                    </div>
+                    <div className="mt-2 text-sm text-green-600 dark:text-green-500">
+                      {result.importedTasks.filter(t => t.isNew).length} new tasks created, {result.importedTasks.filter(t => t.isUpdated).length} tasks updated
+                    </div>
+                  </div>
+                )}
+
+                {result.warnings.length > 0 && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-400 mb-2 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Warnings ({result.warnings.length}):
+                    </h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700 dark:text-yellow-500 max-h-32 overflow-y-auto">
+                      {result.warnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {result.errors.length > 0 && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <h4 className="text-sm font-medium text-red-800 dark:text-red-400 mb-2 flex items-center gap-2">
+                      <XCircle className="w-4 h-4" />
+                      Errors ({result.errors.length}):
+                    </h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-red-700 dark:text-red-500 max-h-32 overflow-y-auto">
+                      {result.errors.map((error, idx) => (
+                        <li key={idx}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleResetImport}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                  >
+                    Import Another File
+                  </button>
+                  <a
+                    href="/tasks"
+                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors inline-block"
+                  >
+                    View Tasks
+                  </a>
+                </div>
               </div>
             )}
           </div>

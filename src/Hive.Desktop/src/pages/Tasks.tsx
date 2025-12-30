@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { tasksApi, directReportsApi, projectsApi } from '../services/api'
+import { tasksApi, directReportsApi, projectsApi, settingsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
-import type { TeamTask, DirectReport, Project } from '../types'
+import type { TeamTask, DirectReport, Project, StoryPointMapping } from '../types'
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
@@ -25,6 +25,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [storyPointMappings, setStoryPointMappings] = useState<StoryPointMapping[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -66,14 +67,16 @@ export default function Tasks() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [tasksData, drData, projectsData] = await Promise.all([
+      const [tasksData, drData, projectsData, settingsData] = await Promise.all([
         tasksApi.getAll(),
         directReportsApi.getAll(),
-        projectsApi.getAll()
+        projectsApi.getAll(),
+        settingsApi.get()
       ])
       setTasks(tasksData)
       setDirectReports(drData)
       setProjects(projectsData)
+      setStoryPointMappings(settingsData.storyPointMappings || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -232,6 +235,48 @@ export default function Tasks() {
       const projectLabels = project.labels.split(',').map(l => l.trim().toLowerCase())
       return projectLabels.some(pl => taskLabelSet.has(pl))
     })
+  }
+
+  // Calculate estimated hours from story points using the mappings
+  const getEstimatedHours = (task: TeamTask): number | null => {
+    // If task already has estimated hours, use that
+    if (task.estimatedHours) return task.estimatedHours
+
+    // Otherwise calculate from story points
+    if (!task.storyPoints || task.storyPoints <= 0 || storyPointMappings.length === 0) {
+      return null
+    }
+
+    // Find exact match
+    const exactMatch = storyPointMappings.find(m => m.points === task.storyPoints)
+    if (exactMatch) return exactMatch.hours
+
+    // Sort mappings by points for interpolation
+    const sorted = [...storyPointMappings].sort((a, b) => a.points - b.points)
+
+    // If below minimum, use minimum's ratio
+    if (task.storyPoints < sorted[0].points) {
+      const ratio = sorted[0].hours / sorted[0].points
+      return Math.round(task.storyPoints * ratio)
+    }
+
+    // If above maximum, use maximum's ratio
+    if (task.storyPoints > sorted[sorted.length - 1].points) {
+      const last = sorted[sorted.length - 1]
+      const ratio = last.hours / last.points
+      return Math.round(task.storyPoints * ratio)
+    }
+
+    // Linear interpolation between two closest points
+    const lower = sorted.filter(m => m.points <= task.storyPoints!).pop()
+    const upper = sorted.find(m => m.points >= task.storyPoints!)
+
+    if (lower && upper && lower.points !== upper.points) {
+      const ratio = (task.storyPoints - lower.points) / (upper.points - lower.points)
+      return Math.round(lower.hours + ratio * (upper.hours - lower.hours))
+    }
+
+    return null
   }
 
   if (loading) {
@@ -555,8 +600,8 @@ export default function Tasks() {
                           {formatDate(task.dueDate)}
                         </span>
                       )}
-                      {task.estimatedHours && (
-                        <span>{task.estimatedHours}h estimated</span>
+                      {getEstimatedHours(task) && (
+                        <span>{getEstimatedHours(task)}h estimated</span>
                       )}
                       {task.storyPoints && (
                         <span className="font-semibold text-amber-600 dark:text-amber-400">{task.storyPoints} SP</span>

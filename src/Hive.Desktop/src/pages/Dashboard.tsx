@@ -8,8 +8,8 @@ import {
   Target
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi, tasksApi } from '../services/api'
-import type { DashboardOverview, OneOnOneFrequency, TeamTask, TeamVelocity } from '../types'
+import { reportsApi, tasksApi, projectsApi } from '../services/api'
+import type { DashboardOverview, OneOnOneFrequency, TeamTask, TeamVelocity, Project } from '../types'
 import {
   BarChart,
   Bar,
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [frequency, setFrequency] = useState<OneOnOneFrequency[]>([])
   const [tasks, setTasks] = useState<TeamTask[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [velocity, setVelocity] = useState<TeamVelocity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,15 +44,17 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, frequencyData, tasksData, velocityData] = await Promise.all([
+      const [dashboardData, frequencyData, tasksData, projectsData, velocityData] = await Promise.all([
         reportsApi.getDashboard(),
         reportsApi.getOneOnOneFrequency(),
         tasksApi.getAll(),
+        projectsApi.getAll(),
         reportsApi.getTeamVelocity()
       ])
       setDashboard(dashboardData)
       setFrequency(frequencyData)
       setTasks(tasksData)
+      setProjects(projectsData)
       setVelocity(velocityData)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
@@ -59,6 +62,21 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Find projects that share at least one label with the task
+  const getMatchedProjects = (taskLabels?: string): Project[] => {
+    if (!taskLabels) return []
+    const taskLabelSet = new Set(
+      taskLabels.split(',').map(l => l.trim().toLowerCase()).filter(l => l)
+    )
+    if (taskLabelSet.size === 0) return []
+
+    return projects.filter(project => {
+      if (!project.labels) return false
+      const projectLabels = project.labels.split(',').map(l => l.trim().toLowerCase())
+      return projectLabels.some(pl => taskLabelSet.has(pl))
+    })
   }
 
   if (loading) {
@@ -95,15 +113,19 @@ export default function Dashboard() {
     overdue: assignee.overdueTasks
   }))
 
-  // Calculate project distribution by assignee
+  // Calculate project distribution by assignee (using label-based matching)
   const projectsByAssignee = tasks
-    .filter(task => task.assigneeId && task.projectId) // Only tasks with both assignee and project
+    .filter(task => task.assigneeId && task.labels) // Only tasks with assignee and labels
     .reduce((acc, task) => {
       const assigneeName = task.assigneeName || 'Unknown'
       if (!acc[assigneeName]) {
         acc[assigneeName] = new Set<string>()
       }
-      acc[assigneeName].add(task.projectId!)
+      // Find all projects that match this task's labels
+      const matchedProjects = getMatchedProjects(task.labels)
+      matchedProjects.forEach(project => {
+        acc[assigneeName].add(project.id)
+      })
       return acc
     }, {} as Record<string, Set<string>>)
 
