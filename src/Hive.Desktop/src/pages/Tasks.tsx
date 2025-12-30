@@ -38,7 +38,6 @@ export default function Tasks() {
     priority: 1,
     assigneeId: '',
     dueDate: '',
-    estimatedHours: '',
     storyPoints: '',
     labels: '',
     sprint: '',
@@ -53,7 +52,6 @@ export default function Tasks() {
       priority: 1,
       assigneeId: '',
       dueDate: '',
-      estimatedHours: '',
       storyPoints: '',
       labels: '',
       sprint: '',
@@ -129,7 +127,6 @@ export default function Tasks() {
         assigneeId: formData.assigneeId || null,
         projectId: null, // Projects are linked via labels, not direct assignment
         dueDate: formData.dueDate || null,
-        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
         storyPoints: formData.storyPoints ? parseInt(formData.storyPoints) : null,
         timeSpentMinutes: formData.timeSpentMinutes ? parseInt(formData.timeSpentMinutes) : null
       }
@@ -155,7 +152,6 @@ export default function Tasks() {
       priority: task.priority,
       assigneeId: task.assigneeId || '',
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
-      estimatedHours: task.estimatedHours?.toString() || '',
       storyPoints: task.storyPoints?.toString() || '',
       labels: task.labels || '',
       sprint: task.sprint || '',
@@ -362,18 +358,6 @@ export default function Tasks() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Estimated Hours</label>
-                    <input
-                      type="number"
-                      value={formData.estimatedHours}
-                      onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                      min="0"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Story Points</label>
                     <input
                       type="number"
@@ -384,17 +368,17 @@ export default function Tasks() {
                       placeholder="1, 2, 3, 5, 8..."
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Time Spent (minutes)</label>
-                    <input
-                      type="number"
-                      value={formData.timeSpentMinutes}
-                      onChange={(e) => setFormData({ ...formData, timeSpentMinutes: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                      min="0"
-                      placeholder="60"
-                    />
-                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Time Spent (minutes)</label>
+                  <input
+                    type="number"
+                    value={formData.timeSpentMinutes}
+                    onChange={(e) => setFormData({ ...formData, timeSpentMinutes: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    min="0"
+                    placeholder="60"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Sprint</label>

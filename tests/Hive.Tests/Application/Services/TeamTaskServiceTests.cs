@@ -12,6 +12,7 @@ public class TeamTaskServiceTests
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
+    private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
     private readonly TeamTaskService _service;
     private readonly DirectReport _testDirectReport;
     private readonly Project _testProject;
@@ -21,10 +22,12 @@ public class TeamTaskServiceTests
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
         _projectRepositoryMock = new Mock<IProjectRepository>();
+        _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
         _service = new TeamTaskService(
             _taskRepositoryMock.Object,
             _directReportRepositoryMock.Object,
-            _projectRepositoryMock.Object);
+            _projectRepositoryMock.Object,
+            _appSettingsRepositoryMock.Object);
 
         _testDirectReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Eng", DateTime.UtcNow);
         _testProject = new Project("Test Project");
@@ -34,7 +37,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullTaskRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(null!, _directReportRepositoryMock.Object, _projectRepositoryMock.Object);
+        var act = () => new TeamTaskService(null!, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, _appSettingsRepositoryMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -45,7 +48,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullDirectReportRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, null!, _projectRepositoryMock.Object);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, null!, _projectRepositoryMock.Object, _appSettingsRepositoryMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -56,11 +59,22 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullProjectRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, null!);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, null!, _appSettingsRepositoryMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("projectRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullAppSettingsRepository_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("appSettingsRepository");
     }
 
     [Fact]

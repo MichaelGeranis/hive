@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
 using Hive.Core.Entities;
@@ -15,15 +16,18 @@ public class TeamTaskService : ITeamTaskService
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IAppSettingsRepository _appSettingsRepository;
 
     public TeamTaskService(
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IAppSettingsRepository appSettingsRepository)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+        _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
     }
 
     public async Task<TeamTaskDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -116,6 +120,9 @@ public class TeamTaskService : ITeamTaskService
             }
         }
 
+        // Calculate estimated hours from story points using the mapping
+        var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
+
         var entity = new TeamTask(
             dto.Title,
             dto.Description,
@@ -124,7 +131,7 @@ public class TeamTaskService : ITeamTaskService
             dto.AssigneeId,
             dto.ProjectId,
             dto.DueDate,
-            dto.EstimatedHours,
+            estimatedHours,
             dto.StoryPoints,
             dto.Tags,
             dto.Labels,
@@ -139,7 +146,10 @@ public class TeamTaskService : ITeamTaskService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, dto.EstimatedHours, dto.StoryPoints, dto.Tags, dto.Labels, dto.Sprint, dto.TimeSpentMinutes);
+        // Calculate estimated hours from story points using the mapping
+        var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
+
+        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, estimatedHours, dto.StoryPoints, dto.Tags, dto.Labels, dto.Sprint, dto.TimeSpentMinutes);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -369,4 +379,69 @@ public class TeamTaskService : ITeamTaskService
         TaskStatus.Cancelled => "Cancelled",
         _ => "Unknown"
     };
+
+    /// <summary>
+    /// Calculates estimated hours from story points using the app settings mapping.
+    /// </summary>
+    private async Task<int?> CalculateEstimatedHoursAsync(int? storyPoints, CancellationToken cancellationToken)
+    {
+        if (!storyPoints.HasValue || storyPoints.Value <= 0)
+            return null;
+
+        var settings = await _appSettingsRepository.GetAsync(cancellationToken);
+        if (settings is null || string.IsNullOrEmpty(settings.StoryPointMappings))
+            return null;
+
+        try
+        {
+            var mappings = JsonSerializer.Deserialize<List<StoryPointMapping>>(
+                settings.StoryPointMappings,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (mappings is null || mappings.Count == 0)
+                return null;
+
+            // Find exact match first
+            var mapping = mappings.FirstOrDefault(m => m.Points == storyPoints.Value);
+            if (mapping is not null)
+                return mapping.Hours;
+
+            // If no exact match, interpolate or use closest
+            var sortedMappings = mappings.OrderBy(m => m.Points).ToList();
+
+            // If below minimum, use minimum's ratio
+            if (storyPoints.Value < sortedMappings.First().Points)
+            {
+                var first = sortedMappings.First();
+                var ratio = (double)first.Hours / first.Points;
+                return (int)Math.Round(storyPoints.Value * ratio);
+            }
+
+            // If above maximum, use maximum's ratio
+            if (storyPoints.Value > sortedMappings.Last().Points)
+            {
+                var last = sortedMappings.Last();
+                var ratio = (double)last.Hours / last.Points;
+                return (int)Math.Round(storyPoints.Value * ratio);
+            }
+
+            // Linear interpolation between two closest points
+            var lower = sortedMappings.LastOrDefault(m => m.Points <= storyPoints.Value);
+            var upper = sortedMappings.FirstOrDefault(m => m.Points >= storyPoints.Value);
+
+            if (lower is not null && upper is not null && lower.Points != upper.Points)
+            {
+                var ratio = (double)(storyPoints.Value - lower.Points) / (upper.Points - lower.Points);
+                return (int)Math.Round(lower.Hours + ratio * (upper.Hours - lower.Hours));
+            }
+
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private record StoryPointMapping(int Points, int Hours, string? Label);
 }
