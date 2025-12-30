@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Save } from 'lucide-react'
+import { Save, Sun, Moon, Monitor } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi } from '../services/api'
+import { useTheme } from '../contexts/ThemeContext'
 import type { StoryPointMapping } from '../types'
 
 const DEFAULT_MAPPINGS: StoryPointMapping[] = [
@@ -13,6 +14,7 @@ const DEFAULT_MAPPINGS: StoryPointMapping[] = [
 ]
 
 export default function Settings() {
+  const { theme, setTheme } = useTheme()
   const [mappings, setMappings] = useState<StoryPointMapping[]>(DEFAULT_MAPPINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -102,9 +104,66 @@ export default function Settings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Configure application preferences</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Configure application preferences</p>
       </div>
+
+      {/* Appearance Settings */}
+      <Card>
+        <CardHeader
+          title="Appearance"
+          subtitle="Customize how Hive looks"
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                Theme
+              </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    theme === 'light'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                      : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <Sun className="w-4 h-4" />
+                  Light
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    theme === 'dark'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                      : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <Moon className="w-4 h-4" />
+                  Dark
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    theme === 'system'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                      : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <Monitor className="w-4 h-4" />
+                  System
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                {theme === 'system'
+                  ? 'Automatically matches your system preferences'
+                  : `Using ${theme} mode`}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Story Points Mapping */}
       <Card>
@@ -114,43 +173,43 @@ export default function Settings() {
         />
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               Use this to standardize task estimation across your team. Configure how many hours each story point represents.
             </p>
 
             <div className="space-y-3">
               {mappings.map((mapping, index) => (
-                <div key={mapping.points} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
+                <div key={mapping.points} className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                   <div className="flex-shrink-0 w-16">
-                    <span className="text-lg font-semibold text-slate-900">{mapping.points} SP</span>
+                    <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{mapping.points} SP</span>
                   </div>
-                  <span className="text-slate-500">=</span>
+                  <span className="text-slate-500 dark:text-slate-400">=</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
                       value={mapping.hours}
                       onChange={(e) => handleHoursChange(index, e.target.value)}
-                      className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                       min="0"
                       step="0.5"
                       disabled={saving}
                     />
-                    <span className="text-slate-700">hours</span>
+                    <span className="text-slate-700 dark:text-slate-300">hours</span>
                   </div>
                   <div className="flex-1">
-                    <span className="text-sm text-slate-500">({getDaysLabel(mapping.hours)})</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">({getDaysLabel(mapping.hours)})</span>
                   </div>
                 </div>
               ))}
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
                 {error}
               </div>
             )}
 
-            <div className="pt-4 border-t flex gap-3">
+            <div className="pt-4 border-t dark:border-slate-700 flex gap-3">
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -162,30 +221,17 @@ export default function Settings() {
               <button
                 onClick={handleReset}
                 disabled={saving}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Reset to Defaults
               </button>
             </div>
 
             {saved && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 Settings saved successfully!
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Additional Settings Placeholder */}
-      <Card>
-        <CardHeader 
-          title="Application Settings" 
-          subtitle="General application preferences"
-        />
-        <CardContent>
-          <div className="py-8 text-center text-slate-500">
-            <p>Additional settings will be added here</p>
           </div>
         </CardContent>
       </Card>

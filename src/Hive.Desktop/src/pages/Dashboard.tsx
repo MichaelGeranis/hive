@@ -71,7 +71,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
         {error}
       </div>
     )
@@ -125,8 +125,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Overview of your team's performance and activities</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Overview of your team's performance and activities</p>
       </div>
 
       {/* Top Stats */}
@@ -212,7 +212,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500">
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
                 No project assignments found
               </div>
             )}
@@ -247,7 +247,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500">
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
                 No tasks found
               </div>
             )}
@@ -280,37 +280,37 @@ export default function Dashboard() {
           subtitle="Track regular check-ins with your team"
           action={
             <div className="flex gap-2 text-xs">
-              <span className="px-2 py-1 bg-green-100 text-green-700 rounded">On Track</span>
-              <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">At Risk</span>
-              <span className="px-2 py-1 bg-red-100 text-red-700 rounded">Overdue</span>
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">On Track</span>
+              <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">At Risk</span>
+              <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded">Overdue</span>
             </div>
           }
         />
         <CardContent>
           <div className="space-y-3">
             {frequency.length === 0 ? (
-              <p className="text-slate-500 text-center py-4">No team members found</p>
+              <p className="text-slate-500 dark:text-slate-400 text-center py-4">No team members found</p>
             ) : (
               frequency.map((member) => (
                 <div
                   key={member.directReportId}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-medium">
+                    <div className="w-10 h-10 bg-slate-200 dark:bg-slate-600 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium">
                       {member.directReportName.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900">{member.directReportName}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{member.directReportName}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {member.completedMeetings} meetings completed
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-sm text-slate-500">Last meeting</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Last meeting</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
                         {member.daysSinceLastMeeting >= 0
                           ? `${member.daysSinceLastMeeting} days ago`
                           : 'Never'}
@@ -319,12 +319,12 @@ export default function Dashboard() {
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
                         member.frequencyStatus === 'On Track'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                           : member.frequencyStatus === 'At Risk'
-                          ? 'bg-amber-100 text-amber-700'
+                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                           : member.frequencyStatus === 'Overdue'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-slate-100 text-slate-700'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                       }`}
                     >
                       {member.frequencyStatus}
@@ -344,39 +344,39 @@ export default function Dashboard() {
           <CardHeader title="Productivity" subtitle="This period" />
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
                   <TrendingUp className="w-4 h-4" />
                   Tasks This Week
                 </div>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">
                   {dashboard.tasks.productivity.tasksCompletedThisWeek}
                 </p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
                   <TrendingUp className="w-4 h-4" />
                   Tasks This Month
                 </div>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">
                   {dashboard.tasks.productivity.tasksCompletedThisMonth}
                 </p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
                   <Clock className="w-4 h-4" />
                   Avg Completion
                 </div>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">
                   {dashboard.tasks.productivity.averageTaskCompletionDays} days
                 </p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
                   <Target className="w-4 h-4" />
                   Estimation Accuracy
                 </div>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">
                   {dashboard.tasks.productivity.estimationAccuracy}%
                 </p>
               </div>
@@ -390,37 +390,37 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-slate-600">Total Reviews</span>
-                <span className="font-bold">{dashboard.reviews.totalReviews}</span>
+                <span className="text-slate-600 dark:text-slate-400">Total Reviews</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{dashboard.reviews.totalReviews}</span>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Completed</span>
-                  <span>{dashboard.reviews.completionRate}%</span>
+                  <span className="text-slate-500 dark:text-slate-400">Completed</span>
+                  <span className="text-slate-900 dark:text-slate-100">{dashboard.reviews.completionRate}%</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{ width: `${dashboard.reviews.completionRate}%` }}
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t dark:border-slate-700">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-amber-500">{dashboard.reviews.draftReviews}</p>
-                  <p className="text-sm text-slate-500">Draft</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Draft</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-blue-500">{dashboard.reviews.submittedReviews}</p>
-                  <p className="text-sm text-slate-500">Submitted</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Submitted</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-purple-500">{dashboard.reviews.acknowledgedReviews}</p>
-                  <p className="text-sm text-slate-500">Acknowledged</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Acknowledged</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-500">{dashboard.reviews.completedReviews}</p>
-                  <p className="text-sm text-slate-500">Completed</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Completed</p>
                 </div>
               </div>
             </div>
@@ -452,20 +452,20 @@ export default function Dashboard() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t">
+            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">
                 <p className="text-2xl font-bold text-amber-500">{velocity.totalStoryPointsCompleted}</p>
-                <p className="text-sm text-slate-500">Total Story Points</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Story Points</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-500">{velocity.averageVelocity}</p>
-                <p className="text-sm text-slate-500">Avg Velocity</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Avg Velocity</p>
               </div>
               <div className="text-center">
                 <p className={`text-2xl font-bold ${velocity.completionTrend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {velocity.completionTrend > 0 ? '+' : ''}{velocity.completionTrend}%
                 </p>
-                <p className="text-sm text-slate-500">Sprint Trend</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Sprint Trend</p>
               </div>
             </div>
           </CardContent>
