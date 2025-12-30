@@ -346,7 +346,7 @@ public class InMemoryDbContext
         var task1 = new TeamTask(
             "Design new API endpoints",
             "Create OpenAPI specification for the new endpoints",
-            TaskType.Feature,
+            TaskType.Story,
             TaskPriority.High,
             directReportIds.Count > 2 ? directReportIds[2] : null,
             apiRedesign.Id,
@@ -362,7 +362,7 @@ public class InMemoryDbContext
         var task2 = new TeamTask(
             "Implement authentication middleware",
             "Add JWT authentication to all protected endpoints",
-            TaskType.Feature,
+            TaskType.Story,
             TaskPriority.Critical,
             directReportIds.Count > 0 ? directReportIds[0] : null,
             apiRedesign.Id,
@@ -390,7 +390,7 @@ public class InMemoryDbContext
         var task4 = new TeamTask(
             "Add rate limiting",
             "Implement rate limiting for public endpoints",
-            TaskType.Improvement,
+            TaskType.Story,
             TaskPriority.Medium,
             null,
             apiRedesign.Id,
@@ -419,7 +419,7 @@ public class InMemoryDbContext
         var task6 = new TeamTask(
             "Design login screen",
             "Create UI/UX design for login and registration flow",
-            TaskType.Feature,
+            TaskType.Story,
             TaskPriority.High,
             directReportIds.Count > 0 ? directReportIds[0] : null,
             mobileApp.Id,
@@ -433,7 +433,7 @@ public class InMemoryDbContext
         var task7 = new TeamTask(
             "Research offline sync options",
             "Evaluate options for offline data synchronization",
-            TaskType.Research,
+            TaskType.Spike,
             TaskPriority.Medium,
             directReportIds.Count > 2 ? directReportIds[2] : null,
             mobileApp.Id,
@@ -447,7 +447,7 @@ public class InMemoryDbContext
         var task8 = new TeamTask(
             "Update API documentation",
             "Update Swagger documentation with new endpoints",
-            TaskType.Documentation,
+            TaskType.Task,
             TaskPriority.Low,
             null,
             documentation.Id,
@@ -460,7 +460,7 @@ public class InMemoryDbContext
         var task9 = new TeamTask(
             "Refactor database queries",
             "Optimize slow database queries identified in profiling",
-            TaskType.Improvement,
+            TaskType.Task,
             TaskPriority.Medium,
             null,
             null,

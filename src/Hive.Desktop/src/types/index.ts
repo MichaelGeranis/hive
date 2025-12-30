@@ -118,11 +118,12 @@ export enum TaskStatus {
 
 export enum TaskType {
   Task = 0,
-  Bug = 1,
-  Feature = 2,
-  Improvement = 3,
-  Research = 4,
-  Documentation = 5
+  Epic = 1,
+  Story = 2,
+  SubTask = 3,
+  Bug = 4,
+  Spike = 5,
+  Support = 6
 }
 
 export interface TeamTask {

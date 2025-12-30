@@ -459,16 +459,13 @@ public class JiraImportService : IJiraImportService
 
         return issueType.ToLowerInvariant() switch
         {
+            "epic" => TaskType.Epic,
+            "story" => TaskType.Story,
+            "sub-task" or "subtask" => TaskType.SubTask,
             "bug" => TaskType.Bug,
-            "story" => TaskType.Feature,
-            "feature" => TaskType.Feature,
-            "epic" => TaskType.Feature,
-            "improvement" => TaskType.Improvement,
-            "enhancement" => TaskType.Improvement,
-            "research" => TaskType.Research,
-            "spike" => TaskType.Research,
-            "documentation" => TaskType.Documentation,
-            "docs" => TaskType.Documentation,
+            "spike" => TaskType.Spike,
+            "support" => TaskType.Support,
+            "task" => TaskType.Task,
             _ => TaskType.Task
         };
     }

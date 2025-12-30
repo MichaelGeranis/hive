@@ -254,12 +254,12 @@ public class HiveDbContext : DbContext
         // Create tasks
         var tasks = new[]
         {
-            new TeamTask("Implement user authentication", "Add JWT auth to API", TaskType.Feature, TaskPriority.High, alice.Id, projects[0].Id, DateTime.UtcNow.AddDays(7), 16),
+            new TeamTask("Implement user authentication", "Add JWT auth to API", TaskType.Story, TaskPriority.High, alice.Id, projects[0].Id, DateTime.UtcNow.AddDays(7), 16),
             new TeamTask("Fix login bug", "Users can't login with SSO", TaskType.Bug, TaskPriority.Critical, bob.Id, projects[0].Id, DateTime.UtcNow.AddDays(2), 4),
             new TeamTask("Write unit tests", "Add tests for auth module", TaskType.Task, TaskPriority.Medium, alice.Id, projects[0].Id, DateTime.UtcNow.AddDays(14), 8),
-            new TeamTask("Design mobile UI", "Create mockups for mobile app", TaskType.Feature, TaskPriority.High, null, projects[1].Id, DateTime.UtcNow.AddDays(21), 24),
-            new TeamTask("Research K8s options", "Evaluate managed K8s providers", TaskType.Research, TaskPriority.Medium, carol.Id, projects[2].Id, DateTime.UtcNow.AddDays(30), 16),
-            new TeamTask("Update README", "Update project documentation", TaskType.Documentation, TaskPriority.Low, bob.Id, projects[3].Id, DateTime.UtcNow.AddDays(-5), 2)
+            new TeamTask("Design mobile UI", "Create mockups for mobile app", TaskType.Story, TaskPriority.High, null, projects[1].Id, DateTime.UtcNow.AddDays(21), 24),
+            new TeamTask("Research K8s options", "Evaluate managed K8s providers", TaskType.Spike, TaskPriority.Medium, carol.Id, projects[2].Id, DateTime.UtcNow.AddDays(30), 16),
+            new TeamTask("Update README", "Update project documentation", TaskType.Task, TaskPriority.Low, bob.Id, projects[3].Id, DateTime.UtcNow.AddDays(-5), 2)
         };
 
         tasks[0].MoveToTodo();

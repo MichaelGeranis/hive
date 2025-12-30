@@ -341,11 +341,12 @@ public class TeamTaskService : ITeamTaskService
     private static string GetTypeName(TaskType type) => type switch
     {
         TaskType.Task => "Task",
+        TaskType.Epic => "Epic",
+        TaskType.Story => "Story",
+        TaskType.SubTask => "Sub-task",
         TaskType.Bug => "Bug",
-        TaskType.Feature => "Feature",
-        TaskType.Improvement => "Improvement",
-        TaskType.Research => "Research",
-        TaskType.Documentation => "Documentation",
+        TaskType.Spike => "Spike",
+        TaskType.Support => "Support",
         _ => "Unknown"
     };
 

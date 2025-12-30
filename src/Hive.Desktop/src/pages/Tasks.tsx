@@ -329,11 +329,12 @@ export default function Tasks() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                     >
                       <option value={0}>Task</option>
-                      <option value={1}>Bug</option>
-                      <option value={2}>Feature</option>
-                      <option value={3}>Improvement</option>
-                      <option value={4}>Research</option>
-                      <option value={5}>Documentation</option>
+                      <option value={1}>Epic</option>
+                      <option value={2}>Story</option>
+                      <option value={3}>Sub-task</option>
+                      <option value={4}>Bug</option>
+                      <option value={5}>Spike</option>
+                      <option value={6}>Support</option>
                     </select>
                   </div>
                 </div>

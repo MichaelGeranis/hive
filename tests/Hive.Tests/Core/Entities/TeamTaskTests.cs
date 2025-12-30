@@ -19,7 +19,7 @@ public class TeamTaskTests
         var task = new TeamTask(
             title,
             description,
-            TaskType.Feature,
+            TaskType.Story,
             TaskPriority.High,
             assigneeId,
             projectId,
@@ -32,7 +32,7 @@ public class TeamTaskTests
         task.Id.Should().NotBeEmpty();
         task.Title.Should().Be(title);
         task.Description.Should().Be(description);
-        task.Type.Should().Be(TaskType.Feature);
+        task.Type.Should().Be(TaskType.Story);
         task.Priority.Should().Be(TaskPriority.High);
         task.Status.Should().Be(TaskStatus.Backlog);
         task.AssigneeId.Should().Be(assigneeId);
@@ -504,11 +504,12 @@ public class TeamTaskTests
 
     [Theory]
     [InlineData(TaskType.Task)]
+    [InlineData(TaskType.Epic)]
+    [InlineData(TaskType.Story)]
+    [InlineData(TaskType.SubTask)]
     [InlineData(TaskType.Bug)]
-    [InlineData(TaskType.Feature)]
-    [InlineData(TaskType.Improvement)]
-    [InlineData(TaskType.Research)]
-    [InlineData(TaskType.Documentation)]
+    [InlineData(TaskType.Spike)]
+    [InlineData(TaskType.Support)]
     public void Constructor_AcceptsAllTaskTypes(TaskType type)
     {
         // Act

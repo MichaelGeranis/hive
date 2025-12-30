@@ -203,7 +203,7 @@ public class TeamTaskServiceTests
         {
             Title = "New Task",
             Description = "Description",
-            Type = TaskType.Feature,
+            Type = TaskType.Story,
             Priority = TaskPriority.High,
             AssigneeId = _testDirectReport.Id,
             ProjectId = _testProject.Id
@@ -222,7 +222,7 @@ public class TeamTaskServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Title.Should().Be(dto.Title);
-        result.Type.Should().Be(TaskType.Feature);
+        result.Type.Should().Be(TaskType.Story);
         result.Priority.Should().Be(TaskPriority.High);
         _taskRepositoryMock.Verify(r => r.AddAsync(It.IsAny<TeamTask>(), It.IsAny<CancellationToken>()), Times.Once);
     }
