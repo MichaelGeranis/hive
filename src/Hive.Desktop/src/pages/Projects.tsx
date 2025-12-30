@@ -6,11 +6,11 @@ import { ProjectStatus } from '../types'
 import type { Project } from '../types'
 
 const statusColors: Record<ProjectStatus, string> = {
-  [ProjectStatus.Planning]: 'bg-slate-100 text-slate-700',
-  [ProjectStatus.Active]: 'bg-green-100 text-green-700',
-  [ProjectStatus.OnHold]: 'bg-amber-100 text-amber-700',
-  [ProjectStatus.Completed]: 'bg-blue-100 text-blue-700',
-  [ProjectStatus.Cancelled]: 'bg-red-100 text-red-700',
+  [ProjectStatus.Planning]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+  [ProjectStatus.Active]: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+  [ProjectStatus.OnHold]: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  [ProjectStatus.Completed]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  [ProjectStatus.Cancelled]: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
 }
 
 export default function Projects() {
@@ -123,8 +123,8 @@ export default function Projects() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Projects</h1>
-          <p className="text-slate-500 mt-1">Manage your team's projects</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Projects</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your team's projects</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -217,7 +217,7 @@ export default function Projects() {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.value
                 ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
             {f.label}
@@ -229,7 +229,7 @@ export default function Projects() {
       {filteredProjects().length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-slate-500">No projects found</p>
+            <p className="text-slate-500 dark:text-slate-400">No projects found</p>
           </CardContent>
         </Card>
       ) : (
@@ -239,31 +239,31 @@ export default function Projects() {
               <CardContent>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <FolderKanban className="w-5 h-5 text-purple-600" />
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <FolderKanban className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{project.name}</h3>
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{project.name}</h3>
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${statusColors[project.status]}`}>
                         {project.statusName}
                       </span>
                     </div>
                   </div>
                   <div className="relative group">
-                    <button className="p-1 hover:bg-slate-100 rounded">
+                    <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                       <MoreVertical className="w-5 h-5 text-slate-400" />
                     </button>
-                    <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                    <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                       <button
                         onClick={() => handleEdit(project)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(project.id)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete
@@ -273,10 +273,10 @@ export default function Projects() {
                 </div>
 
                 {project.description && (
-                  <p className="text-sm text-slate-500 mb-3 line-clamp-2">{project.description}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">{project.description}</p>
                 )}
 
-                <div className="space-y-2 text-sm text-slate-600">
+                <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-slate-400" />
                     <span>{formatDate(project.startDate)} - {formatDate(project.targetEndDate)}</span>
@@ -286,10 +286,10 @@ export default function Projects() {
                 {/* Progress */}
                 <div className="mt-4">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500">Progress</span>
-                    <span className="font-medium">{project.completedTasks}/{project.totalTasks} tasks</span>
+                    <span className="text-slate-500 dark:text-slate-400">Progress</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">{project.completedTasks}/{project.totalTasks} tasks</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
                     <div
                       className="bg-amber-500 h-2 rounded-full transition-all"
                       style={{
@@ -302,7 +302,7 @@ export default function Projects() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-4 pt-4 border-t">
+                <div className="flex gap-2 mt-4 pt-4 border-t dark:border-slate-700">
                   {project.status === ProjectStatus.Planning && (
                     <button
                       onClick={() => handleAction(project.id, 'activate')}

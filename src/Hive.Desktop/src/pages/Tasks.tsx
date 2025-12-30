@@ -6,19 +6,19 @@ import { TaskStatus, TaskPriority } from '../types'
 import type { TeamTask, DirectReport, Project } from '../types'
 
 const statusColors: Record<TaskStatus, string> = {
-  [TaskStatus.Backlog]: 'bg-slate-100 text-slate-700',
-  [TaskStatus.Todo]: 'bg-blue-100 text-blue-700',
-  [TaskStatus.InProgress]: 'bg-amber-100 text-amber-700',
-  [TaskStatus.InReview]: 'bg-purple-100 text-purple-700',
-  [TaskStatus.Done]: 'bg-green-100 text-green-700',
-  [TaskStatus.Cancelled]: 'bg-red-100 text-red-700',
+  [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+  [TaskStatus.Todo]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  [TaskStatus.InProgress]: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  [TaskStatus.InReview]: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+  [TaskStatus.Done]: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+  [TaskStatus.Cancelled]: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
 }
 
 const priorityColors: Record<TaskPriority, string> = {
-  [TaskPriority.Low]: 'text-slate-500',
-  [TaskPriority.Medium]: 'text-blue-500',
-  [TaskPriority.High]: 'text-amber-500',
-  [TaskPriority.Critical]: 'text-red-500',
+  [TaskPriority.Low]: 'text-slate-500 dark:text-slate-400',
+  [TaskPriority.Medium]: 'text-blue-500 dark:text-blue-400',
+  [TaskPriority.High]: 'text-amber-500 dark:text-amber-400',
+  [TaskPriority.Critical]: 'text-red-500 dark:text-red-400',
 }
 
 export default function Tasks() {
@@ -171,8 +171,8 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tasks</h1>
-          <p className="text-slate-500 mt-1">Manage team tasks and work items</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tasks</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage team tasks and work items</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -322,7 +322,7 @@ export default function Tasks() {
 
       {/* Overdue Alert */}
       {overdueCount > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <AlertTriangle className="w-5 h-5" />
           <span><strong>{overdueCount}</strong> overdue task{overdueCount > 1 ? 's' : ''} require attention</span>
         </div>
@@ -345,7 +345,7 @@ export default function Tasks() {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.value
                 ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
             {f.label}
@@ -357,20 +357,20 @@ export default function Tasks() {
       {filteredTasks().length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-slate-500">No tasks found</p>
+            <p className="text-slate-500 dark:text-slate-400">No tasks found</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {filteredTasks().map((task) => (
-            <Card key={task.id} className={task.isOverdue ? 'border-red-300' : ''}>
+            <Card key={task.id} className={task.isOverdue ? 'border-red-300 dark:border-red-700' : ''}>
               <CardContent>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-slate-900">{task.title}</h3>
+                      <h3 className="font-medium text-slate-900 dark:text-slate-100">{task.title}</h3>
                       {task.isOverdue && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded">
                           Overdue
                         </span>
                       )}
@@ -382,21 +382,21 @@ export default function Tasks() {
                       <span className={`font-medium ${priorityColors[task.priority]}`}>
                         {task.priorityName}
                       </span>
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs">
                         {task.typeName}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400">
                       {task.assigneeName && (
                         <span className="flex items-center gap-1">
-                          <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 text-xs font-medium">
+                          <div className="w-5 h-5 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 text-xs font-medium">
                             {task.assigneeName.split(' ').map(n => n[0]).join('')}
                           </div>
                           {task.assigneeName}
                         </span>
                       )}
                       {task.projectName && (
-                        <span className="text-purple-600">{task.projectName}</span>
+                        <span className="text-purple-600 dark:text-purple-400">{task.projectName}</span>
                       )}
                       {task.dueDate && (
                         <span className="flex items-center gap-1">
@@ -408,7 +408,7 @@ export default function Tasks() {
                         <span>{task.estimatedHours}h estimated</span>
                       )}
                       {task.storyPoints && (
-                        <span className="font-semibold text-amber-600">{task.storyPoints} SP</span>
+                        <span className="font-semibold text-amber-600 dark:text-amber-400">{task.storyPoints} SP</span>
                       )}
                     </div>
                   </div>
@@ -441,20 +441,20 @@ export default function Tasks() {
                       </button>
                     )}
                     <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 rounded">
+                      <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
-                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                         <button
                           onClick={() => handleEdit(task)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(task.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete

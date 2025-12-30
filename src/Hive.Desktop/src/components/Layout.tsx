@@ -26,11 +26,11 @@ export default function Layout() {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
+      <aside className="w-64 bg-slate-900 dark:bg-slate-950 text-white flex flex-col">
         {/* Logo / Title bar area - extra padding on macOS for traffic lights */}
-        <div className={`flex items-center px-4 titlebar-drag border-b border-slate-700 ${isMac ? 'h-16 pt-6' : 'h-14'}`}>
+        <div className={`flex items-center px-4 titlebar-drag border-b border-slate-700 dark:border-slate-800 ${isMac ? 'h-16 pt-6' : 'h-14'}`}>
           <div className={`flex items-center gap-2 titlebar-no-drag ${isMac ? 'ml-16' : ''}`}>
             <Hexagon className="w-8 h-8 text-amber-400" />
             <span className="text-xl font-bold">Hive</span>
@@ -58,7 +58,7 @@ export default function Layout() {
         </nav>
 
         {/* Settings / Footer */}
-        <div className="px-3 py-4 border-t border-slate-700">
+        <div className="px-3 py-4 border-t border-slate-700 dark:border-slate-800">
           <NavLink
             to="/settings"
             className={({ isActive }) =>
@@ -76,9 +76,9 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
         {/* Title bar drag area for macOS */}
-        <div className="h-8 titlebar-drag bg-slate-100 border-b border-slate-200" />
+        <div className="h-8 titlebar-drag bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700" />
 
         {/* Page content */}
         <div className="p-6">
