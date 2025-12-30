@@ -27,12 +27,12 @@ var useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase", de
 
 if (useInMemory)
 {
-    builder.Services.AddInfrastructureServices(seedData: true);
+    builder.Services.AddInfrastructureServices(seedData: false);
 }
 else
 {
     var connectionString = $"Data Source={GetDatabasePath()}";
-    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: true);
+    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: false);
 }
 
 static string GetDatabasePath()
