@@ -7,7 +7,8 @@ import {
   FolderKanban,
   CheckSquare,
   Settings,
-  Hexagon
+  Hexagon,
+  Palmtree
 } from 'lucide-react'
 
 const navigation = [
@@ -15,18 +16,22 @@ const navigation = [
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
+  { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Team', to: '/team', icon: Users },
 ]
 
 export default function Layout() {
+  // Check if running on macOS
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        {/* Logo / Title bar area */}
-        <div className="h-14 flex items-center px-4 titlebar-drag border-b border-slate-700">
-          <div className="flex items-center gap-2 titlebar-no-drag">
+        {/* Logo / Title bar area - extra padding on macOS for traffic lights */}
+        <div className={`flex items-center px-4 titlebar-drag border-b border-slate-700 ${isMac ? 'h-16 pt-6' : 'h-14'}`}>
+          <div className={`flex items-center gap-2 titlebar-no-drag ${isMac ? 'ml-16' : ''}`}>
             <Hexagon className="w-8 h-8 text-amber-400" />
             <span className="text-xl font-bold">Hive</span>
           </div>

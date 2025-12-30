@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import * as path from 'path'
+import * as fs from 'fs'
 import { app } from 'electron'
 import * as http from 'http'
 
@@ -97,6 +98,20 @@ export async function startBackend(): Promise<void> {
   }
 
   console.log(`Starting backend from: ${backendPath}`)
+
+  // Check if backend executable exists
+  if (!fs.existsSync(backendPath)) {
+    throw new Error(`Backend executable not found at: ${backendPath}`)
+  }
+
+  // Ensure executable permissions on Unix
+  if (process.platform !== 'win32') {
+    try {
+      fs.chmodSync(backendPath, 0o755)
+    } catch (error) {
+      console.warn('Could not set executable permissions:', error)
+    }
+  }
 
   // Set environment variables for production mode
   const env = {

@@ -15,7 +15,13 @@ import type {
   TasksByAssignee,
   TeamVelocity,
   AppSettings,
-  UpdateAppSettings
+  UpdateAppSettings,
+  Leave,
+  CreateLeaveDto,
+  UpdateLeaveDto,
+  TeamLeaveOverview,
+  MonthlyLeaveSummary,
+  LeaveBalance
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -115,6 +121,28 @@ export const reportsApi = {
 export const settingsApi = {
   get: () => api.get<AppSettings>('/settings').then(r => r.data),
   update: (data: UpdateAppSettings) => api.put<AppSettings>('/settings', data).then(r => r.data)
+}
+
+// Leaves
+export const leavesApi = {
+  getAll: () => api.get<Leave[]>('/leaves').then(r => r.data),
+  getById: (id: string) => api.get<Leave>(`/leaves/${id}`).then(r => r.data),
+  getByDirectReport: (directReportId: string) =>
+    api.get<Leave[]>(`/leaves/by-member/${directReportId}`).then(r => r.data),
+  getByStatus: (status: string) => api.get<Leave[]>(`/leaves/by-status/${status}`).then(r => r.data),
+  getUpcoming: (days: number = 30) => api.get<Leave[]>(`/leaves/upcoming?days=${days}`).then(r => r.data),
+  getOverview: () => api.get<TeamLeaveOverview>('/leaves/overview').then(r => r.data),
+  getMonthlyTrend: (months: number = 12) =>
+    api.get<MonthlyLeaveSummary[]>(`/leaves/monthly-trend?months=${months}`).then(r => r.data),
+  getBalances: (year: number) => api.get<LeaveBalance[]>(`/leaves/balances/${year}`).then(r => r.data),
+  create: (data: CreateLeaveDto) => api.post<Leave>('/leaves', data).then(r => r.data),
+  update: (id: string, data: UpdateLeaveDto) => api.put<Leave>(`/leaves/${id}`, data).then(r => r.data),
+  approve: (id: string, approvedBy: string) =>
+    api.post<Leave>(`/leaves/${id}/approve`, { approvedBy }).then(r => r.data),
+  reject: (id: string, notes?: string) =>
+    api.post<Leave>(`/leaves/${id}/reject`, { notes }).then(r => r.data),
+  cancel: (id: string) => api.post<Leave>(`/leaves/${id}/cancel`).then(r => r.data),
+  delete: (id: string) => api.delete(`/leaves/${id}`)
 }
 
 export default api

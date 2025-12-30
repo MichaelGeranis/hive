@@ -313,6 +313,101 @@ export interface SprintVelocity {
   tasksCompleted: number
 }
 
+// Leaves
+export enum LeaveType {
+  PTO = 0,
+  Vacation = 1,
+  SickLeave = 2,
+  PersonalLeave = 3,
+  FamilyLeave = 4,
+  BereavementLeave = 5,
+  JuryDuty = 6,
+  PublicHoliday = 7,
+  Unpaid = 8,
+  Other = 9
+}
+
+export enum LeaveStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+  Cancelled = 3
+}
+
+export interface Leave {
+  id: string
+  directReportId: string
+  directReportName: string
+  type: string
+  status: string
+  startDate: string
+  endDate: string
+  daysCount: number
+  businessDaysCount: number
+  reason?: string
+  notes?: string
+  createdAt: string
+  updatedAt?: string
+  approvedAt?: string
+  approvedBy?: string
+}
+
+export interface CreateLeaveDto {
+  directReportId: string
+  type: string
+  startDate: string
+  endDate: string
+  reason?: string
+  notes?: string
+}
+
+export interface UpdateLeaveDto {
+  type: string
+  startDate: string
+  endDate: string
+  reason?: string
+  notes?: string
+}
+
+export interface LeaveTypeSummary {
+  type: string
+  count: number
+  totalDays: number
+  totalBusinessDays: number
+}
+
+export interface MonthlyLeaveSummary {
+  year: number
+  month: number
+  monthName: string
+  totalLeaves: number
+  totalDays: number
+  totalBusinessDays: number
+  byType: LeaveTypeSummary[]
+}
+
+export interface TeamLeaveOverview {
+  totalLeaveRequests: number
+  pendingRequests: number
+  approvedRequests: number
+  teamMembersOnLeaveToday: number
+  teamMembersOnLeaveThisWeek: number
+  upcomingLeaves: Leave[]
+  currentLeaves: Leave[]
+  monthlyTrend: MonthlyLeaveSummary[]
+}
+
+export interface LeaveBalance {
+  directReportId: string
+  directReportName: string
+  year: number
+  ptoUsed: number
+  vacationUsed: number
+  sickLeaveUsed: number
+  totalUsed: number
+  pendingDays: number
+}
+
 // Settings
 export interface StoryPointMapping {
   points: number
