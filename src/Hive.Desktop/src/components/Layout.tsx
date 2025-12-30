@@ -8,13 +8,15 @@ import {
   CheckSquare,
   Settings,
   Hexagon,
-  Palmtree
+  Palmtree,
+  Upload
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
+  { name: 'Import from Jira', to: '/import', icon: Upload },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'Reviews', to: '/reviews', icon: Star },

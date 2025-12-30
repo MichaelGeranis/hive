@@ -425,3 +425,50 @@ export interface AppSettings {
 export interface UpdateAppSettings {
   storyPointMappings: StoryPointMapping[]
 }
+
+// Jira Import
+export interface JiraImportRequest {
+  csvContent: string
+  updateExisting: boolean
+  matchField: 'IssueKey' | 'Title'
+}
+
+export interface JiraImportResult {
+  totalRows: number
+  successCount: number
+  skippedCount: number
+  errorCount: number
+  errors: string[]
+  warnings: string[]
+  importedTasks: JiraImportedTask[]
+}
+
+export interface JiraImportedTask {
+  taskId?: string
+  issueKey: string
+  summary: string
+  isNew: boolean
+  isUpdated: boolean
+}
+
+export interface JiraImportPreview {
+  totalRows: number
+  validRows: number
+  invalidRows: number
+  detectedColumns: string[]
+  mappingWarnings: string[]
+  sampleRows: JiraImportPreviewRow[]
+}
+
+export interface JiraImportPreviewRow {
+  rowNumber: number
+  issueKey: string
+  summary: string
+  issueType: string
+  status: string
+  priority: string
+  assignee: string
+  storyPoints?: string
+  isValid: boolean
+  validationErrors: string[]
+}

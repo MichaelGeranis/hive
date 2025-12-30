@@ -10,6 +10,7 @@ import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
 import Leaves from './pages/Leaves'
 import Settings from './pages/Settings'
+import JiraImport from './pages/JiraImport'
 
 type AppStatus = 'loading' | 'ready' | 'error'
 
@@ -95,6 +96,7 @@ function App() {
         <Route path="projects" element={<Projects />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="leaves" element={<Leaves />} />
+        <Route path="import" element={<JiraImport />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
