@@ -104,7 +104,8 @@ export const tasksApi = {
   complete: (id: string, actualHours?: number) =>
     api.post<TeamTask>(`/teamtasks/${id}/complete`, { actualHours }).then(r => r.data),
   reopen: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/reopen`).then(r => r.data),
-  delete: (id: string) => api.delete(`/teamtasks/${id}`)
+  delete: (id: string) => api.delete(`/teamtasks/${id}`),
+  bulkDelete: (ids: string[]) => api.post('/teamtasks/bulk-delete', ids)
 }
 
 // Reports

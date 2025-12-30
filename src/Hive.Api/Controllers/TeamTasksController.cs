@@ -505,4 +505,35 @@ public class TeamTasksController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Deletes multiple tasks.
+    /// </summary>
+    /// <param name="ids">The list of task IDs to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content on success.</returns>
+    [HttpPost("bulk-delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMany([FromBody] IEnumerable<Guid> ids, CancellationToken cancellationToken)
+    {
+        var idsList = ids.ToList();
+        _logger.LogInformation("Bulk deleting {Count} tasks", idsList.Count);
+
+        if (idsList.Count == 0)
+        {
+            return BadRequest(new { message = "No task IDs provided." });
+        }
+
+        try
+        {
+            await _service.DeleteManyAsync(idsList, cancellationToken);
+            return NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
 }

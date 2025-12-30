@@ -251,6 +251,22 @@ public class TeamTaskService : ITeamTaskService
         await _taskRepository.DeleteAsync(id, cancellationToken);
     }
 
+    public async Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idsList = ids.ToList();
+
+        // Validate that all tasks exist before deleting any
+        foreach (var id in idsList)
+        {
+            if (!await _taskRepository.ExistsAsync(id, cancellationToken))
+            {
+                throw new NotFoundException(nameof(TeamTask), id);
+            }
+        }
+
+        await _taskRepository.DeleteManyAsync(idsList, cancellationToken);
+    }
+
     private async Task<TeamTask> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _taskRepository.GetByIdAsync(id, cancellationToken);

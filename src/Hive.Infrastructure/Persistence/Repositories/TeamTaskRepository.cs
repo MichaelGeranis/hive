@@ -117,6 +117,15 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.CompletedTask;
     }
 
+    public Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        foreach (var id in ids)
+        {
+            _context.TeamTasks.TryRemove(id, out _);
+        }
+        return Task.CompletedTask;
+    }
+
     public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_context.TeamTasks.ContainsKey(id));

@@ -30,4 +30,5 @@ public interface ITeamTaskService
     Task<TeamTaskDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> LogHoursAsync(Guid id, LogHoursDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }
