@@ -19,5 +19,6 @@ public interface ITeamTaskRepository
     Task<TeamTask> AddAsync(TeamTask task, CancellationToken cancellationToken = default);
     Task UpdateAsync(TeamTask task, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
 }

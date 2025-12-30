@@ -29,6 +29,7 @@ export default function Tasks() {
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -146,6 +147,39 @@ export default function Tasks() {
     }
   }
 
+  const handleToggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    const currentTasks = filteredTasks()
+    if (selectedIds.size === currentTasks.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(currentTasks.map(t => t.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    if (confirm(`Are you sure you want to delete ${selectedIds.size} task${selectedIds.size > 1 ? 's' : ''}?`)) {
+      try {
+        await tasksApi.bulkDelete(Array.from(selectedIds))
+        setSelectedIds(new Set())
+        loadData()
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return null
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -174,13 +208,24 @@ export default function Tasks() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tasks</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Manage team tasks and work items</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          New Task
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+              Delete Selected ({selectedIds.size})
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            New Task
+          </button>
+        </div>
       </div>
 
       {/* Form Modal */}
@@ -353,6 +398,21 @@ export default function Tasks() {
         ))}
       </div>
 
+      {/* Select All */}
+      {filteredTasks().length > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+          <input
+            type="checkbox"
+            checked={filteredTasks().length > 0 && selectedIds.size === filteredTasks().length}
+            onChange={handleSelectAll}
+            className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
+          />
+          <label className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer" onClick={handleSelectAll}>
+            Select All ({filteredTasks().length})
+          </label>
+        </div>
+      )}
+
       {/* Tasks List */}
       {filteredTasks().length === 0 ? (
         <Card>
@@ -365,9 +425,16 @@ export default function Tasks() {
           {filteredTasks().map((task) => (
             <Card key={task.id} className={task.isOverdue ? 'border-red-300 dark:border-red-700' : ''}>
               <CardContent>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(task.id)}
+                    onChange={() => handleToggleSelect(task.id)}
+                    className="mt-1 w-4 h-4 text-amber-500 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
+                  />
+                  <div className="flex items-start justify-between flex-1">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
                       <h3 className="font-medium text-slate-900 dark:text-slate-100">{task.title}</h3>
                       {task.isOverdue && (
                         <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded">
@@ -462,6 +529,7 @@ export default function Tasks() {
                       </div>
                     </div>
                   </div>
+                </div>
                 </div>
               </CardContent>
             </Card>
