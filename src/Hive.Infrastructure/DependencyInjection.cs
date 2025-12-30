@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IMeetingNoteRepository, SqliteMeetingNoteRepository>();
         services.AddScoped<IProjectRepository, SqliteProjectRepository>();
         services.AddScoped<ITeamTaskRepository, SqliteTeamTaskRepository>();
+        services.AddScoped<IAppSettingsRepository, SqliteAppSettingsRepository>();
         services.AddScoped<ILeaveRepository, SqliteLeaveRepository>();
 
         // Initialize database and seed data

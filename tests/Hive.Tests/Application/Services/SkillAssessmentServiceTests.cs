@@ -446,6 +446,8 @@ public class SkillAssessmentServiceTests
             .ReturnsAsync((SkillAssessment?)null);
         _assessmentRepositoryMock.Setup(r => r.AddAsync(It.IsAny<SkillAssessment>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SkillAssessment a, CancellationToken ct) => a);
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _skillRepositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Skill> { _testSkill, skill2 });
 
@@ -477,6 +479,8 @@ public class SkillAssessmentServiceTests
             .ReturnsAsync(_testSkill);
         _assessmentRepositoryMock.Setup(r => r.GetByDirectReportAndSkillAsync(_testDirectReportId, _testSkillId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAssessment);
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _skillRepositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Skill> { _testSkill });
 

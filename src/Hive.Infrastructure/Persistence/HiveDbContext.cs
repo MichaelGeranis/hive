@@ -21,6 +21,7 @@ public class HiveDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TeamTask> TeamTasks => Set<TeamTask>();
     public DbSet<Leave> Leaves => Set<Leave>();
+    public DbSet<AppSettings> AppSettings => Set<AppSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -126,6 +127,13 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.EndDate);
             entity.Ignore(e => e.DaysCount); // Computed property
             entity.Ignore(e => e.BusinessDaysCount); // Computed property
+        });
+
+        // AppSettings configuration
+        modelBuilder.Entity<AppSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.StoryPointMappings).HasMaxLength(4000).IsRequired();
         });
     }
 
