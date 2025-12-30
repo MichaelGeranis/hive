@@ -109,6 +109,20 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
         }
     }
 
+    public async Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idsList = ids.ToList();
+        var entities = await _context.TeamTasks
+            .Where(x => idsList.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+
+        if (entities.Count > 0)
+        {
+            _context.TeamTasks.RemoveRange(entities);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.TeamTasks.AnyAsync(x => x.Id == id, cancellationToken);
