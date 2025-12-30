@@ -39,19 +39,19 @@ public class JiraImportService : IJiraImportService
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
     }
 
-    public async Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
+    public Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
     {
         var lines = ParseCsvLines(csvContent);
         if (lines.Count == 0)
         {
-            return new JiraImportPreviewDto
+            return Task.FromResult(new JiraImportPreviewDto
             {
                 TotalRows = 0,
                 ValidRows = 0,
                 InvalidRows = 0,
                 DetectedColumns = new List<string>(),
                 MappingWarnings = new List<string> { "CSV file is empty" }
-            };
+            });
         }
 
         var headers = ParseCsvRow(lines[0]);
@@ -76,7 +76,7 @@ public class JiraImportService : IJiraImportService
                 invalidCount++;
         }
 
-        return new JiraImportPreviewDto
+        return Task.FromResult(new JiraImportPreviewDto
         {
             TotalRows = lines.Count - 1, // Exclude header
             ValidRows = validCount,
@@ -84,7 +84,7 @@ public class JiraImportService : IJiraImportService
             DetectedColumns = detectedColumns,
             MappingWarnings = warnings,
             SampleRows = sampleRows
-        };
+        });
     }
 
     public async Task<JiraImportResultDto> ImportAsync(JiraImportRequestDto request, CancellationToken cancellationToken = default)
@@ -368,7 +368,7 @@ public class JiraImportService : IJiraImportService
         return null;
     }
 
-    private async Task<TaskData> MapJiraRowToTaskAsync(
+    private Task<TaskData> MapJiraRowToTaskAsync(
         Dictionary<string, string> rowData,
         IReadOnlyList<DirectReport> directReports,
         IReadOnlyList<Project> projects,
@@ -399,7 +399,7 @@ public class JiraImportService : IJiraImportService
             ? "imported-from-jira"
             : $"jira:{issueKey},imported-from-jira";
 
-        return new TaskData
+        return Task.FromResult(new TaskData
         {
             Title = summary,
             Description = description,
@@ -411,7 +411,7 @@ public class JiraImportService : IJiraImportService
             StoryPoints = storyPoints,
             DueDate = dueDate,
             Tags = tags
-        };
+        });
     }
 
     private static TaskType MapIssueTypeToTaskType(string? issueType)
