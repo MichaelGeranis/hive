@@ -37,7 +37,6 @@ export default function Tasks() {
     type: 0,
     priority: 1,
     assigneeId: '',
-    projectId: '',
     dueDate: '',
     estimatedHours: '',
     storyPoints: '',
@@ -53,7 +52,6 @@ export default function Tasks() {
       type: 0,
       priority: 1,
       assigneeId: '',
-      projectId: '',
       dueDate: '',
       estimatedHours: '',
       storyPoints: '',
@@ -129,7 +127,7 @@ export default function Tasks() {
       const taskData = {
         ...formData,
         assigneeId: formData.assigneeId || null,
-        projectId: formData.projectId || null,
+        projectId: null, // Projects are linked via labels, not direct assignment
         dueDate: formData.dueDate || null,
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
         storyPoints: formData.storyPoints ? parseInt(formData.storyPoints) : null,
@@ -156,7 +154,6 @@ export default function Tasks() {
       type: task.type,
       priority: task.priority,
       assigneeId: task.assigneeId || '',
-      projectId: task.projectId || '',
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       estimatedHours: task.estimatedHours?.toString() || '',
       storyPoints: task.storyPoints?.toString() || '',
@@ -340,33 +337,18 @@ export default function Tasks() {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Assignee</label>
-                    <select
-                      value={formData.assigneeId}
-                      onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="">Unassigned</option>
-                      {directReports.map(dr => (
-                        <option key={dr.id} value={dr.id}>{dr.fullName}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
-                    <select
-                      value={formData.projectId}
-                      onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="">No Project</option>
-                      {projects.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Assignee</label>
+                  <select
+                    value={formData.assigneeId}
+                    onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="">Unassigned</option>
+                    {directReports.map(dr => (
+                      <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

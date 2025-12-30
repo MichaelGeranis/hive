@@ -46,6 +46,32 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TeamTask>> GetByMatchingLabelsAsync(IEnumerable<string> labels, CancellationToken cancellationToken = default)
+    {
+        var labelSet = labels
+            .Select(l => l.Trim().ToLowerInvariant())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToHashSet();
+
+        if (labelSet.Count == 0)
+        {
+            return new List<TeamTask>();
+        }
+
+        // Fetch tasks with labels and filter in memory for comma-separated matching
+        var tasksWithLabels = await _context.TeamTasks
+            .Where(x => x.Labels != null && x.Labels != "")
+            .ToListAsync(cancellationToken);
+
+        return tasksWithLabels
+            .Where(x => x.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim().ToLowerInvariant())
+                .Any(taskLabel => labelSet.Contains(taskLabel)))
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<TeamTask>> GetByStatusAsync(TaskStatus status, CancellationToken cancellationToken = default)
     {
         return await _context.TeamTasks

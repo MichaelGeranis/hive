@@ -12,6 +12,7 @@ public interface ITeamTaskRepository
     Task<IReadOnlyList<TeamTask>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TeamTask>> GetByMatchingLabelsAsync(IEnumerable<string> labels, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByStatusAsync(TaskStatus status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByPriorityAsync(TaskPriority priority, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetOverdueAsync(CancellationToken cancellationToken = default);

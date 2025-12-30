@@ -52,6 +52,30 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.FromResult<IReadOnlyList<TeamTask>>(entities);
     }
 
+    public Task<IReadOnlyList<TeamTask>> GetByMatchingLabelsAsync(IEnumerable<string> labels, CancellationToken cancellationToken = default)
+    {
+        var labelSet = labels
+            .Select(l => l.Trim().ToLowerInvariant())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToHashSet();
+
+        if (labelSet.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyList<TeamTask>>(new List<TeamTask>());
+        }
+
+        var entities = _context.TeamTasks.Values
+            .Where(x => !string.IsNullOrEmpty(x.Labels) &&
+                        x.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(l => l.Trim().ToLowerInvariant())
+                            .Any(taskLabel => labelSet.Contains(taskLabel)))
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<TeamTask>>(entities);
+    }
+
     public Task<IReadOnlyList<TeamTask>> GetByStatusAsync(TaskStatus status, CancellationToken cancellationToken = default)
     {
         var entities = _context.TeamTasks.Values

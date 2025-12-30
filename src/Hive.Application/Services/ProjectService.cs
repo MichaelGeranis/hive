@@ -152,7 +152,15 @@ public class ProjectService : IProjectService
 
     private async Task<ProjectDto> MapToDtoAsync(Project entity, CancellationToken cancellationToken)
     {
-        var tasks = await _taskRepository.GetByProjectIdAsync(entity.Id, cancellationToken);
+        // Get tasks that match project labels (label-based relationship)
+        var projectLabels = string.IsNullOrEmpty(entity.Labels)
+            ? Array.Empty<string>()
+            : entity.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        var tasks = projectLabels.Length > 0
+            ? await _taskRepository.GetByMatchingLabelsAsync(projectLabels, cancellationToken)
+            : Array.Empty<TeamTask>();
+
         var completedTasks = tasks.Count(t => t.Status == TaskStatus.Done);
         var openTasks = tasks.Count(t => t.Status != TaskStatus.Done && t.Status != TaskStatus.Cancelled);
 
