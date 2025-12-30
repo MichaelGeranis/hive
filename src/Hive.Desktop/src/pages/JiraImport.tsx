@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, FileText, CheckCircle, AlertCircle, XCircle, Download } from 'lucide-react'
+import { Upload, FileText, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { jiraImportApi } from '../services/api'
 import type { JiraImportPreview, JiraImportResult, JiraImportRequest } from '../types'
