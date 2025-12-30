@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IAppSettingsService, AppSettingsService>();
         services.AddScoped<ILeaveService, LeaveService>();
+        services.AddScoped<IJiraImportService, JiraImportService>();
         return services;
     }
 }

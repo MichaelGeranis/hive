@@ -21,7 +21,10 @@ import type {
   UpdateLeaveDto,
   TeamLeaveOverview,
   MonthlyLeaveSummary,
-  LeaveBalance
+  LeaveBalance,
+  JiraImportRequest,
+  JiraImportResult,
+  JiraImportPreview
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -143,6 +146,14 @@ export const leavesApi = {
     api.post<Leave>(`/leaves/${id}/reject`, { notes }).then(r => r.data),
   cancel: (id: string) => api.post<Leave>(`/leaves/${id}/cancel`).then(r => r.data),
   delete: (id: string) => api.delete(`/leaves/${id}`)
+}
+
+// Jira Import
+export const jiraImportApi = {
+  preview: (csvContent: string) =>
+    api.post<JiraImportPreview>('/jiraimport/preview', { csvContent }).then(r => r.data),
+  import: (data: JiraImportRequest) =>
+    api.post<JiraImportResult>('/jiraimport/import', data).then(r => r.data)
 }
 
 export default api
