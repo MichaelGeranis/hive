@@ -69,10 +69,17 @@ export default function Projects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      // Convert empty strings to null for optional date fields
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        startDate: formData.startDate || null,
+        targetEndDate: formData.targetEndDate || null
+      }
       if (editingId) {
-        await projectsApi.update(editingId, formData)
+        await projectsApi.update(editingId, payload)
       } else {
-        await projectsApi.create(formData)
+        await projectsApi.create(payload)
       }
       setShowForm(false)
       setEditingId(null)

@@ -28,6 +28,9 @@ public class JiraImportService : IJiraImportService
     private static readonly string[] StoryPointsColumns = { "Story Points", "StoryPoints", "Story points", "Custom field (Story Points)" };
     private static readonly string[] ProjectColumns = { "Project", "Project name", "ProjectName" };
     private static readonly string[] DueDateColumns = { "Due date", "DueDate", "Due Date" };
+    private static readonly string[] TimeSpentColumns = { "Time Spent", "TimeSpent", "Time spent" };
+    private static readonly string[] SprintColumns = { "Sprint" };
+    private static readonly string[] LabelsColumns = { "Labels", "Label" };
 
     public JiraImportService(
         ITeamTaskRepository taskRepository,
@@ -39,19 +42,19 @@ public class JiraImportService : IJiraImportService
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
     }
 
-    public async Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
+    public Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
     {
         var lines = ParseCsvLines(csvContent);
         if (lines.Count == 0)
         {
-            return new JiraImportPreviewDto
+            return Task.FromResult(new JiraImportPreviewDto
             {
                 TotalRows = 0,
                 ValidRows = 0,
                 InvalidRows = 0,
                 DetectedColumns = new List<string>(),
                 MappingWarnings = new List<string> { "CSV file is empty" }
-            };
+            });
         }
 
         var headers = ParseCsvRow(lines[0]);
@@ -62,21 +65,26 @@ public class JiraImportService : IJiraImportService
         var validCount = 0;
         var invalidCount = 0;
 
-        // Preview first 10 rows
-        for (int i = 1; i < Math.Min(11, lines.Count); i++)
+        // Validate ALL rows, but only add first 10 to sample
+        for (int i = 1; i < lines.Count; i++)
         {
             var values = ParseCsvRow(lines[i]);
             var rowData = MapRowToDictionary(headers, values);
             var previewRow = CreatePreviewRow(i + 1, rowData);
 
-            sampleRows.Add(previewRow);
+            // Only add first 10 rows to sample display
+            if (i <= 10)
+            {
+                sampleRows.Add(previewRow);
+            }
+
             if (previewRow.IsValid)
                 validCount++;
             else
                 invalidCount++;
         }
 
-        return new JiraImportPreviewDto
+        return Task.FromResult(new JiraImportPreviewDto
         {
             TotalRows = lines.Count - 1, // Exclude header
             ValidRows = validCount,
@@ -84,7 +92,7 @@ public class JiraImportService : IJiraImportService
             DetectedColumns = detectedColumns,
             MappingWarnings = warnings,
             SampleRows = sampleRows
-        };
+        });
     }
 
     public async Task<JiraImportResultDto> ImportAsync(JiraImportRequestDto request, CancellationToken cancellationToken = default)
@@ -149,7 +157,7 @@ public class JiraImportService : IJiraImportService
                 }
 
                 // Map fields
-                var taskData = await MapJiraRowToTaskAsync(rowData, directReports, projects, cancellationToken);
+                var taskData = MapJiraRowToTask(rowData, directReports, projects);
 
                 if (existingTask != null)
                 {
@@ -162,7 +170,10 @@ public class JiraImportService : IJiraImportService
                         taskData.DueDate,
                         taskData.EstimatedHours,
                         taskData.StoryPoints,
-                        taskData.Tags);
+                        taskData.Tags,
+                        taskData.Labels,
+                        taskData.Sprint,
+                        taskData.TimeSpentMinutes);
 
                     if (taskData.AssigneeId != existingTask.AssigneeId)
                     {
@@ -201,7 +212,10 @@ public class JiraImportService : IJiraImportService
                         taskData.DueDate,
                         taskData.EstimatedHours,
                         taskData.StoryPoints,
-                        taskData.Tags);
+                        taskData.Tags,
+                        taskData.Labels,
+                        taskData.Sprint,
+                        taskData.TimeSpentMinutes);
 
                     // Set status
                     UpdateTaskStatus(newTask, taskData.Status);
@@ -286,7 +300,23 @@ public class JiraImportService : IJiraImportService
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < Math.Min(headers.Count, values.Count); i++)
         {
-            result[headers[i]] = values[i];
+            var header = headers[i];
+            var value = values[i];
+
+            // Handle duplicate columns (like Labels, Sprint) by appending values
+            if (result.TryGetValue(header, out var existing))
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    result[header] = string.IsNullOrWhiteSpace(existing)
+                        ? value
+                        : $"{existing},{value}";
+                }
+            }
+            else
+            {
+                result[header] = value;
+            }
         }
         return result;
     }
@@ -368,11 +398,10 @@ public class JiraImportService : IJiraImportService
         return null;
     }
 
-    private async Task<TaskData> MapJiraRowToTaskAsync(
+    private static TaskData MapJiraRowToTask(
         Dictionary<string, string> rowData,
         IReadOnlyList<DirectReport> directReports,
-        IReadOnlyList<Project> projects,
-        CancellationToken cancellationToken)
+        IReadOnlyList<Project> projects)
     {
         var issueKey = GetValue(rowData, IssueKeyColumns);
         var summary = GetValue(rowData, SummaryColumns) ?? "Untitled Task";
@@ -384,6 +413,11 @@ public class JiraImportService : IJiraImportService
         var storyPointsStr = GetValue(rowData, StoryPointsColumns);
         var projectName = GetValue(rowData, ProjectColumns);
         var dueDateStr = GetValue(rowData, DueDateColumns);
+        var timeSpentStr = GetValue(rowData, TimeSpentColumns);
+
+        // Collect all Labels and Sprint values (Jira exports multiple columns with same name)
+        var labels = GetAllValues(rowData, LabelsColumns);
+        var sprints = GetAllValues(rowData, SprintColumns);
 
         // Map fields
         var taskType = MapIssueTypeToTaskType(issueType);
@@ -393,6 +427,7 @@ public class JiraImportService : IJiraImportService
         var projectId = FindProjectId(projectName, projects);
         var storyPoints = ParseStoryPoints(storyPointsStr);
         var dueDate = ParseDueDate(dueDateStr);
+        var timeSpentMinutes = ParseTimeSpent(timeSpentStr);
 
         // Build tags with Jira Issue Key
         var tags = string.IsNullOrWhiteSpace(issueKey)
@@ -410,7 +445,10 @@ public class JiraImportService : IJiraImportService
             ProjectId = projectId,
             StoryPoints = storyPoints,
             DueDate = dueDate,
-            Tags = tags
+            Tags = tags,
+            Labels = labels,
+            Sprint = sprints,
+            TimeSpentMinutes = timeSpentMinutes
         };
     }
 
@@ -518,10 +556,57 @@ public class JiraImportService : IJiraImportService
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        if (int.TryParse(value, out var points))
-            return points;
+        // Handle decimal story points (e.g., "0.5" -> 1, "1.5" -> 2)
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var doublePoints))
+            return (int)Math.Ceiling(doublePoints);
 
         return null;
+    }
+
+    private static int? ParseTimeSpent(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        // Jira time format: "1w 2d 3h 30m" or "2h 30m" or "45m" or seconds like "3600"
+        var totalMinutes = 0;
+        var lower = value.ToLowerInvariant().Trim();
+
+        // Try parsing as pure number (seconds)
+        if (int.TryParse(lower, out var seconds))
+            return seconds / 60;
+
+        // Parse Jira time format
+        var parts = lower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            if (part.EndsWith("w") && int.TryParse(part.TrimEnd('w'), out var weeks))
+                totalMinutes += weeks * 5 * 8 * 60; // 5 days * 8 hours
+            else if (part.EndsWith("d") && int.TryParse(part.TrimEnd('d'), out var days))
+                totalMinutes += days * 8 * 60; // 8 hours per day
+            else if (part.EndsWith("h") && int.TryParse(part.TrimEnd('h'), out var hours))
+                totalMinutes += hours * 60;
+            else if (part.EndsWith("m") && int.TryParse(part.TrimEnd('m'), out var minutes))
+                totalMinutes += minutes;
+        }
+
+        return totalMinutes > 0 ? totalMinutes : null;
+    }
+
+    private static string GetAllValues(Dictionary<string, string> data, string[] possibleKeys)
+    {
+        // Since MapRowToDictionary now aggregates duplicate columns, just get the value
+        var value = GetValue(data, possibleKeys);
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        // Clean up: split by comma, trim, remove duplicates, rejoin
+        var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct();
+
+        return string.Join(",", parts);
     }
 
     private static DateTime? ParseDueDate(string? value)
@@ -607,5 +692,8 @@ public class JiraImportService : IJiraImportService
         public DateTime? DueDate { get; init; }
         public int? EstimatedHours { get; init; }
         public string Tags { get; init; } = string.Empty;
+        public string Labels { get; init; } = string.Empty;
+        public string Sprint { get; init; } = string.Empty;
+        public int? TimeSpentMinutes { get; init; }
     }
 }

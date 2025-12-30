@@ -143,6 +143,9 @@ export interface TeamTask {
   storyPoints?: number
   actualHours?: number
   tags: string
+  labels: string
+  sprint: string
+  timeSpentMinutes?: number
   isOverdue: boolean
 }
 

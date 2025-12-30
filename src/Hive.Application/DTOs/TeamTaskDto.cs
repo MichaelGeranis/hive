@@ -26,6 +26,9 @@ public record TeamTaskDto
     public int? StoryPoints { get; init; }
     public int? ActualHours { get; init; }
     public string Tags { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
+    public string Sprint { get; init; } = string.Empty;
+    public int? TimeSpentMinutes { get; init; }
     public bool IsOverdue { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -48,6 +51,9 @@ public record CreateTeamTaskDto
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
+    public string Sprint { get; init; } = string.Empty;
+    public int? TimeSpentMinutes { get; init; }
 }
 
 /// <summary>
@@ -63,6 +69,9 @@ public record UpdateTeamTaskDto
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
+    public string Sprint { get; init; } = string.Empty;
+    public int? TimeSpentMinutes { get; init; }
 }
 
 /// <summary>

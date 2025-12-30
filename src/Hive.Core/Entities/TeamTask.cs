@@ -18,6 +18,9 @@ public class TeamTask
     public int? StoryPoints { get; private set; }
     public int? ActualHours { get; private set; }
     public string Tags { get; private set; } = string.Empty;
+    public string Labels { get; private set; } = string.Empty;
+    public string Sprint { get; private set; } = string.Empty;
+    public int? TimeSpentMinutes { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
     public DateTime? StartedAt { get; private set; }
@@ -35,7 +38,10 @@ public class TeamTask
         DateTime? dueDate = null,
         int? estimatedHours = null,
         int? storyPoints = null,
-        string? tags = null)
+        string? tags = null,
+        string? labels = null,
+        string? sprint = null,
+        int? timeSpentMinutes = null)
     {
         ValidateTitle(title);
 
@@ -51,6 +57,9 @@ public class TeamTask
         EstimatedHours = estimatedHours;
         StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
+        Labels = labels?.Trim() ?? string.Empty;
+        Sprint = sprint?.Trim() ?? string.Empty;
+        TimeSpentMinutes = timeSpentMinutes;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -62,7 +71,10 @@ public class TeamTask
         DateTime? dueDate,
         int? estimatedHours,
         int? storyPoints,
-        string? tags)
+        string? tags,
+        string? labels = null,
+        string? sprint = null,
+        int? timeSpentMinutes = null)
     {
         ValidateTitle(title);
 
@@ -74,6 +86,9 @@ public class TeamTask
         EstimatedHours = estimatedHours;
         StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
+        Labels = labels?.Trim() ?? string.Empty;
+        Sprint = sprint?.Trim() ?? string.Empty;
+        TimeSpentMinutes = timeSpentMinutes;
         UpdatedAt = DateTime.UtcNow;
     }
 

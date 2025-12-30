@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -39,7 +39,10 @@ export default function Tasks() {
     projectId: '',
     dueDate: '',
     estimatedHours: '',
-    storyPoints: ''
+    storyPoints: '',
+    labels: '',
+    sprint: '',
+    timeSpentMinutes: ''
   })
 
   const resetForm = () => {
@@ -52,7 +55,10 @@ export default function Tasks() {
       projectId: '',
       dueDate: '',
       estimatedHours: '',
-      storyPoints: ''
+      storyPoints: '',
+      labels: '',
+      sprint: '',
+      timeSpentMinutes: ''
     })
   }
 
@@ -104,7 +110,8 @@ export default function Tasks() {
         projectId: formData.projectId || null,
         dueDate: formData.dueDate || null,
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
-        storyPoints: formData.storyPoints ? parseInt(formData.storyPoints) : null
+        storyPoints: formData.storyPoints ? parseInt(formData.storyPoints) : null,
+        timeSpentMinutes: formData.timeSpentMinutes ? parseInt(formData.timeSpentMinutes) : null
       }
       if (editingId) {
         await tasksApi.update(editingId, taskData)
@@ -130,7 +137,10 @@ export default function Tasks() {
       projectId: task.projectId || '',
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       estimatedHours: task.estimatedHours?.toString() || '',
-      storyPoints: task.storyPoints?.toString() || ''
+      storyPoints: task.storyPoints?.toString() || '',
+      labels: task.labels || '',
+      sprint: task.sprint || '',
+      timeSpentMinutes: task.timeSpentMinutes?.toString() || ''
     })
     setEditingId(task.id)
     setShowForm(true)
@@ -183,6 +193,15 @@ export default function Tasks() {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return null
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const formatTimeSpent = (minutes?: number) => {
+    if (!minutes) return null
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`
+    if (hours > 0) return `${hours}h`
+    return `${mins}m`
   }
 
   if (loading) {
@@ -333,15 +352,48 @@ export default function Tasks() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Story Points</label>
+                    <input
+                      type="number"
+                      value={formData.storyPoints}
+                      onChange={(e) => setFormData({ ...formData, storyPoints: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      min="0"
+                      placeholder="1, 2, 3, 5, 8..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Time Spent (minutes)</label>
+                    <input
+                      type="number"
+                      value={formData.timeSpentMinutes}
+                      onChange={(e) => setFormData({ ...formData, timeSpentMinutes: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      min="0"
+                      placeholder="60"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Story Points</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sprint</label>
                   <input
-                    type="number"
-                    value={formData.storyPoints}
-                    onChange={(e) => setFormData({ ...formData, storyPoints: e.target.value })}
+                    type="text"
+                    value={formData.sprint}
+                    onChange={(e) => setFormData({ ...formData, sprint: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                    min="0"
-                    placeholder="1, 2, 3, 5, 8..."
+                    placeholder="Sprint 1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Labels</label>
+                  <input
+                    type="text"
+                    value={formData.labels}
+                    onChange={(e) => setFormData({ ...formData, labels: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    placeholder="frontend, urgent, bug-fix (comma-separated)"
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -453,7 +505,7 @@ export default function Tasks() {
                         {task.typeName}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
                       {task.assigneeName && (
                         <span className="flex items-center gap-1">
                           <div className="w-5 h-5 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 text-xs font-medium">
@@ -477,7 +529,29 @@ export default function Tasks() {
                       {task.storyPoints && (
                         <span className="font-semibold text-amber-600 dark:text-amber-400">{task.storyPoints} SP</span>
                       )}
+                      {task.timeSpentMinutes && (
+                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <Timer className="w-4 h-4" />
+                          {formatTimeSpent(task.timeSpentMinutes)} logged
+                        </span>
+                      )}
+                      {task.sprint && (
+                        <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                          <Zap className="w-4 h-4" />
+                          {task.sprint}
+                        </span>
+                      )}
                     </div>
+                    {task.labels && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Tag className="w-4 h-4 text-slate-400" />
+                        {task.labels.split(',').map((label, idx) => (
+                          <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs">
+                            {label.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {(task.status === TaskStatus.Backlog || task.status === TaskStatus.Todo) && (
