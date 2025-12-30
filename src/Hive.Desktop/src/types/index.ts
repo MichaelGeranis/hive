@@ -88,6 +88,7 @@ export interface Project {
   id: string
   name: string
   description: string
+  labels: string
   status: ProjectStatus
   statusName: string
   startDate?: string

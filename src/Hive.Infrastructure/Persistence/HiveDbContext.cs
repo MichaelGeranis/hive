@@ -99,6 +99,7 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Description).HasMaxLength(4000);
+            entity.Property(e => e.Labels).HasMaxLength(1000);
         });
 
         // TeamTask configuration

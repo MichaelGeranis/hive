@@ -54,7 +54,7 @@ public class ProjectService : IProjectService
             throw new ConflictException($"A project with name '{dto.Name}' already exists.");
         }
 
-        var entity = new Project(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate);
+        var entity = new Project(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate, dto.Labels);
         var created = await _projectRepository.AddAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(created, cancellationToken);
@@ -69,7 +69,7 @@ public class ProjectService : IProjectService
             throw new ConflictException($"A project with name '{dto.Name}' already exists.");
         }
 
-        entity.Update(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate);
+        entity.Update(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate, dto.Labels);
         await _projectRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -161,6 +161,7 @@ public class ProjectService : IProjectService
             Id = entity.Id,
             Name = entity.Name,
             Description = entity.Description,
+            Labels = entity.Labels,
             Status = entity.Status,
             StatusName = GetStatusName(entity.Status),
             StartDate = entity.StartDate,

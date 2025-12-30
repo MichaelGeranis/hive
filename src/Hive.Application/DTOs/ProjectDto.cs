@@ -10,6 +10,7 @@ public record ProjectDto
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
     public ProjectStatus Status { get; init; }
     public string StatusName { get; init; } = string.Empty;
     public DateTime? StartDate { get; init; }
@@ -29,6 +30,7 @@ public record CreateProjectDto
 {
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
     public DateTime? StartDate { get; init; }
     public DateTime? TargetEndDate { get; init; }
 }
@@ -40,6 +42,7 @@ public record UpdateProjectDto
 {
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public string Labels { get; init; } = string.Empty;
     public DateTime? StartDate { get; init; }
     public DateTime? TargetEndDate { get; init; }
 }

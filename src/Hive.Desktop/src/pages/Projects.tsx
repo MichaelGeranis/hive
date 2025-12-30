@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search } from 'lucide-react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -23,12 +23,13 @@ export default function Projects() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    labels: '',
     startDate: '',
     targetEndDate: ''
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', startDate: '', targetEndDate: '' })
+    setFormData({ name: '', description: '', labels: '', startDate: '', targetEndDate: '' })
   }
 
   useEffect(() => {
@@ -55,7 +56,8 @@ export default function Projects() {
       const query = searchQuery.toLowerCase()
       result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
+        p.description?.toLowerCase().includes(query) ||
+        p.labels?.toLowerCase().includes(query)
       )
     }
 
@@ -88,6 +90,7 @@ export default function Projects() {
       const payload = {
         name: formData.name,
         description: formData.description,
+        labels: formData.labels,
         startDate: formData.startDate || null,
         targetEndDate: formData.targetEndDate || null
       }
@@ -109,6 +112,7 @@ export default function Projects() {
     setFormData({
       name: project.name,
       description: project.description || '',
+      labels: project.labels || '',
       startDate: project.startDate ? project.startDate.split('T')[0] : '',
       targetEndDate: project.targetEndDate ? project.targetEndDate.split('T')[0] : ''
     })
@@ -202,6 +206,16 @@ export default function Projects() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Labels</label>
+                  <input
+                    type="text"
+                    value={formData.labels}
+                    onChange={(e) => setFormData({ ...formData, labels: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
+                    placeholder="frontend, backend, urgent (comma-separated)"
+                  />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button
@@ -308,6 +322,22 @@ export default function Projects() {
 
                 {project.description && (
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">{project.description}</p>
+                )}
+
+                {project.labels && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="w-4 h-4 text-slate-400" />
+                    <div className="flex flex-wrap gap-1">
+                      {project.labels.split(',').map((label, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full"
+                        >
+                          {label.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">

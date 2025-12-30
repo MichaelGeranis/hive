@@ -226,6 +226,21 @@ export default function Tasks() {
     return `${mins}m`
   }
 
+  // Find projects that share at least one label with the task
+  const getMatchedProjects = (taskLabels?: string): Project[] => {
+    if (!taskLabels) return []
+    const taskLabelSet = new Set(
+      taskLabels.split(',').map(l => l.trim().toLowerCase()).filter(l => l)
+    )
+    if (taskLabelSet.size === 0) return []
+
+    return projects.filter(project => {
+      if (!project.labels) return false
+      const projectLabels = project.labels.split(',').map(l => l.trim().toLowerCase())
+      return projectLabels.some(pl => taskLabelSet.has(pl))
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -550,6 +565,22 @@ export default function Tasks() {
                       )}
                       {task.projectName && (
                         <span className="text-purple-600 dark:text-purple-400">{task.projectName}</span>
+                      )}
+                      {getMatchedProjects(task.labels).length > 0 && (
+                        <span className="flex items-center gap-1 flex-wrap">
+                          {getMatchedProjects(task.labels)
+                            .filter(p => p.name !== task.projectName) // Exclude direct project if already shown
+                            .map(p => (
+                              <span
+                                key={p.id}
+                                className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded text-xs"
+                                title={`Matched via labels: ${p.labels}`}
+                              >
+                                {p.name}
+                              </span>
+                            ))
+                          }
+                        </span>
                       )}
                       {task.dueDate && (
                         <span className="flex items-center gap-1">
