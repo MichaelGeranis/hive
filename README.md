@@ -482,6 +482,7 @@ High Impact (Core EM Responsibilities)
 
 1. Career Development Plans 🎯
 
+    I want you to add labels to the Projects. Same as the Tasks. Now, I want every task to be linked with more than one project. The related projects will be determined by the exact match between labels and tasks and projects.
     Track promotion readiness and career progression paths
     Link skill gaps to development goals
     Integration with existing performance reviews and skill assessments

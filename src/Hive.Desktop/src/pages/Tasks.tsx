@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer } from 'lucide-react'
+import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -27,6 +27,7 @@ export default function Tasks() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -85,9 +86,30 @@ export default function Tasks() {
   }
 
   const filteredTasks = () => {
-    if (filter === 'all') return tasks
-    if (filter === 'overdue') return tasks.filter(t => t.isOverdue)
-    return tasks.filter(t => t.status === filter)
+    let result = tasks
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(t =>
+        t.title.toLowerCase().includes(query) ||
+        t.description?.toLowerCase().includes(query) ||
+        t.assigneeName?.toLowerCase().includes(query) ||
+        t.projectName?.toLowerCase().includes(query) ||
+        t.labels?.toLowerCase().includes(query) ||
+        t.sprint?.toLowerCase().includes(query) ||
+        t.tags?.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply status filter
+    if (filter === 'overdue') {
+      result = result.filter(t => t.isOverdue)
+    } else if (filter !== 'all') {
+      result = result.filter(t => t.status === filter)
+    }
+
+    return result
   }
 
   const handleAction = async (id: string, action: 'start' | 'complete' | 'reopen') => {
@@ -425,29 +447,41 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        {[
-          { value: 'all', label: `All (${tasks.length})` },
-          { value: 'overdue', label: `Overdue (${overdueCount})` },
-          { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})` },
-          { value: TaskStatus.Todo, label: `Todo (${todoCount})` },
-          { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})` },
-          { value: TaskStatus.InReview, label: `In Review (${inReviewCount})` },
-          { value: TaskStatus.Done, label: `Done (${doneCount})` },
-        ].map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value as any)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.value
-                ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: 'all', label: `All (${tasks.length})` },
+            { value: 'overdue', label: `Overdue (${overdueCount})` },
+            { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})` },
+            { value: TaskStatus.Todo, label: `Todo (${todoCount})` },
+            { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})` },
+            { value: TaskStatus.InReview, label: `In Review (${inReviewCount})` },
+            { value: TaskStatus.Done, label: `Done (${doneCount})` },
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value as any)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === f.value
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Select All */}

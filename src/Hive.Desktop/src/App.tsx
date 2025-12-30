@@ -60,17 +60,20 @@ function App() {
     initializeApp()
   }, [initializeApp])
 
-  // Periodic health check while app is running
+  // Periodic health check - monitors connection and auto-recovers
   useEffect(() => {
-    if (status !== 'ready') return
+    if (status === 'loading') return // Don't interfere with initial connection
 
     const interval = setInterval(async () => {
       const isHealthy = await checkBackendHealth()
-      if (!isHealthy) {
+      if (isHealthy && status === 'error') {
+        // Auto-recover when backend comes online
+        setStatus('ready')
+      } else if (!isHealthy && status === 'ready') {
         setStatus('error')
-        setStatusMessage('Lost connection to backend. The server may have crashed.')
+        setStatusMessage('Lost connection to backend. Waiting for reconnection...')
       }
-    }, 10000) // Check every 10 seconds
+    }, status === 'error' ? 2000 : 10000) // Check more frequently when in error state
 
     return () => clearInterval(interval)
   }, [status, checkBackendHealth])

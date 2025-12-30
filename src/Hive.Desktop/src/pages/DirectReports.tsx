@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit } from 'lucide-react'
+import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto } from '../types'
@@ -8,6 +8,7 @@ export default function DirectReports() {
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<CreateDirectReportDto>({
@@ -98,6 +99,20 @@ export default function DirectReports() {
     return remainingMonths > 0 ? `${years}y ${remainingMonths}m` : `${years} years`
   }
 
+  const filteredDirectReports = () => {
+    if (!searchQuery.trim()) return directReports
+
+    const query = searchQuery.toLowerCase()
+    return directReports.filter(dr =>
+      dr.fullName.toLowerCase().includes(query) ||
+      dr.firstName.toLowerCase().includes(query) ||
+      dr.lastName.toLowerCase().includes(query) ||
+      dr.email.toLowerCase().includes(query) ||
+      dr.jobTitle?.toLowerCase().includes(query) ||
+      dr.department?.toLowerCase().includes(query)
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -132,6 +147,18 @@ export default function DirectReports() {
           {error}
         </div>
       )}
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search team members..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+        />
+      </div>
 
       {/* Add/Edit Form Modal */}
       {showForm && (
@@ -236,15 +263,17 @@ export default function DirectReports() {
       )}
 
       {/* Team Members Grid */}
-      {directReports.length === 0 ? (
+      {filteredDirectReports().length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-slate-500">No team members yet. Add your first direct report!</p>
+            <p className="text-slate-500">
+              {searchQuery ? 'No team members match your search.' : 'No team members yet. Add your first direct report!'}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {directReports.map((dr) => (
+          {filteredDirectReports().map((dr) => (
             <Card key={dr.id}>
               <CardContent>
                 <div className="flex items-start justify-between">

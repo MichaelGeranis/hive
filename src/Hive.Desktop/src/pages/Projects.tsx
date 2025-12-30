@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -17,6 +17,7 @@ export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | ProjectStatus>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -47,11 +48,25 @@ export default function Projects() {
   }
 
   const filteredProjects = () => {
-    if (filter === 'all') return projects
-    if (filter === 'active') {
-      return projects.filter(p => p.status === ProjectStatus.Planning || p.status === ProjectStatus.Active)
+    let result = projects
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      )
     }
-    return projects.filter(p => p.status === filter)
+
+    // Apply status filter
+    if (filter === 'active') {
+      result = result.filter(p => p.status === ProjectStatus.Planning || p.status === ProjectStatus.Active)
+    } else if (filter !== 'all') {
+      result = result.filter(p => p.status === filter)
+    }
+
+    return result
   }
 
   const handleAction = async (id: string, action: 'activate' | 'complete' | 'cancel' | 'hold' | 'reopen') => {
@@ -209,27 +224,39 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        {[
-          { value: 'all', label: 'All' },
-          { value: 'active', label: 'Active' },
-          { value: ProjectStatus.Planning, label: 'Planning' },
-          { value: ProjectStatus.OnHold, label: 'On Hold' },
-          { value: ProjectStatus.Completed, label: 'Completed' },
-        ].map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value as any)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.value
-                ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: 'all', label: 'All' },
+            { value: 'active', label: 'Active' },
+            { value: ProjectStatus.Planning, label: 'Planning' },
+            { value: ProjectStatus.OnHold, label: 'On Hold' },
+            { value: ProjectStatus.Completed, label: 'Completed' },
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value as any)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === f.value
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Projects Grid */}
