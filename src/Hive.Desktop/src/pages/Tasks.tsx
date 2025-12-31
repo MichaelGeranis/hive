@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi, settingsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
 import type { TeamTask, DirectReport, Project, StoryPointMapping } from '../types'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
@@ -59,6 +60,14 @@ export default function Tasks() {
       timeSpentMinutes: ''
     })
   }
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    setEditingId(null)
+    resetForm()
+  }, [])
+
+  useEscapeKey(closeModal, showForm)
 
   useEffect(() => {
     loadData()

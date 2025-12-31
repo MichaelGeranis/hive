@@ -51,4 +51,9 @@ public interface IReportingService
     /// Gets team velocity metrics based on completed story points per sprint.
     /// </summary>
     Task<TeamVelocityDto> GetTeamVelocityAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets estimation accuracy metrics comparing estimated hours to actual time spent.
+    /// </summary>
+    Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(CancellationToken cancellationToken = default);
 }

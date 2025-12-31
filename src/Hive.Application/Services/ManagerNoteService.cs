@@ -1,0 +1,129 @@
+using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
+using Hive.Core.Entities;
+using Hive.Core.Exceptions;
+using Hive.Core.Interfaces;
+
+namespace Hive.Application.Services;
+
+/// <summary>
+/// Service implementing use cases for ManagerNote management.
+/// </summary>
+public class ManagerNoteService : IManagerNoteService
+{
+    private readonly IManagerNoteRepository _repository;
+
+    public ManagerNoteService(IManagerNoteRepository repository)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<ManagerNoteDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        return entity is null ? null : MapToDto(entity);
+    }
+
+    public async Task<IReadOnlyList<ManagerNoteDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.GetAllAsync(cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<ManagerNoteDto>> GetPendingAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.GetPendingAsync(cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<ManagerNoteDto>> GetCompletedAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.GetCompletedAsync(cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<ManagerNoteDto>> GetOverdueAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.GetOverdueAsync(cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<ManagerNoteDto> CreateAsync(CreateManagerNoteDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new ManagerNote(
+            dto.Title,
+            dto.Content,
+            dto.Priority,
+            dto.DueDate);
+
+        var created = await _repository.AddAsync(entity, cancellationToken);
+        return MapToDto(created);
+    }
+
+    public async Task<ManagerNoteDto> UpdateAsync(Guid id, UpdateManagerNoteDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        entity.Update(dto.Title, dto.Content, dto.Priority, dto.DueDate);
+        await _repository.UpdateAsync(entity, cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    public async Task<ManagerNoteDto> ToggleCompleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        entity.ToggleComplete();
+        await _repository.UpdateAsync(entity, cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        if (!await _repository.ExistsAsync(id, cancellationToken))
+        {
+            throw new NotFoundException(nameof(ManagerNote), id);
+        }
+
+        await _repository.DeleteAsync(id, cancellationToken);
+    }
+
+    private async Task<ManagerNote> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
+        {
+            throw new NotFoundException(nameof(ManagerNote), id);
+        }
+        return entity;
+    }
+
+    private static ManagerNoteDto MapToDto(ManagerNote entity)
+    {
+        return new ManagerNoteDto
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Content = entity.Content,
+            Priority = entity.Priority,
+            PriorityName = GetPriorityName(entity.Priority),
+            IsCompleted = entity.IsCompleted,
+            DueDate = entity.DueDate,
+            IsOverdue = entity.IsOverdue(),
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt,
+            CompletedAt = entity.CompletedAt
+        };
+    }
+
+    private static string GetPriorityName(NotePriority priority) => priority switch
+    {
+        NotePriority.Low => "Low",
+        NotePriority.Normal => "Normal",
+        NotePriority.High => "High",
+        NotePriority.Urgent => "Urgent",
+        _ => "Unknown"
+    };
+}

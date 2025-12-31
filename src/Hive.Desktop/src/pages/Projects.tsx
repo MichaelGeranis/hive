@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
 import type { Project } from '../types'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<ProjectStatus, string> = {
   [ProjectStatus.Planning]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
@@ -31,6 +32,14 @@ export default function Projects() {
   const resetForm = () => {
     setFormData({ name: '', description: '', labels: '', startDate: '', targetEndDate: '' })
   }
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    setEditingId(null)
+    resetForm()
+  }, [])
+
+  useEscapeKey(closeModal, showForm)
 
   useEffect(() => {
     loadProjects()

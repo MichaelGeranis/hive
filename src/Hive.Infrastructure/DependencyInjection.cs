@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ITeamTaskRepository, TeamTaskRepository>();
         services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
+        services.AddScoped<IManagerNoteRepository, ManagerNoteRepository>();
 
         return services;
     }
@@ -67,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<ITeamTaskRepository, SqliteTeamTaskRepository>();
         services.AddScoped<IAppSettingsRepository, SqliteAppSettingsRepository>();
         services.AddScoped<ILeaveRepository, SqliteLeaveRepository>();
+        services.AddScoped<IManagerNoteRepository, SqliteManagerNoteRepository>();
 
         // Always initialize database (creates tables), optionally seed data
         services.AddSingleton<IHostedService>(sp =>

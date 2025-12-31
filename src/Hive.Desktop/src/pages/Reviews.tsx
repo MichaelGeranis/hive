@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, Star, CheckCircle, Send, MoreVertical, Edit, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
 import { ReviewStatus } from '../types'
 import type { PerformanceReview, DirectReport } from '../types'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<ReviewStatus, string> = {
   [ReviewStatus.Draft]: 'bg-slate-100 text-slate-700',
@@ -50,6 +51,15 @@ export default function Reviews() {
       managerNotes: ''
     })
   }
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    setEditingId(null)
+    setError(null)
+    resetForm()
+  }, [])
+
+  useEscapeKey(closeModal, showForm)
 
   useEffect(() => {
     loadData()

@@ -4,6 +4,9 @@ import type {
   CreateDirectReportDto,
   PerformanceReview,
   OneOnOneMeeting,
+  MeetingNote,
+  CreateMeetingNoteDto,
+  UpdateMeetingNoteDto,
   Project,
   TeamTask,
   DashboardOverview,
@@ -14,6 +17,7 @@ import type {
   ActionItemsSummary,
   TasksByAssignee,
   TeamVelocity,
+  EstimationAccuracy,
   AppSettings,
   UpdateAppSettings,
   Leave,
@@ -24,7 +28,10 @@ import type {
   LeaveBalance,
   JiraImportRequest,
   JiraImportResult,
-  JiraImportPreview
+  JiraImportPreview,
+  ManagerNote,
+  CreateManagerNoteDto,
+  UpdateManagerNoteDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -75,6 +82,19 @@ export const meetingsApi = {
   delete: (id: string) => api.delete(`/oneononemeetings/${id}`)
 }
 
+// Meeting Notes
+export const meetingNotesApi = {
+  getByMeeting: (meetingId: string) =>
+    api.get<MeetingNote[]>(`/meetingnotes/by-meeting/${meetingId}`).then(r => r.data),
+  create: (data: CreateMeetingNoteDto) =>
+    api.post<MeetingNote>('/meetingnotes', data).then(r => r.data),
+  update: (id: string, data: UpdateMeetingNoteDto) =>
+    api.put<MeetingNote>(`/meetingnotes/${id}`, data).then(r => r.data),
+  completeAction: (id: string) =>
+    api.post<MeetingNote>(`/meetingnotes/${id}/complete`).then(r => r.data),
+  delete: (id: string) => api.delete(`/meetingnotes/${id}`)
+}
+
 // Projects
 export const projectsApi = {
   getAll: () => api.get<Project[]>('/projects').then(r => r.data),
@@ -118,7 +138,8 @@ export const reportsApi = {
   getOneOnOneFrequency: () => api.get<OneOnOneFrequency[]>('/reports/one-on-one-frequency').then(r => r.data),
   getActionItemsSummary: () => api.get<ActionItemsSummary>('/reports/action-items').then(r => r.data),
   getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data),
-  getTeamVelocity: () => api.get<TeamVelocity>('/reports/team-velocity').then(r => r.data)
+  getTeamVelocity: () => api.get<TeamVelocity>('/reports/team-velocity').then(r => r.data),
+  getEstimationAccuracy: () => api.get<EstimationAccuracy>('/reports/estimation-accuracy').then(r => r.data)
 }
 
 // Settings
@@ -155,6 +176,19 @@ export const jiraImportApi = {
     api.post<JiraImportPreview>('/jiraimport/preview', { csvContent }).then(r => r.data),
   import: (data: JiraImportRequest) =>
     api.post<JiraImportResult>('/jiraimport/import', data).then(r => r.data)
+}
+
+// Manager Notes (TODOs)
+export const notesApi = {
+  getAll: () => api.get<ManagerNote[]>('/managernotes').then(r => r.data),
+  getPending: () => api.get<ManagerNote[]>('/managernotes/pending').then(r => r.data),
+  getCompleted: () => api.get<ManagerNote[]>('/managernotes/completed').then(r => r.data),
+  getOverdue: () => api.get<ManagerNote[]>('/managernotes/overdue').then(r => r.data),
+  getById: (id: string) => api.get<ManagerNote>(`/managernotes/${id}`).then(r => r.data),
+  create: (data: CreateManagerNoteDto) => api.post<ManagerNote>('/managernotes', data).then(r => r.data),
+  update: (id: string, data: UpdateManagerNoteDto) => api.put<ManagerNote>(`/managernotes/${id}`, data).then(r => r.data),
+  toggle: (id: string) => api.post<ManagerNote>(`/managernotes/${id}/toggle`).then(r => r.data),
+  delete: (id: string) => api.delete(`/managernotes/${id}`)
 }
 
 export default api

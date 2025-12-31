@@ -321,4 +321,62 @@ public record SprintVelocityDto
     public DateTime EndDate { get; init; }
     public int StoryPointsCompleted { get; init; }
     public int TasksCompleted { get; init; }
+    public int TotalTimeSpentMinutes { get; init; }
+    public int TotalEstimatedHours { get; init; }
+}
+
+/// <summary>
+/// Estimation accuracy metrics comparing story points/estimated hours to actual time spent.
+/// </summary>
+public record EstimationAccuracyDto
+{
+    public IReadOnlyList<SprintAccuracyDto> Sprints { get; init; } = [];
+    public IReadOnlyList<AssigneeAccuracyDto> ByAssignee { get; init; } = [];
+    public IReadOnlyList<ProjectAccuracyDto> ByProject { get; init; } = [];
+    public double OverallAccuracyPercentage { get; init; }
+    public int TotalEstimatedHours { get; init; }
+    public int TotalActualHours { get; init; }
+    public int TotalVarianceHours { get; init; }
+}
+
+/// <summary>
+/// Estimation accuracy for a single sprint.
+/// </summary>
+public record SprintAccuracyDto
+{
+    public string SprintName { get; init; } = string.Empty;
+    public int TasksCompleted { get; init; }
+    public int StoryPointsCompleted { get; init; }
+    public int EstimatedHours { get; init; }
+    public int ActualHours { get; init; }
+    public int VarianceHours { get; init; }
+    public double AccuracyPercentage { get; init; }
+}
+
+/// <summary>
+/// Estimation accuracy by assignee.
+/// </summary>
+public record AssigneeAccuracyDto
+{
+    public Guid? AssigneeId { get; init; }
+    public string AssigneeName { get; init; } = string.Empty;
+    public int TasksCompleted { get; init; }
+    public int EstimatedHours { get; init; }
+    public int ActualHours { get; init; }
+    public int VarianceHours { get; init; }
+    public double AccuracyPercentage { get; init; }
+}
+
+/// <summary>
+/// Estimation accuracy by project.
+/// </summary>
+public record ProjectAccuracyDto
+{
+    public Guid? ProjectId { get; init; }
+    public string ProjectName { get; init; } = string.Empty;
+    public int TasksCompleted { get; init; }
+    public int EstimatedHours { get; init; }
+    public int ActualHours { get; init; }
+    public int VarianceHours { get; init; }
+    public double AccuracyPercentage { get; init; }
 }

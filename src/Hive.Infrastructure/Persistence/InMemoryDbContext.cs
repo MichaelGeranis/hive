@@ -18,6 +18,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, Project> Projects { get; } = new();
     public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
     public ConcurrentDictionary<Guid, Leave> Leaves { get; } = new();
+    public ConcurrentDictionary<Guid, ManagerNote> ManagerNotes { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>

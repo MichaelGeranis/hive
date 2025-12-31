@@ -1,15 +1,38 @@
-import { useEffect, useState } from 'react'
-import { Plus, Calendar, Clock, MapPin, CheckCircle, XCircle, MoreVertical, Edit, Trash2 } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { Plus, Calendar, Clock, MapPin, CheckCircle, XCircle, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { meetingsApi, directReportsApi } from '../services/api'
-import { MeetingStatus } from '../types'
-import type { OneOnOneMeeting, DirectReport } from '../types'
+import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
+import { MeetingStatus, NoteCategory, ActionItemStatus } from '../types'
+import type { OneOnOneMeeting, DirectReport, MeetingNote, CreateMeetingNoteDto } from '../types'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<MeetingStatus, string> = {
-  [MeetingStatus.Scheduled]: 'bg-blue-100 text-blue-700',
-  [MeetingStatus.Completed]: 'bg-green-100 text-green-700',
-  [MeetingStatus.Cancelled]: 'bg-red-100 text-red-700',
-  [MeetingStatus.Rescheduled]: 'bg-amber-100 text-amber-700',
+  [MeetingStatus.Scheduled]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  [MeetingStatus.Completed]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  [MeetingStatus.Cancelled]: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  [MeetingStatus.Rescheduled]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+}
+
+const categoryColors: Record<NoteCategory, string> = {
+  [NoteCategory.Discussion]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+  [NoteCategory.ActionItem]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  [NoteCategory.Feedback]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  [NoteCategory.CareerDevelopment]: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  [NoteCategory.Blocker]: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  [NoteCategory.Achievement]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  [NoteCategory.Personal]: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  [NoteCategory.FollowUp]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+}
+
+const categoryLabels: Record<NoteCategory, string> = {
+  [NoteCategory.Discussion]: 'Discussion',
+  [NoteCategory.ActionItem]: 'Action Item',
+  [NoteCategory.Feedback]: 'Feedback',
+  [NoteCategory.CareerDevelopment]: 'Career',
+  [NoteCategory.Blocker]: 'Blocker',
+  [NoteCategory.Achievement]: 'Achievement',
+  [NoteCategory.Personal]: 'Personal',
+  [NoteCategory.FollowUp]: 'Follow Up',
 }
 
 export default function Meetings() {
@@ -27,6 +50,17 @@ export default function Meetings() {
     agenda: ''
   })
 
+  // Notes state
+  const [expandedMeetingId, setExpandedMeetingId] = useState<string | null>(null)
+  const [meetingNotes, setMeetingNotes] = useState<Record<string, MeetingNote[]>>({})
+  const [showNoteForm, setShowNoteForm] = useState(false)
+  const [noteFormData, setNoteFormData] = useState<CreateMeetingNoteDto>({
+    meetingId: '',
+    content: '',
+    category: NoteCategory.Discussion,
+    isPrivate: false
+  })
+
   const resetForm = () => {
     setFormData({
       directReportId: '',
@@ -36,6 +70,29 @@ export default function Meetings() {
       agenda: ''
     })
   }
+
+  const resetNoteForm = () => {
+    setNoteFormData({
+      meetingId: '',
+      content: '',
+      category: NoteCategory.Discussion,
+      isPrivate: false
+    })
+  }
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    setEditingId(null)
+    resetForm()
+  }, [])
+
+  const closeNoteModal = useCallback(() => {
+    setShowNoteForm(false)
+    resetNoteForm()
+  }, [])
+
+  useEscapeKey(closeModal, showForm)
+  useEscapeKey(closeNoteModal, showNoteForm)
 
   useEffect(() => {
     loadData()
@@ -63,6 +120,26 @@ export default function Meetings() {
       setMeetings(data)
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const loadMeetingNotes = async (meetingId: string) => {
+    try {
+      const notes = await meetingNotesApi.getByMeeting(meetingId)
+      setMeetingNotes(prev => ({ ...prev, [meetingId]: notes }))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleToggleExpand = async (meetingId: string) => {
+    if (expandedMeetingId === meetingId) {
+      setExpandedMeetingId(null)
+    } else {
+      setExpandedMeetingId(meetingId)
+      if (!meetingNotes[meetingId]) {
+        await loadMeetingNotes(meetingId)
+      }
     }
   }
 
@@ -118,7 +195,7 @@ export default function Meetings() {
   const handleEdit = (meeting: OneOnOneMeeting) => {
     setFormData({
       directReportId: meeting.directReportId,
-      scheduledDate: meeting.scheduledDate.slice(0, 16), // Format: YYYY-MM-DDTHH:MM
+      scheduledDate: meeting.scheduledDate.slice(0, 16),
       durationMinutes: meeting.durationMinutes.toString(),
       location: meeting.location || '',
       agenda: meeting.agenda || ''
@@ -136,6 +213,47 @@ export default function Meetings() {
         console.error(err)
       }
     }
+  }
+
+  const handleCreateNote = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await meetingNotesApi.create(noteFormData)
+      await loadMeetingNotes(noteFormData.meetingId)
+      closeNoteModal()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleCompleteAction = async (noteId: string, meetingId: string) => {
+    try {
+      await meetingNotesApi.completeAction(noteId)
+      await loadMeetingNotes(meetingId)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleDeleteNote = async (noteId: string, meetingId: string) => {
+    if (confirm('Are you sure you want to delete this note?')) {
+      try {
+        await meetingNotesApi.delete(noteId)
+        await loadMeetingNotes(meetingId)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
+  const openNoteForm = (meetingId: string) => {
+    setNoteFormData({
+      meetingId,
+      content: '',
+      category: NoteCategory.Discussion,
+      isPrivate: false
+    })
+    setShowNoteForm(true)
   }
 
   const formatDate = (dateStr: string) => {
@@ -168,8 +286,8 @@ export default function Meetings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">1:1 Meetings</h1>
-          <p className="text-slate-500 mt-1">Schedule and track your one-on-ones</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">1:1 Meetings</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Schedule and track your one-on-ones</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -188,11 +306,11 @@ export default function Meetings() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Team Member</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Team Member</label>
                   <select
                     value={formData.directReportId}
                     onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     required
                   >
                     <option value="">Select team member</option>
@@ -203,21 +321,21 @@ export default function Meetings() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date & Time</label>
                     <input
                       type="datetime-local"
                       value={formData.scheduledDate}
                       onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Duration (minutes)</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Duration (minutes)</label>
                     <select
                       value={formData.durationMinutes}
                       onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     >
                       <option value="15">15 minutes</option>
                       <option value="30">30 minutes</option>
@@ -227,21 +345,21 @@ export default function Meetings() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Location</label>
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     placeholder="e.g., Conference Room A, Zoom, etc."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Agenda</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Agenda</label>
                   <textarea
                     value={formData.agenda}
                     onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     rows={3}
                     placeholder="Topics to discuss..."
                   />
@@ -249,8 +367,8 @@ export default function Meetings() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
-                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     Cancel
                   </button>
@@ -267,20 +385,106 @@ export default function Meetings() {
         </div>
       )}
 
+      {/* Note Form Modal */}
+      {showNoteForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader title="Add Meeting Note" />
+            <CardContent>
+              <form onSubmit={handleCreateNote} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
+                  <select
+                    value={noteFormData.category}
+                    onChange={(e) => setNoteFormData({ ...noteFormData, category: parseInt(e.target.value) as NoteCategory })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  >
+                    {Object.entries(categoryLabels).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content</label>
+                  <textarea
+                    value={noteFormData.content}
+                    onChange={(e) => setNoteFormData({ ...noteFormData, content: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                    rows={3}
+                    required
+                    placeholder="Note content..."
+                  />
+                </div>
+                {noteFormData.category === NoteCategory.ActionItem && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assignee</label>
+                      <input
+                        type="text"
+                        value={noteFormData.actionAssignee || ''}
+                        onChange={(e) => setNoteFormData({ ...noteFormData, actionAssignee: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                        placeholder="Who's responsible?"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Due Date</label>
+                      <input
+                        type="date"
+                        value={noteFormData.actionDueDate || ''}
+                        onChange={(e) => setNoteFormData({ ...noteFormData, actionDueDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isPrivate"
+                    checked={noteFormData.isPrivate}
+                    onChange={(e) => setNoteFormData({ ...noteFormData, isPrivate: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300"
+                  />
+                  <label htmlFor="isPrivate" className="text-sm text-slate-700 dark:text-slate-300">
+                    Private note (only visible to you)
+                  </label>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeNoteModal}
+                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                  >
+                    Add Note
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Upcoming Meetings */}
       {upcomingMeetings.length > 0 && (
         <Card>
           <CardHeader title="Upcoming Meetings" subtitle="Next 5 scheduled" />
-          <CardContent className="divide-y">
+          <CardContent className="divide-y dark:divide-slate-700">
             {upcomingMeetings.map((meeting) => (
               <div key={meeting.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-medium">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-400 font-medium">
                     {meeting.directReportName.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">{meeting.directReportName}</p>
-                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-white">{meeting.directReportName}</p>
+                    <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {formatDate(meeting.scheduledDate)}
@@ -295,14 +499,14 @@ export default function Meetings() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleComplete(meeting.id)}
-                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                    className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
                     title="Mark as completed"
                   >
                     <CheckCircle className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleCancel(meeting.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
                     title="Cancel"
                   >
                     <XCircle className="w-5 h-5" />
@@ -324,11 +528,11 @@ export default function Meetings() {
         ].map((f) => (
           <button
             key={f.value}
-            onClick={() => setFilter(f.value as any)}
+            onClick={() => setFilter(f.value as typeof filter)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.value
                 ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             {f.label}
@@ -341,7 +545,7 @@ export default function Meetings() {
         {filteredMeetings().length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-slate-500">No meetings found</p>
+              <p className="text-slate-500 dark:text-slate-400">No meetings found</p>
             </CardContent>
           </Card>
         ) : (
@@ -350,12 +554,12 @@ export default function Meetings() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-semibold">
+                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 font-semibold">
                       {meeting.directReportName.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{meeting.directReportName}</h3>
-                      <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                      <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.directReportName}</h3>
+                      <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-1">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           {formatDate(meeting.scheduledDate)}
@@ -377,21 +581,31 @@ export default function Meetings() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[meeting.status]}`}>
                       {meeting.statusName}
                     </span>
+                    <button
+                      onClick={() => handleToggleExpand(meeting.id)}
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                    >
+                      {expandedMeetingId === meeting.id ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
                     <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 rounded">
+                      <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
-                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                         <button
                           onClick={() => handleEdit(meeting)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(meeting.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -400,10 +614,103 @@ export default function Meetings() {
                     </div>
                   </div>
                 </div>
+
+                {/* Agenda */}
                 {meeting.agenda && (
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-sm font-medium text-slate-700">Agenda</p>
-                    <p className="text-sm text-slate-500 mt-1">{meeting.agenda}</p>
+                  <div className="mt-4 pt-4 border-t dark:border-slate-700">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Agenda</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 whitespace-pre-wrap">{meeting.agenda}</p>
+                  </div>
+                )}
+
+                {/* Expanded Notes Section */}
+                {expandedMeetingId === meeting.id && (
+                  <div className="mt-4 pt-4 border-t dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <StickyNote className="w-4 h-4" />
+                        Meeting Notes
+                      </h4>
+                      {meeting.status === MeetingStatus.Completed && (
+                        <button
+                          onClick={() => openNoteForm(meeting.id)}
+                          className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Note
+                        </button>
+                      )}
+                    </div>
+
+                    {meetingNotes[meeting.id]?.length > 0 ? (
+                      <div className="space-y-2">
+                        {meetingNotes[meeting.id].map((note) => (
+                          <div
+                            key={note.id}
+                            className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
+                              note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
+                                    {note.categoryName}
+                                  </span>
+                                  {note.isPrivate && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
+                                      Private
+                                    </span>
+                                  )}
+                                  {note.actionStatusName && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      note.actionStatus === ActionItemStatus.Completed
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        : note.actionStatus === ActionItemStatus.InProgress
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                        : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                    }`}>
+                                      {note.actionStatusName}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
+                                {note.actionDueDate && (
+                                  <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                                    Due: {new Date(note.actionDueDate).toLocaleDateString()}
+                                    {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
+                                  <button
+                                    onClick={() => handleCompleteAction(note.id, meeting.id)}
+                                    className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+                                    title="Complete action"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteNote(note.id, meeting.id)}
+                                  className="p-1 text-slate-400 hover:text-red-500 rounded"
+                                  title="Delete note"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {meeting.status === MeetingStatus.Completed
+                          ? 'No notes yet. Click "Add Note" to add your first note.'
+                          : 'Notes can be added after the meeting is completed.'}
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>

@@ -152,4 +152,17 @@ public class ReportsController : ControllerBase
         var velocity = await _service.GetTeamVelocityAsync(cancellationToken);
         return Ok(velocity);
     }
+
+    /// <summary>
+    /// Gets estimation accuracy metrics comparing estimated hours to actual time spent.
+    /// </summary>
+    /// <returns>Estimation accuracy by sprint, assignee, and project.</returns>
+    [HttpGet("estimation-accuracy")]
+    [ProducesResponseType(typeof(EstimationAccuracyDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<EstimationAccuracyDto>> GetEstimationAccuracy(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Generating estimation accuracy report");
+        var accuracy = await _service.GetEstimationAccuracyAsync(cancellationToken);
+        return Ok(accuracy);
+    }
 }

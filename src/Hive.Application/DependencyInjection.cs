@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsService, AppSettingsService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<IJiraImportService, JiraImportService>();
+        services.AddScoped<IManagerNoteService, ManagerNoteService>();
         return services;
     }
 }

@@ -22,6 +22,7 @@ public class HiveDbContext : DbContext
     public DbSet<TeamTask> TeamTasks => Set<TeamTask>();
     public DbSet<Leave> Leaves => Set<Leave>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
+    public DbSet<ManagerNote> ManagerNotes => Set<ManagerNote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +138,17 @@ public class HiveDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.StoryPointMappings).HasMaxLength(4000).IsRequired();
+        });
+
+        // ManagerNote configuration
+        modelBuilder.Entity<ManagerNote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Content).HasMaxLength(4000);
+            entity.HasIndex(e => e.IsCompleted);
+            entity.HasIndex(e => e.Priority);
+            entity.HasIndex(e => e.DueDate);
         });
     }
 

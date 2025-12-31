@@ -8,7 +8,8 @@ import {
   CheckSquare,
   Settings,
   Hexagon,
-  Palmtree
+  Palmtree,
+  StickyNote
 } from 'lucide-react'
 
 const navigation = [
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
+  { name: 'Notes', to: '/notes', icon: StickyNote },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Team', to: '/team', icon: Users },

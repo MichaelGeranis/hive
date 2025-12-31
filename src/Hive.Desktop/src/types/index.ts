@@ -62,6 +62,24 @@ export enum MeetingStatus {
   Rescheduled = 3
 }
 
+export enum NoteCategory {
+  Discussion = 0,
+  ActionItem = 1,
+  Feedback = 2,
+  CareerDevelopment = 3,
+  Blocker = 4,
+  Achievement = 5,
+  Personal = 6,
+  FollowUp = 7
+}
+
+export enum ActionItemStatus {
+  Open = 0,
+  InProgress = 1,
+  Completed = 2,
+  Cancelled = 3
+}
+
 export interface OneOnOneMeeting {
   id: string
   directReportId: string
@@ -73,6 +91,41 @@ export interface OneOnOneMeeting {
   status: MeetingStatus
   statusName: string
   completedAt?: string
+}
+
+export interface MeetingNote {
+  id: string
+  meetingId: string
+  meetingDate: string
+  directReportName: string
+  content: string
+  category: NoteCategory
+  categoryName: string
+  isPrivate: boolean
+  actionStatus?: ActionItemStatus
+  actionStatusName?: string
+  actionDueDate?: string
+  actionAssignee?: string
+  isOverdue: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateMeetingNoteDto {
+  meetingId: string
+  content: string
+  category: NoteCategory
+  isPrivate: boolean
+  actionDueDate?: string
+  actionAssignee?: string
+}
+
+export interface UpdateMeetingNoteDto {
+  content: string
+  category: NoteCategory
+  isPrivate: boolean
+  actionDueDate?: string
+  actionAssignee?: string
 }
 
 // Projects
@@ -316,6 +369,49 @@ export interface SprintVelocity {
   endDate: string
   storyPointsCompleted: number
   tasksCompleted: number
+  totalTimeSpentMinutes: number
+  totalEstimatedHours: number
+}
+
+// Estimation Accuracy
+export interface EstimationAccuracy {
+  sprints: SprintAccuracy[]
+  byAssignee: AssigneeAccuracy[]
+  byProject: ProjectAccuracy[]
+  overallAccuracyPercentage: number
+  totalEstimatedHours: number
+  totalActualHours: number
+  totalVarianceHours: number
+}
+
+export interface SprintAccuracy {
+  sprintName: string
+  tasksCompleted: number
+  storyPointsCompleted: number
+  estimatedHours: number
+  actualHours: number
+  varianceHours: number
+  accuracyPercentage: number
+}
+
+export interface AssigneeAccuracy {
+  assigneeId?: string
+  assigneeName: string
+  tasksCompleted: number
+  estimatedHours: number
+  actualHours: number
+  varianceHours: number
+  accuracyPercentage: number
+}
+
+export interface ProjectAccuracy {
+  projectId?: string
+  projectName: string
+  tasksCompleted: number
+  estimatedHours: number
+  actualHours: number
+  varianceHours: number
+  accuracyPercentage: number
 }
 
 // Leaves
@@ -476,4 +572,40 @@ export interface JiraImportPreviewRow {
   storyPoints?: string
   isValid: boolean
   validationErrors: string[]
+}
+
+// Manager Notes (TODOs)
+export enum NotePriority {
+  Low = 0,
+  Normal = 1,
+  High = 2,
+  Urgent = 3
+}
+
+export interface ManagerNote {
+  id: string
+  title: string
+  content: string
+  priority: NotePriority
+  priorityName: string
+  isCompleted: boolean
+  dueDate?: string
+  isOverdue: boolean
+  createdAt: string
+  updatedAt?: string
+  completedAt?: string
+}
+
+export interface CreateManagerNoteDto {
+  title: string
+  content: string
+  priority: NotePriority
+  dueDate?: string
+}
+
+export interface UpdateManagerNoteDto {
+  title: string
+  content: string
+  priority: NotePriority
+  dueDate?: string
 }

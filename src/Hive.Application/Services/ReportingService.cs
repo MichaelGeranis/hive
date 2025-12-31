@@ -552,7 +552,9 @@ public class ReportingService : IReportingService
                     StartDate = currentSprintStart,
                     EndDate = sprintEnd.AddDays(-1), // End date is inclusive
                     StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints!.Value),
-                    TasksCompleted = sprintTasks.Count
+                    TasksCompleted = sprintTasks.Count,
+                    TotalTimeSpentMinutes = sprintTasks.Sum(t => t.TimeSpentMinutes ?? 0),
+                    TotalEstimatedHours = sprintTasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value)
                 };
                 sprints.Add(sprintVelocity);
             }
@@ -585,6 +587,132 @@ public class ReportingService : IReportingService
             AverageVelocity = averageVelocity,
             TotalStoryPointsCompleted = totalStoryPoints,
             CompletionTrend = completionTrend
+        };
+    }
+
+    public async Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(CancellationToken cancellationToken = default)
+    {
+        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+
+        // Only consider completed tasks with both estimated hours and time spent
+        var completedTasks = tasks
+            .Where(t => t.Status == TaskStatus.Done && t.EstimatedHours.HasValue && t.TimeSpentMinutes.HasValue)
+            .ToList();
+
+        if (completedTasks.Count == 0)
+        {
+            return new EstimationAccuracyDto
+            {
+                Sprints = [],
+                ByAssignee = [],
+                ByProject = [],
+                OverallAccuracyPercentage = 0,
+                TotalEstimatedHours = 0,
+                TotalActualHours = 0,
+                TotalVarianceHours = 0
+            };
+        }
+
+        var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
+        var projectMap = projects.ToDictionary(p => p.Id, p => p.Name);
+
+        // Calculate by sprint
+        var sprintGroups = completedTasks
+            .Where(t => !string.IsNullOrEmpty(t.Sprint))
+            .GroupBy(t => t.Sprint)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var estimated = g.Sum(t => t.EstimatedHours!.Value);
+                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var variance = actual - estimated;
+                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+
+                return new SprintAccuracyDto
+                {
+                    SprintName = g.Key,
+                    TasksCompleted = g.Count(),
+                    StoryPointsCompleted = g.Where(t => t.StoryPoints.HasValue).Sum(t => t.StoryPoints!.Value),
+                    EstimatedHours = estimated,
+                    ActualHours = actual,
+                    VarianceHours = variance,
+                    AccuracyPercentage = accuracy
+                };
+            })
+            .ToList();
+
+        // Calculate by assignee
+        var byAssignee = completedTasks
+            .GroupBy(t => t.AssigneeId)
+            .Select(g =>
+            {
+                var estimated = g.Sum(t => t.EstimatedHours!.Value);
+                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var variance = actual - estimated;
+                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+
+                return new AssigneeAccuracyDto
+                {
+                    AssigneeId = g.Key,
+                    AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
+                        ? name
+                        : (g.Key.HasValue ? "Unknown" : "Unassigned"),
+                    TasksCompleted = g.Count(),
+                    EstimatedHours = estimated,
+                    ActualHours = actual,
+                    VarianceHours = variance,
+                    AccuracyPercentage = accuracy
+                };
+            })
+            .OrderByDescending(a => a.TasksCompleted)
+            .ToList();
+
+        // Calculate by project
+        var byProject = completedTasks
+            .Where(t => t.ProjectId.HasValue)
+            .GroupBy(t => t.ProjectId)
+            .Select(g =>
+            {
+                var estimated = g.Sum(t => t.EstimatedHours!.Value);
+                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var variance = actual - estimated;
+                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+
+                return new ProjectAccuracyDto
+                {
+                    ProjectId = g.Key,
+                    ProjectName = g.Key.HasValue && projectMap.TryGetValue(g.Key.Value, out var name)
+                        ? name
+                        : "Unknown",
+                    TasksCompleted = g.Count(),
+                    EstimatedHours = estimated,
+                    ActualHours = actual,
+                    VarianceHours = variance,
+                    AccuracyPercentage = accuracy
+                };
+            })
+            .OrderByDescending(p => p.TasksCompleted)
+            .ToList();
+
+        // Calculate overall metrics
+        var totalEstimated = completedTasks.Sum(t => t.EstimatedHours!.Value);
+        var totalActual = (int)Math.Round(completedTasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+        var totalVariance = totalActual - totalEstimated;
+        var overallAccuracy = totalEstimated > 0
+            ? Math.Max(0, Math.Round(100 - Math.Abs(totalVariance * 100.0 / totalEstimated), 1))
+            : 0;
+
+        return new EstimationAccuracyDto
+        {
+            Sprints = sprintGroups,
+            ByAssignee = byAssignee,
+            ByProject = byProject,
+            OverallAccuracyPercentage = overallAccuracy,
+            TotalEstimatedHours = totalEstimated,
+            TotalActualHours = totalActual,
+            TotalVarianceHours = totalVariance
         };
     }
 }

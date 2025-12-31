@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto } from '../types'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 export default function DirectReports() {
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
@@ -19,6 +20,25 @@ export default function DirectReports() {
     department: '',
     hireDate: new Date().toISOString().split('T')[0]
   })
+
+  const resetForm = useCallback(() => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      jobTitle: '',
+      department: '',
+      hireDate: new Date().toISOString().split('T')[0]
+    })
+  }, [])
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    setEditingId(null)
+    resetForm()
+  }, [resetForm])
+
+  useEscapeKey(closeModal, showForm)
 
   useEffect(() => {
     loadDirectReports()
@@ -76,17 +96,6 @@ export default function DirectReports() {
         console.error(err)
       }
     }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      jobTitle: '',
-      department: '',
-      hireDate: new Date().toISOString().split('T')[0]
-    })
   }
 
   const calculateTenure = (hireDate: string) => {

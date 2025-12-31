@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Calendar,
   Plus,
@@ -14,6 +14,7 @@ import {
 import { leavesApi, directReportsApi } from '../services/api'
 import type { Leave, DirectReport, CreateLeaveDto, TeamLeaveOverview, MonthlyLeaveSummary } from '../types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const leaveTypes = [
   'PTO',
@@ -69,6 +70,23 @@ export default function Leaves() {
     endDate: '',
     reason: ''
   })
+
+  const resetForm = useCallback(() => {
+    setFormData({
+      directReportId: '',
+      type: 'PTO',
+      startDate: '',
+      endDate: '',
+      reason: ''
+    })
+  }, [])
+
+  const closeModal = useCallback(() => {
+    setShowForm(false)
+    resetForm()
+  }, [resetForm])
+
+  useEscapeKey(closeModal, showForm)
 
   useEffect(() => {
     loadData()
