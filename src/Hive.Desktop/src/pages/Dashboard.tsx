@@ -153,6 +153,33 @@ export default function Dashboard() {
     .sort((a, b) => b.value - a.value)
     .filter(d => d.value > 0)
 
+  // Calculate members distribution by project (reverse of projectsByAssignee)
+  // This helps identify knowledge silos - projects with less than 2 members
+  const membersByProject = tasks
+    .filter(task => task.assigneeId && task.labels)
+    .reduce((acc, task) => {
+      const assigneeName = task.assigneeName || 'Unknown'
+      const matchedProjects = getMatchedProjects(task.labels)
+      matchedProjects.forEach(project => {
+        if (!acc[project.id]) {
+          acc[project.id] = { name: project.name, members: new Set<string>() }
+        }
+        acc[project.id].members.add(assigneeName)
+      })
+      return acc
+    }, {} as Record<string, { name: string; members: Set<string> }>)
+
+  const membersDistributionData = Object.entries(membersByProject)
+    .map(([_, data]) => ({
+      name: data.name.length > 15 ? data.name.substring(0, 15) + '...' : data.name,
+      fullName: data.name,
+      value: data.members.size,
+      isSilo: data.members.size < 2
+    }))
+    .sort((a, b) => a.value - b.value) // Sort ascending so silos appear first
+
+  const siloCount = membersDistributionData.filter(d => d.isSilo).length
+
   const taskTypeData = dashboard.tasks.tasksByType.map(type => ({
     name: type.typeName,
     value: type.totalTasks,
@@ -197,9 +224,9 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Distribution by Assignee */}
+      {/* Distribution Charts Row - 3 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Projects Distribution by Member */}
         <Card>
           <CardHeader title="Projects Distribution" subtitle="By member" />
           <CardContent className="h-64">
@@ -210,8 +237,8 @@ export default function Dashboard() {
                     data={projectDistributionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={50}
+                    outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${value}`}
@@ -232,10 +259,7 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Second Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task Type Distribution */}
         <Card>
           <CardHeader title="Tasks Distribution" subtitle="By type" />
@@ -247,8 +271,8 @@ export default function Dashboard() {
                     data={taskTypeData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={50}
+                    outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
@@ -263,6 +287,48 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
                 No tasks found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Members Distribution by Project - Knowledge Silos */}
+        <Card>
+          <CardHeader
+            title="Members by Project"
+            subtitle={siloCount > 0 ? `${siloCount} potential silo${siloCount !== 1 ? 's' : ''}` : 'No silos detected'}
+          />
+          <CardContent className="h-64">
+            {membersDistributionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={membersDistributionData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} member${value !== 1 ? 's' : ''}`, 'Members']}
+                    labelFormatter={(label) => {
+                      const item = membersDistributionData.find(d => d.name === label)
+                      return item?.fullName || label
+                    }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    name="Members"
+                    radius={[0, 4, 4, 0]}
+                  >
+                    {membersDistributionData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.isSilo ? '#ef4444' : '#10b981'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                No project assignments found
               </div>
             )}
           </CardContent>

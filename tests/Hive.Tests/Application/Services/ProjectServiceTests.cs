@@ -78,18 +78,21 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_IncludesTaskCounts()
     {
-        // Arrange
-        var project = new Project("Test Project");
-        var task1 = new TeamTask("Task 1", projectId: project.Id);
+        // Arrange - Project with labels for task matching
+        var project = new Project("Test Project", labels: "ProjectA");
+        var task1 = new TeamTask("Task 1", labels: "ProjectA");
         task1.Complete();
-        var task2 = new TeamTask("Task 2", projectId: project.Id);
+        var task2 = new TeamTask("Task 2", labels: "ProjectA");
         task2.Start();
-        var task3 = new TeamTask("Task 3", projectId: project.Id);
+        var task3 = new TeamTask("Task 3", labels: "ProjectA");
         task3.Cancel();
 
         _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
+        // Service uses label-based matching, not projectId
+        _taskRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(
+            It.Is<string[]>(labels => labels.Contains("ProjectA")),
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask> { task1, task2, task3 });
 
         // Act
