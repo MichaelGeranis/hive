@@ -36,14 +36,6 @@ public class SqliteLeaveRepository : ILeaveRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Leave>> GetByStatusAsync(LeaveStatus status, CancellationToken cancellationToken = default)
-    {
-        return await _context.Leaves
-            .Where(l => l.Status == status)
-            .OrderByDescending(l => l.StartDate)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyList<Leave>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         return await _context.Leaves
@@ -69,7 +61,7 @@ public class SqliteLeaveRepository : ILeaveRepository
         var endDate = today.AddDays(days);
 
         return await _context.Leaves
-            .Where(l => l.Status == LeaveStatus.Approved && l.StartDate >= today && l.StartDate <= endDate)
+            .Where(l => l.StartDate >= today && l.StartDate <= endDate)
             .OrderBy(l => l.StartDate)
             .ToListAsync(cancellationToken);
     }

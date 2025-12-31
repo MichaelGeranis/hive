@@ -149,12 +149,14 @@ export const settingsApi = {
 }
 
 // Leaves
+// Simple tracking for capacity planning - approvals handled externally (e.g., HiBob)
 export const leavesApi = {
   getAll: () => api.get<Leave[]>('/leaves').then(r => r.data),
   getById: (id: string) => api.get<Leave>(`/leaves/${id}`).then(r => r.data),
   getByDirectReport: (directReportId: string) =>
     api.get<Leave[]>(`/leaves/by-member/${directReportId}`).then(r => r.data),
-  getByStatus: (status: string) => api.get<Leave[]>(`/leaves/by-status/${status}`).then(r => r.data),
+  getByDateRange: (startDate: string, endDate: string) =>
+    api.get<Leave[]>(`/leaves/by-date-range?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
   getUpcoming: (days: number = 30) => api.get<Leave[]>(`/leaves/upcoming?days=${days}`).then(r => r.data),
   getOverview: () => api.get<TeamLeaveOverview>('/leaves/overview').then(r => r.data),
   getMonthlyTrend: (months: number = 12) =>
@@ -162,11 +164,6 @@ export const leavesApi = {
   getBalances: (year: number) => api.get<LeaveBalance[]>(`/leaves/balances/${year}`).then(r => r.data),
   create: (data: CreateLeaveDto) => api.post<Leave>('/leaves', data).then(r => r.data),
   update: (id: string, data: UpdateLeaveDto) => api.put<Leave>(`/leaves/${id}`, data).then(r => r.data),
-  approve: (id: string, approvedBy: string) =>
-    api.post<Leave>(`/leaves/${id}/approve`, { approvedBy }).then(r => r.data),
-  reject: (id: string, notes?: string) =>
-    api.post<Leave>(`/leaves/${id}/reject`, { notes }).then(r => r.data),
-  cancel: (id: string) => api.post<Leave>(`/leaves/${id}/cancel`).then(r => r.data),
   delete: (id: string) => api.delete(`/leaves/${id}`)
 }
 

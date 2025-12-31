@@ -8,6 +8,10 @@ using Moq;
 
 namespace Hive.Tests.Api.Controllers;
 
+/// <summary>
+/// Tests for LeavesController.
+/// Simplified for capacity planning - no approval workflow.
+/// </summary>
 public class LeavesControllerTests
 {
     private readonly Mock<ILeaveService> _serviceMock;
@@ -125,43 +129,6 @@ public class LeavesControllerTests
 
     #endregion
 
-    #region GetByStatus Tests
-
-    [Fact]
-    public async Task GetByStatus_WithValidStatus_ReturnsOkWithFilteredLeaves()
-    {
-        // Arrange
-        var status = "Pending";
-        var leaves = new List<LeaveDto> { CreateDto(status: status) };
-        _serviceMock.Setup(s => s.GetByStatusAsync(status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaves);
-
-        // Act
-        var result = await _controller.GetByStatus(status, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedLeaves = okResult.Value.Should().BeAssignableTo<IEnumerable<LeaveDto>>().Subject;
-        returnedLeaves.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task GetByStatus_WithInvalidStatus_ReturnsBadRequest()
-    {
-        // Arrange
-        var invalidStatus = "InvalidStatus";
-        _serviceMock.Setup(s => s.GetByStatusAsync(invalidStatus, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ArgumentException($"Invalid leave status: {invalidStatus}"));
-
-        // Act
-        var result = await _controller.GetByStatus(invalidStatus, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
     #region GetByDateRange Tests
 
     [Fact]
@@ -231,9 +198,7 @@ public class LeavesControllerTests
         // Arrange
         var overview = new TeamLeaveOverviewDto
         {
-            TotalLeaveRequests = 10,
-            PendingRequests = 3,
-            ApprovedRequests = 5,
+            TotalLeaveRecords = 10,
             TeamMembersOnLeaveToday = 2,
             TeamMembersOnLeaveThisWeek = 4,
             UpcomingLeaves = new List<LeaveDto>(),
@@ -249,9 +214,9 @@ public class LeavesControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedOverview = okResult.Value.Should().BeOfType<TeamLeaveOverviewDto>().Subject;
-        returnedOverview.TotalLeaveRequests.Should().Be(10);
-        returnedOverview.PendingRequests.Should().Be(3);
-        returnedOverview.ApprovedRequests.Should().Be(5);
+        returnedOverview.TotalLeaveRecords.Should().Be(10);
+        returnedOverview.TeamMembersOnLeaveToday.Should().Be(2);
+        returnedOverview.TeamMembersOnLeaveThisWeek.Should().Be(4);
     }
 
     #endregion
@@ -310,11 +275,10 @@ public class LeavesControllerTests
                 DirectReportId = Guid.NewGuid(),
                 DirectReportName = "John Doe",
                 Year = year,
-                PtoUsed = 10,
                 VacationUsed = 5,
                 SickLeaveUsed = 2,
-                TotalUsed = 17,
-                PendingDays = 3
+                OtherUsed = 1,
+                TotalUsed = 8
             }
         };
         _serviceMock.Setup(s => s.GetTeamBalancesAsync(year, It.IsAny<CancellationToken>()))
@@ -343,7 +307,7 @@ public class LeavesControllerTests
             Type = "Vacation",
             StartDate = new DateTime(2024, 1, 15),
             EndDate = new DateTime(2024, 1, 19),
-            Reason = "Family vacation"
+            Notes = "Family vacation"
         };
         var resultDto = CreateDto();
         _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
@@ -413,7 +377,7 @@ public class LeavesControllerTests
             EndDate = new DateTime(2024, 1, 19)
         };
         _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("This leave request overlaps with an existing leave."));
+            .ThrowsAsync(new InvalidOperationException("This leave overlaps with an existing leave record."));
 
         // Act
         var result = await _controller.Create(createDto, CancellationToken.None);
@@ -433,12 +397,12 @@ public class LeavesControllerTests
         var id = Guid.NewGuid();
         var updateDto = new UpdateLeaveDto
         {
-            Type = "SickLeave",
+            Type = "Sick",
             StartDate = new DateTime(2024, 2, 1),
             EndDate = new DateTime(2024, 2, 5),
-            Reason = "Updated reason"
+            Notes = "Updated notes"
         };
-        var resultDto = CreateDto(type: "SickLeave");
+        var resultDto = CreateDto(type: "Sick");
         _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
 
@@ -448,7 +412,7 @@ public class LeavesControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedDto = okResult.Value.Should().BeOfType<LeaveDto>().Subject;
-        returnedDto.Type.Should().Be("SickLeave");
+        returnedDto.Type.Should().Be("Sick");
     }
 
     [Fact]
@@ -494,7 +458,7 @@ public class LeavesControllerTests
     }
 
     [Fact]
-    public async Task Update_OnApprovedLeave_ReturnsBadRequest()
+    public async Task Update_WithOverlappingLeave_ReturnsBadRequest()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -505,180 +469,10 @@ public class LeavesControllerTests
             EndDate = new DateTime(2024, 1, 19)
         };
         _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Cannot modify an approved leave request."));
+            .ThrowsAsync(new InvalidOperationException("This leave overlaps with an existing leave record."));
 
         // Act
         var result = await _controller.Update(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
-    #region Approve Tests
-
-    [Fact]
-    public async Task Approve_WithValidDto_ReturnsOkWithApprovedLeave()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var approveDto = new ApproveLeaveDto { ApprovedBy = "Jane Manager" };
-        var resultDto = CreateDto(status: "Approved");
-        resultDto.ApprovedBy = "Jane Manager";
-        resultDto.ApprovedAt = DateTime.UtcNow;
-
-        _serviceMock.Setup(s => s.ApproveAsync(id, approveDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Approve(id, approveDto, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedDto = okResult.Value.Should().BeOfType<LeaveDto>().Subject;
-        returnedDto.Status.Should().Be("Approved");
-        returnedDto.ApprovedBy.Should().Be("Jane Manager");
-    }
-
-    [Fact]
-    public async Task Approve_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var approveDto = new ApproveLeaveDto { ApprovedBy = "Manager" };
-        _serviceMock.Setup(s => s.ApproveAsync(id, approveDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new KeyNotFoundException($"Leave with ID {id} not found."));
-
-        // Act
-        var result = await _controller.Approve(id, approveDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task Approve_OnNonPendingLeave_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var approveDto = new ApproveLeaveDto { ApprovedBy = "Manager" };
-        _serviceMock.Setup(s => s.ApproveAsync(id, approveDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Cannot approve a leave request with status: Approved"));
-
-        // Act
-        var result = await _controller.Approve(id, approveDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
-    #region Reject Tests
-
-    [Fact]
-    public async Task Reject_WithValidDto_ReturnsOkWithRejectedLeave()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var rejectDto = new RejectLeaveDto { Notes = "Insufficient leave balance" };
-        var resultDto = CreateDto(status: "Rejected");
-        resultDto.Notes = "Insufficient leave balance";
-
-        _serviceMock.Setup(s => s.RejectAsync(id, rejectDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Reject(id, rejectDto, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedDto = okResult.Value.Should().BeOfType<LeaveDto>().Subject;
-        returnedDto.Status.Should().Be("Rejected");
-        returnedDto.Notes.Should().Be("Insufficient leave balance");
-    }
-
-    [Fact]
-    public async Task Reject_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var rejectDto = new RejectLeaveDto { Notes = "Rejection reason" };
-        _serviceMock.Setup(s => s.RejectAsync(id, rejectDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new KeyNotFoundException($"Leave with ID {id} not found."));
-
-        // Act
-        var result = await _controller.Reject(id, rejectDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task Reject_OnApprovedLeave_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var rejectDto = new RejectLeaveDto { Notes = "Changed mind" };
-        _serviceMock.Setup(s => s.RejectAsync(id, rejectDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Cannot reject a leave request with status: Approved"));
-
-        // Act
-        var result = await _controller.Reject(id, rejectDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
-    #region Cancel Tests
-
-    [Fact]
-    public async Task Cancel_WithValidId_ReturnsOkWithCancelledLeave()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto(status: "Cancelled");
-
-        _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Cancel(id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedDto = okResult.Value.Should().BeOfType<LeaveDto>().Subject;
-        returnedDto.Status.Should().Be("Cancelled");
-    }
-
-    [Fact]
-    public async Task Cancel_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new KeyNotFoundException($"Leave with ID {id} not found."));
-
-        // Act
-        var result = await _controller.Cancel(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task Cancel_OnAlreadyCancelledLeave_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Leave request is already cancelled."));
-
-        // Act
-        var result = await _controller.Cancel(id, CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -725,8 +519,7 @@ public class LeavesControllerTests
     private static LeaveDto CreateDto(
         Guid? id = null,
         Guid? directReportId = null,
-        string type = "Vacation",
-        string status = "Pending")
+        string type = "Vacation")
     {
         return new LeaveDto
         {
@@ -734,12 +527,11 @@ public class LeavesControllerTests
             DirectReportId = directReportId ?? Guid.NewGuid(),
             DirectReportName = "John Doe",
             Type = type,
-            Status = status,
             StartDate = new DateTime(2024, 1, 15),
             EndDate = new DateTime(2024, 1, 19),
             DaysCount = 5,
             BusinessDaysCount = 5,
-            Reason = "Test reason",
+            Notes = "Test notes",
             CreatedAt = DateTime.UtcNow
         };
     }

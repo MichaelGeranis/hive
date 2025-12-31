@@ -7,6 +7,10 @@ using Moq;
 
 namespace Hive.Tests.Application.Services;
 
+/// <summary>
+/// Tests for LeaveService.
+/// Simplified for capacity planning - no approval workflow.
+/// </summary>
 public class LeaveServiceTests
 {
     private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
@@ -58,7 +62,6 @@ public class LeaveServiceTests
         result.DirectReportId.Should().Be(_testDirectReportId);
         result.DirectReportName.Should().Be(_testDirectReport.FullName);
         result.Type.Should().Be(LeaveType.Vacation.ToString());
-        result.Status.Should().Be(LeaveStatus.Pending.ToString());
     }
 
     [Fact]
@@ -104,7 +107,7 @@ public class LeaveServiceTests
         var leaves = new List<Leave>
         {
             CreateLeave(),
-            CreateLeave(LeaveType.SickLeave)
+            CreateLeave(LeaveType.Sick)
         };
         _leaveRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(leaves);
@@ -117,7 +120,7 @@ public class LeaveServiceTests
         // Assert
         result.Should().HaveCount(2);
         result[0].Type.Should().Be(LeaveType.Vacation.ToString());
-        result[1].Type.Should().Be(LeaveType.SickLeave.ToString());
+        result[1].Type.Should().Be(LeaveType.Sick.ToString());
     }
 
     [Fact]
@@ -145,7 +148,7 @@ public class LeaveServiceTests
         var leaves = new List<Leave>
         {
             CreateLeave(),
-            CreateLeave(LeaveType.SickLeave)
+            CreateLeave(LeaveType.Sick)
         };
         _leaveRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(leaves);
@@ -158,56 +161,6 @@ public class LeaveServiceTests
         // Assert
         result.Should().HaveCount(2);
         result.All(l => l.DirectReportId == _testDirectReportId).Should().BeTrue();
-    }
-
-    #endregion
-
-    #region GetByStatusAsync Tests
-
-    [Fact]
-    public async Task GetByStatusAsync_WithValidStatus_ReturnsFilteredDtos()
-    {
-        // Arrange
-        var leaves = new List<Leave> { CreateLeave() };
-        _leaveRepositoryMock.Setup(r => r.GetByStatusAsync(LeaveStatus.Pending, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaves);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.GetByStatusAsync("Pending");
-
-        // Assert
-        result.Should().HaveCount(1);
-        result[0].Status.Should().Be(LeaveStatus.Pending.ToString());
-    }
-
-    [Fact]
-    public async Task GetByStatusAsync_WithValidStatusCaseInsensitive_ReturnsFilteredDtos()
-    {
-        // Arrange
-        var leaves = new List<Leave> { CreateLeave() };
-        _leaveRepositoryMock.Setup(r => r.GetByStatusAsync(LeaveStatus.Pending, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaves);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.GetByStatusAsync("pending");
-
-        // Assert
-        result.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task GetByStatusAsync_WithInvalidStatus_ThrowsArgumentException()
-    {
-        // Act
-        var act = () => _service.GetByStatusAsync("InvalidStatus");
-
-        // Assert
-        await act.Should().ThrowAsync<ArgumentException>()
-            .WithMessage("Invalid leave status: InvalidStatus");
     }
 
     #endregion
@@ -285,8 +238,7 @@ public class LeaveServiceTests
             Type = "Vacation",
             StartDate = new DateTime(2024, 1, 15),
             EndDate = new DateTime(2024, 1, 19),
-            Reason = "Family vacation",
-            Notes = "Going to Europe"
+            Notes = "Family vacation"
         };
 
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
@@ -305,9 +257,7 @@ public class LeaveServiceTests
         result.Type.Should().Be("Vacation");
         result.StartDate.Should().Be(dto.StartDate.Date);
         result.EndDate.Should().Be(dto.EndDate.Date);
-        result.Reason.Should().Be(dto.Reason);
         result.Notes.Should().Be(dto.Notes);
-        result.Status.Should().Be(LeaveStatus.Pending.ToString());
     }
 
     [Fact]
@@ -357,7 +307,7 @@ public class LeaveServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithOverlappingApprovedLeave_ThrowsInvalidOperationException()
+    public async Task CreateAsync_WithOverlappingLeave_ThrowsInvalidOperationException()
     {
         // Arrange
         var dto = new CreateLeaveDto
@@ -369,7 +319,6 @@ public class LeaveServiceTests
         };
 
         var existingLeave = CreateLeave();
-        existingLeave.Approve("Manager");
 
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
@@ -381,92 +330,7 @@ public class LeaveServiceTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("This leave request overlaps with an existing leave.");
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithOverlappingPendingLeave_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var dto = new CreateLeaveDto
-        {
-            DirectReportId = _testDirectReportId,
-            Type = "Vacation",
-            StartDate = new DateTime(2024, 1, 15),
-            EndDate = new DateTime(2024, 1, 19)
-        };
-
-        var existingLeave = CreateLeave(); // Status is Pending
-
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-        _leaveRepositoryMock.Setup(r => r.GetOverlappingLeavesAsync(_testDirectReportId, dto.StartDate, dto.EndDate, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Leave> { existingLeave });
-
-        // Act
-        var act = () => _service.CreateAsync(dto);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("This leave request overlaps with an existing leave.");
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithOverlappingCancelledLeave_Succeeds()
-    {
-        // Arrange
-        var dto = new CreateLeaveDto
-        {
-            DirectReportId = _testDirectReportId,
-            Type = "Vacation",
-            StartDate = new DateTime(2024, 1, 15),
-            EndDate = new DateTime(2024, 1, 19)
-        };
-
-        var existingLeave = CreateLeave();
-        existingLeave.Cancel();
-
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-        _leaveRepositoryMock.Setup(r => r.GetOverlappingLeavesAsync(_testDirectReportId, dto.StartDate, dto.EndDate, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Leave> { existingLeave });
-        _leaveRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Leave>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Leave l, CancellationToken ct) => l);
-
-        // Act
-        var act = () => _service.CreateAsync(dto);
-
-        // Assert
-        await act.Should().NotThrowAsync();
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithOverlappingRejectedLeave_Succeeds()
-    {
-        // Arrange
-        var dto = new CreateLeaveDto
-        {
-            DirectReportId = _testDirectReportId,
-            Type = "Vacation",
-            StartDate = new DateTime(2024, 1, 15),
-            EndDate = new DateTime(2024, 1, 19)
-        };
-
-        var existingLeave = CreateLeave();
-        existingLeave.Reject();
-
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-        _leaveRepositoryMock.Setup(r => r.GetOverlappingLeavesAsync(_testDirectReportId, dto.StartDate, dto.EndDate, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Leave> { existingLeave });
-        _leaveRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Leave>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Leave l, CancellationToken ct) => l);
-
-        // Act
-        var act = () => _service.CreateAsync(dto);
-
-        // Assert
-        await act.Should().NotThrowAsync();
+            .WithMessage("This leave overlaps with an existing leave record.");
     }
 
     #endregion
@@ -480,10 +344,9 @@ public class LeaveServiceTests
         var leave = CreateLeave();
         var dto = new UpdateLeaveDto
         {
-            Type = "SickLeave",
+            Type = "Sick",
             StartDate = new DateTime(2024, 2, 1),
             EndDate = new DateTime(2024, 2, 5),
-            Reason = "Updated reason",
             Notes = "Updated notes"
         };
 
@@ -499,7 +362,7 @@ public class LeaveServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Type.Should().Be("SickLeave");
+        result.Type.Should().Be("Sick");
         result.StartDate.Should().Be(dto.StartDate.Date);
         result.EndDate.Should().Be(dto.EndDate.Date);
         _leaveRepositoryMock.Verify(r => r.UpdateAsync(leave, It.IsAny<CancellationToken>()), Times.Once);
@@ -557,7 +420,6 @@ public class LeaveServiceTests
         // Arrange
         var leave = CreateLeave();
         var overlappingLeave = CreateLeave();
-        overlappingLeave.Approve("Manager");
 
         var dto = new UpdateLeaveDto
         {
@@ -576,193 +438,7 @@ public class LeaveServiceTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("This leave request overlaps with an existing leave.");
-    }
-
-    #endregion
-
-    #region ApproveAsync Tests
-
-    [Fact]
-    public async Task ApproveAsync_WithValidData_ApprovesLeave()
-    {
-        // Arrange
-        var leave = CreateLeave();
-        var dto = new ApproveLeaveDto { ApprovedBy = "Jane Manager" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.ApproveAsync(leave.Id, dto);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Status.Should().Be(LeaveStatus.Approved.ToString());
-        result.ApprovedBy.Should().Be("Jane Manager");
-        result.ApprovedAt.Should().NotBeNull();
-        _leaveRepositoryMock.Verify(r => r.UpdateAsync(leave, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task ApproveAsync_WithNonExistentLeave_ThrowsKeyNotFoundException()
-    {
-        // Arrange
-        var leaveId = Guid.NewGuid();
-        var dto = new ApproveLeaveDto { ApprovedBy = "Manager" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leaveId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Leave?)null);
-
-        // Act
-        var act = () => _service.ApproveAsync(leaveId, dto);
-
-        // Assert
-        await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage($"Leave with ID {leaveId} not found.");
-    }
-
-    [Fact]
-    public async Task ApproveAsync_OnAlreadyApprovedLeave_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var leave = CreateLeave();
-        leave.Approve("First Manager");
-        var dto = new ApproveLeaveDto { ApprovedBy = "Second Manager" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-
-        // Act
-        var act = () => _service.ApproveAsync(leave.Id, dto);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Cannot approve a leave request with status: Approved");
-    }
-
-    #endregion
-
-    #region RejectAsync Tests
-
-    [Fact]
-    public async Task RejectAsync_WithValidData_RejectsLeave()
-    {
-        // Arrange
-        var leave = CreateLeave();
-        var dto = new RejectLeaveDto { Notes = "Insufficient leave balance" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.RejectAsync(leave.Id, dto);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Status.Should().Be(LeaveStatus.Rejected.ToString());
-        result.Notes.Should().Be("Insufficient leave balance");
-        _leaveRepositoryMock.Verify(r => r.UpdateAsync(leave, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task RejectAsync_WithNonExistentLeave_ThrowsKeyNotFoundException()
-    {
-        // Arrange
-        var leaveId = Guid.NewGuid();
-        var dto = new RejectLeaveDto { Notes = "Rejection reason" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leaveId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Leave?)null);
-
-        // Act
-        var act = () => _service.RejectAsync(leaveId, dto);
-
-        // Assert
-        await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage($"Leave with ID {leaveId} not found.");
-    }
-
-    [Fact]
-    public async Task RejectAsync_OnApprovedLeave_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var leave = CreateLeave();
-        leave.Approve("Manager");
-        var dto = new RejectLeaveDto { Notes = "Changed mind" };
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-
-        // Act
-        var act = () => _service.RejectAsync(leave.Id, dto);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Cannot reject a leave request with status: Approved");
-    }
-
-    #endregion
-
-    #region CancelAsync Tests
-
-    [Fact]
-    public async Task CancelAsync_WithValidLeave_CancelsLeave()
-    {
-        // Arrange
-        var leave = CreateLeave();
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.CancelAsync(leave.Id);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Status.Should().Be(LeaveStatus.Cancelled.ToString());
-        _leaveRepositoryMock.Verify(r => r.UpdateAsync(leave, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task CancelAsync_WithNonExistentLeave_ThrowsKeyNotFoundException()
-    {
-        // Arrange
-        var leaveId = Guid.NewGuid();
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leaveId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Leave?)null);
-
-        // Act
-        var act = () => _service.CancelAsync(leaveId);
-
-        // Assert
-        await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage($"Leave with ID {leaveId} not found.");
-    }
-
-    [Fact]
-    public async Task CancelAsync_OnAlreadyCancelledLeave_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var leave = CreateLeave();
-        leave.Cancel();
-
-        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leave);
-
-        // Act
-        var act = () => _service.CancelAsync(leave.Id);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Leave request is already cancelled.");
+            .WithMessage("This leave overlaps with an existing leave record.");
     }
 
     #endregion
@@ -810,12 +486,8 @@ public class LeaveServiceTests
         // Arrange
         var today = DateTime.UtcNow.Date;
         var leave1 = CreateLeave(LeaveType.Vacation, today, today.AddDays(2));
-        leave1.Approve("Manager");
-
-        var leave2 = CreateLeave(LeaveType.SickLeave, today.AddDays(5), today.AddDays(7));
-
-        var leave3 = CreateLeave(LeaveType.PTO, today.AddDays(10), today.AddDays(15));
-        leave3.Approve("Manager");
+        var leave2 = CreateLeave(LeaveType.Sick, today.AddDays(5), today.AddDays(7));
+        var leave3 = CreateLeave(LeaveType.Vacation, today.AddDays(10), today.AddDays(15));
 
         var allLeaves = new List<Leave> { leave1, leave2, leave3 };
 
@@ -833,9 +505,7 @@ public class LeaveServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result.TotalLeaveRequests.Should().Be(3);
-        result.PendingRequests.Should().Be(1);
-        result.ApprovedRequests.Should().Be(2);
+        result.TotalLeaveRecords.Should().Be(3);
         result.TeamMembersOnLeaveToday.Should().Be(1);
     }
 
@@ -848,9 +518,7 @@ public class LeaveServiceTests
     {
         // Arrange
         var leave1 = CreateLeave(LeaveType.Vacation);
-        leave1.Approve("Manager");
-        var leave2 = CreateLeave(LeaveType.SickLeave);
-        leave2.Approve("Manager");
+        var leave2 = CreateLeave(LeaveType.Sick);
 
         _leaveRepositoryMock.Setup(r => r.GetByMonthAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Leave> { leave1, leave2 });
@@ -877,15 +545,11 @@ public class LeaveServiceTests
     {
         // Arrange
         var year = 2024;
-        var ptoLeave = CreateLeave(LeaveType.PTO, new DateTime(2024, 1, 15), new DateTime(2024, 1, 19));
-        ptoLeave.Approve("Manager");
+        var vacationLeave = CreateLeave(LeaveType.Vacation, new DateTime(2024, 1, 15), new DateTime(2024, 1, 19));
+        var sickLeave = CreateLeave(LeaveType.Sick, new DateTime(2024, 2, 1), new DateTime(2024, 2, 3));
+        var otherLeave = CreateLeave(LeaveType.Other, new DateTime(2024, 3, 1), new DateTime(2024, 3, 2));
 
-        var vacationLeave = CreateLeave(LeaveType.Vacation, new DateTime(2024, 2, 1), new DateTime(2024, 2, 5));
-        vacationLeave.Approve("Manager");
-
-        var pendingLeave = CreateLeave(LeaveType.SickLeave, new DateTime(2024, 3, 1), new DateTime(2024, 3, 3));
-
-        var allLeaves = new List<Leave> { ptoLeave, vacationLeave, pendingLeave };
+        var allLeaves = new List<Leave> { vacationLeave, sickLeave, otherLeave };
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
@@ -904,11 +568,10 @@ public class LeaveServiceTests
         balance.DirectReportId.Should().Be(_testDirectReportId);
         balance.DirectReportName.Should().Be(_testDirectReport.FullName);
         balance.Year.Should().Be(year);
-        balance.PtoUsed.Should().Be(ptoLeave.BusinessDaysCount);
         balance.VacationUsed.Should().Be(vacationLeave.BusinessDaysCount);
-        balance.SickLeaveUsed.Should().Be(0); // Pending, not approved
-        balance.TotalUsed.Should().Be(ptoLeave.BusinessDaysCount + vacationLeave.BusinessDaysCount);
-        balance.PendingDays.Should().Be(pendingLeave.BusinessDaysCount);
+        balance.SickLeaveUsed.Should().Be(sickLeave.BusinessDaysCount);
+        balance.OtherUsed.Should().Be(otherLeave.BusinessDaysCount);
+        balance.TotalUsed.Should().Be(vacationLeave.BusinessDaysCount + sickLeave.BusinessDaysCount + otherLeave.BusinessDaysCount);
     }
 
     #endregion
@@ -925,7 +588,6 @@ public class LeaveServiceTests
             type,
             startDate,
             endDate,
-            "Test reason",
             "Test notes");
     }
 

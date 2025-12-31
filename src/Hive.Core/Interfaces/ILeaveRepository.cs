@@ -10,7 +10,6 @@ public interface ILeaveRepository
     Task<Leave?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Leave>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Leave>> GetByDirectReportIdAsync(Guid directReportId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<Leave>> GetByStatusAsync(LeaveStatus status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Leave>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Leave>> GetByMonthAsync(int year, int month, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Leave>> GetUpcomingAsync(int days = 30, CancellationToken cancellationToken = default);

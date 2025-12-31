@@ -38,15 +38,6 @@ public class LeaveRepository : ILeaveRepository
         return Task.FromResult<IReadOnlyList<Leave>>(leaves);
     }
 
-    public Task<IReadOnlyList<Leave>> GetByStatusAsync(LeaveStatus status, CancellationToken cancellationToken = default)
-    {
-        var leaves = _context.Leaves.Values
-            .Where(l => l.Status == status)
-            .OrderByDescending(l => l.StartDate)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<Leave>>(leaves);
-    }
-
     public Task<IReadOnlyList<Leave>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         var leaves = _context.Leaves.Values
@@ -74,7 +65,7 @@ public class LeaveRepository : ILeaveRepository
         var endDate = today.AddDays(days);
 
         var leaves = _context.Leaves.Values
-            .Where(l => l.Status == LeaveStatus.Approved && l.StartDate >= today && l.StartDate <= endDate)
+            .Where(l => l.StartDate >= today && l.StartDate <= endDate)
             .OrderBy(l => l.StartDate)
             .ToList();
         return Task.FromResult<IReadOnlyList<Leave>>(leaves);

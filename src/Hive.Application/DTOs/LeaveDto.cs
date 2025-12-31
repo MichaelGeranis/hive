@@ -11,21 +11,17 @@ public class LeaveDto
     public Guid DirectReportId { get; set; }
     public string DirectReportName { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public int DaysCount { get; set; }
     public int BusinessDaysCount { get; set; }
-    public string? Reason { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public DateTime? ApprovedAt { get; set; }
-    public string? ApprovedBy { get; set; }
 }
 
 /// <summary>
-/// DTO for creating a new leave request
+/// DTO for creating a new leave record
 /// </summary>
 public class CreateLeaveDto
 {
@@ -41,15 +37,12 @@ public class CreateLeaveDto
     [Required]
     public DateTime EndDate { get; set; }
 
-    [MaxLength(500)]
-    public string? Reason { get; set; }
-
     [MaxLength(1000)]
     public string? Notes { get; set; }
 }
 
 /// <summary>
-/// DTO for updating a leave request
+/// DTO for updating a leave record
 /// </summary>
 public class UpdateLeaveDto
 {
@@ -62,28 +55,6 @@ public class UpdateLeaveDto
     [Required]
     public DateTime EndDate { get; set; }
 
-    [MaxLength(500)]
-    public string? Reason { get; set; }
-
-    [MaxLength(1000)]
-    public string? Notes { get; set; }
-}
-
-/// <summary>
-/// DTO for approving a leave request
-/// </summary>
-public class ApproveLeaveDto
-{
-    [Required]
-    [MaxLength(100)]
-    public string ApprovedBy { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// DTO for rejecting a leave request
-/// </summary>
-public class RejectLeaveDto
-{
     [MaxLength(1000)]
     public string? Notes { get; set; }
 }
@@ -121,11 +92,10 @@ public class LeaveBalanceDto
     public Guid DirectReportId { get; set; }
     public string DirectReportName { get; set; } = string.Empty;
     public int Year { get; set; }
-    public int PtoUsed { get; set; }
     public int VacationUsed { get; set; }
     public int SickLeaveUsed { get; set; }
+    public int OtherUsed { get; set; }
     public int TotalUsed { get; set; }
-    public int PendingDays { get; set; }
 }
 
 /// <summary>
@@ -133,9 +103,7 @@ public class LeaveBalanceDto
 /// </summary>
 public class TeamLeaveOverviewDto
 {
-    public int TotalLeaveRequests { get; set; }
-    public int PendingRequests { get; set; }
-    public int ApprovedRequests { get; set; }
+    public int TotalLeaveRecords { get; set; }
     public int TeamMembersOnLeaveToday { get; set; }
     public int TeamMembersOnLeaveThisWeek { get; set; }
     public List<LeaveDto> UpcomingLeaves { get; set; } = new();

@@ -1,23 +1,19 @@
 namespace Hive.Core.Entities;
 
 /// <summary>
-/// Represents a leave request for a team member.
-/// Tracks PTO, vacation, sick leave, and other time off.
+/// Represents a leave record for a team member.
+/// Simple tracking for capacity planning - approvals handled externally (e.g., HiBob).
 /// </summary>
 public class Leave
 {
     public Guid Id { get; private set; }
     public Guid DirectReportId { get; private set; }
     public LeaveType Type { get; private set; }
-    public LeaveStatus Status { get; private set; }
     public DateTime StartDate { get; private set; }
     public DateTime EndDate { get; private set; }
-    public string? Reason { get; private set; }
     public string? Notes { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
-    public DateTime? ApprovedAt { get; private set; }
-    public string? ApprovedBy { get; private set; }
 
     // Private constructor for EF Core / serialization
     private Leave() { }
@@ -27,7 +23,6 @@ public class Leave
         LeaveType type,
         DateTime startDate,
         DateTime endDate,
-        string? reason = null,
         string? notes = null)
     {
         ValidateDates(startDate, endDate);
@@ -36,16 +31,14 @@ public class Leave
         Id = Guid.NewGuid();
         DirectReportId = directReportId;
         Type = type;
-        Status = LeaveStatus.Pending;
         StartDate = startDate.Date;
         EndDate = endDate.Date;
-        Reason = reason?.Trim();
         Notes = notes?.Trim();
         CreatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Gets the number of days for this leave request (inclusive)
+    /// Gets the number of days for this leave (inclusive)
     /// </summary>
     public int DaysCount => (EndDate - StartDate).Days + 1;
 
@@ -88,65 +81,14 @@ public class Leave
         LeaveType type,
         DateTime startDate,
         DateTime endDate,
-        string? reason,
         string? notes)
     {
-        if (Status == LeaveStatus.Approved)
-        {
-            throw new InvalidOperationException("Cannot modify an approved leave request.");
-        }
-
         ValidateDates(startDate, endDate);
 
         Type = type;
         StartDate = startDate.Date;
         EndDate = endDate.Date;
-        Reason = reason?.Trim();
         Notes = notes?.Trim();
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Approve(string approvedBy)
-    {
-        if (Status != LeaveStatus.Pending)
-        {
-            throw new InvalidOperationException($"Cannot approve a leave request with status: {Status}");
-        }
-
-        if (string.IsNullOrWhiteSpace(approvedBy))
-        {
-            throw new ArgumentException("Approver name is required.", nameof(approvedBy));
-        }
-
-        Status = LeaveStatus.Approved;
-        ApprovedAt = DateTime.UtcNow;
-        ApprovedBy = approvedBy.Trim();
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Reject(string? notes = null)
-    {
-        if (Status != LeaveStatus.Pending)
-        {
-            throw new InvalidOperationException($"Cannot reject a leave request with status: {Status}");
-        }
-
-        Status = LeaveStatus.Rejected;
-        if (notes != null)
-        {
-            Notes = notes.Trim();
-        }
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Cancel()
-    {
-        if (Status == LeaveStatus.Cancelled)
-        {
-            throw new InvalidOperationException("Leave request is already cancelled.");
-        }
-
-        Status = LeaveStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
     }
 

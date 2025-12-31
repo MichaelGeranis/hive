@@ -3,21 +3,17 @@ using Hive.Application.DTOs;
 namespace Hive.Application.Interfaces;
 
 /// <summary>
-/// Service interface for managing leave requests.
+/// Service interface for managing leave records.
 /// </summary>
 public interface ILeaveService
 {
     Task<LeaveDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveDto>> GetByDirectReportIdAsync(Guid directReportId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<LeaveDto>> GetByStatusAsync(string status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveDto>> GetUpcomingAsync(int days = 30, CancellationToken cancellationToken = default);
     Task<LeaveDto> CreateAsync(CreateLeaveDto dto, CancellationToken cancellationToken = default);
     Task<LeaveDto> UpdateAsync(Guid id, UpdateLeaveDto dto, CancellationToken cancellationToken = default);
-    Task<LeaveDto> ApproveAsync(Guid id, ApproveLeaveDto dto, CancellationToken cancellationToken = default);
-    Task<LeaveDto> RejectAsync(Guid id, RejectLeaveDto dto, CancellationToken cancellationToken = default);
-    Task<LeaveDto> CancelAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamLeaveOverviewDto> GetTeamOverviewAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MonthlyLeaveSummaryDto>> GetMonthlyTrendAsync(int months = 12, CancellationToken cancellationToken = default);

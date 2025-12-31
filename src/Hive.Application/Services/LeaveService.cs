@@ -7,7 +7,8 @@ using Hive.Core.Interfaces;
 namespace Hive.Application.Services;
 
 /// <summary>
-/// Service for managing leave requests.
+/// Service for managing leave records.
+/// Simple tracking for capacity planning - approvals handled externally (e.g., HiBob).
 /// </summary>
 public class LeaveService : ILeaveService
 {
@@ -43,17 +44,6 @@ public class LeaveService : ILeaveService
         return await MapToDtoListAsync(leaves, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<LeaveDto>> GetByStatusAsync(string status, CancellationToken cancellationToken = default)
-    {
-        if (!Enum.TryParse<LeaveStatus>(status, true, out var leaveStatus))
-        {
-            throw new ArgumentException($"Invalid leave status: {status}");
-        }
-
-        var leaves = await _leaveRepository.GetByStatusAsync(leaveStatus, cancellationToken);
-        return await MapToDtoListAsync(leaves, cancellationToken);
-    }
-
     public async Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         var leaves = await _leaveRepository.GetByDateRangeAsync(startDate, endDate, cancellationToken);
@@ -85,9 +75,9 @@ public class LeaveService : ILeaveService
         var overlapping = await _leaveRepository.GetOverlappingLeavesAsync(
             dto.DirectReportId, dto.StartDate, dto.EndDate, null, cancellationToken);
 
-        if (overlapping.Any(l => l.Status != LeaveStatus.Cancelled && l.Status != LeaveStatus.Rejected))
+        if (overlapping.Any())
         {
-            throw new InvalidOperationException("This leave request overlaps with an existing leave.");
+            throw new InvalidOperationException("This leave overlaps with an existing leave record.");
         }
 
         var leave = new Leave(
@@ -95,7 +85,6 @@ public class LeaveService : ILeaveService
             leaveType,
             dto.StartDate,
             dto.EndDate,
-            dto.Reason,
             dto.Notes);
 
         var created = await _leaveRepository.AddAsync(leave, cancellationToken);
@@ -119,57 +108,12 @@ public class LeaveService : ILeaveService
         var overlapping = await _leaveRepository.GetOverlappingLeavesAsync(
             leave.DirectReportId, dto.StartDate, dto.EndDate, id, cancellationToken);
 
-        if (overlapping.Any(l => l.Status != LeaveStatus.Cancelled && l.Status != LeaveStatus.Rejected))
+        if (overlapping.Any())
         {
-            throw new InvalidOperationException("This leave request overlaps with an existing leave.");
+            throw new InvalidOperationException("This leave overlaps with an existing leave record.");
         }
 
-        leave.Update(leaveType, dto.StartDate, dto.EndDate, dto.Reason, dto.Notes);
-        await _leaveRepository.UpdateAsync(leave, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(leave.DirectReportId, cancellationToken);
-        return MapToDto(leave, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<LeaveDto> ApproveAsync(Guid id, ApproveLeaveDto dto, CancellationToken cancellationToken = default)
-    {
-        var leave = await _leaveRepository.GetByIdAsync(id, cancellationToken);
-        if (leave == null)
-        {
-            throw new KeyNotFoundException($"Leave with ID {id} not found.");
-        }
-
-        leave.Approve(dto.ApprovedBy);
-        await _leaveRepository.UpdateAsync(leave, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(leave.DirectReportId, cancellationToken);
-        return MapToDto(leave, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<LeaveDto> RejectAsync(Guid id, RejectLeaveDto dto, CancellationToken cancellationToken = default)
-    {
-        var leave = await _leaveRepository.GetByIdAsync(id, cancellationToken);
-        if (leave == null)
-        {
-            throw new KeyNotFoundException($"Leave with ID {id} not found.");
-        }
-
-        leave.Reject(dto.Notes);
-        await _leaveRepository.UpdateAsync(leave, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(leave.DirectReportId, cancellationToken);
-        return MapToDto(leave, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<LeaveDto> CancelAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var leave = await _leaveRepository.GetByIdAsync(id, cancellationToken);
-        if (leave == null)
-        {
-            throw new KeyNotFoundException($"Leave with ID {id} not found.");
-        }
-
-        leave.Cancel();
+        leave.Update(leaveType, dto.StartDate, dto.EndDate, dto.Notes);
         await _leaveRepository.UpdateAsync(leave, cancellationToken);
 
         var directReport = await _directReportRepository.GetByIdAsync(leave.DirectReportId, cancellationToken);
@@ -192,18 +136,15 @@ public class LeaveService : ILeaveService
         var today = DateTime.UtcNow.Date;
         var weekEnd = today.AddDays(7);
 
-        var activeLeaves = allLeaves.Where(l => l.Status == LeaveStatus.Approved).ToList();
-        var currentLeaves = activeLeaves.Where(l => l.IncludesDate(today)).ToList();
-        var thisWeekLeaves = activeLeaves.Where(l => l.OverlapsWith(today, weekEnd)).ToList();
+        var currentLeaves = allLeaves.Where(l => l.IncludesDate(today)).ToList();
+        var thisWeekLeaves = allLeaves.Where(l => l.OverlapsWith(today, weekEnd)).ToList();
 
         var upcomingLeaves = await _leaveRepository.GetUpcomingAsync(30, cancellationToken);
         var monthlyTrend = await GetMonthlyTrendAsync(6, cancellationToken);
 
         return new TeamLeaveOverviewDto
         {
-            TotalLeaveRequests = allLeaves.Count,
-            PendingRequests = allLeaves.Count(l => l.Status == LeaveStatus.Pending),
-            ApprovedRequests = allLeaves.Count(l => l.Status == LeaveStatus.Approved),
+            TotalLeaveRecords = allLeaves.Count,
             TeamMembersOnLeaveToday = currentLeaves.Select(l => l.DirectReportId).Distinct().Count(),
             TeamMembersOnLeaveThisWeek = thisWeekLeaves.Select(l => l.DirectReportId).Distinct().Count(),
             UpcomingLeaves = (await MapToDtoListAsync(upcomingLeaves.Take(5).ToList(), cancellationToken)).ToList(),
@@ -224,9 +165,8 @@ public class LeaveService : ILeaveService
             var month = targetDate.Month;
 
             var monthLeaves = await _leaveRepository.GetByMonthAsync(year, month, cancellationToken);
-            var approvedLeaves = monthLeaves.Where(l => l.Status == LeaveStatus.Approved).ToList();
 
-            var byType = approvedLeaves
+            var byType = monthLeaves
                 .GroupBy(l => l.Type)
                 .Select(g => new LeaveTypeSummaryDto
                 {
@@ -242,9 +182,9 @@ public class LeaveService : ILeaveService
                 Year = year,
                 Month = month,
                 MonthName = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(month),
-                TotalLeaves = approvedLeaves.Count,
-                TotalDays = approvedLeaves.Sum(l => l.DaysCount),
-                TotalBusinessDays = approvedLeaves.Sum(l => l.BusinessDaysCount),
+                TotalLeaves = monthLeaves.Count,
+                TotalDays = monthLeaves.Sum(l => l.DaysCount),
+                TotalBusinessDays = monthLeaves.Sum(l => l.BusinessDaysCount),
                 ByType = byType
             });
         }
@@ -264,19 +204,16 @@ public class LeaveService : ILeaveService
         foreach (var dr in directReports)
         {
             var drLeaves = allLeaves.Where(l => l.DirectReportId == dr.Id).ToList();
-            var approved = drLeaves.Where(l => l.Status == LeaveStatus.Approved).ToList();
-            var pending = drLeaves.Where(l => l.Status == LeaveStatus.Pending).ToList();
 
             result.Add(new LeaveBalanceDto
             {
                 DirectReportId = dr.Id,
                 DirectReportName = dr.FullName,
                 Year = year,
-                PtoUsed = approved.Where(l => l.Type == LeaveType.PTO).Sum(l => l.BusinessDaysCount),
-                VacationUsed = approved.Where(l => l.Type == LeaveType.Vacation).Sum(l => l.BusinessDaysCount),
-                SickLeaveUsed = approved.Where(l => l.Type == LeaveType.SickLeave).Sum(l => l.BusinessDaysCount),
-                TotalUsed = approved.Sum(l => l.BusinessDaysCount),
-                PendingDays = pending.Sum(l => l.BusinessDaysCount)
+                VacationUsed = drLeaves.Where(l => l.Type == LeaveType.Vacation).Sum(l => l.BusinessDaysCount),
+                SickLeaveUsed = drLeaves.Where(l => l.Type == LeaveType.Sick).Sum(l => l.BusinessDaysCount),
+                OtherUsed = drLeaves.Where(l => l.Type == LeaveType.Other).Sum(l => l.BusinessDaysCount),
+                TotalUsed = drLeaves.Sum(l => l.BusinessDaysCount)
             });
         }
 
@@ -291,17 +228,13 @@ public class LeaveService : ILeaveService
             DirectReportId = leave.DirectReportId,
             DirectReportName = directReportName,
             Type = leave.Type.ToString(),
-            Status = leave.Status.ToString(),
             StartDate = leave.StartDate,
             EndDate = leave.EndDate,
             DaysCount = leave.DaysCount,
             BusinessDaysCount = leave.BusinessDaysCount,
-            Reason = leave.Reason,
             Notes = leave.Notes,
             CreatedAt = leave.CreatedAt,
-            UpdatedAt = leave.UpdatedAt,
-            ApprovedAt = leave.ApprovedAt,
-            ApprovedBy = leave.ApprovedBy
+            UpdatedAt = leave.UpdatedAt
         };
     }
 

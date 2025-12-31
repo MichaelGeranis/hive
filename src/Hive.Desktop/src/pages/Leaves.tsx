@@ -2,57 +2,38 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Calendar,
   Plus,
-  Check,
-  X,
-  Clock,
   User,
-  Filter,
   Palmtree,
   Thermometer,
-  Coffee
+  Briefcase,
+  Edit2,
+  Trash2,
+  Users
 } from 'lucide-react'
 import { leavesApi, directReportsApi } from '../services/api'
-import type { Leave, DirectReport, CreateLeaveDto, TeamLeaveOverview, MonthlyLeaveSummary } from '../types'
+import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, MonthlyLeaveSummary } from '../types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
-const leaveTypes = [
-  'PTO',
-  'Vacation',
-  'SickLeave',
-  'PersonalLeave',
-  'FamilyLeave',
-  'BereavementLeave',
-  'JuryDuty',
-  'PublicHoliday',
-  'Unpaid',
-  'Other'
-]
+// Simple leave types: Vacation, Sick, Other
+const leaveTypes = ['Vacation', 'Sick', 'Other']
 
 const leaveTypeLabels: Record<string, string> = {
-  PTO: 'PTO',
   Vacation: 'Vacation',
-  SickLeave: 'Sick Leave',
-  PersonalLeave: 'Personal Leave',
-  FamilyLeave: 'Family Leave',
-  BereavementLeave: 'Bereavement',
-  JuryDuty: 'Jury Duty',
-  PublicHoliday: 'Public Holiday',
-  Unpaid: 'Unpaid Leave',
+  Sick: 'Sick Leave',
   Other: 'Other'
-}
-
-const statusColors: Record<string, string> = {
-  Pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400',
-  Approved: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
-  Rejected: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
-  Cancelled: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
 }
 
 const typeIcons: Record<string, typeof Palmtree> = {
   Vacation: Palmtree,
-  SickLeave: Thermometer,
-  PTO: Coffee
+  Sick: Thermometer,
+  Other: Briefcase
+}
+
+const typeColors: Record<string, string> = {
+  Vacation: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
+  Sick: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400',
+  Other: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400'
 }
 
 export default function Leaves() {
@@ -62,23 +43,25 @@ export default function Leaves() {
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyLeaveSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [editingLeave, setEditingLeave] = useState<Leave | null>(null)
+  const [memberFilter, setMemberFilter] = useState<string>('all')
   const [formData, setFormData] = useState<CreateLeaveDto>({
     directReportId: '',
-    type: 'PTO',
+    type: 'Vacation',
     startDate: '',
     endDate: '',
-    reason: ''
+    notes: ''
   })
 
   const resetForm = useCallback(() => {
     setFormData({
       directReportId: '',
-      type: 'PTO',
+      type: 'Vacation',
       startDate: '',
       endDate: '',
-      reason: ''
+      notes: ''
     })
+    setEditingLeave(null)
   }, [])
 
   const closeModal = useCallback(() => {
@@ -116,44 +99,56 @@ export default function Leaves() {
     e.preventDefault()
     try {
       await leavesApi.create(formData)
-      setShowForm(false)
-      setFormData({ directReportId: '', type: 'PTO', startDate: '', endDate: '', reason: '' })
+      closeModal()
       loadData()
     } catch (error) {
       console.error('Failed to create leave:', error)
     }
   }
 
-  const handleApprove = async (id: string) => {
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingLeave) return
     try {
-      await leavesApi.approve(id, 'Manager')
+      const updateData: UpdateLeaveDto = {
+        type: formData.type,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        notes: formData.notes
+      }
+      await leavesApi.update(editingLeave.id, updateData)
+      closeModal()
       loadData()
     } catch (error) {
-      console.error('Failed to approve leave:', error)
+      console.error('Failed to update leave:', error)
     }
   }
 
-  const handleReject = async (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this leave record?')) return
     try {
-      await leavesApi.reject(id)
+      await leavesApi.delete(id)
       loadData()
     } catch (error) {
-      console.error('Failed to reject leave:', error)
+      console.error('Failed to delete leave:', error)
     }
   }
 
-  const handleCancel = async (id: string) => {
-    try {
-      await leavesApi.cancel(id)
-      loadData()
-    } catch (error) {
-      console.error('Failed to cancel leave:', error)
-    }
+  const openEditForm = (leave: Leave) => {
+    setEditingLeave(leave)
+    setFormData({
+      directReportId: leave.directReportId,
+      type: leave.type,
+      startDate: leave.startDate.split('T')[0],
+      endDate: leave.endDate.split('T')[0],
+      notes: leave.notes || ''
+    })
+    setShowForm(true)
   }
 
-  const filteredLeaves = statusFilter === 'all'
+  const filteredLeaves = memberFilter === 'all'
     ? leaves
-    : leaves.filter(l => l.status === statusFilter)
+    : leaves.filter(l => l.directReportId === memberFilter)
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString()
 
@@ -170,15 +165,15 @@ export default function Leaves() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leave Management</h1>
-          <p className="text-slate-500 dark:text-slate-400">Track team PTO, vacation, and sick leave</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leave Tracking</h1>
+          <p className="text-slate-500 dark:text-slate-400">Track team time off for capacity planning</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
         >
           <Plus className="w-5 h-5" />
-          Request Leave
+          Add Leave
         </button>
       </div>
 
@@ -191,30 +186,8 @@ export default function Leaves() {
                 <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total Requests</p>
-                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.totalLeaveRequests}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Pending</p>
-                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.pendingRequests}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Approved</p>
-                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.approvedRequests}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Records</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.totalLeaveRecords}</p>
               </div>
             </div>
           </div>
@@ -226,6 +199,28 @@ export default function Leaves() {
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">On Leave Today</p>
                 <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.teamMembersOnLeaveToday}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">This Week</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.teamMembersOnLeaveThisWeek}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Palmtree className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Upcoming</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{overview.upcomingLeaves.length}</p>
               </div>
             </div>
           </div>
@@ -250,17 +245,16 @@ export default function Leaves() {
 
       {/* Filter */}
       <div className="flex items-center gap-2">
-        <Filter className="w-5 h-5 text-slate-400" />
+        <User className="w-5 h-5 text-slate-400" />
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={memberFilter}
+          onChange={(e) => setMemberFilter(e.target.value)}
           className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
         >
-          <option value="all">All Status</option>
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-          <option value="Cancelled">Cancelled</option>
+          <option value="all">All Team Members</option>
+          {directReports.map((dr) => (
+            <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+          ))}
         </select>
       </div>
 
@@ -273,8 +267,7 @@ export default function Leaves() {
               <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Type</th>
               <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Dates</th>
               <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Days</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Status</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Reason</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Notes</th>
               <th className="text-right px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Actions</th>
             </tr>
           </thead>
@@ -288,8 +281,10 @@ export default function Leaves() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <TypeIcon className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-700 dark:text-slate-300">{leaveTypeLabels[leave.type] || leave.type}</span>
+                      <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${typeColors[leave.type] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}>
+                        <TypeIcon className="w-3.5 h-3.5" />
+                        {leaveTypeLabels[leave.type] || leave.type}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
@@ -298,41 +293,26 @@ export default function Leaves() {
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
                     {leave.businessDaysCount} days
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[leave.status]}`}>
-                      {leave.status}
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">
-                    {leave.reason || '-'}
+                    {leave.notes || '-'}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {leave.status === 'Pending' && (
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleApprove(leave.id)}
-                          className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                          title="Approve"
-                        >
-                          <Check className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleReject(leave.id)}
-                          className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                          title="Reject"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    )}
-                    {leave.status === 'Approved' && (
+                    <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => handleCancel(leave.id)}
-                        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                        onClick={() => openEditForm(leave)}
+                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                        title="Edit"
                       >
-                        Cancel
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                    )}
+                      <button
+                        onClick={() => handleDelete(leave.id)}
+                        className="p-1 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -341,33 +321,37 @@ export default function Leaves() {
         </table>
         {filteredLeaves.length === 0 && (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            No leave requests found
+            No leave records found
           </div>
         )}
       </div>
 
-      {/* Create Form Modal */}
+      {/* Create/Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Request Leave</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Team Member
-                </label>
-                <select
-                  value={formData.directReportId}
-                  onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
-                  className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2"
-                  required
-                >
-                  <option value="">Select team member</option>
-                  {directReports.map((dr) => (
-                    <option key={dr.id} value={dr.id}>{dr.fullName}</option>
-                  ))}
-                </select>
-              </div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+              {editingLeave ? 'Edit Leave' : 'Add Leave'}
+            </h2>
+            <form onSubmit={editingLeave ? handleUpdate : handleCreate} className="space-y-4">
+              {!editingLeave && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Team Member
+                  </label>
+                  <select
+                    value={formData.directReportId}
+                    onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
+                    className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2"
+                    required
+                  >
+                    <option value="">Select team member</option>
+                    {directReports.map((dr) => (
+                      <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Leave Type
@@ -411,19 +395,20 @@ export default function Leaves() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Reason (optional)
+                  Notes (optional)
                 </label>
                 <textarea
-                  value={formData.reason}
-                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2"
                   rows={3}
+                  placeholder="Optional notes about the leave"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={closeModal}
                   className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
                 >
                   Cancel
@@ -432,7 +417,7 @@ export default function Leaves() {
                   type="submit"
                   className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                 >
-                  Submit Request
+                  {editingLeave ? 'Save Changes' : 'Add Leave'}
                 </button>
               </div>
             </form>

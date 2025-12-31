@@ -415,24 +415,11 @@ export interface ProjectAccuracy {
 }
 
 // Leaves
+// Simple tracking for capacity planning - approvals handled externally (e.g., HiBob)
 export enum LeaveType {
-  PTO = 0,
-  Vacation = 1,
-  SickLeave = 2,
-  PersonalLeave = 3,
-  FamilyLeave = 4,
-  BereavementLeave = 5,
-  JuryDuty = 6,
-  PublicHoliday = 7,
-  Unpaid = 8,
-  Other = 9
-}
-
-export enum LeaveStatus {
-  Pending = 0,
-  Approved = 1,
-  Rejected = 2,
-  Cancelled = 3
+  Vacation = 0,
+  Sick = 1,
+  Other = 2
 }
 
 export interface Leave {
@@ -440,17 +427,13 @@ export interface Leave {
   directReportId: string
   directReportName: string
   type: string
-  status: string
   startDate: string
   endDate: string
   daysCount: number
   businessDaysCount: number
-  reason?: string
   notes?: string
   createdAt: string
   updatedAt?: string
-  approvedAt?: string
-  approvedBy?: string
 }
 
 export interface CreateLeaveDto {
@@ -458,7 +441,6 @@ export interface CreateLeaveDto {
   type: string
   startDate: string
   endDate: string
-  reason?: string
   notes?: string
 }
 
@@ -466,7 +448,6 @@ export interface UpdateLeaveDto {
   type: string
   startDate: string
   endDate: string
-  reason?: string
   notes?: string
 }
 
@@ -488,9 +469,7 @@ export interface MonthlyLeaveSummary {
 }
 
 export interface TeamLeaveOverview {
-  totalLeaveRequests: number
-  pendingRequests: number
-  approvedRequests: number
+  totalLeaveRecords: number
   teamMembersOnLeaveToday: number
   teamMembersOnLeaveThisWeek: number
   upcomingLeaves: Leave[]
@@ -502,11 +481,10 @@ export interface LeaveBalance {
   directReportId: string
   directReportName: string
   year: number
-  ptoUsed: number
   vacationUsed: number
   sickLeaveUsed: number
+  otherUsed: number
   totalUsed: number
-  pendingDays: number
 }
 
 // Settings

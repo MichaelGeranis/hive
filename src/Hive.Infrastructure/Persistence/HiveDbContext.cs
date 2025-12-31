@@ -119,14 +119,12 @@ public class HiveDbContext : DbContext
         });
 
         // Leave configuration
+        // Simple tracking for capacity planning - approvals handled externally (e.g., HiBob)
         modelBuilder.Entity<Leave>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.Notes).HasMaxLength(1000);
-            entity.Property(e => e.ApprovedBy).HasMaxLength(100);
             entity.HasIndex(e => e.DirectReportId);
-            entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.StartDate);
             entity.HasIndex(e => e.EndDate);
             entity.Ignore(e => e.DaysCount); // Computed property
@@ -287,23 +285,13 @@ public class HiveDbContext : DbContext
         TeamTasks.AddRange(tasks);
         SaveChanges();
 
-        // Create leaves
-        var leave1 = new Leave(alice.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(-30), DateTime.UtcNow.AddDays(-25), "Summer vacation", null);
-        leave1.Approve("Manager");
-
-        var leave2 = new Leave(alice.Id, LeaveType.PTO, DateTime.UtcNow.AddDays(14), DateTime.UtcNow.AddDays(15), "Personal appointment", null);
-        leave2.Approve("Manager");
-
-        var leave3 = new Leave(bob.Id, LeaveType.SickLeave, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), "Not feeling well", null);
-        leave3.Approve("Manager");
-
-        var leave4 = new Leave(bob.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(30), DateTime.UtcNow.AddDays(40), "Winter holiday", null);
-
-        var leave5 = new Leave(carol.Id, LeaveType.PTO, DateTime.UtcNow.AddDays(-60), DateTime.UtcNow.AddDays(-58), "Family event", null);
-        leave5.Approve("Manager");
-
-        var leave6 = new Leave(carol.Id, LeaveType.Other, DateTime.UtcNow.AddDays(7), DateTime.UtcNow.AddDays(9), "Tech conference", "Attending as speaker");
-        leave6.Approve("Manager");
+        // Create leaves - simple tracking for capacity planning
+        var leave1 = new Leave(alice.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(-30), DateTime.UtcNow.AddDays(-25), "Summer vacation");
+        var leave2 = new Leave(alice.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(14), DateTime.UtcNow.AddDays(15), "Personal time");
+        var leave3 = new Leave(bob.Id, LeaveType.Sick, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), "Not feeling well");
+        var leave4 = new Leave(bob.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(30), DateTime.UtcNow.AddDays(40), "Winter holiday");
+        var leave5 = new Leave(carol.Id, LeaveType.Vacation, DateTime.UtcNow.AddDays(-60), DateTime.UtcNow.AddDays(-58), "Family event");
+        var leave6 = new Leave(carol.Id, LeaveType.Other, DateTime.UtcNow.AddDays(7), DateTime.UtcNow.AddDays(9), "Tech conference");
 
         Leaves.AddRange(leave1, leave2, leave3, leave4, leave5, leave6);
         SaveChanges();

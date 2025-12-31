@@ -59,26 +59,22 @@ public class InMemoryDbContext
         var directReportIds = DirectReports.Keys.ToList();
         if (directReportIds.Count == 0) return;
 
-        // Past approved vacation for Alice
+        // Past vacation for Alice
         var leave1 = new Leave(
             directReportIds[0],
             LeaveType.Vacation,
             DateTime.UtcNow.AddDays(-30),
             DateTime.UtcNow.AddDays(-25),
-            "Summer vacation",
-            null);
-        leave1.Approve("Manager");
+            "Summer vacation");
         Leaves.TryAdd(leave1.Id, leave1);
 
-        // Upcoming PTO for Alice
+        // Upcoming vacation for Alice
         var leave2 = new Leave(
             directReportIds[0],
-            LeaveType.PTO,
+            LeaveType.Vacation,
             DateTime.UtcNow.AddDays(14),
             DateTime.UtcNow.AddDays(15),
-            "Personal appointment",
-            null);
-        leave2.Approve("Manager");
+            "Personal time");
         Leaves.TryAdd(leave2.Id, leave2);
 
         if (directReportIds.Count > 1)
@@ -86,36 +82,31 @@ public class InMemoryDbContext
             // Sick leave for Bob (currently on leave)
             var leave3 = new Leave(
                 directReportIds[1],
-                LeaveType.SickLeave,
+                LeaveType.Sick,
                 DateTime.UtcNow.AddDays(-1),
                 DateTime.UtcNow.AddDays(1),
-                "Not feeling well",
-                null);
-            leave3.Approve("Manager");
+                "Not feeling well");
             Leaves.TryAdd(leave3.Id, leave3);
 
-            // Pending leave request for Bob
+            // Upcoming vacation for Bob
             var leave4 = new Leave(
                 directReportIds[1],
                 LeaveType.Vacation,
                 DateTime.UtcNow.AddDays(30),
                 DateTime.UtcNow.AddDays(40),
-                "Winter holiday",
-                null);
+                "Winter holiday");
             Leaves.TryAdd(leave4.Id, leave4);
         }
 
         if (directReportIds.Count > 2)
         {
-            // Past PTO for Carol
+            // Past vacation for Carol
             var leave5 = new Leave(
                 directReportIds[2],
-                LeaveType.PTO,
+                LeaveType.Vacation,
                 DateTime.UtcNow.AddDays(-60),
                 DateTime.UtcNow.AddDays(-58),
-                "Family event",
-                null);
-            leave5.Approve("Manager");
+                "Family event");
             Leaves.TryAdd(leave5.Id, leave5);
 
             // Upcoming conference
@@ -124,9 +115,7 @@ public class InMemoryDbContext
                 LeaveType.Other,
                 DateTime.UtcNow.AddDays(7),
                 DateTime.UtcNow.AddDays(9),
-                "Tech conference",
-                "Attending as speaker");
-            leave6.Approve("Manager");
+                "Tech conference");
             Leaves.TryAdd(leave6.Id, leave6);
         }
     }
