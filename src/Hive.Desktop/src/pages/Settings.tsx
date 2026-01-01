@@ -635,14 +635,14 @@ export default function Settings() {
       {/* Sprint Capacity Management */}
       <Card>
         <CardHeader
-          title="Sprint Capacity"
-          subtitle="Configure story point capacity per sprint for capacity analysis"
+          title="Sprint Committed Points"
+          subtitle="Configure committed story points per sprint"
         />
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Set the total story point capacity and available team members for each sprint.
-              This data is used in capacity analysis reports.
+              Set the committed story points and available team members for each sprint.
+              This data is used for sprint utilization analysis (completed vs committed).
             </p>
 
             {sprints.length === 0 ? (

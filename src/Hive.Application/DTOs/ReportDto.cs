@@ -433,15 +433,15 @@ public record LateTasksByAssigneeDto
 }
 
 /// <summary>
-/// Capacity analysis report comparing planned vs actual story points.
+/// Capacity analysis report comparing committed vs completed story points.
 /// </summary>
 public record CapacityAnalysisDto
 {
     public IReadOnlyList<SprintCapacityAnalysisDto> PastSprints { get; init; } = [];
     public SprintCapacityAnalysisDto? CurrentSprint { get; init; }
     public IReadOnlyList<SprintCapacityAnalysisDto> FutureSprints { get; init; } = [];
-    public double OverallUtilization { get; init; }
-    public int TotalCapacityPoints { get; init; }
+    public double AverageUtilization { get; init; }
+    public int TotalCommittedPoints { get; init; }
     public int TotalCompletedPoints { get; init; }
 }
 
@@ -455,10 +455,8 @@ public record SprintCapacityAnalysisDto
     public int Year { get; init; }
     public int Quarter { get; init; }
     public int SprintNumber { get; init; }
-    public int CapacityPoints { get; init; }
+    public int CommittedPoints { get; init; }
     public int CompletedPoints { get; init; }
-    public int InProgressPoints { get; init; }
-    public int PlannedPoints { get; init; }
     public double UtilizationPercentage { get; init; }
     public string Status { get; init; } = string.Empty; // "Past", "Current", "Future"
 }

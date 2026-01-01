@@ -670,19 +670,18 @@ export interface CapacityAnalysis {
   currentSprint?: SprintCapacityAnalysis
   futureSprints: SprintCapacityAnalysis[]
   averageUtilization: number
+  totalCommittedPoints: number
+  totalCompletedPoints: number
 }
 
 export interface SprintCapacityAnalysis {
   sprintId: string
   sprintName: string
-  teamName: string
   quarter: number
   year: number
   sprintNumber: number
-  capacityPoints: number
   committedPoints: number
   completedPoints: number
   utilizationPercentage: number
-  completionPercentage: number
-  category: 'Past' | 'Current' | 'Future'
+  status: 'Past' | 'Current' | 'Future'
 }

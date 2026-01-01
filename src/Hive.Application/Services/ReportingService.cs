@@ -812,8 +812,8 @@ public class ReportingService : IReportingService
                 PastSprints = [],
                 CurrentSprint = null,
                 FutureSprints = [],
-                OverallUtilization = 0,
-                TotalCapacityPoints = 0,
+                AverageUtilization = 0,
+                TotalCommittedPoints = 0,
                 TotalCompletedPoints = 0
             };
         }
@@ -857,18 +857,9 @@ public class ReportingService : IReportingService
                 .Where(t => t.Status == TaskStatus.Done && t.StoryPoints.HasValue)
                 .Sum(t => t.StoryPoints!.Value);
 
-            var inProgressPoints = sprintTasks
-                .Where(t => t.Status == TaskStatus.InProgress && t.StoryPoints.HasValue)
-                .Sum(t => t.StoryPoints!.Value);
-
-            var plannedPoints = sprintTasks
-                .Where(t => (t.Status == TaskStatus.Backlog || t.Status == TaskStatus.Todo) && t.StoryPoints.HasValue)
-                .Sum(t => t.StoryPoints!.Value);
-
-            var capacityPoints = capacity?.TotalCapacityPoints ?? 0;
-            var totalUsed = completedPoints + inProgressPoints + plannedPoints;
-            var utilization = capacityPoints > 0
-                ? Math.Round((double)totalUsed / capacityPoints * 100, 1)
+            var committedPoints = capacity?.TotalCapacityPoints ?? 0;
+            var utilization = committedPoints > 0
+                ? Math.Round((double)completedPoints / committedPoints * 100, 1)
                 : 0;
 
             string status;
@@ -892,10 +883,8 @@ public class ReportingService : IReportingService
                 Year = sprint.Year,
                 Quarter = sprint.Quarter,
                 SprintNumber = sprint.SprintNumber,
-                CapacityPoints = capacityPoints,
+                CommittedPoints = committedPoints,
                 CompletedPoints = completedPoints,
-                InProgressPoints = inProgressPoints,
-                PlannedPoints = plannedPoints,
                 UtilizationPercentage = utilization,
                 Status = status
             };
@@ -914,11 +903,11 @@ public class ReportingService : IReportingService
             }
         }
 
-        // Calculate overall utilization from past sprints
-        var totalCapacity = pastSprints.Sum(s => s.CapacityPoints);
+        // Calculate average utilization from past sprints (average of utilization percentages)
+        var totalCommitted = pastSprints.Sum(s => s.CommittedPoints);
         var totalCompleted = pastSprints.Sum(s => s.CompletedPoints);
-        var overallUtilization = totalCapacity > 0
-            ? Math.Round((double)totalCompleted / totalCapacity * 100, 1)
+        var averageUtilization = pastSprints.Count > 0
+            ? Math.Round(pastSprints.Average(s => s.UtilizationPercentage), 1)
             : 0;
 
         return new CapacityAnalysisDto
@@ -926,8 +915,8 @@ public class ReportingService : IReportingService
             PastSprints = pastSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
             CurrentSprint = currentSprint,
             FutureSprints = futureSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
-            OverallUtilization = overallUtilization,
-            TotalCapacityPoints = totalCapacity,
+            AverageUtilization = averageUtilization,
+            TotalCommittedPoints = totalCommitted,
             TotalCompletedPoints = totalCompleted
         };
     }

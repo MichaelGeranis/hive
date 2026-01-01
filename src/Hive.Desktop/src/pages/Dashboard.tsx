@@ -231,7 +231,7 @@ export default function Dashboard() {
           <StatCard
             title="Current Sprint"
             value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
-            subtitle={`${capacityAnalysis.currentSprint.committedPoints ?? 0}/${capacityAnalysis.currentSprint.capacityPoints ?? 0} SP`}
+            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
             icon={<TrendingUp className="w-6 h-6" />}
             color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
           />
@@ -511,7 +511,6 @@ export default function Dashboard() {
                 />
                 <Legend />
                 <ReferenceLine y={0} stroke="#000" />
-                <Bar dataKey="capacityPoints" fill="#94a3b8" name="Capacity" />
                 <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed" />
                 <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
               </BarChart>
