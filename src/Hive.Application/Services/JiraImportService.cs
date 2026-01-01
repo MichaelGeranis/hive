@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
 using Hive.Core.Entities;
@@ -17,6 +18,9 @@ public class JiraImportService : IJiraImportService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ISprintService _sprintService;
+
+    // Sprint name pattern: TeamName_QuarterQYear_SSprintNumber (e.g., LP_1Q25_S4)
+    private static readonly Regex SprintPatternRegex = new(@"^(\w+)_(\d)Q(\d{2})_S(\d+)$", RegexOptions.Compiled);
 
     // Common Jira CSV column names
     private static readonly string[] IssueKeyColumns = { "Issue key", "Key", "Issue Key", "IssueKey" };
@@ -162,6 +166,48 @@ public class JiraImportService : IJiraImportService
                     continue;
                 }
 
+                // Filter and validate sprints before mapping
+                // Only process sprints that match the pattern: TeamName_QuarterQYear_SSprintNumber
+                var sprintValue = GetValue(rowData, SprintColumns);
+                if (!string.IsNullOrWhiteSpace(sprintValue))
+                {
+                    var sprintNames = sprintValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    var validSprints = new List<string>();
+
+                    foreach (var sprintName in sprintNames)
+                    {
+                        if (IsValidSprintPattern(sprintName))
+                        {
+                            validSprints.Add(sprintName);
+                        }
+                        else
+                        {
+                            warnings.Add($"Row {i + 1}: Sprint '{sprintName}' doesn't match required pattern (TeamName_QuarterQYear_SSprintNumber), ignoring");
+                        }
+                    }
+
+                    // If task had sprints but none were valid, skip this task
+                    if (sprintNames.Length > 0 && validSprints.Count == 0)
+                    {
+                        warnings.Add($"Row {i + 1}: Task '{summary}' has no valid sprints matching the required pattern, skipping");
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Update rowData to only contain valid sprints
+                    if (validSprints.Count > 0)
+                    {
+                        // Update all possible sprint column variations
+                        foreach (var sprintCol in SprintColumns)
+                        {
+                            if (rowData.ContainsKey(sprintCol))
+                            {
+                                rowData[sprintCol] = string.Join(",", validSprints);
+                            }
+                        }
+                    }
+                }
+
                 // Map fields
                 var taskData = MapJiraRowToTask(rowData, directReports, projects, out var projectName);
 
@@ -171,7 +217,7 @@ public class JiraImportService : IJiraImportService
                     warnings.Add($"Row {i + 1}: Project '{projectName}' not found, leaving ProjectId null");
                 }
 
-                // Auto-create sprints if specified (sprint field can contain comma-separated values)
+                // Auto-create valid sprints
                 if (!string.IsNullOrWhiteSpace(taskData.Sprint))
                 {
                     var sprintNames = taskData.Sprint.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -411,6 +457,14 @@ public class JiraImportService : IJiraImportService
             }
         }
         return null;
+    }
+
+    private static bool IsValidSprintPattern(string sprintName)
+    {
+        if (string.IsNullOrWhiteSpace(sprintName))
+            return false;
+
+        return SprintPatternRegex.IsMatch(sprintName);
     }
 
     private static TeamTask? FindExistingTask(IReadOnlyList<TeamTask> existingTasks, string? issueKey, string? summary, string matchField)

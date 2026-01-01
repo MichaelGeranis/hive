@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, AlertTriangle, Clock, Play, CheckCircle, MoreVertical, Edit, Trash2, RotateCcw, Tag, Zap, Timer, Search } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi, settingsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -321,13 +321,7 @@ export default function Tasks() {
               Delete Selected ({selectedIds.size})
             </button>
           )}
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            New Task
-          </button>
+          {/* Tasks are imported from Jira - manual creation disabled */}
         </div>
       </div>
 
@@ -640,54 +634,14 @@ export default function Tasks() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {(task.status === TaskStatus.Backlog || task.status === TaskStatus.Todo) && (
-                      <button
-                        onClick={() => handleAction(task.id, 'start')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-                      >
-                        <Play className="w-4 h-4" />
-                        Start
-                      </button>
-                    )}
-                    {(task.status === TaskStatus.InProgress || task.status === TaskStatus.InReview) && (
-                      <button
-                        onClick={() => handleAction(task.id, 'complete')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Done
-                      </button>
-                    )}
-                    {task.status === TaskStatus.Done && (
-                      <button
-                        onClick={() => handleAction(task.id, 'reopen')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-500 text-white rounded-lg hover:bg-slate-600"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Reopen
-                      </button>
-                    )}
-                    <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                        <MoreVertical className="w-5 h-5 text-slate-400" />
-                      </button>
-                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                        <button
-                          onClick={() => handleEdit(task)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(task.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+                    {/* Status change buttons disabled - tasks are read-only */}
+                    <button
+                      onClick={() => handleDelete(task.id)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
                   </div>
                 </div>
                 </div>
