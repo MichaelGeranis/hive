@@ -9,6 +9,7 @@ public class Leave
     public Guid Id { get; private set; }
     public Guid DirectReportId { get; private set; }
     public LeaveType Type { get; private set; }
+    public LeaveStatus Status { get; private set; }
     public DateTime StartDate { get; private set; }
     public DateTime EndDate { get; private set; }
     public string? Notes { get; private set; }
@@ -31,6 +32,7 @@ public class Leave
         Id = Guid.NewGuid();
         DirectReportId = directReportId;
         Type = type;
+        Status = LeaveStatus.Active;
         StartDate = startDate.Date;
         EndDate = endDate.Date;
         Notes = notes?.Trim();

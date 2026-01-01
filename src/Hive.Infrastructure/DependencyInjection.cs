@@ -97,8 +97,8 @@ public class DatabaseInitializer : IHostedService
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<HiveDbContext>();
 
-        // Ensure database is created
-        await context.Database.EnsureCreatedAsync(cancellationToken);
+        // Apply pending migrations
+        await context.Database.MigrateAsync(cancellationToken);
 
         // Seed data if enabled and database is empty
         if (_seedData)

@@ -128,6 +128,7 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.DirectReportId);
             entity.HasIndex(e => e.StartDate);
             entity.HasIndex(e => e.EndDate);
+            entity.Property(e => e.Status).IsRequired().HasDefaultValue(LeaveStatus.Active);
             entity.Ignore(e => e.DaysCount); // Computed property
             entity.Ignore(e => e.BusinessDaysCount); // Computed property
         });

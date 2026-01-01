@@ -9,3 +9,13 @@ public enum LeaveType
     Sick = 1,
     Other = 2
 }
+
+/// <summary>
+/// Status of a leave record.
+/// Kept intentionally small - used for simple tracking and future workflows.
+/// </summary>
+public enum LeaveStatus
+{
+    Active = 0,
+    Cancelled = 1
+}

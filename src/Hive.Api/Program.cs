@@ -32,7 +32,7 @@ if (useInMemory)
 else
 {
     var connectionString = $"Data Source={GetDatabasePath()}";
-    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: false);
+    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: true);
 }
 
 static string GetDatabasePath()

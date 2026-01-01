@@ -27,6 +27,13 @@ help:
 	@echo "Other:"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make restore        - Restore NuGet packages"
+	@echo "  make reset-db       - Reset SQLite database (creates backup)"
+	@echo ""
+	@echo "Migrations:"
+	@echo "  make migration-add     - Create a new migration"
+	@echo "  make migration-remove  - Remove the last migration"
+	@echo "  make migration-update  - Apply migrations to database"
+	@echo "  make migration-list    - List all migrations"
 
 # Install dependencies
 install:
@@ -116,3 +123,32 @@ clean:
 check:
 	dotnet build Hive.sln --warnaserror
 	cd src/Hive.Desktop && npx tsc --noEmit
+
+# Reset the SQLite database (backs up existing database)
+reset-db:
+	@echo "Resetting SQLite database..."
+	@if [ -f "$$HOME/Library/Application Support/Hive/hive.db" ]; then \
+		echo "Backing up existing database..."; \
+		cp "$$HOME/Library/Application Support/Hive/hive.db" "$$HOME/Library/Application Support/Hive/hive.db.backup.$$(date +%Y%m%d_%H%M%S)"; \
+		rm "$$HOME/Library/Application Support/Hive/hive.db"; \
+		echo "Database deleted. It will be recreated on next backend start."; \
+	else \
+		echo "No database file found."; \
+	fi
+
+# Create a new migration
+migration-add:
+	@read -p "Enter migration name: " name; \
+	dotnet ef migrations add $$name --project src/Hive.Infrastructure/Hive.Infrastructure.csproj --startup-project src/Hive.Api/Hive.Api.csproj --context HiveDbContext
+
+# Remove the last migration
+migration-remove:
+	dotnet ef migrations remove --project src/Hive.Infrastructure/Hive.Infrastructure.csproj --startup-project src/Hive.Api/Hive.Api.csproj --context HiveDbContext
+
+# Apply migrations to the database
+migration-update:
+	dotnet ef database update --project src/Hive.Infrastructure/Hive.Infrastructure.csproj --startup-project src/Hive.Api/Hive.Api.csproj --context HiveDbContext
+
+# List all migrations
+migration-list:
+	dotnet ef migrations list --project src/Hive.Infrastructure/Hive.Infrastructure.csproj --startup-project src/Hive.Api/Hive.Api.csproj --context HiveDbContext
