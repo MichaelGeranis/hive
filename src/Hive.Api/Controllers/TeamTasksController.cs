@@ -193,21 +193,17 @@ public class TeamTasksController : ControllerBase
         }
     }
 
+    // DISABLED: Tasks are read-only data imported from Jira. Only deletion is allowed.
+    // Uncomment if manual task editing is needed in the future.
+
+    /*
     /// <summary>
     /// Updates an existing task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="dto">The updated task data.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Update(Guid id, [FromBody] UpdateTeamTaskDto dto, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating task with ID: {Id}", id);
-
         try
         {
             var updated = await _service.UpdateAsync(id, dto, cancellationToken);
@@ -226,17 +222,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Assigns a task to a team member.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="dto">The assignment data.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/assign")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Assign(Guid id, [FromBody] AssignTaskDto dto, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Assigning task {Id} to {AssigneeId}", id, dto.AssigneeId);
-
         try
         {
             var updated = await _service.AssignAsync(id, dto, cancellationToken);
@@ -251,17 +240,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Moves a task to backlog.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/backlog")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> MoveToBacklog(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Moving task {Id} to backlog", id);
-
         try
         {
             var updated = await _service.MoveToBacklogAsync(id, cancellationToken);
@@ -280,17 +262,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Moves a task to todo.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/todo")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> MoveToTodo(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Moving task {Id} to todo", id);
-
         try
         {
             var updated = await _service.MoveToTodoAsync(id, cancellationToken);
@@ -309,17 +284,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Starts work on a task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/start")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Start(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting task {Id}", id);
-
         try
         {
             var updated = await _service.StartAsync(id, cancellationToken);
@@ -338,17 +306,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Moves a task to review.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/review")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> MoveToReview(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Moving task {Id} to review", id);
-
         try
         {
             var updated = await _service.MoveToReviewAsync(id, cancellationToken);
@@ -367,18 +328,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Completes a task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="dto">Optional completion data with actual hours.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/complete")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Complete(Guid id, [FromBody] CompleteTaskDto? dto, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Completing task {Id}", id);
-
         try
         {
             var updated = await _service.CompleteAsync(id, dto, cancellationToken);
@@ -397,17 +350,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Cancels a task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/cancel")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Cancel(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Cancelling task {Id}", id);
-
         try
         {
             var updated = await _service.CancelAsync(id, cancellationToken);
@@ -426,17 +372,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Reopens a completed or cancelled task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/reopen")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> Reopen(Guid id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Reopening task {Id}", id);
-
         try
         {
             var updated = await _service.ReopenAsync(id, cancellationToken);
@@ -455,18 +394,10 @@ public class TeamTasksController : ControllerBase
     /// <summary>
     /// Logs hours worked on a task.
     /// </summary>
-    /// <param name="id">The task ID.</param>
-    /// <param name="dto">The hours to log.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated task.</returns>
     [HttpPost("{id:guid}/log-hours")]
-    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamTaskDto>> LogHours(Guid id, [FromBody] LogHoursDto dto, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Logging {Hours} hours on task {Id}", dto.Hours, id);
-
         try
         {
             var updated = await _service.LogHoursAsync(id, dto, cancellationToken);
@@ -481,6 +412,7 @@ public class TeamTasksController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+    */
 
     /// <summary>
     /// Deletes a task.

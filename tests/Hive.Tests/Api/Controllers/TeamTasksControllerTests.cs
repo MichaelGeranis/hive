@@ -178,151 +178,109 @@ public class TeamTasksControllerTests
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+    // DISABLED: Tasks are read-only. Update endpoints are disabled.
+    /*
     [Fact]
     public async Task Update_WhenExists_ReturnsOkWithUpdatedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var updateDto = new UpdateTeamTaskDto { Title = "Updated" };
         var resultDto = CreateDto("Updated");
         _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Update(id, updateDto, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Assign_WithValidAssignee_ReturnsOkWithUpdatedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var assignDto = new AssignTaskDto { AssigneeId = Guid.NewGuid() };
         var resultDto = CreateDto();
         _serviceMock.Setup(s => s.AssignAsync(id, assignDto, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Assign(id, assignDto, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Start_ReturnsOkWithUpdatedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var resultDto = CreateDto() with { Status = TaskStatus.InProgress };
         _serviceMock.Setup(s => s.StartAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Start(id, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Start_WhenInvalidState_ReturnsBadRequest()
     {
-        // Arrange
         var id = Guid.NewGuid();
         _serviceMock.Setup(s => s.StartAsync(id, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Cannot start"));
-
-        // Act
         var result = await _controller.Start(id, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     [Fact]
     public async Task MoveToReview_ReturnsOkWithUpdatedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var resultDto = CreateDto() with { Status = TaskStatus.InReview };
         _serviceMock.Setup(s => s.MoveToReviewAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.MoveToReview(id, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Complete_ReturnsOkWithCompletedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var resultDto = CreateDto() with { Status = TaskStatus.Done };
         _serviceMock.Setup(s => s.CompleteAsync(id, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Complete(id, null, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Cancel_ReturnsOkWithCancelledTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var resultDto = CreateDto() with { Status = TaskStatus.Cancelled };
         _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Cancel(id, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task Reopen_ReturnsOkWithReopenedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var resultDto = CreateDto() with { Status = TaskStatus.Todo };
         _serviceMock.Setup(s => s.ReopenAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.Reopen(id, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task LogHours_ReturnsOkWithUpdatedTask()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var logDto = new LogHoursDto { Hours = 5 };
         var resultDto = CreateDto();
         _serviceMock.Setup(s => s.LogHoursAsync(id, logDto, It.IsAny<CancellationToken>()))
             .ReturnsAsync(resultDto);
-
-        // Act
         var result = await _controller.LogHours(id, logDto, CancellationToken.None);
-
-        // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
+    */
 
     [Fact]
     public async Task Delete_WhenExists_ReturnsNoContent()
