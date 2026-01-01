@@ -171,17 +171,24 @@ public class JiraImportService : IJiraImportService
                     warnings.Add($"Row {i + 1}: Project '{projectName}' not found, leaving ProjectId null");
                 }
 
-                // Auto-create sprint if specified and not already created
-                if (!string.IsNullOrWhiteSpace(taskData.Sprint) && !createdSprints.Contains(taskData.Sprint))
+                // Auto-create sprints if specified (sprint field can contain comma-separated values)
+                if (!string.IsNullOrWhiteSpace(taskData.Sprint))
                 {
-                    try
+                    var sprintNames = taskData.Sprint.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    foreach (var sprintName in sprintNames)
                     {
-                        await _sprintService.GetOrCreateAsync(taskData.Sprint, cancellationToken);
-                        createdSprints.Add(taskData.Sprint);
-                    }
-                    catch (Exception ex)
-                    {
-                        warnings.Add($"Row {i + 1}: Failed to create sprint '{taskData.Sprint}': {ex.Message}");
+                        if (!createdSprints.Contains(sprintName))
+                        {
+                            try
+                            {
+                                await _sprintService.GetOrCreateAsync(sprintName, cancellationToken);
+                                createdSprints.Add(sprintName);
+                            }
+                            catch (Exception ex)
+                            {
+                                warnings.Add($"Row {i + 1}: Failed to create sprint '{sprintName}': {ex.Message}");
+                            }
+                        }
                     }
                 }
 
