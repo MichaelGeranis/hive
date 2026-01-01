@@ -120,17 +120,6 @@ export default function Tasks() {
     return result
   }
 
-  const handleAction = async (id: string, action: 'start' | 'complete' | 'reopen') => {
-    try {
-      if (action === 'start') await tasksApi.start(id)
-      else if (action === 'complete') await tasksApi.complete(id)
-      else if (action === 'reopen') await tasksApi.reopen(id)
-      loadData()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -154,23 +143,6 @@ export default function Tasks() {
     } catch (err) {
       console.error(err)
     }
-  }
-
-  const handleEdit = (task: TeamTask) => {
-    setFormData({
-      title: task.title,
-      description: task.description || '',
-      type: task.type,
-      priority: task.priority,
-      assigneeId: task.assigneeId || '',
-      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
-      storyPoints: task.storyPoints?.toString() || '',
-      labels: task.labels || '',
-      sprint: task.sprint || '',
-      timeSpentMinutes: task.timeSpentMinutes?.toString() || ''
-    })
-    setEditingId(task.id)
-    setShowForm(true)
   }
 
   const handleDelete = async (id: string) => {
