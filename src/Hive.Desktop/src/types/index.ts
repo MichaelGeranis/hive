@@ -586,3 +586,103 @@ export interface UpdateManagerNoteDto {
   priority: NotePriority
   dueDate?: string
 }
+
+// Sprints
+export interface Sprint {
+  id: string
+  name: string
+  teamName: string
+  quarter: number
+  year: number
+  sprintNumber: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateSprintDto {
+  name: string
+}
+
+// Sprint Capacity
+export interface SprintCapacity {
+  id: string
+  sprintId: string
+  sprintName: string
+  totalCapacityPoints: number
+  availableMembers: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateSprintCapacityDto {
+  sprintId: string
+  totalCapacityPoints: number
+  availableMembers: number
+}
+
+export interface UpdateSprintCapacityDto {
+  totalCapacityPoints: number
+  availableMembers: number
+}
+
+// Late Tasks Report
+export interface LateTasksReport {
+  totalLateTasks: number
+  averageDelayDays: number
+  lateTaskPercentage: number
+  lateTasks: LateTask[]
+  bySprintBreakdown: LateTasksBySprint[]
+  byAssigneeBreakdown: LateTasksByAssignee[]
+}
+
+export interface LateTask {
+  taskId: string
+  taskTitle: string
+  issueKey: string
+  assigneeName: string
+  sprintName: string
+  dueDate: string
+  completedAt: string
+  delayDays: number
+  storyPoints?: number
+}
+
+export interface LateTasksBySprint {
+  sprintName: string
+  lateTaskCount: number
+  totalCompletedTasks: number
+  lateTaskPercentage: number
+  averageDelayDays: number
+}
+
+export interface LateTasksByAssignee {
+  assigneeId?: string
+  assigneeName: string
+  lateTaskCount: number
+  totalCompletedTasks: number
+  lateTaskPercentage: number
+  averageDelayDays: number
+}
+
+// Capacity Analysis
+export interface CapacityAnalysis {
+  pastSprints: SprintCapacityAnalysis[]
+  currentSprint?: SprintCapacityAnalysis
+  futureSprints: SprintCapacityAnalysis[]
+  averageUtilization: number
+}
+
+export interface SprintCapacityAnalysis {
+  sprintId: string
+  sprintName: string
+  teamName: string
+  quarter: number
+  year: number
+  sprintNumber: number
+  capacityPoints: number
+  committedPoints: number
+  completedPoints: number
+  utilizationPercentage: number
+  completionPercentage: number
+  category: 'Past' | 'Current' | 'Future'
+}

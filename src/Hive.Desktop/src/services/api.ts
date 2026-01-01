@@ -31,7 +31,13 @@ import type {
   JiraImportPreview,
   ManagerNote,
   CreateManagerNoteDto,
-  UpdateManagerNoteDto
+  UpdateManagerNoteDto,
+  Sprint,
+  CreateSprintDto,
+  SprintCapacity,
+  CreateSprintCapacityDto,
+  LateTasksReport,
+  CapacityAnalysis
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5000/api'
@@ -136,7 +142,31 @@ export const reportsApi = {
   getActionItemsSummary: () => api.get<ActionItemsSummary>('/reports/action-items').then(r => r.data),
   getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data),
   getTeamVelocity: () => api.get<TeamVelocity>('/reports/team-velocity').then(r => r.data),
-  getEstimationAccuracy: () => api.get<EstimationAccuracy>('/reports/estimation-accuracy').then(r => r.data)
+  getEstimationAccuracy: () => api.get<EstimationAccuracy>('/reports/estimation-accuracy').then(r => r.data),
+  getLateTasks: () => api.get<LateTasksReport>('/reports/late-tasks').then(r => r.data),
+  getCapacityAnalysis: () => api.get<CapacityAnalysis>('/reports/capacity-analysis').then(r => r.data)
+}
+
+// Sprints
+export const sprintsApi = {
+  getAll: () => api.get<Sprint[]>('/sprints').then(r => r.data),
+  getById: (id: string) => api.get<Sprint>(`/sprints/${id}`).then(r => r.data),
+  getByName: (name: string) => api.get<Sprint>(`/sprints/by-name/${encodeURIComponent(name)}`).then(r => r.data),
+  getByTeam: (teamName: string) => api.get<Sprint[]>(`/sprints/team/${encodeURIComponent(teamName)}`).then(r => r.data),
+  getByYear: (year: number) => api.get<Sprint[]>(`/sprints/year/${year}`).then(r => r.data),
+  getByYearQuarter: (year: number, quarter: number) =>
+    api.get<Sprint[]>(`/sprints/year/${year}/quarter/${quarter}`).then(r => r.data),
+  create: (data: CreateSprintDto) => api.post<Sprint>('/sprints', data).then(r => r.data),
+  delete: (id: string) => api.delete(`/sprints/${id}`)
+}
+
+// Sprint Capacity
+export const sprintCapacityApi = {
+  getAll: () => api.get<SprintCapacity[]>('/sprint-capacity').then(r => r.data),
+  getById: (id: string) => api.get<SprintCapacity>(`/sprint-capacity/${id}`).then(r => r.data),
+  getBySprintId: (sprintId: string) => api.get<SprintCapacity>(`/sprint-capacity/sprint/${sprintId}`).then(r => r.data),
+  createOrUpdate: (data: CreateSprintCapacityDto) => api.post<SprintCapacity>('/sprint-capacity', data).then(r => r.data),
+  delete: (id: string) => api.delete(`/sprint-capacity/${id}`)
 }
 
 // Settings

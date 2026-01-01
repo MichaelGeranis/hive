@@ -380,3 +380,85 @@ public record ProjectAccuracyDto
     public int VarianceHours { get; init; }
     public double AccuracyPercentage { get; init; }
 }
+
+/// <summary>
+/// Late tasks report - tasks completed after their due date.
+/// </summary>
+public record LateTasksReportDto
+{
+    public int TotalLateTasks { get; init; }
+    public IReadOnlyList<LateTaskDto> LateTasks { get; init; } = [];
+    public IReadOnlyList<LateTasksBySprintDto> BySprint { get; init; } = [];
+    public IReadOnlyList<LateTasksByAssigneeDto> ByAssignee { get; init; } = [];
+}
+
+/// <summary>
+/// A single late task.
+/// </summary>
+public record LateTaskDto
+{
+    public Guid TaskId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Sprint { get; init; } = string.Empty;
+    public Guid? AssigneeId { get; init; }
+    public string? AssigneeName { get; init; }
+    public Guid? ProjectId { get; init; }
+    public string? ProjectName { get; init; }
+    public DateTime DueDate { get; init; }
+    public DateTime CompletedAt { get; init; }
+    public int DaysLate { get; init; }
+}
+
+/// <summary>
+/// Late tasks aggregated by sprint.
+/// </summary>
+public record LateTasksBySprintDto
+{
+    public string Sprint { get; init; } = string.Empty;
+    public int LateTasksCount { get; init; }
+    public int TotalDaysLate { get; init; }
+    public double AverageDaysLate { get; init; }
+}
+
+/// <summary>
+/// Late tasks aggregated by assignee.
+/// </summary>
+public record LateTasksByAssigneeDto
+{
+    public Guid? AssigneeId { get; init; }
+    public string AssigneeName { get; init; } = string.Empty;
+    public int LateTasksCount { get; init; }
+    public int TotalDaysLate { get; init; }
+    public double AverageDaysLate { get; init; }
+}
+
+/// <summary>
+/// Capacity analysis report comparing planned vs actual story points.
+/// </summary>
+public record CapacityAnalysisDto
+{
+    public IReadOnlyList<SprintCapacityAnalysisDto> PastSprints { get; init; } = [];
+    public SprintCapacityAnalysisDto? CurrentSprint { get; init; }
+    public IReadOnlyList<SprintCapacityAnalysisDto> FutureSprints { get; init; } = [];
+    public double OverallUtilization { get; init; }
+    public int TotalCapacityPoints { get; init; }
+    public int TotalCompletedPoints { get; init; }
+}
+
+/// <summary>
+/// Capacity analysis for a single sprint.
+/// </summary>
+public record SprintCapacityAnalysisDto
+{
+    public Guid SprintId { get; init; }
+    public string SprintName { get; init; } = string.Empty;
+    public int Year { get; init; }
+    public int Quarter { get; init; }
+    public int SprintNumber { get; init; }
+    public int CapacityPoints { get; init; }
+    public int CompletedPoints { get; init; }
+    public int InProgressPoints { get; init; }
+    public int PlannedPoints { get; init; }
+    public double UtilizationPercentage { get; init; }
+    public string Status { get; init; } = string.Empty; // "Past", "Current", "Future"
+}

@@ -1,0 +1,103 @@
+using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
+using Hive.Core.Entities;
+using Hive.Core.Exceptions;
+using Hive.Core.Interfaces;
+
+namespace Hive.Application.Services;
+
+/// <summary>
+/// Service implementing use cases for SprintCapacity management.
+/// </summary>
+public class SprintCapacityService : ISprintCapacityService
+{
+    private readonly ISprintCapacityRepository _capacityRepository;
+    private readonly ISprintRepository _sprintRepository;
+
+    public SprintCapacityService(
+        ISprintCapacityRepository capacityRepository,
+        ISprintRepository sprintRepository)
+    {
+        _capacityRepository = capacityRepository ?? throw new ArgumentNullException(nameof(capacityRepository));
+        _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
+    }
+
+    public async Task<SprintCapacityDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _capacityRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null) return null;
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
+    public async Task<SprintCapacityDto?> GetBySprintIdAsync(Guid sprintId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _capacityRepository.GetBySprintIdAsync(sprintId, cancellationToken);
+        if (entity is null) return null;
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SprintCapacityDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _capacityRepository.GetAllAsync(cancellationToken);
+        var result = new List<SprintCapacityDto>();
+        foreach (var entity in entities)
+        {
+            result.Add(await MapToDtoAsync(entity, cancellationToken));
+        }
+        return result;
+    }
+
+    public async Task<SprintCapacityDto> CreateOrUpdateAsync(CreateSprintCapacityDto dto, CancellationToken cancellationToken = default)
+    {
+        // Verify sprint exists
+        var sprint = await _sprintRepository.GetByIdAsync(dto.SprintId, cancellationToken);
+        if (sprint is null)
+        {
+            throw new NotFoundException(nameof(Sprint), dto.SprintId);
+        }
+
+        // Check if capacity already exists for this sprint
+        var existing = await _capacityRepository.GetBySprintIdAsync(dto.SprintId, cancellationToken);
+        if (existing is not null)
+        {
+            existing.Update(dto.TotalCapacityPoints, dto.AvailableMembers);
+            await _capacityRepository.UpdateAsync(existing, cancellationToken);
+            return await MapToDtoAsync(existing, cancellationToken);
+        }
+
+        // Create new capacity
+        var entity = new SprintCapacity(dto.SprintId, dto.TotalCapacityPoints, dto.AvailableMembers);
+        var created = await _capacityRepository.AddAsync(entity, cancellationToken);
+
+        return await MapToDtoAsync(created, cancellationToken);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _capacityRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
+        {
+            throw new NotFoundException(nameof(SprintCapacity), id);
+        }
+
+        await _capacityRepository.DeleteAsync(id, cancellationToken);
+    }
+
+    private async Task<SprintCapacityDto> MapToDtoAsync(SprintCapacity entity, CancellationToken cancellationToken)
+    {
+        var sprint = await _sprintRepository.GetByIdAsync(entity.SprintId, cancellationToken);
+
+        return new SprintCapacityDto
+        {
+            Id = entity.Id,
+            SprintId = entity.SprintId,
+            SprintName = sprint?.Name ?? "Unknown",
+            TotalCapacityPoints = entity.TotalCapacityPoints,
+            AvailableMembers = entity.AvailableMembers,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+}

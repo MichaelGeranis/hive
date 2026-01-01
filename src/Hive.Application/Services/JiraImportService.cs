@@ -16,6 +16,7 @@ public class JiraImportService : IJiraImportService
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISprintService _sprintService;
 
     // Common Jira CSV column names
     private static readonly string[] IssueKeyColumns = { "Issue key", "Key", "Issue Key", "IssueKey" };
@@ -35,11 +36,13 @@ public class JiraImportService : IJiraImportService
     public JiraImportService(
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        ISprintService sprintService)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+        _sprintService = sprintService ?? throw new ArgumentNullException(nameof(sprintService));
     }
 
     public Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
@@ -128,6 +131,9 @@ public class JiraImportService : IJiraImportService
         var skippedCount = 0;
         var errorCount = 0;
 
+        // Track created sprints to avoid duplicate creation attempts
+        var createdSprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         for (int i = 1; i < lines.Count; i++)
         {
             try
@@ -157,7 +163,27 @@ public class JiraImportService : IJiraImportService
                 }
 
                 // Map fields
-                var taskData = MapJiraRowToTask(rowData, directReports, projects);
+                var taskData = MapJiraRowToTask(rowData, directReports, projects, out var projectName);
+
+                // Add warning if project was specified but not found
+                if (!string.IsNullOrWhiteSpace(projectName) && !taskData.ProjectId.HasValue)
+                {
+                    warnings.Add($"Row {i + 1}: Project '{projectName}' not found, leaving ProjectId null");
+                }
+
+                // Auto-create sprint if specified and not already created
+                if (!string.IsNullOrWhiteSpace(taskData.Sprint) && !createdSprints.Contains(taskData.Sprint))
+                {
+                    try
+                    {
+                        await _sprintService.GetOrCreateAsync(taskData.Sprint, cancellationToken);
+                        createdSprints.Add(taskData.Sprint);
+                    }
+                    catch (Exception ex)
+                    {
+                        warnings.Add($"Row {i + 1}: Failed to create sprint '{taskData.Sprint}': {ex.Message}");
+                    }
+                }
 
                 if (existingTask != null)
                 {
@@ -401,7 +427,8 @@ public class JiraImportService : IJiraImportService
     private static TaskData MapJiraRowToTask(
         Dictionary<string, string> rowData,
         IReadOnlyList<DirectReport> directReports,
-        IReadOnlyList<Project> projects)
+        IReadOnlyList<Project> projects,
+        out string? projectNameOut)
     {
         var issueKey = GetValue(rowData, IssueKeyColumns);
         var summary = GetValue(rowData, SummaryColumns) ?? "Untitled Task";
@@ -412,6 +439,7 @@ public class JiraImportService : IJiraImportService
         var assigneeName = GetValue(rowData, AssigneeColumns);
         var storyPointsStr = GetValue(rowData, StoryPointsColumns);
         var projectName = GetValue(rowData, ProjectColumns);
+        projectNameOut = projectName; // Output the project name for warning if not found
         var dueDateStr = GetValue(rowData, DueDateColumns);
         var timeSpentStr = GetValue(rowData, TimeSpentColumns);
 

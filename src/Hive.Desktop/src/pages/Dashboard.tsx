@@ -5,11 +5,13 @@ import {
   AlertTriangle,
   Target,
   X,
-  FolderKanban
+  FolderKanban,
+  Clock,
+  TrendingUp
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { reportsApi, tasksApi, projectsApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project } from '../types'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, LateTasksReport, CapacityAnalysis } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -24,7 +26,8 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
+  Legend,
+  ReferenceLine
 } from 'recharts'
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
@@ -35,6 +38,8 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([])
   const [velocity, setVelocity] = useState<TeamVelocity | null>(null)
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
+  const [lateTasks, setLateTasks] = useState<LateTasksReport | null>(null)
+  const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -50,18 +55,22 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, velocityData, accuracyData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, lateTasksData, capacityData] = await Promise.all([
         reportsApi.getDashboard(),
         tasksApi.getAll(),
         projectsApi.getAll(),
         reportsApi.getTeamVelocity(),
-        reportsApi.getEstimationAccuracy()
+        reportsApi.getEstimationAccuracy(),
+        reportsApi.getLateTasks(),
+        reportsApi.getCapacityAnalysis()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData)
       setProjects(projectsData)
       setVelocity(velocityData)
       setAccuracy(accuracyData)
+      setLateTasks(lateTasksData)
+      setCapacityAnalysis(capacityData)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -195,7 +204,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           title="Team Members"
           value={dashboard.team.totalDirectReports}
@@ -222,6 +231,22 @@ export default function Dashboard() {
           icon={<AlertTriangle className="w-6 h-6" />}
           color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
         />
+        <StatCard
+          title="Late Deliveries"
+          value={lateTasks?.totalLateTasks ?? 0}
+          subtitle={lateTasks && lateTasks.totalLateTasks > 0 ? `${lateTasks.lateTaskPercentage.toFixed(1)}% of completed` : 'On track'}
+          icon={<Clock className="w-6 h-6" />}
+          color={lateTasks && lateTasks.totalLateTasks > 0 ? 'amber' : 'green'}
+        />
+        {capacityAnalysis?.currentSprint && (
+          <StatCard
+            title="Current Sprint"
+            value={`${capacityAnalysis.currentSprint.utilizationPercentage}%`}
+            subtitle={`${capacityAnalysis.currentSprint.committedPoints}/${capacityAnalysis.currentSprint.capacityPoints} SP`}
+            icon={<TrendingUp className="w-6 h-6" />}
+            color={capacityAnalysis.currentSprint.utilizationPercentage > 100 ? 'red' : capacityAnalysis.currentSprint.utilizationPercentage > 80 ? 'amber' : 'blue'}
+          />
+        )}
       </div>
 
       {/* Distribution Charts Row - 3 columns */}
@@ -465,6 +490,105 @@ export default function Dashboard() {
                   {accuracy.overallAccuracyPercentage}%
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Capacity Analysis */}
+      {capacityAnalysis && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (
+        <Card>
+          <CardHeader
+            title="Sprint Capacity Analysis"
+            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization}%`}
+          />
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={[
+                ...capacityAnalysis.pastSprints,
+                ...(capacityAnalysis.currentSprint ? [capacityAnalysis.currentSprint] : []),
+                ...capacityAnalysis.futureSprints
+              ].map(s => ({
+                ...s,
+                name: s.sprintName
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [value, name]}
+                  labelFormatter={(label) => `Sprint: ${label}`}
+                />
+                <Legend />
+                <ReferenceLine y={0} stroke="#000" />
+                <Bar dataKey="capacityPoints" fill="#94a3b8" name="Capacity" />
+                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed" />
+                <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t dark:border-slate-700">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Current Sprint</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-500">{capacityAnalysis.futureSprints.length}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Future Sprints</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Late Tasks Breakdown */}
+      {lateTasks && lateTasks.totalLateTasks > 0 && (
+        <Card>
+          <CardHeader
+            title="Late Tasks Analysis"
+            subtitle={`${lateTasks.totalLateTasks} tasks delivered late | Avg delay: ${lateTasks.averageDelayDays.toFixed(1)} days`}
+          />
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* By Sprint */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">By Sprint</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={lateTasks.bySprintBreakdown.slice(0, 6)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="sprintName" width={80} tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      formatter={(value: number, name: string) => {
+                        if (name === 'Late %') return [`${value.toFixed(1)}%`, name]
+                        return [value, name]
+                      }}
+                    />
+                    <Bar dataKey="lateTaskCount" fill="#ef4444" name="Late Tasks" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* By Assignee */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">By Assignee</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={lateTasks.byAssigneeBreakdown.slice(0, 6)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="assigneeName" width={80} tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      formatter={(value: number, name: string) => {
+                        if (name === 'Late %') return [`${value.toFixed(1)}%`, name]
+                        return [value, name]
+                      }}
+                    />
+                    <Bar dataKey="lateTaskCount" fill="#f59e0b" name="Late Tasks" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </CardContent>

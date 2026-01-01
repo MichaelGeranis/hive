@@ -17,6 +17,8 @@ public class ReportingService : IReportingService
     private readonly IMeetingNoteRepository _noteRepository;
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISprintRepository _sprintRepository;
+    private readonly ISprintCapacityRepository _sprintCapacityRepository;
 
     public ReportingService(
         IDirectReportRepository directReportRepository,
@@ -24,7 +26,9 @@ public class ReportingService : IReportingService
         IOneOnOneMeetingRepository meetingRepository,
         IMeetingNoteRepository noteRepository,
         ITeamTaskRepository taskRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        ISprintRepository sprintRepository,
+        ISprintCapacityRepository sprintCapacityRepository)
     {
         _directReportRepository = directReportRepository;
         _reviewRepository = reviewRepository;
@@ -32,6 +36,8 @@ public class ReportingService : IReportingService
         _noteRepository = noteRepository;
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
+        _sprintRepository = sprintRepository;
+        _sprintCapacityRepository = sprintCapacityRepository;
     }
 
     public async Task<DashboardOverviewDto> GetDashboardOverviewAsync(CancellationToken cancellationToken = default)
@@ -714,6 +720,215 @@ public class ReportingService : IReportingService
             TotalEstimatedHours = totalEstimated,
             TotalActualHours = totalActual,
             TotalVarianceHours = totalVariance
+        };
+    }
+
+    public async Task<LateTasksReportDto> GetLateTasksReportAsync(CancellationToken cancellationToken = default)
+    {
+        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+
+        var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
+        var projectMap = projects.ToDictionary(p => p.Id, p => p.Name);
+
+        // Find tasks where CompletedAt > DueDate
+        var lateTasks = tasks
+            .Where(t => t.Status == TaskStatus.Done
+                && t.CompletedAt.HasValue
+                && t.DueDate.HasValue
+                && t.CompletedAt.Value > t.DueDate.Value)
+            .Select(t =>
+            {
+                var daysLate = (int)(t.CompletedAt!.Value.Date - t.DueDate!.Value.Date).TotalDays;
+                return new LateTaskDto
+                {
+                    TaskId = t.Id,
+                    Title = t.Title,
+                    Sprint = t.Sprint,
+                    AssigneeId = t.AssigneeId,
+                    AssigneeName = t.AssigneeId.HasValue && directReportMap.TryGetValue(t.AssigneeId.Value, out var name)
+                        ? name
+                        : null,
+                    ProjectId = t.ProjectId,
+                    ProjectName = t.ProjectId.HasValue && projectMap.TryGetValue(t.ProjectId.Value, out var projectName)
+                        ? projectName
+                        : null,
+                    DueDate = t.DueDate.Value,
+                    CompletedAt = t.CompletedAt.Value,
+                    DaysLate = daysLate
+                };
+            })
+            .OrderByDescending(t => t.DaysLate)
+            .ToList();
+
+        // Group by sprint
+        var bySprint = lateTasks
+            .Where(t => !string.IsNullOrEmpty(t.Sprint))
+            .GroupBy(t => t.Sprint)
+            .Select(g => new LateTasksBySprintDto
+            {
+                Sprint = g.Key,
+                LateTasksCount = g.Count(),
+                TotalDaysLate = g.Sum(t => t.DaysLate),
+                AverageDaysLate = Math.Round(g.Average(t => t.DaysLate), 1)
+            })
+            .OrderByDescending(s => s.LateTasksCount)
+            .ToList();
+
+        // Group by assignee
+        var byAssignee = lateTasks
+            .GroupBy(t => t.AssigneeId)
+            .Select(g => new LateTasksByAssigneeDto
+            {
+                AssigneeId = g.Key,
+                AssigneeName = g.First().AssigneeName ?? "Unassigned",
+                LateTasksCount = g.Count(),
+                TotalDaysLate = g.Sum(t => t.DaysLate),
+                AverageDaysLate = Math.Round(g.Average(t => t.DaysLate), 1)
+            })
+            .OrderByDescending(a => a.LateTasksCount)
+            .ToList();
+
+        return new LateTasksReportDto
+        {
+            TotalLateTasks = lateTasks.Count,
+            LateTasks = lateTasks,
+            BySprint = bySprint,
+            ByAssignee = byAssignee
+        };
+    }
+
+    public async Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(CancellationToken cancellationToken = default)
+    {
+        var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
+        var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
+        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+
+        if (sprints.Count == 0)
+        {
+            return new CapacityAnalysisDto
+            {
+                PastSprints = [],
+                CurrentSprint = null,
+                FutureSprints = [],
+                OverallUtilization = 0,
+                TotalCapacityPoints = 0,
+                TotalCompletedPoints = 0
+            };
+        }
+
+        var capacityMap = sprintCapacities.ToDictionary(c => c.SprintId);
+
+        // Group tasks by sprint name
+        var tasksBySprint = tasks
+            .Where(t => !string.IsNullOrEmpty(t.Sprint))
+            .GroupBy(t => t.Sprint)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Determine current sprint based on highest sort order where we have in-progress tasks
+        // or fallback to the latest sprint with any tasks
+        var currentSprintEntity = sprints
+            .Where(s => tasksBySprint.TryGetValue(s.Name, out var st) && st.Any(t => t.Status == TaskStatus.InProgress))
+            .OrderByDescending(s => s.GetSortOrder())
+            .FirstOrDefault();
+
+        if (currentSprintEntity == null)
+        {
+            // Fallback: use the sprint with highest sort order that has any tasks
+            currentSprintEntity = sprints
+                .Where(s => tasksBySprint.ContainsKey(s.Name))
+                .OrderByDescending(s => s.GetSortOrder())
+                .FirstOrDefault();
+        }
+
+        var currentSortOrder = currentSprintEntity?.GetSortOrder() ?? 0;
+
+        var pastSprints = new List<SprintCapacityAnalysisDto>();
+        var futureSprints = new List<SprintCapacityAnalysisDto>();
+        SprintCapacityAnalysisDto? currentSprint = null;
+
+        foreach (var sprint in sprints.OrderByDescending(s => s.GetSortOrder()))
+        {
+            var sprintTasks = tasksBySprint.TryGetValue(sprint.Name, out var st) ? st : new List<TeamTask>();
+            capacityMap.TryGetValue(sprint.Id, out var capacity);
+
+            var completedPoints = sprintTasks
+                .Where(t => t.Status == TaskStatus.Done && t.StoryPoints.HasValue)
+                .Sum(t => t.StoryPoints!.Value);
+
+            var inProgressPoints = sprintTasks
+                .Where(t => t.Status == TaskStatus.InProgress && t.StoryPoints.HasValue)
+                .Sum(t => t.StoryPoints!.Value);
+
+            var plannedPoints = sprintTasks
+                .Where(t => (t.Status == TaskStatus.Backlog || t.Status == TaskStatus.Todo) && t.StoryPoints.HasValue)
+                .Sum(t => t.StoryPoints!.Value);
+
+            var capacityPoints = capacity?.TotalCapacityPoints ?? 0;
+            var totalUsed = completedPoints + inProgressPoints + plannedPoints;
+            var utilization = capacityPoints > 0
+                ? Math.Round((double)totalUsed / capacityPoints * 100, 1)
+                : 0;
+
+            string status;
+            if (currentSprintEntity != null && sprint.Id == currentSprintEntity.Id)
+            {
+                status = "Current";
+            }
+            else if (sprint.GetSortOrder() < currentSortOrder)
+            {
+                status = "Past";
+            }
+            else
+            {
+                status = "Future";
+            }
+
+            var analysis = new SprintCapacityAnalysisDto
+            {
+                SprintId = sprint.Id,
+                SprintName = sprint.Name,
+                Year = sprint.Year,
+                Quarter = sprint.Quarter,
+                SprintNumber = sprint.SprintNumber,
+                CapacityPoints = capacityPoints,
+                CompletedPoints = completedPoints,
+                InProgressPoints = inProgressPoints,
+                PlannedPoints = plannedPoints,
+                UtilizationPercentage = utilization,
+                Status = status
+            };
+
+            if (status == "Current")
+            {
+                currentSprint = analysis;
+            }
+            else if (status == "Past")
+            {
+                pastSprints.Add(analysis);
+            }
+            else
+            {
+                futureSprints.Add(analysis);
+            }
+        }
+
+        // Calculate overall utilization from past sprints
+        var totalCapacity = pastSprints.Sum(s => s.CapacityPoints);
+        var totalCompleted = pastSprints.Sum(s => s.CompletedPoints);
+        var overallUtilization = totalCapacity > 0
+            ? Math.Round((double)totalCompleted / totalCapacity * 100, 1)
+            : 0;
+
+        return new CapacityAnalysisDto
+        {
+            PastSprints = pastSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
+            CurrentSprint = currentSprint,
+            FutureSprints = futureSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
+            OverallUtilization = overallUtilization,
+            TotalCapacityPoints = totalCapacity,
+            TotalCompletedPoints = totalCompleted
         };
     }
 }

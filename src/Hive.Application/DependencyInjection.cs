@@ -24,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<IJiraImportService, JiraImportService>();
         services.AddScoped<IManagerNoteService, ManagerNoteService>();
+        services.AddScoped<ISprintService, SprintService>();
+        services.AddScoped<ISprintCapacityService, SprintCapacityService>();
         return services;
     }
 }

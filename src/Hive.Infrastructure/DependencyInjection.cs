@@ -41,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IManagerNoteRepository, ManagerNoteRepository>();
+        services.AddScoped<ISprintRepository, SprintRepository>();
+        services.AddScoped<ISprintCapacityRepository, SprintCapacityRepository>();
 
         return services;
     }
@@ -69,6 +71,8 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsRepository, SqliteAppSettingsRepository>();
         services.AddScoped<ILeaveRepository, SqliteLeaveRepository>();
         services.AddScoped<IManagerNoteRepository, SqliteManagerNoteRepository>();
+        services.AddScoped<ISprintRepository, SqliteSprintRepository>();
+        services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
 
         // Always initialize database (creates tables), optionally seed data
         services.AddSingleton<IHostedService>(sp =>

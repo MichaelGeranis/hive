@@ -56,4 +56,14 @@ public interface IReportingService
     /// Gets estimation accuracy metrics comparing estimated hours to actual time spent.
     /// </summary>
     Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets late tasks report - tasks completed after their due date.
+    /// </summary>
+    Task<LateTasksReportDto> GetLateTasksReportAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets capacity analysis comparing planned vs actual story points by sprint.
+    /// </summary>
+    Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(CancellationToken cancellationToken = default);
 }

@@ -23,6 +23,8 @@ public class HiveDbContext : DbContext
     public DbSet<Leave> Leaves => Set<Leave>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
     public DbSet<ManagerNote> ManagerNotes => Set<ManagerNote>();
+    public DbSet<Sprint> Sprints => Set<Sprint>();
+    public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,6 +152,24 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.IsCompleted);
             entity.HasIndex(e => e.Priority);
             entity.HasIndex(e => e.DueDate);
+        });
+
+        // Sprint configuration
+        modelBuilder.Entity<Sprint>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.TeamName).HasMaxLength(50);
+            entity.HasIndex(e => e.TeamName);
+            entity.HasIndex(e => new { e.Year, e.Quarter });
+        });
+
+        // SprintCapacity configuration
+        modelBuilder.Entity<SprintCapacity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.SprintId).IsUnique();
         });
     }
 

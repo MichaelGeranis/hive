@@ -165,4 +165,30 @@ public class ReportsController : ControllerBase
         var accuracy = await _service.GetEstimationAccuracyAsync(cancellationToken);
         return Ok(accuracy);
     }
+
+    /// <summary>
+    /// Gets late tasks report - tasks completed after their due date.
+    /// </summary>
+    /// <returns>Late tasks with breakdown by sprint and assignee.</returns>
+    [HttpGet("late-tasks")]
+    [ProducesResponseType(typeof(LateTasksReportDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<LateTasksReportDto>> GetLateTasks(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Generating late tasks report");
+        var report = await _service.GetLateTasksReportAsync(cancellationToken);
+        return Ok(report);
+    }
+
+    /// <summary>
+    /// Gets capacity analysis comparing planned vs actual story points by sprint.
+    /// </summary>
+    /// <returns>Capacity analysis with past, current, and future sprint data.</returns>
+    [HttpGet("capacity-analysis")]
+    [ProducesResponseType(typeof(CapacityAnalysisDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CapacityAnalysisDto>> GetCapacityAnalysis(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Generating capacity analysis report");
+        var analysis = await _service.GetCapacityAnalysisAsync(cancellationToken);
+        return Ok(analysis);
+    }
 }
