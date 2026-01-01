@@ -234,17 +234,17 @@ export default function Dashboard() {
         <StatCard
           title="Late Deliveries"
           value={lateTasks?.totalLateTasks ?? 0}
-          subtitle={lateTasks && lateTasks.totalLateTasks > 0 ? `${lateTasks.lateTaskPercentage.toFixed(1)}% of completed` : 'On track'}
+          subtitle={lateTasks && lateTasks.totalLateTasks > 0 && lateTasks.lateTaskPercentage != null ? `${lateTasks.lateTaskPercentage.toFixed(1)}% of completed` : 'On track'}
           icon={<Clock className="w-6 h-6" />}
           color={lateTasks && lateTasks.totalLateTasks > 0 ? 'amber' : 'green'}
         />
         {capacityAnalysis?.currentSprint && (
           <StatCard
             title="Current Sprint"
-            value={`${capacityAnalysis.currentSprint.utilizationPercentage}%`}
-            subtitle={`${capacityAnalysis.currentSprint.committedPoints}/${capacityAnalysis.currentSprint.capacityPoints} SP`}
+            value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
+            subtitle={`${capacityAnalysis.currentSprint.committedPoints ?? 0}/${capacityAnalysis.currentSprint.capacityPoints ?? 0} SP`}
             icon={<TrendingUp className="w-6 h-6" />}
-            color={capacityAnalysis.currentSprint.utilizationPercentage > 100 ? 'red' : capacityAnalysis.currentSprint.utilizationPercentage > 80 ? 'amber' : 'blue'}
+            color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
           />
         )}
       </div>
@@ -501,7 +501,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Sprint Capacity Analysis"
-            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization}%`}
+            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%`}
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -550,7 +550,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Late Tasks Analysis"
-            subtitle={`${lateTasks.totalLateTasks} tasks delivered late | Avg delay: ${lateTasks.averageDelayDays.toFixed(1)} days`}
+            subtitle={`${lateTasks.totalLateTasks} tasks delivered late | Avg delay: ${lateTasks.averageDelayDays != null ? lateTasks.averageDelayDays.toFixed(1) : '0'} days`}
           />
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -558,7 +558,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">By Sprint</h4>
                 <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={lateTasks.bySprintBreakdown.slice(0, 6)} layout="vertical">
+                  <BarChart data={lateTasks.bySprintBreakdown?.slice(0, 6) ?? []} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="sprintName" width={80} tick={{ fontSize: 11 }} />
@@ -576,7 +576,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">By Assignee</h4>
                 <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={lateTasks.byAssigneeBreakdown.slice(0, 6)} layout="vertical">
+                  <BarChart data={lateTasks.byAssigneeBreakdown?.slice(0, 6) ?? []} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="assigneeName" width={80} tick={{ fontSize: 11 }} />
