@@ -8,6 +8,7 @@ public class ManagerNote
     public Guid Id { get; private set; }
     public string Title { get; private set; } = string.Empty;
     public string Content { get; private set; } = string.Empty;
+    public string Tags { get; private set; } = string.Empty;
     public NotePriority Priority { get; private set; }
     public bool IsCompleted { get; private set; }
     public DateTime? DueDate { get; private set; }
@@ -21,26 +22,67 @@ public class ManagerNote
         string title,
         string content = "",
         NotePriority priority = NotePriority.Normal,
-        DateTime? dueDate = null)
+        DateTime? dueDate = null,
+        string? tags = null)
     {
         ValidateTitle(title);
         Id = Guid.NewGuid();
         Title = title.Trim();
         Content = content?.Trim() ?? string.Empty;
+        Tags = NormalizeTags(tags);
         Priority = priority;
         DueDate = dueDate;
         IsCompleted = false;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string title, string content, NotePriority priority, DateTime? dueDate)
+    public void Update(string title, string content, NotePriority priority, DateTime? dueDate, string? tags = null)
     {
         ValidateTitle(title);
         Title = title.Trim();
         Content = content?.Trim() ?? string.Empty;
+        Tags = NormalizeTags(tags);
         Priority = priority;
         DueDate = dueDate;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Gets the list of tags as an array.
+    /// </summary>
+    public string[] GetTagsList()
+    {
+        if (string.IsNullOrWhiteSpace(Tags))
+            return Array.Empty<string>();
+        return Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    /// <summary>
+    /// Checks if the note has a specific tag.
+    /// </summary>
+    public bool HasTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || string.IsNullOrWhiteSpace(Tags))
+            return false;
+        return GetTagsList().Contains(tag.Trim(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Normalizes tags to lowercase, comma-separated format.
+    /// </summary>
+    private static string NormalizeTags(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return string.Empty;
+
+        var tagList = tags
+            .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(t => t.ToLowerInvariant())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct()
+            .OrderBy(t => t);
+
+        return string.Join(",", tagList);
     }
 
     public void ToggleComplete()

@@ -37,6 +37,45 @@ public class ManagerNotesController : ControllerBase
     }
 
     /// <summary>
+    /// Searches notes by text and/or tag.
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IEnumerable<ManagerNoteDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ManagerNoteDto>>> Search(
+        [FromQuery] string? q,
+        [FromQuery] string? tag,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Searching manager notes with term: {Term}, tag: {Tag}", q, tag);
+        var notes = await _service.SearchAsync(q, tag, cancellationToken);
+        return Ok(notes);
+    }
+
+    /// <summary>
+    /// Gets all unique tags.
+    /// </summary>
+    [HttpGet("tags")]
+    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<string>>> GetTags(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting all tags");
+        var tags = await _service.GetAllTagsAsync(cancellationToken);
+        return Ok(tags);
+    }
+
+    /// <summary>
+    /// Gets notes by tag.
+    /// </summary>
+    [HttpGet("by-tag/{tag}")]
+    [ProducesResponseType(typeof(IEnumerable<ManagerNoteDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ManagerNoteDto>>> GetByTag(string tag, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting manager notes with tag: {Tag}", tag);
+        var notes = await _service.GetByTagAsync(tag, cancellationToken);
+        return Ok(notes);
+    }
+
+    /// <summary>
     /// Gets pending (incomplete) notes.
     /// </summary>
     [HttpGet("pending")]

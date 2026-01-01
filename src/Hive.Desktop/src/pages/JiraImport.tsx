@@ -103,7 +103,7 @@ export default function JiraImport() {
         <CardHeader title="How to Export from Jira" />
         <CardContent>
           <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600 dark:text-slate-400">
-            <li>Go to your Jira project and navigate to Issues</li>
+            <li>2 Go to your Jira project and navigate to Issues</li>
             <li>Click on the "..." menu and select "Export"</li>
             <li>Choose "Export CSV (all fields)" or "Export CSV (current fields)"</li>
             <li>Save the exported CSV file</li>

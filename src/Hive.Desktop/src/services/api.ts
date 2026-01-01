@@ -178,6 +178,14 @@ export const notesApi = {
   getPending: () => api.get<ManagerNote[]>('/managernotes/pending').then(r => r.data),
   getCompleted: () => api.get<ManagerNote[]>('/managernotes/completed').then(r => r.data),
   getOverdue: () => api.get<ManagerNote[]>('/managernotes/overdue').then(r => r.data),
+  getByTag: (tag: string) => api.get<ManagerNote[]>(`/managernotes/by-tag/${encodeURIComponent(tag)}`).then(r => r.data),
+  search: (q?: string, tag?: string) => {
+    const params = new URLSearchParams()
+    if (q) params.append('q', q)
+    if (tag) params.append('tag', tag)
+    return api.get<ManagerNote[]>(`/managernotes/search?${params.toString()}`).then(r => r.data)
+  },
+  getTags: () => api.get<string[]>('/managernotes/tags').then(r => r.data),
   getById: (id: string) => api.get<ManagerNote>(`/managernotes/${id}`).then(r => r.data),
   create: (data: CreateManagerNoteDto) => api.post<ManagerNote>('/managernotes', data).then(r => r.data),
   update: (id: string, data: UpdateManagerNoteDto) => api.put<ManagerNote>(`/managernotes/${id}`, data).then(r => r.data),

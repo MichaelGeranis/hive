@@ -58,6 +58,51 @@ public class ManagerNoteRepository : IManagerNoteRepository
         return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
     }
 
+    public Task<IReadOnlyList<ManagerNote>> GetByTagAsync(string tag, CancellationToken cancellationToken = default)
+    {
+        var notes = _context.ManagerNotes.Values
+            .Where(n => n.HasTag(tag))
+            .OrderByDescending(n => n.Priority)
+            .ThenByDescending(n => n.CreatedAt)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
+    }
+
+    public Task<IReadOnlyList<ManagerNote>> SearchAsync(string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes.Values.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLowerInvariant();
+            query = query.Where(n =>
+                n.Title.ToLowerInvariant().Contains(term) ||
+                n.Content.ToLowerInvariant().Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            query = query.Where(n => n.HasTag(tag));
+        }
+
+        var notes = query
+            .OrderByDescending(n => n.Priority)
+            .ThenByDescending(n => n.CreatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
+    }
+
+    public Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default)
+    {
+        var tags = _context.ManagerNotes.Values
+            .SelectMany(n => n.GetTagsList())
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<string>>(tags);
+    }
+
     public Task<ManagerNote> AddAsync(ManagerNote note, CancellationToken cancellationToken = default)
     {
         _context.ManagerNotes.TryAdd(note.Id, note);

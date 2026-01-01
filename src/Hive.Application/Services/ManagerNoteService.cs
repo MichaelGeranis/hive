@@ -48,13 +48,31 @@ public class ManagerNoteService : IManagerNoteService
         return entities.Select(MapToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<ManagerNoteDto>> GetByTagAsync(string tag, CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.GetByTagAsync(tag, cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<ManagerNoteDto>> SearchAsync(string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    {
+        var entities = await _repository.SearchAsync(searchTerm, tag, cancellationToken);
+        return entities.Select(MapToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetAllTagsAsync(cancellationToken);
+    }
+
     public async Task<ManagerNoteDto> CreateAsync(CreateManagerNoteDto dto, CancellationToken cancellationToken = default)
     {
         var entity = new ManagerNote(
             dto.Title,
             dto.Content,
             dto.Priority,
-            dto.DueDate);
+            dto.DueDate,
+            dto.Tags);
 
         var created = await _repository.AddAsync(entity, cancellationToken);
         return MapToDto(created);
@@ -64,7 +82,7 @@ public class ManagerNoteService : IManagerNoteService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.Update(dto.Title, dto.Content, dto.Priority, dto.DueDate);
+        entity.Update(dto.Title, dto.Content, dto.Priority, dto.DueDate, dto.Tags);
         await _repository.UpdateAsync(entity, cancellationToken);
 
         return MapToDto(entity);
@@ -107,6 +125,8 @@ public class ManagerNoteService : IManagerNoteService
             Id = entity.Id,
             Title = entity.Title,
             Content = entity.Content,
+            Tags = entity.Tags,
+            TagsList = entity.GetTagsList(),
             Priority = entity.Priority,
             PriorityName = GetPriorityName(entity.Priority),
             IsCompleted = entity.IsCompleted,

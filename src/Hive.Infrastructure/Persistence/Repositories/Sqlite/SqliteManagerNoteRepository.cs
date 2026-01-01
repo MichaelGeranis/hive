@@ -55,6 +55,56 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ManagerNote>> GetByTagAsync(string tag, CancellationToken cancellationToken = default)
+    {
+        var tagLower = tag.ToLowerInvariant();
+        return await _context.ManagerNotes
+            .Where(n => n.Tags.Contains(tagLower))
+            .OrderByDescending(n => n.Priority)
+            .ThenByDescending(n => n.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ManagerNote>> SearchAsync(string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLower();
+            query = query.Where(n =>
+                n.Title.ToLower().Contains(term) ||
+                n.Content.ToLower().Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var tagLower = tag.ToLowerInvariant();
+            query = query.Where(n => n.Tags.Contains(tagLower));
+        }
+
+        return await query
+            .OrderByDescending(n => n.Priority)
+            .ThenByDescending(n => n.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default)
+    {
+        var allNotes = await _context.ManagerNotes
+            .Where(n => n.Tags != "")
+            .Select(n => n.Tags)
+            .ToListAsync(cancellationToken);
+
+        var tags = allNotes
+            .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList();
+
+        return tags;
+    }
+
     public async Task<ManagerNote> AddAsync(ManagerNote note, CancellationToken cancellationToken = default)
     {
         _context.ManagerNotes.Add(note);

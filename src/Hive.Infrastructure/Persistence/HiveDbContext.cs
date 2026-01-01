@@ -145,6 +145,7 @@ public class HiveDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
             entity.Property(e => e.Content).HasMaxLength(4000);
+            entity.Property(e => e.Tags).HasMaxLength(500);
             entity.HasIndex(e => e.IsCompleted);
             entity.HasIndex(e => e.Priority);
             entity.HasIndex(e => e.DueDate);

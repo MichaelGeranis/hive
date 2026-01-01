@@ -259,7 +259,7 @@ export default function Settings() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Use this to standardize task estimation across your team. Configure how many hours each story point represents.
+              Use this to compare estimated story points against actual hours worked logged by team members.
             </p>
 
             <div className="space-y-3">
@@ -333,7 +333,7 @@ export default function Settings() {
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">How to Export from Jira</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-blue-700 dark:text-blue-300">
-                <li>Go to your Jira project and navigate to Issues</li>
+                <li>1 Go to your Jira project and navigate to Issues</li>
                 <li>Click on the "..." menu and select "Export"</li>
                 <li>Choose "Export CSV (all fields)" or "Export CSV (current fields)"</li>
                 <li>Save the exported CSV file and upload it below</li>

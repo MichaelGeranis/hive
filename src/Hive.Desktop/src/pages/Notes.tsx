@@ -8,7 +8,9 @@ import {
   AlertTriangle,
   Trash2,
   Edit2,
-  Filter
+  Filter,
+  Search,
+  Tag
 } from 'lucide-react'
 import { notesApi } from '../services/api'
 import type { ManagerNote, CreateManagerNoteDto, UpdateManagerNoteDto, NotePriority } from '../types'
@@ -39,13 +41,17 @@ type FilterType = 'all' | 'pending' | 'completed' | 'overdue'
 
 export default function Notes() {
   const [notes, setNotes] = useState<ManagerNote[]>([])
+  const [allTags, setAllTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingNote, setEditingNote] = useState<ManagerNote | null>(null)
   const [filter, setFilter] = useState<FilterType>('pending')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [formData, setFormData] = useState<CreateManagerNoteDto>({
     title: '',
     content: '',
+    tags: '',
     priority: 1 as NotePriority,
     dueDate: undefined
   })
@@ -54,6 +60,7 @@ export default function Notes() {
     setFormData({
       title: '',
       content: '',
+      tags: '',
       priority: 1 as NotePriority,
       dueDate: undefined
     })
@@ -69,28 +76,70 @@ export default function Notes() {
 
   useEffect(() => {
     loadData()
-  }, [filter])
+  }, [filter, selectedTag])
+
+  useEffect(() => {
+    loadTags()
+  }, [])
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm || selectedTag) {
+        searchNotes()
+      } else {
+        loadData()
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  const loadTags = async () => {
+    try {
+      const tags = await notesApi.getTags()
+      setAllTags(tags)
+    } catch (error) {
+      console.error('Failed to load tags:', error)
+    }
+  }
 
   const loadData = async () => {
     try {
       setLoading(true)
       let data: ManagerNote[]
-      switch (filter) {
-        case 'pending':
-          data = await notesApi.getPending()
-          break
-        case 'completed':
-          data = await notesApi.getCompleted()
-          break
-        case 'overdue':
-          data = await notesApi.getOverdue()
-          break
-        default:
-          data = await notesApi.getAll()
+
+      if (selectedTag) {
+        data = await notesApi.getByTag(selectedTag)
+      } else {
+        switch (filter) {
+          case 'pending':
+            data = await notesApi.getPending()
+            break
+          case 'completed':
+            data = await notesApi.getCompleted()
+            break
+          case 'overdue':
+            data = await notesApi.getOverdue()
+            break
+          default:
+            data = await notesApi.getAll()
+        }
       }
       setNotes(data)
     } catch (error) {
       console.error('Failed to load notes:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const searchNotes = async () => {
+    try {
+      setLoading(true)
+      const data = await notesApi.search(searchTerm || undefined, selectedTag || undefined)
+      setNotes(data)
+    } catch (error) {
+      console.error('Failed to search notes:', error)
     } finally {
       setLoading(false)
     }
@@ -102,6 +151,7 @@ export default function Notes() {
       await notesApi.create(formData)
       closeModal()
       loadData()
+      loadTags()
     } catch (error) {
       console.error('Failed to create note:', error)
     }
@@ -114,12 +164,14 @@ export default function Notes() {
       const updateData: UpdateManagerNoteDto = {
         title: formData.title,
         content: formData.content,
+        tags: formData.tags,
         priority: formData.priority,
         dueDate: formData.dueDate
       }
       await notesApi.update(editingNote.id, updateData)
       closeModal()
       loadData()
+      loadTags()
     } catch (error) {
       console.error('Failed to update note:', error)
     }
@@ -139,6 +191,7 @@ export default function Notes() {
     try {
       await notesApi.delete(id)
       loadData()
+      loadTags()
     } catch (error) {
       console.error('Failed to delete note:', error)
     }
@@ -149,10 +202,25 @@ export default function Notes() {
     setFormData({
       title: note.title,
       content: note.content,
+      tags: note.tags,
       priority: note.priority,
       dueDate: note.dueDate ? note.dueDate.split('T')[0] : undefined
     })
     setShowForm(true)
+  }
+
+  const handleTagClick = (tag: string) => {
+    if (selectedTag === tag) {
+      setSelectedTag(null)
+    } else {
+      setSelectedTag(tag)
+    }
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedTag(null)
+    setFilter('pending')
   }
 
   const formatDate = (dateString: string) => {
@@ -178,7 +246,7 @@ export default function Notes() {
   const pendingCount = notes.filter(n => !n.isCompleted).length
   const overdueCount = notes.filter(n => n.isOverdue).length
 
-  if (loading) {
+  if (loading && notes.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
@@ -190,14 +258,11 @@ export default function Notes() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <StickyNote className="w-8 h-8 text-amber-500" />
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notes & TODOs</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Personal notes and action items
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notes & TODOs</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Keep personal notes & action items
+          </p>
         </div>
         <button
           onClick={() => {
@@ -211,33 +276,80 @@ export default function Notes() {
         </button>
       </div>
 
-      {/* Stats & Filters */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <Clock className="w-4 h-4" />
-            <span>{pendingCount} pending</span>
-          </div>
-          {overdueCount > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-              <AlertTriangle className="w-4 h-4" />
-              <span>{overdueCount} overdue</span>
-            </div>
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+          />
+          {(searchTerm || selectedTag) && (
+            <button
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as FilterType)}
-            className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-          >
-            <option value="all">All Notes</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
+        {/* Tags */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag className="w-4 h-4 text-slate-400" />
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleTagClick(tag)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedTag === tag
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Stats & Filter */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Clock className="w-4 h-4" />
+              <span>{pendingCount} pending</span>
+            </div>
+            {overdueCount > 0 && (
+              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-4 h-4" />
+                <span>{overdueCount} overdue</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value as FilterType)
+                setSelectedTag(null)
+                setSearchTerm('')
+              }}
+              className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+            >
+              <option value="all">All Notes</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -247,7 +359,11 @@ export default function Notes() {
           <StickyNote className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No notes found</h3>
           <p className="text-slate-500 dark:text-slate-400">
-            {filter === 'all' ? 'Create your first note to get started' : `No ${filter} notes`}
+            {searchTerm || selectedTag
+              ? 'Try adjusting your search or filters'
+              : filter === 'all'
+              ? 'Create your first note to get started'
+              : `No ${filter} notes`}
           </p>
         </div>
       ) : (
@@ -301,6 +417,25 @@ export default function Notes() {
                     <p className={`mt-1 text-sm text-slate-600 dark:text-slate-400 ${note.isCompleted ? 'line-through' : ''}`}>
                       {note.content}
                     </p>
+                  )}
+
+                  {/* Tags */}
+                  {note.tagsList && note.tagsList.length > 0 && (
+                    <div className="mt-2 flex items-center gap-1 flex-wrap">
+                      {note.tagsList.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => handleTagClick(tag)}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                            selectedTag === tag
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   )}
 
                   <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
@@ -366,6 +501,22 @@ export default function Notes() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                   placeholder="Additional details..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={formData.tags || ''}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  placeholder="work, urgent, follow-up (comma separated)"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Separate tags with commas, spaces, or semicolons
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

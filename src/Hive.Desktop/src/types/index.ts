@@ -559,6 +559,8 @@ export interface ManagerNote {
   id: string
   title: string
   content: string
+  tags: string
+  tagsList: string[]
   priority: NotePriority
   priorityName: string
   isCompleted: boolean
@@ -572,6 +574,7 @@ export interface ManagerNote {
 export interface CreateManagerNoteDto {
   title: string
   content: string
+  tags?: string
   priority: NotePriority
   dueDate?: string
 }
@@ -579,6 +582,7 @@ export interface CreateManagerNoteDto {
 export interface UpdateManagerNoteDto {
   title: string
   content: string
+  tags?: string
   priority: NotePriority
   dueDate?: string
 }

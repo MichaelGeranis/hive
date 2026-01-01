@@ -480,58 +480,44 @@ const api = axios.create({
 Top Feature Suggestions
 High Impact (Core EM Responsibilities)
 1. Career Development Plans 🎯
+    Create RAG evaluations based on current company's RAg Excel/Confluence and promotion criteria
     Track promotion readiness and career progression paths
     Link skill gaps to development goals
-    Integration with existing performance reviews and skill assessments
     Why: Critical for retention and addressing "what's next?" conversations in 1:1s
 
-2. Team Goals & OKRs
-    Quarterly/annual objective and key result tracking
-    Team vs individual goals with progress tracking
-    Why: Your current system has tasks and reviews but no structured goal framework
+2. On-call & Incident Management
+    Rotation scheduling, incident tracking, post-mortems
+    Why: Common for engineering teams, impacts work-life balance
 
-3. Hiring & Recruiting Pipeline
+3. Task Dependencies
+   Blocking/blocked relationships, critical path analysis
+   Why: Complex projects need dependency visualization   
+
+4. Hiring & Recruiting Pipeline
     Job requisitions, candidate tracking, interview scheduling
     Interview feedback collection and pipeline analytics
     Why: Hiring is typically 30-40% of an EM's time, currently not tracked
 
-4. Compensation Management
-    Salary bands, equity/RSU tracking, compensation review cycles
-    Budget planning for raises and promotions
-    Why: Sensitive but crucial EM responsibility, currently no visibility
+5. Sprint/Iteration Management
+    Link tasks to sprints, burndown charts, velocity trends
+    Why: You have tasks but no sprint planning or velocity tracking
 
-5. Team Health & Engagement Surveys
+6. Team Goals & OKRs
+    Quarterly/annual objective and key result tracking
+    Team vs individual goals with progress tracking
+    Why: Your current system has tasks and reviews but no structured goal framework
+
+7. Team Health & Engagement Surveys
     Pulse surveys, eNPS tracking, anonymous feedback
     Trend analysis to spot morale issues early
     Why: Proactive team wellness monitoring vs reactive 1:1s
 
-Medium Impact (Operational Excellence)
-6. Sprint/Iteration Management
-    Link tasks to sprints, burndown charts, velocity trends
-    Why: You have tasks but no sprint planning or velocity tracking
-
-7. Task Dependencies
-    Blocking/blocked relationships, critical path analysis
-    Why: Complex projects need dependency visualization
-
 8. Training & Certifications
-    Track courses, certifications, learning budgets
-    Recommendations based on skill gap analysis
-    Why: Natural extension of your skill assessment system
+   Track courses, certifications, learning budgets
+   Recommendations based on skill gap analysis
+   Why: Natural extension of your skill assessment system   
 
-9. On-call & Incident Management
-    Rotation scheduling, incident tracking, post-mortems
-    Why: Common for engineering teams, impacts work-life balance
-
-10. Team Calendar & Availability
-    Unified view of schedules, leave, meeting load analysis
-    Why: Better visibility than just leave requests
-
-Quick Wins
-11. Notifications & Reminders
-    Alerts for upcoming reviews, overdue action items, milestones
-    Why: Low effort, high value for preventing missed deadlines
-
-12. Enhanced Export & Reporting
-    PDF generation for reviews, CSV exports, executive summaries
-    Why: Needed for HR compliance and stakeholder updates
+9. Compensation Management
+    Salary bands, equity/RSU tracking, compensation review cycles
+    Budget planning for raises and promotions
+    Why: Sensitive but crucial EM responsibility, currently no visibility

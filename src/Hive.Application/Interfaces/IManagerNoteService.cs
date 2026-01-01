@@ -12,6 +12,9 @@ public interface IManagerNoteService
     Task<IReadOnlyList<ManagerNoteDto>> GetPendingAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetCompletedAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetOverdueAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ManagerNoteDto>> GetByTagAsync(string tag, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ManagerNoteDto>> SearchAsync(string? searchTerm, string? tag, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default);
     Task<ManagerNoteDto> CreateAsync(CreateManagerNoteDto dto, CancellationToken cancellationToken = default);
     Task<ManagerNoteDto> UpdateAsync(Guid id, UpdateManagerNoteDto dto, CancellationToken cancellationToken = default);
     Task<ManagerNoteDto> ToggleCompleteAsync(Guid id, CancellationToken cancellationToken = default);
