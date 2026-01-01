@@ -10,23 +10,21 @@ public class OneOnOneMeetingTests
     public void Constructor_WithValidData_CreatesMeeting()
     {
         // Arrange
-        var scheduledDate = DateTime.UtcNow.AddDays(1);
+        var meetingDate = DateTime.UtcNow.AddDays(1);
         var durationMinutes = 30;
         var location = "Zoom";
         var agenda = "Weekly sync";
 
         // Act
-        var meeting = new OneOnOneMeeting(_validDirectReportId, scheduledDate, durationMinutes, location, agenda);
+        var meeting = new OneOnOneMeeting(_validDirectReportId, meetingDate, durationMinutes, location, agenda);
 
         // Assert
         meeting.Id.Should().NotBeEmpty();
         meeting.DirectReportId.Should().Be(_validDirectReportId);
-        meeting.ScheduledDate.Should().Be(scheduledDate);
+        meeting.MeetingDate.Should().Be(meetingDate);
         meeting.DurationMinutes.Should().Be(durationMinutes);
         meeting.Location.Should().Be(location);
         meeting.Agenda.Should().Be(agenda);
-        meeting.Status.Should().Be(MeetingStatus.Scheduled);
-        meeting.CompletedAt.Should().BeNull();
         meeting.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -93,17 +91,17 @@ public class OneOnOneMeetingTests
     }
 
     [Fact]
-    public void UpdateDetails_WhenScheduled_UpdatesProperties()
+    public void Update_UpdatesProperties()
     {
         // Arrange
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
         var newDate = DateTime.UtcNow.AddDays(7);
 
         // Act
-        meeting.UpdateDetails(newDate, 45, "Conference Room", "New agenda");
+        meeting.Update(newDate, 45, "Conference Room", "New agenda");
 
         // Assert
-        meeting.ScheduledDate.Should().Be(newDate);
+        meeting.MeetingDate.Should().Be(newDate);
         meeting.DurationMinutes.Should().Be(45);
         meeting.Location.Should().Be("Conference Room");
         meeting.Agenda.Should().Be("New agenda");
@@ -111,150 +109,72 @@ public class OneOnOneMeetingTests
     }
 
     [Fact]
-    public void UpdateDetails_WhenCompleted_ThrowsInvalidOperationException()
+    public void Update_WithInvalidDuration_ThrowsArgumentException()
     {
         // Arrange
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Complete();
 
         // Act
-        var act = () => meeting.UpdateDetails(DateTime.UtcNow, 30, null, null);
+        var act = () => meeting.Update(DateTime.UtcNow, 3, null, null);
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed*");
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("durationMinutes");
     }
 
     [Fact]
-    public void UpdateDetails_WhenCancelled_ChangesToRescheduled()
+    public void Update_WithNullLocation_SetsEmptyString()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Cancel();
+        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow, 30, "Initial Location");
 
         // Act
-        meeting.UpdateDetails(DateTime.UtcNow.AddDays(1), 30, null, null);
+        meeting.Update(DateTime.UtcNow, 30, null, null);
 
         // Assert
-        meeting.Status.Should().Be(MeetingStatus.Rescheduled);
+        meeting.Location.Should().BeEmpty();
     }
 
     [Fact]
-    public void Complete_WhenScheduled_ChangesStatusToCompleted()
+    public void Update_WithNullAgenda_SetsEmptyString()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
+        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow, 30, null, "Initial Agenda");
 
         // Act
-        meeting.Complete();
+        meeting.Update(DateTime.UtcNow, 30, null, null);
 
         // Assert
-        meeting.Status.Should().Be(MeetingStatus.Completed);
-        meeting.CompletedAt.Should().NotBeNull();
-        meeting.CompletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        meeting.Agenda.Should().BeEmpty();
     }
 
     [Fact]
-    public void Complete_WhenAlreadyCompleted_ThrowsInvalidOperationException()
+    public void Update_TrimsWhitespace()
     {
         // Arrange
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Complete();
 
         // Act
-        var act = () => meeting.Complete();
+        meeting.Update(DateTime.UtcNow, 30, "  Conference Room  ", "  Weekly sync  ");
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*already completed*");
+        meeting.Location.Should().Be("Conference Room");
+        meeting.Agenda.Should().Be("Weekly sync");
     }
 
     [Fact]
-    public void Complete_WhenCancelled_ThrowsInvalidOperationException()
+    public void Constructor_TrimsWhitespace()
     {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Cancel();
-
         // Act
-        var act = () => meeting.Complete();
+        var meeting = new OneOnOneMeeting(
+            _validDirectReportId,
+            DateTime.UtcNow,
+            30,
+            "  Conference Room  ",
+            "  Weekly sync  ");
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*cancelled*");
-    }
-
-    [Fact]
-    public void Cancel_WhenScheduled_ChangesStatusToCancelled()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-
-        // Act
-        meeting.Cancel();
-
-        // Assert
-        meeting.Status.Should().Be(MeetingStatus.Cancelled);
-        meeting.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Cancel_WhenCompleted_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Complete();
-
-        // Act
-        var act = () => meeting.Cancel();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed*");
-    }
-
-    [Fact]
-    public void Reschedule_WhenScheduled_ChangesDateAndStatus()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        var newDate = DateTime.UtcNow.AddDays(5);
-
-        // Act
-        meeting.Reschedule(newDate);
-
-        // Assert
-        meeting.ScheduledDate.Should().Be(newDate);
-        meeting.Status.Should().Be(MeetingStatus.Rescheduled);
-        meeting.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Reschedule_WhenCompleted_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Complete();
-
-        // Act
-        var act = () => meeting.Reschedule(DateTime.UtcNow.AddDays(1));
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed*");
-    }
-
-    [Fact]
-    public void Reschedule_WhenCancelled_ChangesToRescheduled()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
-        meeting.Cancel();
-
-        // Act
-        meeting.Reschedule(DateTime.UtcNow.AddDays(1));
-
-        // Assert
-        meeting.Status.Should().Be(MeetingStatus.Rescheduled);
+        meeting.Location.Should().Be("Conference Room");
+        meeting.Agenda.Should().Be("Weekly sync");
     }
 }

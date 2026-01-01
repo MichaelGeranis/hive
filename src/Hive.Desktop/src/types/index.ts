@@ -55,13 +55,6 @@ export interface PerformanceReview {
 }
 
 // One-on-One Meetings
-export enum MeetingStatus {
-  Scheduled = 0,
-  Completed = 1,
-  Cancelled = 2,
-  Rescheduled = 3
-}
-
 export enum NoteCategory {
   Discussion = 0,
   ActionItem = 1,
@@ -70,7 +63,8 @@ export enum NoteCategory {
   Blocker = 4,
   Achievement = 5,
   Personal = 6,
-  FollowUp = 7
+  FollowUp = 7,
+  Agenda = 8  // Pre-meeting topics for preparation
 }
 
 export enum ActionItemStatus {
@@ -84,13 +78,14 @@ export interface OneOnOneMeeting {
   id: string
   directReportId: string
   directReportName: string
-  scheduledDate: string
+  meetingDate: string
   durationMinutes: number
   location: string
   agenda: string
-  status: MeetingStatus
-  statusName: string
-  completedAt?: string
+  noteCount: number
+  openActionItemCount: number
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface MeetingNote {

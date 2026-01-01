@@ -221,14 +221,13 @@ public class InMemoryDbContext
         var directReportIds = DirectReports.Keys.ToList();
         if (directReportIds.Count == 0) return;
 
-        // Past completed meeting with Alice
+        // Past meeting with Alice
         var meeting1 = new OneOnOneMeeting(
             directReportIds[0],
             DateTime.UtcNow.AddDays(-7),
             30,
             "Zoom",
             "Weekly sync - project updates, blockers");
-        meeting1.Complete();
         OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
 
         // Add notes to the completed meeting
@@ -272,7 +271,6 @@ public class InMemoryDbContext
                 30,
                 "Zoom",
                 "Project check-in");
-            meeting4.Complete();
             OneOnOneMeetings.TryAdd(meeting4.Id, meeting4);
 
             var note5 = new MeetingNote(meeting4.Id, "Discussed .NET Core learning path", NoteCategory.CareerDevelopment);

@@ -1,17 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Calendar, Clock, MapPin, CheckCircle, XCircle, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check } from 'lucide-react'
+import { Plus, Calendar, Clock, MapPin, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
-import { MeetingStatus, NoteCategory, ActionItemStatus } from '../types'
+import { NoteCategory, ActionItemStatus } from '../types'
 import type { OneOnOneMeeting, DirectReport, MeetingNote, CreateMeetingNoteDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
-
-const statusColors: Record<MeetingStatus, string> = {
-  [MeetingStatus.Scheduled]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  [MeetingStatus.Completed]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  [MeetingStatus.Cancelled]: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  [MeetingStatus.Rescheduled]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-}
 
 const categoryColors: Record<NoteCategory, string> = {
   [NoteCategory.Discussion]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
@@ -22,6 +15,7 @@ const categoryColors: Record<NoteCategory, string> = {
   [NoteCategory.Achievement]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   [NoteCategory.Personal]: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
   [NoteCategory.FollowUp]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  [NoteCategory.Agenda]: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
 }
 
 const categoryLabels: Record<NoteCategory, string> = {
@@ -33,18 +27,32 @@ const categoryLabels: Record<NoteCategory, string> = {
   [NoteCategory.Achievement]: 'Achievement',
   [NoteCategory.Personal]: 'Personal',
   [NoteCategory.FollowUp]: 'Follow Up',
+  [NoteCategory.Agenda]: 'Agenda',
 }
+
+// All categories available for notes
+const allCategories = [
+  NoteCategory.Discussion,
+  NoteCategory.ActionItem,
+  NoteCategory.Feedback,
+  NoteCategory.CareerDevelopment,
+  NoteCategory.Blocker,
+  NoteCategory.Achievement,
+  NoteCategory.Personal,
+  NoteCategory.FollowUp,
+  NoteCategory.Agenda,
+]
 
 export default function Meetings() {
   const [meetings, setMeetings] = useState<OneOnOneMeeting[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'upcoming' | MeetingStatus>('all')
+  const [filterDirectReportId, setFilterDirectReportId] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     directReportId: '',
-    scheduledDate: '',
+    meetingDate: '',
     durationMinutes: '30',
     location: '',
     agenda: ''
@@ -64,7 +72,7 @@ export default function Meetings() {
   const resetForm = () => {
     setFormData({
       directReportId: '',
-      scheduledDate: '',
+      meetingDate: '',
       durationMinutes: '30',
       location: '',
       agenda: ''
@@ -105,6 +113,8 @@ export default function Meetings() {
         meetingsApi.getAll(),
         directReportsApi.getAll()
       ])
+      // Sort by meeting date descending
+      meetingsData.sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime())
       setMeetings(meetingsData)
       setDirectReports(drData)
     } catch (err) {
@@ -117,6 +127,8 @@ export default function Meetings() {
   const loadMeetings = async () => {
     try {
       const data = await meetingsApi.getAll()
+      // Sort by meeting date descending
+      data.sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime())
       setMeetings(data)
     } catch (err) {
       console.error(err)
@@ -144,31 +156,8 @@ export default function Meetings() {
   }
 
   const filteredMeetings = () => {
-    if (filter === 'all') return meetings
-    if (filter === 'upcoming') {
-      return meetings.filter(
-        m => m.status === MeetingStatus.Scheduled && new Date(m.scheduledDate) >= new Date()
-      )
-    }
-    return meetings.filter(m => m.status === filter)
-  }
-
-  const handleComplete = async (id: string) => {
-    try {
-      await meetingsApi.complete(id)
-      loadMeetings()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleCancel = async (id: string) => {
-    try {
-      await meetingsApi.cancel(id)
-      loadMeetings()
-    } catch (err) {
-      console.error(err)
-    }
+    if (filterDirectReportId === 'all') return meetings
+    return meetings.filter(m => m.directReportId === filterDirectReportId)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -195,7 +184,7 @@ export default function Meetings() {
   const handleEdit = (meeting: OneOnOneMeeting) => {
     setFormData({
       directReportId: meeting.directReportId,
-      scheduledDate: meeting.scheduledDate.slice(0, 16),
+      meetingDate: meeting.meetingDate.slice(0, 16),
       durationMinutes: meeting.durationMinutes.toString(),
       location: meeting.location || '',
       agenda: meeting.agenda || ''
@@ -262,13 +251,14 @@ export default function Meetings() {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })
   }
 
-  const isUpcoming = (meeting: OneOnOneMeeting) => {
-    return meeting.status === MeetingStatus.Scheduled && new Date(meeting.scheduledDate) >= new Date()
+  const isPastMeeting = (meeting: OneOnOneMeeting) => {
+    return new Date(meeting.meetingDate) < new Date()
   }
 
   if (loading) {
@@ -279,22 +269,20 @@ export default function Meetings() {
     )
   }
 
-  const upcomingMeetings = meetings.filter(isUpcoming).slice(0, 5)
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">1:1 Meetings</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Schedule and track your one-on-ones</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Track your one-on-ones and meeting notes</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
         >
           <Plus className="w-5 h-5" />
-          Schedule Meeting
+          Add Meeting
         </button>
       </div>
 
@@ -302,7 +290,7 @@ export default function Meetings() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-lg mx-4">
-            <CardHeader title={editingId ? 'Edit Meeting' : 'Schedule Meeting'} />
+            <CardHeader title={editingId ? 'Edit Meeting' : 'Add Meeting'} />
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -324,8 +312,8 @@ export default function Meetings() {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date & Time</label>
                     <input
                       type="datetime-local"
-                      value={formData.scheduledDate}
-                      onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
+                      value={formData.meetingDate}
+                      onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                       required
                     />
@@ -376,7 +364,7 @@ export default function Meetings() {
                     type="submit"
                     className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                   >
-                    {editingId ? 'Update' : 'Schedule'}
+                    {editingId ? 'Update' : 'Add'}
                   </button>
                 </div>
               </form>
@@ -389,7 +377,7 @@ export default function Meetings() {
       {showNoteForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-lg mx-4">
-            <CardHeader title="Add Meeting Note" />
+            <CardHeader title="Add Note" />
             <CardContent>
               <form onSubmit={handleCreateNote} className="space-y-4">
                 <div>
@@ -399,8 +387,8 @@ export default function Meetings() {
                     onChange={(e) => setNoteFormData({ ...noteFormData, category: parseInt(e.target.value) as NoteCategory })}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                   >
-                    {Object.entries(categoryLabels).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                    {allCategories.map((cat) => (
+                      <option key={cat} value={cat}>{categoryLabels[cat]}</option>
                     ))}
                   </select>
                 </div>
@@ -471,71 +459,29 @@ export default function Meetings() {
         </div>
       )}
 
-      {/* Upcoming Meetings */}
-      {upcomingMeetings.length > 0 && (
-        <Card>
-          <CardHeader title="Upcoming Meetings" subtitle="Next 5 scheduled" />
-          <CardContent className="divide-y dark:divide-slate-700">
-            {upcomingMeetings.map((meeting) => (
-              <div key={meeting.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-400 font-medium">
-                    {meeting.directReportName.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">{meeting.directReportName}</p>
-                    <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(meeting.scheduledDate)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {meeting.durationMinutes} min
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleComplete(meeting.id)}
-                    className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
-                    title="Mark as completed"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleCancel(meeting.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                    title="Cancel"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filters */}
-      <div className="flex gap-2">
-        {[
-          { value: 'all', label: 'All' },
-          { value: 'upcoming', label: 'Upcoming' },
-          { value: MeetingStatus.Completed, label: 'Completed' },
-          { value: MeetingStatus.Cancelled, label: 'Cancelled' },
-        ].map((f) => (
+      {/* Filter by Direct Report */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setFilterDirectReportId('all')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            filterDirectReportId === 'all'
+              ? 'bg-amber-500 text-white'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          All
+        </button>
+        {directReports.map((dr) => (
           <button
-            key={f.value}
-            onClick={() => setFilter(f.value as typeof filter)}
+            key={dr.id}
+            onClick={() => setFilterDirectReportId(dr.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.value
+              filterDirectReportId === dr.id
                 ? 'bg-amber-500 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            {f.label}
+            {dr.fullName}
           </button>
         ))}
       </div>
@@ -562,7 +508,7 @@ export default function Meetings() {
                       <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-1">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {formatDate(meeting.scheduledDate)}
+                          {formatDate(meeting.meetingDate)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
@@ -578,9 +524,21 @@ export default function Meetings() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[meeting.status]}`}>
-                      {meeting.statusName}
+                    {/* Show if meeting is past or upcoming */}
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      isPastMeeting(meeting)
+                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {isPastMeeting(meeting) ? 'Past' : 'Upcoming'}
                     </span>
+                    {/* Note count indicator */}
+                    {meeting.noteCount > 0 && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <StickyNote className="w-3 h-3" />
+                        {meeting.noteCount}
+                      </span>
+                    )}
                     <button
                       onClick={() => handleToggleExpand(meeting.id)}
                       className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
@@ -629,88 +587,87 @@ export default function Meetings() {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <StickyNote className="w-4 h-4" />
-                        Meeting Notes
+                        Notes
                       </h4>
-                      {meeting.status === MeetingStatus.Completed && (
-                        <button
-                          onClick={() => openNoteForm(meeting.id)}
-                          className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Add Note
-                        </button>
-                      )}
+                      <button
+                        onClick={() => openNoteForm(meeting.id)}
+                        className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Note
+                      </button>
                     </div>
 
-                    {meetingNotes[meeting.id]?.length > 0 ? (
-                      <div className="space-y-2">
-                        {meetingNotes[meeting.id].map((note) => (
-                          <div
-                            key={note.id}
-                            className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
-                              note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
-                                    {note.categoryName}
-                                  </span>
-                                  {note.isPrivate && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
-                                      Private
+                    {(() => {
+                      const notes = meetingNotes[meeting.id] || []
+                      return notes.length > 0 ? (
+                        <div className="space-y-2">
+                          {notes.map((note) => (
+                            <div
+                              key={note.id}
+                              className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
+                                note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
+                                      {note.categoryName}
                                     </span>
-                                  )}
-                                  {note.actionStatusName && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                      note.actionStatus === ActionItemStatus.Completed
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        : note.actionStatus === ActionItemStatus.InProgress
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                        : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                    }`}>
-                                      {note.actionStatusName}
-                                    </span>
+                                    {note.isPrivate && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
+                                        Private
+                                      </span>
+                                    )}
+                                    {note.actionStatusName && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        note.actionStatus === ActionItemStatus.Completed
+                                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                          : note.actionStatus === ActionItemStatus.InProgress
+                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                          : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                      }`}>
+                                        {note.actionStatusName}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
+                                  {note.actionDueDate && (
+                                    <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                                      Due: {new Date(note.actionDueDate).toLocaleDateString()}
+                                      {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
+                                    </p>
                                   )}
                                 </div>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
-                                {note.actionDueDate && (
-                                  <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-                                    Due: {new Date(note.actionDueDate).toLocaleDateString()}
-                                    {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
+                                <div className="flex items-center gap-1">
+                                  {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
+                                    <button
+                                      onClick={() => handleCompleteAction(note.id, meeting.id)}
+                                      className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+                                      title="Complete action"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={() => handleCompleteAction(note.id, meeting.id)}
-                                    className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
-                                    title="Complete action"
+                                    onClick={() => handleDeleteNote(note.id, meeting.id)}
+                                    className="p-1 text-slate-400 hover:text-red-500 rounded"
+                                    title="Delete note"
                                   >
-                                    <Check className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteNote(note.id, meeting.id)}
-                                  className="p-1 text-slate-400 hover:text-red-500 rounded"
-                                  title="Delete note"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {meeting.status === MeetingStatus.Completed
-                          ? 'No notes yet. Click "Add Note" to add your first note.'
-                          : 'Notes can be added after the meeting is completed.'}
-                      </p>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          No notes yet. Click "Add Note" to capture key takeaways.
+                        </p>
+                      )
+                    })()}
                   </div>
                 )}
               </CardContent>

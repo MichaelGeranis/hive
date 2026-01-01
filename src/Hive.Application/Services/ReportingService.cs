@@ -129,13 +129,13 @@ public class ReportingService : IReportingService
         var meetings = await _meetingRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
 
-        var completedMeetings = meetings.Where(m => m.Status == MeetingStatus.Completed).ToList();
-        var scheduledMeetings = meetings.Where(m => m.Status == MeetingStatus.Scheduled).ToList();
-        var cancelledMeetings = meetings.Where(m => m.Status == MeetingStatus.Cancelled).ToList();
-        var rescheduledMeetings = meetings.Where(m => m.Status == MeetingStatus.Rescheduled).ToList();
+        // Simplified: Past meetings are those with date before now, upcoming are future
+        var now = DateTime.UtcNow;
+        var pastMeetings = meetings.Where(m => m.MeetingDate < now).ToList();
+        var upcomingMeetings = meetings.Where(m => m.MeetingDate >= now).ToList();
 
-        var totalMinutes = completedMeetings.Sum(m => m.DurationMinutes);
-        var avgDuration = completedMeetings.Count > 0 ? Math.Round((double)totalMinutes / completedMeetings.Count, 1) : 0;
+        var totalMinutes = pastMeetings.Sum(m => m.DurationMinutes);
+        var avgDuration = pastMeetings.Count > 0 ? Math.Round((double)totalMinutes / pastMeetings.Count, 1) : 0;
 
         var frequencyByDirectReport = await GetOneOnOneFrequencyReportAsync(cancellationToken);
         var actionItemsSummary = await GetActionItemsSummaryAsync(cancellationToken);
@@ -143,11 +143,11 @@ public class ReportingService : IReportingService
         return new OneOnOnesOverviewDto
         {
             TotalMeetings = meetings.Count,
-            CompletedMeetings = completedMeetings.Count,
-            ScheduledMeetings = scheduledMeetings.Count,
-            CancelledMeetings = cancelledMeetings.Count,
-            RescheduledMeetings = rescheduledMeetings.Count,
-            CompletionRate = meetings.Count > 0 ? Math.Round((double)completedMeetings.Count / meetings.Count * 100, 1) : 0,
+            CompletedMeetings = pastMeetings.Count,
+            ScheduledMeetings = upcomingMeetings.Count,
+            CancelledMeetings = 0,  // No longer tracking cancellations
+            RescheduledMeetings = 0,  // No longer tracking reschedules
+            CompletionRate = meetings.Count > 0 ? Math.Round((double)pastMeetings.Count / meetings.Count * 100, 1) : 0,
             TotalMeetingMinutes = totalMinutes,
             AverageMeetingDuration = avgDuration,
             FrequencyByDirectReport = frequencyByDirectReport,
@@ -296,31 +296,32 @@ public class ReportingService : IReportingService
             }).ToList()
         };
 
-        // One-on-one analytics
-        var completedMeetings = meetings.Where(m => m.Status == MeetingStatus.Completed).OrderByDescending(m => m.CompletedAt).ToList();
-        var scheduledMeetings = meetings.Where(m => m.Status == MeetingStatus.Scheduled).OrderBy(m => m.ScheduledDate).ToList();
-        var lastMeeting = completedMeetings.FirstOrDefault();
-        var nextMeeting = scheduledMeetings.FirstOrDefault(m => m.ScheduledDate > DateTime.UtcNow);
+        // One-on-one analytics (simplified - no status)
+        var now = DateTime.UtcNow;
+        var pastMeetings = meetings.Where(m => m.MeetingDate < now).OrderByDescending(m => m.MeetingDate).ToList();
+        var upcomingMeetings = meetings.Where(m => m.MeetingDate >= now).OrderBy(m => m.MeetingDate).ToList();
+        var lastMeeting = pastMeetings.FirstOrDefault();
+        var nextMeeting = upcomingMeetings.FirstOrDefault();
 
         var actionItems = await _noteRepository.GetActionItemsAsync(directReportId, cancellationToken);
         var openActionItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.Open || a.ActionStatus == ActionItemStatus.InProgress);
         var overdueActionItems = actionItems.Count(a => a.IsOverdue());
 
-        var daysSinceLastMeeting = lastMeeting?.CompletedAt != null
-            ? (int)(DateTime.UtcNow - lastMeeting.CompletedAt.Value).TotalDays
+        var daysSinceLastMeeting = lastMeeting != null
+            ? (int)(DateTime.UtcNow - lastMeeting.MeetingDate).TotalDays
             : -1;
 
-        var avgFrequency = CalculateAverageFrequency(completedMeetings);
+        var avgFrequency = CalculateAverageFrequency(pastMeetings);
 
         var oneOnOneAnalytics = new OneOnOneAnalyticsDto
         {
             TotalMeetings = meetings.Count,
-            CompletedMeetings = completedMeetings.Count,
-            LastMeetingDate = lastMeeting?.CompletedAt,
-            NextScheduledDate = nextMeeting?.ScheduledDate,
+            CompletedMeetings = pastMeetings.Count,
+            LastMeetingDate = lastMeeting?.MeetingDate,
+            NextScheduledDate = nextMeeting?.MeetingDate,
             DaysSinceLastMeeting = daysSinceLastMeeting,
             AverageMeetingFrequencyDays = avgFrequency,
-            TotalMeetingMinutes = completedMeetings.Sum(m => m.DurationMinutes),
+            TotalMeetingMinutes = pastMeetings.Sum(m => m.DurationMinutes),
             OpenActionItems = openActionItems,
             OverdueActionItems = overdueActionItems
         };
@@ -367,17 +368,18 @@ public class ReportingService : IReportingService
         foreach (var dr in directReports)
         {
             var meetings = await _meetingRepository.GetByDirectReportIdAsync(dr.Id, cancellationToken);
-            var completedMeetings = meetings.Where(m => m.Status == MeetingStatus.Completed).OrderByDescending(m => m.CompletedAt).ToList();
-            var scheduledMeetings = meetings.Where(m => m.Status == MeetingStatus.Scheduled).OrderBy(m => m.ScheduledDate).ToList();
+            var now = DateTime.UtcNow;
+            var pastMeetings = meetings.Where(m => m.MeetingDate < now).OrderByDescending(m => m.MeetingDate).ToList();
+            var upcomingMeetings = meetings.Where(m => m.MeetingDate >= now).OrderBy(m => m.MeetingDate).ToList();
 
-            var lastMeeting = completedMeetings.FirstOrDefault();
-            var nextMeeting = scheduledMeetings.FirstOrDefault(m => m.ScheduledDate > DateTime.UtcNow);
+            var lastMeeting = pastMeetings.FirstOrDefault();
+            var nextMeeting = upcomingMeetings.FirstOrDefault();
 
-            var daysSinceLastMeeting = lastMeeting?.CompletedAt != null
-                ? (int)(DateTime.UtcNow - lastMeeting.CompletedAt.Value).TotalDays
+            var daysSinceLastMeeting = lastMeeting != null
+                ? (int)(DateTime.UtcNow - lastMeeting.MeetingDate).TotalDays
                 : -1;
 
-            var avgFrequency = CalculateAverageFrequency(completedMeetings);
+            var avgFrequency = CalculateAverageFrequency(pastMeetings);
 
             // Determine frequency status
             string frequencyStatus;
@@ -403,9 +405,9 @@ public class ReportingService : IReportingService
                 DirectReportId = dr.Id,
                 DirectReportName = dr.FullName,
                 TotalMeetings = meetings.Count,
-                CompletedMeetings = completedMeetings.Count,
-                LastMeetingDate = lastMeeting?.CompletedAt,
-                NextScheduledDate = nextMeeting?.ScheduledDate,
+                CompletedMeetings = pastMeetings.Count,
+                LastMeetingDate = lastMeeting?.MeetingDate,
+                NextScheduledDate = nextMeeting?.MeetingDate,
                 DaysSinceLastMeeting = daysSinceLastMeeting,
                 AverageFrequencyDays = avgFrequency,
                 FrequencyStatus = frequencyStatus
@@ -486,14 +488,13 @@ public class ReportingService : IReportingService
         return Math.Max(0, months);
     }
 
-    private static double CalculateAverageFrequency(List<OneOnOneMeeting> completedMeetings)
+    private static double CalculateAverageFrequency(List<OneOnOneMeeting> pastMeetings)
     {
-        if (completedMeetings.Count < 2)
+        if (pastMeetings.Count < 2)
             return 0;
 
-        var orderedMeetings = completedMeetings
-            .Where(m => m.CompletedAt.HasValue)
-            .OrderBy(m => m.CompletedAt!.Value)
+        var orderedMeetings = pastMeetings
+            .OrderBy(m => m.MeetingDate)
             .ToList();
 
         if (orderedMeetings.Count < 2)
@@ -502,7 +503,7 @@ public class ReportingService : IReportingService
         var intervals = new List<double>();
         for (int i = 1; i < orderedMeetings.Count; i++)
         {
-            var days = (orderedMeetings[i].CompletedAt!.Value - orderedMeetings[i - 1].CompletedAt!.Value).TotalDays;
+            var days = (orderedMeetings[i].MeetingDate - orderedMeetings[i - 1].MeetingDate).TotalDays;
             intervals.Add(days);
         }
 

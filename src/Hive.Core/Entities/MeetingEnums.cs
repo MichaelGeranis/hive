@@ -1,17 +1,6 @@
 namespace Hive.Core.Entities;
 
 /// <summary>
-/// Status of a one-on-one meeting.
-/// </summary>
-public enum MeetingStatus
-{
-    Scheduled = 0,
-    Completed = 1,
-    Cancelled = 2,
-    Rescheduled = 3
-}
-
-/// <summary>
 /// Category of a meeting note.
 /// </summary>
 public enum NoteCategory
@@ -23,7 +12,8 @@ public enum NoteCategory
     Blocker = 4,
     Achievement = 5,
     Personal = 6,
-    FollowUp = 7
+    FollowUp = 7,
+    Agenda = 8  // Pre-meeting topics for preparation
 }
 
 /// <summary>

@@ -21,7 +21,7 @@ public class SqliteOneOnOneMeetingRepository : IOneOnOneMeetingRepository
     public async Task<IReadOnlyList<OneOnOneMeeting>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.OneOnOneMeetings
-            .OrderByDescending(x => x.ScheduledDate)
+            .OrderByDescending(x => x.MeetingDate)
             .ToListAsync(cancellationToken);
     }
 
@@ -29,43 +29,8 @@ public class SqliteOneOnOneMeetingRepository : IOneOnOneMeetingRepository
     {
         return await _context.OneOnOneMeetings
             .Where(x => x.DirectReportId == directReportId)
-            .OrderByDescending(x => x.ScheduledDate)
+            .OrderByDescending(x => x.MeetingDate)
             .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<OneOnOneMeeting>> GetByStatusAsync(MeetingStatus status, CancellationToken cancellationToken = default)
-    {
-        return await _context.OneOnOneMeetings
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.ScheduledDate)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<OneOnOneMeeting>> GetUpcomingAsync(int days = 7, CancellationToken cancellationToken = default)
-    {
-        var now = DateTime.UtcNow;
-        var endDate = now.AddDays(days);
-
-        return await _context.OneOnOneMeetings
-            .Where(x => x.ScheduledDate >= now
-                        && x.ScheduledDate <= endDate
-                        && x.Status != MeetingStatus.Cancelled
-                        && x.Status != MeetingStatus.Completed)
-            .OrderBy(x => x.ScheduledDate)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<OneOnOneMeeting?> GetNextMeetingAsync(Guid directReportId, CancellationToken cancellationToken = default)
-    {
-        var now = DateTime.UtcNow;
-
-        return await _context.OneOnOneMeetings
-            .Where(x => x.DirectReportId == directReportId
-                        && x.ScheduledDate >= now
-                        && x.Status != MeetingStatus.Cancelled
-                        && x.Status != MeetingStatus.Completed)
-            .OrderBy(x => x.ScheduledDate)
-            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<OneOnOneMeeting> AddAsync(OneOnOneMeeting meeting, CancellationToken cancellationToken = default)

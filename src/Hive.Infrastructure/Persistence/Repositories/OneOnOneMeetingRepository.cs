@@ -24,7 +24,7 @@ public class OneOnOneMeetingRepository : IOneOnOneMeetingRepository
     public Task<IReadOnlyList<OneOnOneMeeting>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = _context.OneOnOneMeetings.Values
-            .OrderByDescending(x => x.ScheduledDate)
+            .OrderByDescending(x => x.MeetingDate)
             .ToList();
         return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
     }
@@ -33,49 +33,9 @@ public class OneOnOneMeetingRepository : IOneOnOneMeetingRepository
     {
         var entities = _context.OneOnOneMeetings.Values
             .Where(x => x.DirectReportId == directReportId)
-            .OrderByDescending(x => x.ScheduledDate)
+            .OrderByDescending(x => x.MeetingDate)
             .ToList();
         return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
-    }
-
-    public Task<IReadOnlyList<OneOnOneMeeting>> GetByStatusAsync(MeetingStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = _context.OneOnOneMeetings.Values
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.ScheduledDate)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
-    }
-
-    public Task<IReadOnlyList<OneOnOneMeeting>> GetUpcomingAsync(int days = 7, CancellationToken cancellationToken = default)
-    {
-        var now = DateTime.UtcNow;
-        var endDate = now.AddDays(days);
-
-        var entities = _context.OneOnOneMeetings.Values
-            .Where(x => x.ScheduledDate >= now
-                        && x.ScheduledDate <= endDate
-                        && x.Status != MeetingStatus.Cancelled
-                        && x.Status != MeetingStatus.Completed)
-            .OrderBy(x => x.ScheduledDate)
-            .ToList();
-
-        return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
-    }
-
-    public Task<OneOnOneMeeting?> GetNextMeetingAsync(Guid directReportId, CancellationToken cancellationToken = default)
-    {
-        var now = DateTime.UtcNow;
-
-        var entity = _context.OneOnOneMeetings.Values
-            .Where(x => x.DirectReportId == directReportId
-                        && x.ScheduledDate >= now
-                        && x.Status != MeetingStatus.Cancelled
-                        && x.Status != MeetingStatus.Completed)
-            .OrderBy(x => x.ScheduledDate)
-            .FirstOrDefault();
-
-        return Task.FromResult(entity);
     }
 
     public Task<OneOnOneMeeting> AddAsync(OneOnOneMeeting meeting, CancellationToken cancellationToken = default)

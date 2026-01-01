@@ -75,13 +75,14 @@ public class HiveDbContext : DbContext
         });
 
         // OneOnOneMeeting configuration
+        // Simplified for note tracking - no scheduling workflow
         modelBuilder.Entity<OneOnOneMeeting>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Location).HasMaxLength(500);
             entity.Property(e => e.Agenda).HasMaxLength(4000);
             entity.HasIndex(e => e.DirectReportId);
-            entity.HasIndex(e => e.ScheduledDate);
+            entity.HasIndex(e => e.MeetingDate);
         });
 
         // MeetingNote configuration
@@ -218,7 +219,7 @@ public class HiveDbContext : DbContext
         PerformanceReviews.AddRange(reviews);
         SaveChanges();
 
-        // Create 1:1 meetings
+        // Create 1:1 meetings (simplified - no status workflow)
         var meetings = new[]
         {
             new OneOnOneMeeting(alice.Id, DateTime.UtcNow.AddDays(-14), 30, "Conference Room A", "Weekly sync"),
@@ -227,10 +228,6 @@ public class HiveDbContext : DbContext
             new OneOnOneMeeting(bob.Id, DateTime.UtcNow.AddDays(14), 30, "Virtual", "Bi-weekly check-in"),
             new OneOnOneMeeting(carol.Id, DateTime.UtcNow.AddDays(-21), 45, "Office", "Monthly review")
         };
-
-        meetings[0].Complete();
-        meetings[2].Complete();
-        meetings[4].Complete();
 
         OneOnOneMeetings.AddRange(meetings);
         SaveChanges();

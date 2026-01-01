@@ -8,6 +8,7 @@ namespace Hive.Application.Services;
 
 /// <summary>
 /// Service implementing use cases for OneOnOneMeeting management.
+/// Simplified for note tracking - no scheduling workflow.
 /// </summary>
 public class OneOnOneMeetingService : IOneOnOneMeetingService
 {
@@ -42,7 +43,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         var notes = await _noteRepository.GetByMeetingIdAsync(id, true, cancellationToken);
         var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
 
-        var noteDtos = notes.Select(n => MapNoteToDto(n, entity.ScheduledDate, directReport?.FullName ?? "Unknown")).ToList();
+        var noteDtos = notes.Select(n => MapNoteToDto(n, entity.MeetingDate, directReport?.FullName ?? "Unknown")).ToList();
 
         return new OneOnOneMeetingDetailsDto
         {
@@ -54,33 +55,17 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
     public async Task<IReadOnlyList<OneOnOneMeetingDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _meetingRepository.GetAllAsync(cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
+        // Order by meeting date descending (most recent first)
+        var ordered = entities.OrderByDescending(e => e.MeetingDate).ToList();
+        return await MapToDtosAsync(ordered, cancellationToken);
     }
 
     public async Task<IReadOnlyList<OneOnOneMeetingDto>> GetByDirectReportIdAsync(Guid directReportId, CancellationToken cancellationToken = default)
     {
         var entities = await _meetingRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<OneOnOneMeetingDto>> GetByStatusAsync(MeetingStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = await _meetingRepository.GetByStatusAsync(status, cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<OneOnOneMeetingDto>> GetUpcomingAsync(int days = 7, CancellationToken cancellationToken = default)
-    {
-        var entities = await _meetingRepository.GetUpcomingAsync(days, cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
-    public async Task<OneOnOneMeetingDto?> GetNextMeetingAsync(Guid directReportId, CancellationToken cancellationToken = default)
-    {
-        var entity = await _meetingRepository.GetNextMeetingAsync(directReportId, cancellationToken);
-        if (entity is null) return null;
-
-        return await MapToDtoAsync(entity, cancellationToken);
+        // Order by meeting date descending (most recent first)
+        var ordered = entities.OrderByDescending(e => e.MeetingDate).ToList();
+        return await MapToDtosAsync(ordered, cancellationToken);
     }
 
     public async Task<OneOnOneMeetingDto> CreateAsync(CreateOneOnOneMeetingDto dto, CancellationToken cancellationToken = default)
@@ -93,7 +78,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
 
         var entity = new OneOnOneMeeting(
             dto.DirectReportId,
-            dto.ScheduledDate,
+            dto.MeetingDate,
             dto.DurationMinutes,
             dto.Location,
             dto.Agenda);
@@ -106,37 +91,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.UpdateDetails(dto.ScheduledDate, dto.DurationMinutes, dto.Location, dto.Agenda);
-        await _meetingRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<OneOnOneMeetingDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Complete();
-        await _meetingRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<OneOnOneMeetingDto> CancelAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Cancel();
-        await _meetingRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<OneOnOneMeetingDto> RescheduleAsync(Guid id, RescheduleMeetingDto dto, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Reschedule(dto.NewDate);
+        entity.Update(dto.MeetingDate, dto.DurationMinutes, dto.Location, dto.Agenda);
         await _meetingRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -175,13 +130,10 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             Id = entity.Id,
             DirectReportId = entity.DirectReportId,
             DirectReportName = directReport?.FullName ?? "Unknown",
-            ScheduledDate = entity.ScheduledDate,
+            MeetingDate = entity.MeetingDate,
             DurationMinutes = entity.DurationMinutes,
             Location = entity.Location,
             Agenda = entity.Agenda,
-            Status = entity.Status,
-            StatusName = GetStatusName(entity.Status),
-            CompletedAt = entity.CompletedAt,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             NoteCount = notes.Count,
@@ -218,15 +170,6 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         UpdatedAt = note.UpdatedAt
     };
 
-    private static string GetStatusName(MeetingStatus status) => status switch
-    {
-        MeetingStatus.Scheduled => "Scheduled",
-        MeetingStatus.Completed => "Completed",
-        MeetingStatus.Cancelled => "Cancelled",
-        MeetingStatus.Rescheduled => "Rescheduled",
-        _ => "Unknown"
-    };
-
     private static string GetCategoryName(NoteCategory category) => category switch
     {
         NoteCategory.Discussion => "Discussion",
@@ -237,6 +180,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         NoteCategory.Achievement => "Achievement",
         NoteCategory.Personal => "Personal",
         NoteCategory.FollowUp => "Follow Up",
+        NoteCategory.Agenda => "Agenda",
         _ => "Unknown"
     };
 

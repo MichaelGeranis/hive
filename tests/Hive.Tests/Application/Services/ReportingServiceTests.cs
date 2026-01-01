@@ -181,12 +181,11 @@ public class ReportingServiceTests
         var directReportId = Guid.NewGuid();
         var meetings = new List<OneOnOneMeeting>
         {
-            CreateMeeting(directReportId, MeetingStatus.Scheduled),
-            CreateMeeting(directReportId, MeetingStatus.Scheduled),
-            CreateMeeting(directReportId, MeetingStatus.Completed),
-            CreateMeeting(directReportId, MeetingStatus.Completed),
-            CreateMeeting(directReportId, MeetingStatus.Completed),
-            CreateMeeting(directReportId, MeetingStatus.Cancelled)
+            CreateMeeting(directReportId, isPast: false),  // Future meeting
+            CreateMeeting(directReportId, isPast: false),  // Future meeting
+            CreateMeeting(directReportId, isPast: true),   // Past meeting
+            CreateMeeting(directReportId, isPast: true),   // Past meeting
+            CreateMeeting(directReportId, isPast: true),   // Past meeting
         };
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -200,11 +199,11 @@ public class ReportingServiceTests
         var result = await _service.GetOneOnOnesAnalyticsAsync();
 
         // Assert
-        result.TotalMeetings.Should().Be(6);
-        result.CompletedMeetings.Should().Be(3);
-        result.ScheduledMeetings.Should().Be(2);
-        result.CancelledMeetings.Should().Be(1);
-        result.CompletionRate.Should().Be(50); // 3/6 = 50%
+        result.TotalMeetings.Should().Be(5);
+        result.CompletedMeetings.Should().Be(3);  // Past meetings
+        result.ScheduledMeetings.Should().Be(2);  // Future meetings
+        result.CancelledMeetings.Should().Be(0);  // No longer tracking
+        result.CompletionRate.Should().Be(60);    // 3/5 = 60%
     }
 
     [Fact]
@@ -212,8 +211,8 @@ public class ReportingServiceTests
     {
         // Arrange
         var directReportId = Guid.NewGuid();
-        var meeting1 = CreateMeeting(directReportId, MeetingStatus.Completed, 30);
-        var meeting2 = CreateMeeting(directReportId, MeetingStatus.Completed, 60);
+        var meeting1 = CreateMeeting(directReportId, isPast: true, 30);
+        var meeting2 = CreateMeeting(directReportId, isPast: true, 60);
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting1, meeting2 });
@@ -382,10 +381,7 @@ public class ReportingServiceTests
     {
         // Arrange
         var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
-        var recentMeeting = CreateMeeting(directReport.Id, MeetingStatus.Completed, 30);
-
-        // Use reflection to set CompletedAt to a recent date
-        typeof(OneOnOneMeeting).GetProperty("CompletedAt")!.SetValue(recentMeeting, DateTime.UtcNow.AddDays(-7));
+        var recentMeeting = CreateMeeting(directReport.Id, isPast: true, 30);  // Past meeting
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { directReport });
@@ -578,22 +574,11 @@ public class ReportingServiceTests
             .ToList();
     }
 
-    private static OneOnOneMeeting CreateMeeting(Guid directReportId, MeetingStatus status, int duration = 30)
+    private static OneOnOneMeeting CreateMeeting(Guid directReportId, bool isPast, int duration = 30)
     {
-        var meeting = new OneOnOneMeeting(directReportId, DateTime.UtcNow.AddDays(-1), duration);
-        if (status == MeetingStatus.Completed)
-        {
-            meeting.Complete();
-        }
-        else if (status == MeetingStatus.Cancelled)
-        {
-            meeting.Cancel();
-        }
-        else if (status == MeetingStatus.Rescheduled)
-        {
-            meeting.Reschedule(DateTime.UtcNow.AddDays(7));
-        }
-        return meeting;
+        // Past meetings have date in the past, future meetings have date in the future
+        var meetingDate = isPast ? DateTime.UtcNow.AddDays(-7) : DateTime.UtcNow.AddDays(7);
+        return new OneOnOneMeeting(directReportId, meetingDate, duration);
     }
 
     private static List<TeamTask> CreateTasks(int count)

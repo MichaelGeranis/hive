@@ -1,22 +1,18 @@
-using Hive.Core.Entities;
-
 namespace Hive.Application.DTOs;
 
 /// <summary>
 /// Data Transfer Object for OneOnOneMeeting.
+/// Simplified for note tracking - no scheduling workflow.
 /// </summary>
 public record OneOnOneMeetingDto
 {
     public Guid Id { get; init; }
     public Guid DirectReportId { get; init; }
     public string DirectReportName { get; init; } = string.Empty;
-    public DateTime ScheduledDate { get; init; }
+    public DateTime MeetingDate { get; init; }
     public int DurationMinutes { get; init; }
     public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
-    public MeetingStatus Status { get; init; }
-    public string StatusName { get; init; } = string.Empty;
-    public DateTime? CompletedAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public int NoteCount { get; init; }
@@ -24,34 +20,26 @@ public record OneOnOneMeetingDto
 }
 
 /// <summary>
-/// DTO for creating a new meeting.
+/// DTO for creating a new meeting record.
 /// </summary>
 public record CreateOneOnOneMeetingDto
 {
     public Guid DirectReportId { get; init; }
-    public DateTime ScheduledDate { get; init; }
+    public DateTime MeetingDate { get; init; }
     public int DurationMinutes { get; init; } = 30;
     public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
 }
 
 /// <summary>
-/// DTO for updating a meeting.
+/// DTO for updating a meeting record.
 /// </summary>
 public record UpdateOneOnOneMeetingDto
 {
-    public DateTime ScheduledDate { get; init; }
+    public DateTime MeetingDate { get; init; }
     public int DurationMinutes { get; init; }
     public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
-}
-
-/// <summary>
-/// DTO for rescheduling a meeting.
-/// </summary>
-public record RescheduleMeetingDto
-{
-    public DateTime NewDate { get; init; }
 }
 
 /// <summary>

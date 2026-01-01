@@ -142,7 +142,7 @@ public class MeetingNoteService : IMeetingNoteService
         {
             Id = entity.Id,
             MeetingId = entity.MeetingId,
-            MeetingDate = meeting?.ScheduledDate ?? DateTime.MinValue,
+            MeetingDate = meeting?.MeetingDate ?? DateTime.MinValue,
             DirectReportName = directReport?.FullName ?? "Unknown",
             Content = entity.Content,
             Category = entity.Category,
@@ -178,6 +178,7 @@ public class MeetingNoteService : IMeetingNoteService
         NoteCategory.Achievement => "Achievement",
         NoteCategory.Personal => "Personal",
         NoteCategory.FollowUp => "Follow Up",
+        NoteCategory.Agenda => "Agenda",
         _ => "Unknown"
     };
 

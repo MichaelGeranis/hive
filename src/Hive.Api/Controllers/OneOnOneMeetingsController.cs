@@ -1,6 +1,5 @@
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
-using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Hive.Api.Controllers;
 
 /// <summary>
-/// API Controller for managing one-on-one meetings.
+/// API Controller for managing one-on-one meeting records.
+/// Simplified for note tracking - no scheduling workflow.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -26,7 +26,7 @@ public class OneOnOneMeetingsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all one-on-one meetings.
+    /// Gets all one-on-one meetings ordered by date descending.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<OneOnOneMeetingDto>), StatusCodes.Status200OK)]
@@ -34,20 +34,6 @@ public class OneOnOneMeetingsController : ControllerBase
     {
         _logger.LogInformation("Getting all one-on-one meetings");
         var meetings = await _service.GetAllAsync(cancellationToken);
-        return Ok(meetings);
-    }
-
-    /// <summary>
-    /// Gets upcoming meetings within specified days.
-    /// </summary>
-    [HttpGet("upcoming")]
-    [ProducesResponseType(typeof(IEnumerable<OneOnOneMeetingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<OneOnOneMeetingDto>>> GetUpcoming(
-        [FromQuery] int days = 7,
-        CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Getting upcoming meetings for next {Days} days", days);
-        var meetings = await _service.GetUpcomingAsync(days, cancellationToken);
         return Ok(meetings);
     }
 
@@ -104,42 +90,7 @@ public class OneOnOneMeetingsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the next scheduled meeting for a direct report.
-    /// </summary>
-    [HttpGet("next/{directReportId:guid}")]
-    [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OneOnOneMeetingDto>> GetNextMeeting(
-        Guid directReportId,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting next meeting for direct report: {DirectReportId}", directReportId);
-        var meeting = await _service.GetNextMeetingAsync(directReportId, cancellationToken);
-
-        if (meeting is null)
-        {
-            return NotFound(new { message = "No upcoming meeting found for this direct report." });
-        }
-
-        return Ok(meeting);
-    }
-
-    /// <summary>
-    /// Gets meetings by status.
-    /// </summary>
-    [HttpGet("by-status/{status}")]
-    [ProducesResponseType(typeof(IEnumerable<OneOnOneMeetingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<OneOnOneMeetingDto>>> GetByStatus(
-        MeetingStatus status,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting meetings with status: {Status}", status);
-        var meetings = await _service.GetByStatusAsync(status, cancellationToken);
-        return Ok(meetings);
-    }
-
-    /// <summary>
-    /// Creates a new one-on-one meeting.
+    /// Creates a new one-on-one meeting record.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status201Created)]
@@ -167,7 +118,7 @@ public class OneOnOneMeetingsController : ControllerBase
     }
 
     /// <summary>
-    /// Updates a meeting.
+    /// Updates a meeting record.
     /// </summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status200OK)]
@@ -189,10 +140,6 @@ public class OneOnOneMeetingsController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -200,88 +147,7 @@ public class OneOnOneMeetingsController : ControllerBase
     }
 
     /// <summary>
-    /// Marks a meeting as completed.
-    /// </summary>
-    [HttpPost("{id:guid}/complete")]
-    [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OneOnOneMeetingDto>> Complete(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Completing meeting: {Id}", id);
-
-        try
-        {
-            var updated = await _service.CompleteAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Cancels a meeting.
-    /// </summary>
-    [HttpPost("{id:guid}/cancel")]
-    [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OneOnOneMeetingDto>> Cancel(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Cancelling meeting: {Id}", id);
-
-        try
-        {
-            var updated = await _service.CancelAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Reschedules a meeting.
-    /// </summary>
-    [HttpPost("{id:guid}/reschedule")]
-    [ProducesResponseType(typeof(OneOnOneMeetingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OneOnOneMeetingDto>> Reschedule(
-        Guid id,
-        [FromBody] RescheduleMeetingDto dto,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Rescheduling meeting: {Id}", id);
-
-        try
-        {
-            var updated = await _service.RescheduleAsync(id, dto, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Deletes a meeting.
+    /// Deletes a meeting record.
     /// </summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

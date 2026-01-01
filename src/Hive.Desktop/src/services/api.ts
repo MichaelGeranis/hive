@@ -74,11 +74,8 @@ export const meetingsApi = {
   getById: (id: string) => api.get<OneOnOneMeeting>(`/oneononemeetings/${id}`).then(r => r.data),
   getByDirectReport: (directReportId: string) =>
     api.get<OneOnOneMeeting[]>(`/oneononemeetings/direct-report/${directReportId}`).then(r => r.data),
-  getUpcoming: (days: number = 7) => api.get<OneOnOneMeeting[]>(`/oneononemeetings/upcoming?days=${days}`).then(r => r.data),
   create: (data: any) => api.post<OneOnOneMeeting>('/oneononemeetings', data).then(r => r.data),
   update: (id: string, data: any) => api.put<OneOnOneMeeting>(`/oneononemeetings/${id}`, data).then(r => r.data),
-  complete: (id: string) => api.post<OneOnOneMeeting>(`/oneononemeetings/${id}/complete`).then(r => r.data),
-  cancel: (id: string) => api.post<OneOnOneMeeting>(`/oneononemeetings/${id}/cancel`).then(r => r.data),
   delete: (id: string) => api.delete(`/oneononemeetings/${id}`)
 }
 
