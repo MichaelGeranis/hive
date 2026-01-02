@@ -477,8 +477,7 @@ const api = axios.create({
 ```
 
 ## Future Enhancements
-Top Feature Suggestions
-High Impact (Core EM Responsibilities)
+0. Use or remove Authentication for 
 1. Career Development Plans 🎯
     Create RAG evaluations based on current company's RAg Excel/Confluence and promotion criteria
     Track promotion readiness and career progression paths
@@ -521,3 +520,11 @@ High Impact (Core EM Responsibilities)
     Salary bands, equity/RSU tracking, compensation review cycles
     Budget planning for raises and promotions
     Why: Sensitive but crucial EM responsibility, currently no visibility
+
+Reviewed:
+scripts
+- generate-icons
+Hive.Api
+- Auth
+- Controllers/DirectReports
+- Controllers/JiraImport

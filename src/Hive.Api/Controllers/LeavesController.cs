@@ -6,8 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Hive.Api.Controllers;
 
 /// <summary>
-/// API Controller for managing leave records.
-/// Simple tracking for capacity planning - approvals handled externally (e.g., HiBob).
+/// API Controller for tracking leave records.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]

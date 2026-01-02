@@ -109,12 +109,7 @@ public class ProjectService : IProjectService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        if (entity.Status != ProjectStatus.Completed && entity.Status != ProjectStatus.Cancelled)
-        {
-            throw new InvalidOperationException("Only completed or cancelled projects can be reopened.");
-        }
-
-        entity.Activate();
+        entity.ResetToPlanning();
         await _projectRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);

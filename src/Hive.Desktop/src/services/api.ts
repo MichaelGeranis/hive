@@ -106,6 +106,7 @@ export const projectsApi = {
   create: (data: any) => api.post<Project>('/projects', data).then(r => r.data),
   update: (id: string, data: any) => api.put<Project>(`/projects/${id}`, data).then(r => r.data),
   activate: (id: string) => api.post<Project>(`/projects/${id}/activate`).then(r => r.data),
+  hold: (id: string) => api.post<Project>(`/projects/${id}/hold`).then(r => r.data),
   complete: (id: string) => api.post<Project>(`/projects/${id}/complete`).then(r => r.data),
   reopen: (id: string) => api.post<Project>(`/projects/${id}/reopen`).then(r => r.data),
   cancel: (id: string) => api.post<Project>(`/projects/${id}/cancel`).then(r => r.data),

@@ -85,7 +85,28 @@ export default function Projects() {
       if (action === 'activate') await projectsApi.activate(id)
       else if (action === 'complete') await projectsApi.complete(id)
       else if (action === 'cancel') await projectsApi.cancel(id)
+      else if (action === 'hold') await projectsApi.hold(id)
       else if (action === 'reopen') await projectsApi.reopen(id)
+      loadProjects()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
+    try {
+      // Map status to appropriate API action
+      if (newStatus === ProjectStatus.Active) {
+        await projectsApi.activate(projectId)
+      } else if (newStatus === ProjectStatus.Planning) {
+        await projectsApi.reopen(projectId)
+      } else if (newStatus === ProjectStatus.OnHold) {
+        await projectsApi.hold(projectId)
+      } else if (newStatus === ProjectStatus.Completed) {
+        await projectsApi.complete(projectId)
+      } else if (newStatus === ProjectStatus.Cancelled) {
+        await projectsApi.cancel(projectId)
+      }
       loadProjects()
     } catch (err) {
       console.error(err)
@@ -295,15 +316,23 @@ export default function Projects() {
             <Card key={project.id}>
               <CardContent>
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                       <FolderKanban className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{project.name}</h3>
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${statusColors[project.status]}`}>
-                        {project.statusName}
-                      </span>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{project.name}</h3>
+                      <select
+                        value={project.status}
+                        onChange={(e) => handleStatusChange(project.id, Number(e.target.value) as ProjectStatus)}
+                        className={`px-2 py-1 rounded-md text-xs font-medium border-none cursor-pointer focus:ring-2 focus:ring-amber-500 ${statusColors[project.status]}`}
+                      >
+                        <option value={ProjectStatus.Planning}>Planning</option>
+                        <option value={ProjectStatus.Active}>Active</option>
+                        <option value={ProjectStatus.OnHold}>On Hold</option>
+                        <option value={ProjectStatus.Completed}>Completed</option>
+                        <option value={ProjectStatus.Cancelled}>Cancelled</option>
+                      </select>
                     </div>
                   </div>
                   <div className="relative group">

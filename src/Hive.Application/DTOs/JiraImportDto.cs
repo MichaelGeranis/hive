@@ -65,3 +65,11 @@ public record JiraImportPreviewRowDto
     public bool IsValid { get; init; }
     public List<string> ValidationErrors { get; init; } = new();
 }
+
+/// <summary>
+/// DTO for CSV content.
+/// </summary>
+public record CsvContentDto
+{
+    public string CsvContent { get; init; } = string.Empty;
+}

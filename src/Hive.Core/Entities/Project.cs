@@ -46,13 +46,14 @@ public class Project
 
     public void Activate()
     {
-        if (Status == ProjectStatus.Completed || Status == ProjectStatus.Cancelled)
-        {
-            throw new InvalidOperationException("Cannot activate a completed or cancelled project.");
-        }
-
         Status = ProjectStatus.Active;
         StartDate ??= DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetToPlanning()
+    {
+        Status = ProjectStatus.Planning;
         UpdatedAt = DateTime.UtcNow;
     }
 

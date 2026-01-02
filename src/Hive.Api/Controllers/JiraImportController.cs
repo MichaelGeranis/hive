@@ -91,11 +91,3 @@ public class JiraImportController : ControllerBase
         }
     }
 }
-
-/// <summary>
-/// DTO for CSV content.
-/// </summary>
-public record CsvContentDto
-{
-    public string CsvContent { get; init; } = string.Empty;
-}

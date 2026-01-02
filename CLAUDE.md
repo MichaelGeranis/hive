@@ -56,7 +56,7 @@ src/
 - **Domain-Driven Design**: Rich domain entities with validation and business rules
 
 ### Backend Technology Stack
-- .NET 8.0, ASP.NET Core Web API
+- .NET 9.0, ASP.NET Core Web API
 - xUnit + Moq + FluentAssertions for testing
 - SQLite database (production) / In-memory database (development)
 - Basic Authentication (credentials in appsettings.json: admin/admin123)

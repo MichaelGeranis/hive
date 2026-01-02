@@ -515,10 +515,18 @@ export default function Dashboard() {
                 <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
               </BarChart>
             </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t dark:border-slate-700">
+            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">
                 <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-500">
+                  {capacityAnalysis.pastSprints.length > 0
+                    ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
+                    : 0}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Avg Completed SP</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
