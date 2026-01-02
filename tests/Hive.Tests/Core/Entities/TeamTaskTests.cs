@@ -40,9 +40,6 @@ public class TeamTaskTests
         task.DueDate.Should().Be(dueDate);
         task.EstimatedHours.Should().Be(8);
         task.Tags.Should().Be("api,feature");
-        task.ActualHours.Should().BeNull();
-        task.StartedAt.Should().BeNull();
-        task.CompletedAt.Should().BeNull();
         task.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -194,8 +191,6 @@ public class TeamTaskTests
 
         // Assert
         task.Status.Should().Be(TaskStatus.InProgress);
-        task.StartedAt.Should().NotBeNull();
-        task.StartedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         task.UpdatedAt.Should().NotBeNull();
     }
 
@@ -211,22 +206,6 @@ public class TeamTaskTests
 
         // Assert
         task.Status.Should().Be(TaskStatus.InProgress);
-    }
-
-    [Fact]
-    public void Start_PreservesExistingStartedAt()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-        task.Start();
-        var originalStartedAt = task.StartedAt;
-        task.MoveToTodo(); // Move back
-
-        // Act
-        task.Start();
-
-        // Assert
-        task.StartedAt.Should().Be(originalStartedAt);
     }
 
     [Fact]
@@ -300,23 +279,7 @@ public class TeamTaskTests
 
         // Assert
         task.Status.Should().Be(TaskStatus.Done);
-        task.CompletedAt.Should().NotBeNull();
-        task.CompletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         task.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Complete_WithActualHours_SetsActualHours()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-        task.Start();
-
-        // Act
-        task.Complete(10);
-
-        // Assert
-        task.ActualHours.Should().Be(10);
     }
 
     [Fact]
@@ -389,7 +352,6 @@ public class TeamTaskTests
 
         // Assert
         task.Status.Should().Be(TaskStatus.Todo);
-        task.CompletedAt.Should().BeNull();
         task.UpdatedAt.Should().NotBeNull();
     }
 
@@ -420,34 +382,6 @@ public class TeamTaskTests
         // Assert
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*completed or cancelled*");
-    }
-
-    [Fact]
-    public void LogHours_AddsHours()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-
-        // Act
-        task.LogHours(5);
-        task.LogHours(3);
-
-        // Assert
-        task.ActualHours.Should().Be(8);
-    }
-
-    [Fact]
-    public void LogHours_WithNegative_ThrowsArgumentException()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-
-        // Act
-        var act = () => task.LogHours(-5);
-
-        // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithParameterName("hours");
     }
 
     [Fact]

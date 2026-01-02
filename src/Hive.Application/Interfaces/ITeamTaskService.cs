@@ -25,10 +25,9 @@ public interface ITeamTaskService
     Task<TeamTaskDto> MoveToTodoAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> StartAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> MoveToReviewAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<TeamTaskDto> CompleteAsync(Guid id, CompleteTaskDto? dto = null, CancellationToken cancellationToken = default);
+    Task<TeamTaskDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> CancelAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<TeamTaskDto> LogHoursAsync(Guid id, LogHoursDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }

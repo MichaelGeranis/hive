@@ -281,7 +281,7 @@ export default function Tasks() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tasks</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage team tasks and work items</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Core data source of Hive application</p>
         </div>
         <div className="flex items-center gap-3">
           {selectedIds.size > 0 && (

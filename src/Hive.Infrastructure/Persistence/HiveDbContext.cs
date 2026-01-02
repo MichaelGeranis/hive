@@ -299,7 +299,7 @@ public class HiveDbContext : DbContext
         tasks[2].MoveToTodo();
         tasks[5].MoveToTodo();
         tasks[5].Start();
-        tasks[5].Complete(3);
+        tasks[5].Complete();
 
         TeamTasks.AddRange(tasks);
         SaveChanges();

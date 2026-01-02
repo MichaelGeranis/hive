@@ -16,15 +16,12 @@ public class TeamTask
     public DateTime? DueDate { get; private set; }
     public int? EstimatedHours { get; private set; }
     public int? StoryPoints { get; private set; }
-    public int? ActualHours { get; private set; }
     public string Tags { get; private set; } = string.Empty;
     public string Labels { get; private set; } = string.Empty;
     public string Sprint { get; private set; } = string.Empty;
     public int? TimeSpentMinutes { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
-    public DateTime? StartedAt { get; private set; }
-    public DateTime? CompletedAt { get; private set; }
 
     private TeamTask() { }
 
@@ -124,7 +121,6 @@ public class TeamTask
         }
 
         Status = TaskStatus.InProgress;
-        StartedAt ??= DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -139,7 +135,7 @@ public class TeamTask
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Complete(int? actualHours = null)
+    public void Complete()
     {
         if (Status == TaskStatus.Cancelled)
         {
@@ -147,11 +143,6 @@ public class TeamTask
         }
 
         Status = TaskStatus.Done;
-        CompletedAt = DateTime.UtcNow;
-        if (actualHours.HasValue)
-        {
-            ActualHours = actualHours;
-        }
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -174,18 +165,6 @@ public class TeamTask
         }
 
         Status = TaskStatus.Todo;
-        CompletedAt = null;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void LogHours(int hours)
-    {
-        if (hours < 0)
-        {
-            throw new ArgumentException("Hours cannot be negative.", nameof(hours));
-        }
-
-        ActualHours = (ActualHours ?? 0) + hours;
         UpdatedAt = DateTime.UtcNow;
     }
 

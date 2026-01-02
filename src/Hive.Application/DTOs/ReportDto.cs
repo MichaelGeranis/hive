@@ -317,8 +317,8 @@ public record TeamVelocityDto
 public record SprintVelocityDto
 {
     public string SprintName { get; init; } = string.Empty;
-    public DateTime StartDate { get; init; }
-    public DateTime EndDate { get; init; }
+    public DateTime? StartDate { get; init; }
+    public DateTime? EndDate { get; init; }
     public int StoryPointsCompleted { get; init; }
     public int TasksCompleted { get; init; }
     public int TotalTimeSpentMinutes { get; init; }
@@ -405,7 +405,7 @@ public record LateTaskDto
     public Guid? ProjectId { get; init; }
     public string? ProjectName { get; init; }
     public DateTime DueDate { get; init; }
-    public DateTime CompletedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; } // Changed from CompletedAt since completion dates are no longer tracked
     public int DaysLate { get; init; }
 }
 

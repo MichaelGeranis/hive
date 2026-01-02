@@ -166,7 +166,7 @@ export default function Leaves() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leave Tracking</h1>
-          <p className="text-slate-500 dark:text-slate-400">Track team time off for capacity planning</p>
+          <p className="text-slate-500 dark:text-slate-400">Track time off for capacity planning</p>
         </div>
         <button
           onClick={() => setShowForm(true)}

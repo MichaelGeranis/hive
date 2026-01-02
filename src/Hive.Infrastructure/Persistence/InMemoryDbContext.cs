@@ -346,7 +346,7 @@ public class InMemoryDbContext
             string.Empty);
         task1.Start();
         task1.MoveToReview();
-        task1.Complete(10);
+        task1.Complete();
         TeamTasks.TryAdd(task1.Id, task1);
 
         var task2 = new TeamTask(
@@ -403,7 +403,7 @@ public class InMemoryDbContext
             1,
             "mobile,setup");
         task5.Start();
-        task5.Complete(3);
+        task5.Complete();
         TeamTasks.TryAdd(task5.Id, task5);
 
         var task6 = new TeamTask(

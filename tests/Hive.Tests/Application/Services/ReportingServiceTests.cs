@@ -16,6 +16,7 @@ public class ReportingServiceTests
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
     private readonly Mock<ISprintCapacityRepository> _sprintCapacityRepositoryMock;
+    private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
     private readonly ReportingService _service;
 
     public ReportingServiceTests()
@@ -28,6 +29,7 @@ public class ReportingServiceTests
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _sprintRepositoryMock = new Mock<ISprintRepository>();
         _sprintCapacityRepositoryMock = new Mock<ISprintCapacityRepository>();
+        _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
 
         _service = new ReportingService(
             _directReportRepositoryMock.Object,
@@ -37,7 +39,8 @@ public class ReportingServiceTests
             _taskRepositoryMock.Object,
             _projectRepositoryMock.Object,
             _sprintRepositoryMock.Object,
-            _sprintCapacityRepositoryMock.Object);
+            _sprintCapacityRepositoryMock.Object,
+            _appSettingsRepositoryMock.Object);
     }
 
     #region Dashboard Overview Tests

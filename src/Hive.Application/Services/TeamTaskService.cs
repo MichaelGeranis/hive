@@ -214,11 +214,11 @@ public class TeamTaskService : ITeamTaskService
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
-    public async Task<TeamTaskDto> CompleteAsync(Guid id, CompleteTaskDto? dto = null, CancellationToken cancellationToken = default)
+    public async Task<TeamTaskDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.Complete(dto?.ActualHours);
+        entity.Complete();
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -239,16 +239,6 @@ public class TeamTaskService : ITeamTaskService
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
         entity.Reopen();
-        await _taskRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<TeamTaskDto> LogHoursAsync(Guid id, LogHoursDto dto, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.LogHours(dto.Hours);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -325,16 +315,13 @@ public class TeamTaskService : ITeamTaskService
             DueDate = entity.DueDate,
             EstimatedHours = entity.EstimatedHours,
             StoryPoints = entity.StoryPoints,
-            ActualHours = entity.ActualHours,
             Tags = entity.Tags,
             Labels = entity.Labels,
             Sprint = entity.Sprint,
             TimeSpentMinutes = entity.TimeSpentMinutes,
             IsOverdue = entity.IsOverdue(),
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt,
-            StartedAt = entity.StartedAt,
-            CompletedAt = entity.CompletedAt
+            UpdatedAt = entity.UpdatedAt
         };
     }
 

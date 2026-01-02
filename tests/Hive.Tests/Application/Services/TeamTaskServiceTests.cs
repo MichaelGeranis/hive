@@ -393,22 +393,6 @@ public class TeamTaskServiceTests
     }
 
     [Fact]
-    public async Task CompleteAsync_WithActualHours_SetsActualHours()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-        var dto = new CompleteTaskDto { ActualHours = 10 };
-        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(task);
-
-        // Act
-        var result = await _service.CompleteAsync(task.Id, dto);
-
-        // Assert
-        result.ActualHours.Should().Be(10);
-    }
-
-    [Fact]
     public async Task CancelAsync_UpdatesStatusToCancelled()
     {
         // Arrange
@@ -437,22 +421,6 @@ public class TeamTaskServiceTests
 
         // Assert
         result.Status.Should().Be(TaskStatus.Todo);
-    }
-
-    [Fact]
-    public async Task LogHoursAsync_AddsHoursToTask()
-    {
-        // Arrange
-        var task = new TeamTask("Task");
-        var dto = new LogHoursDto { Hours = 5 };
-        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(task);
-
-        // Act
-        var result = await _service.LogHoursAsync(task.Id, dto);
-
-        // Assert
-        result.ActualHours.Should().Be(5);
     }
 
     [Fact]

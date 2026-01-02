@@ -24,7 +24,6 @@ public record TeamTaskDto
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }
-    public int? ActualHours { get; init; }
     public string Tags { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
     public string Sprint { get; init; } = string.Empty;
@@ -32,8 +31,6 @@ public record TeamTaskDto
     public bool IsOverdue { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
-    public DateTime? StartedAt { get; init; }
-    public DateTime? CompletedAt { get; init; }
 }
 
 /// <summary>
@@ -80,22 +77,6 @@ public record UpdateTeamTaskDto
 public record AssignTaskDto
 {
     public Guid? AssigneeId { get; init; }
-}
-
-/// <summary>
-/// DTO for logging hours on a task.
-/// </summary>
-public record LogHoursDto
-{
-    public int Hours { get; init; }
-}
-
-/// <summary>
-/// DTO for completing a task with actual hours.
-/// </summary>
-public record CompleteTaskDto
-{
-    public int? ActualHours { get; init; }
 }
 
 /// <summary>
