@@ -50,12 +50,14 @@ public interface IReportingService
     /// <summary>
     /// Gets team velocity metrics based on completed story points per sprint.
     /// </summary>
-    Task<TeamVelocityDto> GetTeamVelocityAsync(CancellationToken cancellationToken = default);
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    Task<TeamVelocityDto> GetTeamVelocityAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets estimation accuracy metrics comparing estimated hours to actual time spent.
     /// </summary>
-    Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(CancellationToken cancellationToken = default);
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets late tasks report - tasks completed after their due date.
@@ -65,5 +67,6 @@ public interface IReportingService
     /// <summary>
     /// Gets capacity analysis comparing planned vs actual story points by sprint.
     /// </summary>
-    Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(CancellationToken cancellationToken = default);
+    /// <param name="sprintCount">Optional number of recent past sprints to include. If null, returns all sprints.</param>
+    Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 }

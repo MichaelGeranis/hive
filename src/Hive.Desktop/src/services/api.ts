@@ -142,10 +142,19 @@ export const reportsApi = {
   getOneOnOneFrequency: () => api.get<OneOnOneFrequency[]>('/reports/one-on-one-frequency').then(r => r.data),
   getActionItemsSummary: () => api.get<ActionItemsSummary>('/reports/action-items').then(r => r.data),
   getTasksByAssignee: () => api.get<TasksByAssignee[]>('/reports/tasks-by-assignee').then(r => r.data),
-  getTeamVelocity: () => api.get<TeamVelocity>('/reports/team-velocity').then(r => r.data),
-  getEstimationAccuracy: () => api.get<EstimationAccuracy>('/reports/estimation-accuracy').then(r => r.data),
+  getTeamVelocity: (sprintCount?: number) => {
+    const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
+    return api.get<TeamVelocity>(`/reports/team-velocity${params}`).then(r => r.data);
+  },
+  getEstimationAccuracy: (sprintCount?: number) => {
+    const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
+    return api.get<EstimationAccuracy>(`/reports/estimation-accuracy${params}`).then(r => r.data);
+  },
   getLateTasks: () => api.get<LateTasksReport>('/reports/late-tasks').then(r => r.data),
-  getCapacityAnalysis: () => api.get<CapacityAnalysis>('/reports/capacity-analysis').then(r => r.data)
+  getCapacityAnalysis: (sprintCount?: number) => {
+    const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
+    return api.get<CapacityAnalysis>(`/reports/capacity-analysis${params}`).then(r => r.data);
+  }
 }
 
 // Sprints

@@ -143,26 +143,30 @@ public class ReportsController : ControllerBase
     /// <summary>
     /// Gets team velocity metrics based on completed story points per sprint.
     /// </summary>
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Sprint velocity data and averages.</returns>
     [HttpGet("team-velocity")]
     [ProducesResponseType(typeof(TeamVelocityDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<TeamVelocityDto>> GetTeamVelocity(CancellationToken cancellationToken)
+    public async Task<ActionResult<TeamVelocityDto>> GetTeamVelocity([FromQuery] int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generating team velocity report");
-        var velocity = await _service.GetTeamVelocityAsync(cancellationToken);
+        _logger.LogInformation("Generating team velocity report with sprintCount={SprintCount}", sprintCount);
+        var velocity = await _service.GetTeamVelocityAsync(sprintCount, cancellationToken);
         return Ok(velocity);
     }
 
     /// <summary>
     /// Gets estimation accuracy metrics comparing estimated hours to actual time spent.
     /// </summary>
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Estimation accuracy by sprint, assignee, and project.</returns>
     [HttpGet("estimation-accuracy")]
     [ProducesResponseType(typeof(EstimationAccuracyDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<EstimationAccuracyDto>> GetEstimationAccuracy(CancellationToken cancellationToken)
+    public async Task<ActionResult<EstimationAccuracyDto>> GetEstimationAccuracy([FromQuery] int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generating estimation accuracy report");
-        var accuracy = await _service.GetEstimationAccuracyAsync(cancellationToken);
+        _logger.LogInformation("Generating estimation accuracy report with sprintCount={SprintCount}", sprintCount);
+        var accuracy = await _service.GetEstimationAccuracyAsync(sprintCount, cancellationToken);
         return Ok(accuracy);
     }
 
@@ -182,13 +186,15 @@ public class ReportsController : ControllerBase
     /// <summary>
     /// Gets capacity analysis comparing planned vs actual story points by sprint.
     /// </summary>
+    /// <param name="sprintCount">Optional number of recent past sprints to include. If null, returns all sprints.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Capacity analysis with past, current, and future sprint data.</returns>
     [HttpGet("capacity-analysis")]
     [ProducesResponseType(typeof(CapacityAnalysisDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<CapacityAnalysisDto>> GetCapacityAnalysis(CancellationToken cancellationToken)
+    public async Task<ActionResult<CapacityAnalysisDto>> GetCapacityAnalysis([FromQuery] int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generating capacity analysis report");
-        var analysis = await _service.GetCapacityAnalysisAsync(cancellationToken);
+        _logger.LogInformation("Generating capacity analysis report with sprintCount={SprintCount}", sprintCount);
+        var analysis = await _service.GetCapacityAnalysisAsync(sprintCount, cancellationToken);
         return Ok(analysis);
     }
 }

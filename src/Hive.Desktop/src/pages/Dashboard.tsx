@@ -42,13 +42,14 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
   const [memberProjects, setMemberProjects] = useState<Project[]>([])
+  const [sprintFilter, setSprintFilter] = useState<number | undefined>(3) // Default: Last 3 sprints
 
   const closeModal = useCallback(() => setSelectedMember(null), [])
   useEscapeKey(closeModal, !!selectedMember)
 
   useEffect(() => {
     loadDashboard()
-  }, [])
+  }, [sprintFilter]) // Re-fetch when filter changes
 
   const loadDashboard = async () => {
     try {
@@ -57,9 +58,9 @@ export default function Dashboard() {
         reportsApi.getDashboard(),
         tasksApi.getAll(),
         projectsApi.getAll(),
-        reportsApi.getTeamVelocity(),
-        reportsApi.getEstimationAccuracy(),
-        reportsApi.getCapacityAnalysis()
+        reportsApi.getTeamVelocity(sprintFilter),
+        reportsApi.getEstimationAccuracy(sprintFilter),
+        reportsApi.getCapacityAnalysis(sprintFilter)
       ])
       setDashboard(dashboardData)
       setTasks(tasksData)
@@ -199,6 +200,30 @@ export default function Dashboard() {
         <p className="text-slate-500 dark:text-slate-400 mt-1">Overview team performance & activities</p>
       </div>
 
+      {/* Sprint Filter */}
+      <div className="flex justify-end">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Sprint History:
+          </label>
+          <select
+            value={sprintFilter ?? 'all'}
+            onChange={(e) => {
+              const value = e.target.value === 'all' ? undefined : parseInt(e.target.value);
+              setSprintFilter(value);
+            }}
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg
+                       bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100
+                       focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+          >
+            <option value="3">Last 3 sprints</option>
+            <option value="6">Last 6 sprints</option>
+            <option value="12">Last 12 sprints</option>
+            <option value="all">All sprints</option>
+          </select>
+        </div>
+      </div>
+
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard
@@ -214,6 +239,15 @@ export default function Dashboard() {
           icon={<Target className="w-6 h-6" />}
           color="purple"
         />
+         {capacityAnalysis?.currentSprint && (
+          <StatCard
+            title="Current Sprint"
+            value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
+            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
+            icon={<TrendingUp className="w-6 h-6" />}
+            color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
+          />
+        )}
         <StatCard
           title="Task Completion"
           value={`${dashboard.tasks.tasks.completionRate}%`}
@@ -227,15 +261,7 @@ export default function Dashboard() {
           icon={<AlertTriangle className="w-6 h-6" />}
           color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
         />
-        {capacityAnalysis?.currentSprint && (
-          <StatCard
-            title="Current Sprint"
-            value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
-            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
-            icon={<TrendingUp className="w-6 h-6" />}
-            color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
-          />
-        )}
+       
       </div>
 
       {/* Distribution Charts Row - 3 columns */}
@@ -349,7 +375,57 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Task Distribution by Assignee */}
+      {/* Capacity Analysis */}
+      {capacityAnalysis && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (
+        <Card>
+          <CardHeader
+            title="Sprint Capacity Analysis"
+            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%. Average Completed SP: ${capacityAnalysis.pastSprints.length > 0
+                    ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
+                    : 0}.`}
+          />
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={[
+                ...capacityAnalysis.pastSprints,
+                ...(capacityAnalysis.currentSprint ? [capacityAnalysis.currentSprint] : []),
+                ...capacityAnalysis.futureSprints
+              ].map(s => ({
+                ...s,
+                name: s.sprintName
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [value, name]}
+                  labelFormatter={(label) => `Sprint: ${label}`}
+                />
+                <Legend />
+                <ReferenceLine y={0} stroke="#000" />
+                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed" />
+                <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Current Sprint</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-500">{capacityAnalysis.futureSprints.length}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Future Sprints</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Task Distribution by Assignee - Members Workload*/}
       <Card>
         <CardHeader title="Members Workload" subtitle="" />
         <CardContent className="h-80">
@@ -479,62 +555,6 @@ export default function Dashboard() {
                   {accuracy.overallAccuracyPercentage}%
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Capacity Analysis */}
-      {capacityAnalysis && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (
-        <Card>
-          <CardHeader
-            title="Sprint Capacity Analysis"
-            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%`}
-          />
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[
-                ...capacityAnalysis.pastSprints,
-                ...(capacityAnalysis.currentSprint ? [capacityAnalysis.currentSprint] : []),
-                ...capacityAnalysis.futureSprints
-              ].map(s => ({
-                ...s,
-                name: s.sprintName
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
-                <Tooltip
-                  formatter={(value: number, name: string) => [value, name]}
-                  labelFormatter={(label) => `Sprint: ${label}`}
-                />
-                <Legend />
-                <ReferenceLine y={0} stroke="#000" />
-                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed" />
-                <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-500">
-                  {capacityAnalysis.pastSprints.length > 0
-                    ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
-                    : 0}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Avg Completed SP</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Current Sprint</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-purple-500">{capacityAnalysis.futureSprints.length}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Future Sprints</p>
               </div>
             </div>
           </CardContent>

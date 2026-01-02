@@ -516,7 +516,7 @@ public class ReportingService : IReportingService
         return Math.Round(intervals.Average(), 1);
     }
 
-    public async Task<TeamVelocityDto> GetTeamVelocityAsync(CancellationToken cancellationToken = default)
+    public async Task<TeamVelocityDto> GetTeamVelocityAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
         var completedTasks = tasks
@@ -538,7 +538,7 @@ public class ReportingService : IReportingService
         // Calculate sprints based on 2-week periods from the earliest completed task
         var firstCompletedDate = completedTasks.First().CompletedAt!.Value;
         var lastCompletedDate = completedTasks.Last().CompletedAt!.Value;
-        
+
         var sprints = new List<SprintVelocityDto>();
         var currentSprintStart = firstCompletedDate.Date;
         var sprintNumber = 1;
@@ -546,7 +546,7 @@ public class ReportingService : IReportingService
         while (currentSprintStart <= lastCompletedDate)
         {
             var sprintEnd = currentSprintStart.AddDays(14);
-            
+
             var sprintTasks = completedTasks
                 .Where(t => t.CompletedAt!.Value >= currentSprintStart && t.CompletedAt.Value < sprintEnd)
                 .ToList();
@@ -570,6 +570,12 @@ public class ReportingService : IReportingService
             sprintNumber++;
         }
 
+        // Filter by sprint count if requested
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            sprints = sprints.TakeLast(sprintCount.Value).ToList();
+        }
+
         var totalStoryPoints = sprints.Sum(s => s.StoryPointsCompleted);
         var averageVelocity = sprints.Count > 0 ? Math.Round((double)totalStoryPoints / sprints.Count, 1) : 0;
 
@@ -579,7 +585,7 @@ public class ReportingService : IReportingService
         {
             var lastSprint = sprints[^1];
             var previousSprint = sprints[^2];
-            
+
             if (previousSprint.StoryPointsCompleted > 0)
             {
                 completionTrend = Math.Round(
@@ -597,7 +603,7 @@ public class ReportingService : IReportingService
         };
     }
 
-    public async Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(CancellationToken cancellationToken = default)
+    public async Task<EstimationAccuracyDto> GetEstimationAccuracyAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
@@ -650,8 +656,28 @@ public class ReportingService : IReportingService
             })
             .ToList();
 
-        // Calculate by assignee
-        var byAssignee = completedTasks
+        // Filter by sprint count if requested
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            sprintGroups = sprintGroups.TakeLast(sprintCount.Value).ToList();
+        }
+
+        // Get the filtered sprint names for filtering tasks
+        var filteredSprintNames = sprintGroups.Select(s => s.SprintName).ToHashSet();
+
+        // Filter completedTasks to only include tasks from the filtered sprints
+        var filteredCompletedTasks = completedTasks
+            .Where(t => !string.IsNullOrEmpty(t.Sprint) && filteredSprintNames.Contains(t.Sprint))
+            .ToList();
+
+        // If no tasks remain after filtering, use original completedTasks for assignee/project calculations
+        if (filteredCompletedTasks.Count == 0)
+        {
+            filteredCompletedTasks = completedTasks;
+        }
+
+        // Calculate by assignee using filtered tasks
+        var byAssignee = filteredCompletedTasks
             .GroupBy(t => t.AssigneeId)
             .Select(g =>
             {
@@ -676,8 +702,8 @@ public class ReportingService : IReportingService
             .OrderByDescending(a => a.TasksCompleted)
             .ToList();
 
-        // Calculate by project
-        var byProject = completedTasks
+        // Calculate by project using filtered tasks
+        var byProject = filteredCompletedTasks
             .Where(t => t.ProjectId.HasValue)
             .GroupBy(t => t.ProjectId)
             .Select(g =>
@@ -703,9 +729,9 @@ public class ReportingService : IReportingService
             .OrderByDescending(p => p.TasksCompleted)
             .ToList();
 
-        // Calculate overall metrics
-        var totalEstimated = completedTasks.Sum(t => t.EstimatedHours!.Value);
-        var totalActual = (int)Math.Round(completedTasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+        // Calculate overall metrics from filtered tasks
+        var totalEstimated = filteredCompletedTasks.Sum(t => t.EstimatedHours!.Value);
+        var totalActual = (int)Math.Round(filteredCompletedTasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
         var totalVariance = totalActual - totalEstimated;
         var overallAccuracy = totalEstimated > 0
             ? Math.Max(0, Math.Round(100 - Math.Abs(totalVariance * 100.0 / totalEstimated), 1))
@@ -799,7 +825,7 @@ public class ReportingService : IReportingService
         };
     }
 
-    public async Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(CancellationToken cancellationToken = default)
+    public async Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
@@ -903,7 +929,18 @@ public class ReportingService : IReportingService
             }
         }
 
-        // Calculate average utilization from past sprints (average of utilization percentages)
+        // Filter past sprints by count if requested (keep current and future sprints unchanged)
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            pastSprints = pastSprints
+                .OrderByDescending(s => s.Year)
+                .ThenByDescending(s => s.Quarter)
+                .ThenByDescending(s => s.SprintNumber)
+                .Take(sprintCount.Value)
+                .ToList();
+        }
+
+        // Calculate average utilization from filtered past sprints
         var totalCommitted = pastSprints.Sum(s => s.CommittedPoints);
         var totalCompleted = pastSprints.Sum(s => s.CompletedPoints);
         var averageUtilization = pastSprints.Count > 0
