@@ -396,8 +396,9 @@ export default function Settings() {
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">How to Export from Jira</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-blue-700 dark:text-blue-300">
-                <li>1 Go to your Jira project and navigate to Issues</li>
-                <li>Click on the "..." menu and select "Export"</li>
+                <li>Go to your Jira project and navigate to All work</li>
+                <li>Get all issues except EPIC from LP project from the last 5 sprints including the current in progress sprint</li>
+                <li>eg: project = LP AND issuetype != Epic AND cf[10020] in (LP_4Q25_S1, LP_4Q25_S2, LP_4Q25_S3, LP_4Q25_S4, LP_4Q25_S5, LP_4Q25_S6) ORDER BY created DESC</li>
                 <li>Choose "Export CSV (all fields)" or "Export CSV (current fields)"</li>
                 <li>Save the exported CSV file and upload it below</li>
               </ol>

@@ -40,12 +40,52 @@ public class ReportingService : IReportingService
         _sprintCapacityRepository = sprintCapacityRepository;
     }
 
-    public async Task<DashboardOverviewDto> GetDashboardOverviewAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Extracts the latest sprint from a comma-separated list of sprint names.
+    /// If a task has "LP_4Q25_S5,LP_4Q25_S6", returns "LP_4Q25_S6".
+    /// </summary>
+    private static string GetLatestSprintFromTask(string sprintValue)
+    {
+        if (string.IsNullOrWhiteSpace(sprintValue))
+            return string.Empty;
+
+        var sprintNames = sprintValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (sprintNames.Length == 0)
+            return string.Empty;
+
+        if (sprintNames.Length == 1)
+            return sprintNames[0];
+
+        // Parse all sprint names and find the one with highest sort order
+        var sprints = sprintNames
+            .Select(name =>
+            {
+                try
+                {
+                    return new Sprint(name);
+                }
+                catch
+                {
+                    return null;
+                }
+            })
+            .Where(s => s != null)
+            .ToList();
+
+        if (sprints.Count == 0)
+            return sprintNames[0]; // Fallback to first if none could be parsed
+
+        var latestSprint = sprints.OrderByDescending(s => s!.GetSortOrder()).First();
+        return latestSprint!.Name;
+    }
+
+    public async Task<DashboardOverviewDto> GetDashboardOverviewAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
         var teamOverview = await GetTeamOverviewAsync(cancellationToken);
         var reviewsOverview = await GetReviewsAnalyticsAsync(cancellationToken);
         var oneOnOnesOverview = await GetOneOnOnesAnalyticsAsync(cancellationToken);
-        var tasksOverview = await GetTasksAnalyticsAsync(cancellationToken);
+        var tasksOverview = await GetTasksAnalyticsAsync(sprintCount, cancellationToken);
 
         return new DashboardOverviewDto
         {
@@ -161,11 +201,42 @@ public class ReportingService : IReportingService
         };
     }
 
-    public async Task<TasksOverviewDto> GetTasksAnalyticsAsync(CancellationToken cancellationToken = default)
+    public async Task<TasksOverviewDto> GetTasksAnalyticsAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+
+        // Filter tasks by sprint count if requested
+        var tasks = allTasks;
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
+
+            // Get unique sprint names from tasks (using latest sprint per task)
+            var uniqueSprintNames = allTasks
+                .Where(t => !string.IsNullOrEmpty(t.Sprint))
+                .Select(t => GetLatestSprintFromTask(t.Sprint!))
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct()
+                .ToHashSet();
+
+            // Get sprint entities for proper ordering and take the last N
+            var sprintNames = allSprints
+                .Where(s => uniqueSprintNames.Contains(s.Name))
+                .OrderBy(s => s.GetSortOrder())
+                .TakeLast(sprintCount.Value)
+                .Select(s => s.Name)
+                .ToHashSet();
+
+            // Filter tasks to only those whose latest sprint is in the selected sprints
+            if (sprintNames.Count > 0)
+            {
+                tasks = allTasks
+                    .Where(t => !string.IsNullOrEmpty(t.Sprint) && sprintNames.Contains(GetLatestSprintFromTask(t.Sprint!)))
+                    .ToList();
+            }
+        }
 
         var projectsSummary = new ProjectsSummaryDto
         {
@@ -195,7 +266,34 @@ public class ReportingService : IReportingService
             CompletionRate = tasks.Count > 0 ? Math.Round((double)doneTasks / tasks.Count * 100, 1) : 0
         };
 
-        var tasksByAssignee = await GetTasksByAssigneeReportAsync(cancellationToken);
+        // Calculate tasks by assignee using filtered tasks
+        var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
+        var tasksByAssignee = tasks
+            .GroupBy(t => t.AssigneeId)
+            .Select(g =>
+            {
+                var assigneeTasks = g.ToList();
+                var completed = assigneeTasks.Count(t => t.Status == TaskStatus.Done);
+                var inProgress = assigneeTasks.Count(t => t.Status == TaskStatus.InProgress);
+                var overdue = assigneeTasks.Count(t => t.IsOverdue());
+
+                return new TasksByAssigneeDto
+                {
+                    AssigneeId = g.Key,
+                    AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
+                        ? name
+                        : (g.Key.HasValue ? "Unknown" : "Unassigned"),
+                    TotalTasks = assigneeTasks.Count,
+                    CompletedTasks = completed,
+                    InProgressTasks = inProgress,
+                    OverdueTasks = overdue,
+                    CompletionRate = assigneeTasks.Count > 0 ? Math.Round((double)completed / assigneeTasks.Count * 100, 1) : 0,
+                    TotalEstimatedHours = assigneeTasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value),
+                    TotalActualHours = assigneeTasks.Where(t => t.ActualHours.HasValue).Sum(t => t.ActualHours!.Value)
+                };
+            })
+            .OrderByDescending(a => a.TotalTasks)
+            .ToList();
 
         var tasksByType = Enum.GetValues<TaskType>()
             .Select(type =>
@@ -519,9 +617,10 @@ public class ReportingService : IReportingService
     public async Task<TeamVelocityDto> GetTeamVelocityAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
+
         var completedTasks = tasks
-            .Where(t => t.Status == TaskStatus.Done && t.CompletedAt.HasValue && t.StoryPoints.HasValue)
-            .OrderBy(t => t.CompletedAt!.Value)
+            .Where(t => t.Status == TaskStatus.Done && t.CompletedAt.HasValue && t.StoryPoints.HasValue && !string.IsNullOrEmpty(t.Sprint))
             .ToList();
 
         if (completedTasks.Count == 0)
@@ -535,40 +634,35 @@ public class ReportingService : IReportingService
             };
         }
 
-        // Calculate sprints based on 2-week periods from the earliest completed task
-        var firstCompletedDate = completedTasks.First().CompletedAt!.Value;
-        var lastCompletedDate = completedTasks.Last().CompletedAt!.Value;
+        // Group completed tasks by their latest sprint
+        var tasksByLatestSprint = completedTasks
+            .Select(t => new { Task = t, LatestSprint = GetLatestSprintFromTask(t.Sprint!) })
+            .Where(x => !string.IsNullOrEmpty(x.LatestSprint))
+            .GroupBy(x => x.LatestSprint)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
-        var sprints = new List<SprintVelocityDto>();
-        var currentSprintStart = firstCompletedDate.Date;
-        var sprintNumber = 1;
+        // Get sprint entities for the sprints that have completed tasks
+        var sprintEntities = allSprints
+            .Where(s => tasksByLatestSprint.ContainsKey(s.Name))
+            .OrderBy(s => s.GetSortOrder())
+            .ToList();
 
-        while (currentSprintStart <= lastCompletedDate)
-        {
-            var sprintEnd = currentSprintStart.AddDays(14);
-
-            var sprintTasks = completedTasks
-                .Where(t => t.CompletedAt!.Value >= currentSprintStart && t.CompletedAt.Value < sprintEnd)
-                .ToList();
-
-            if (sprintTasks.Any())
+        var sprints = sprintEntities
+            .Select(sprint =>
             {
-                var sprintVelocity = new SprintVelocityDto
+                var sprintTasks = tasksByLatestSprint[sprint.Name];
+                return new SprintVelocityDto
                 {
-                    SprintName = $"Sprint {sprintNumber}",
-                    StartDate = currentSprintStart,
-                    EndDate = sprintEnd.AddDays(-1), // End date is inclusive
+                    SprintName = sprint.Name,
+                    StartDate = sprintTasks.Min(t => t.CompletedAt!.Value),
+                    EndDate = sprintTasks.Max(t => t.CompletedAt!.Value),
                     StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints!.Value),
                     TasksCompleted = sprintTasks.Count,
                     TotalTimeSpentMinutes = sprintTasks.Sum(t => t.TimeSpentMinutes ?? 0),
                     TotalEstimatedHours = sprintTasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value)
                 };
-                sprints.Add(sprintVelocity);
-            }
-
-            currentSprintStart = sprintEnd;
-            sprintNumber++;
-        }
+            })
+            .ToList();
 
         // Filter by sprint count if requested
         if (sprintCount.HasValue && sprintCount.Value > 0)
@@ -630,24 +724,33 @@ public class ReportingService : IReportingService
 
         var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
         var projectMap = projects.ToDictionary(p => p.Id, p => p.Name);
+        var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
 
-        // Calculate by sprint
-        var sprintGroups = completedTasks
+        // Calculate by sprint, grouping by latest sprint per task
+        var tasksByLatestSprint = completedTasks
             .Where(t => !string.IsNullOrEmpty(t.Sprint))
-            .GroupBy(t => t.Sprint)
-            .OrderBy(g => g.Key)
-            .Select(g =>
+            .Select(t => new { Task = t, LatestSprint = GetLatestSprintFromTask(t.Sprint!) })
+            .Where(x => !string.IsNullOrEmpty(x.LatestSprint))
+            .GroupBy(x => x.LatestSprint)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
+
+        // Order sprints by GetSortOrder() for proper chronological ordering
+        var sprintGroups = allSprints
+            .Where(s => tasksByLatestSprint.ContainsKey(s.Name))
+            .OrderBy(s => s.GetSortOrder())
+            .Select(sprint =>
             {
-                var estimated = g.Sum(t => t.EstimatedHours!.Value);
-                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var tasks = tasksByLatestSprint[sprint.Name];
+                var estimated = tasks.Sum(t => t.EstimatedHours!.Value);
+                var actual = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
                 var variance = actual - estimated;
                 var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
 
                 return new SprintAccuracyDto
                 {
-                    SprintName = g.Key,
-                    TasksCompleted = g.Count(),
-                    StoryPointsCompleted = g.Where(t => t.StoryPoints.HasValue).Sum(t => t.StoryPoints!.Value),
+                    SprintName = sprint.Name,
+                    TasksCompleted = tasks.Count,
+                    StoryPointsCompleted = tasks.Where(t => t.StoryPoints.HasValue).Sum(t => t.StoryPoints!.Value),
                     EstimatedHours = estimated,
                     ActualHours = actual,
                     VarianceHours = variance,
@@ -665,9 +768,9 @@ public class ReportingService : IReportingService
         // Get the filtered sprint names for filtering tasks
         var filteredSprintNames = sprintGroups.Select(s => s.SprintName).ToHashSet();
 
-        // Filter completedTasks to only include tasks from the filtered sprints
+        // Filter completedTasks to only include tasks from the filtered sprints (using latest sprint logic)
         var filteredCompletedTasks = completedTasks
-            .Where(t => !string.IsNullOrEmpty(t.Sprint) && filteredSprintNames.Contains(t.Sprint))
+            .Where(t => !string.IsNullOrEmpty(t.Sprint) && filteredSprintNames.Contains(GetLatestSprintFromTask(t.Sprint!)))
             .ToList();
 
         // If no tasks remain after filtering, use original completedTasks for assignee/project calculations
@@ -846,27 +949,18 @@ public class ReportingService : IReportingService
 
         var capacityMap = sprintCapacities.ToDictionary(c => c.SprintId);
 
-        // Group tasks by sprint name
+        // Group tasks by sprint name, extracting the latest sprint if multiple are assigned
         var tasksBySprint = tasks
             .Where(t => !string.IsNullOrEmpty(t.Sprint))
-            .GroupBy(t => t.Sprint)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            .Select(t => new { Task = t, LatestSprint = GetLatestSprintFromTask(t.Sprint!) })
+            .Where(x => !string.IsNullOrEmpty(x.LatestSprint))
+            .GroupBy(x => x.LatestSprint)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
-        // Determine current sprint based on highest sort order where we have in-progress tasks
-        // or fallback to the latest sprint with any tasks
+        // Determine current sprint based on highest sort order from all sprints
         var currentSprintEntity = sprints
-            .Where(s => tasksBySprint.TryGetValue(s.Name, out var st) && st.Any(t => t.Status == TaskStatus.InProgress))
             .OrderByDescending(s => s.GetSortOrder())
             .FirstOrDefault();
-
-        if (currentSprintEntity == null)
-        {
-            // Fallback: use the sprint with highest sort order that has any tasks
-            currentSprintEntity = sprints
-                .Where(s => tasksBySprint.ContainsKey(s.Name))
-                .OrderByDescending(s => s.GetSortOrder())
-                .FirstOrDefault();
-        }
 
         var currentSortOrder = currentSprintEntity?.GetSortOrder() ?? 0;
 

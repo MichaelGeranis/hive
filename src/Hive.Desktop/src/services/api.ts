@@ -134,7 +134,10 @@ export const tasksApi = {
 
 // Reports
 export const reportsApi = {
-  getDashboard: () => api.get<DashboardOverview>('/reports/dashboard').then(r => r.data),
+  getDashboard: (sprintCount?: number) => {
+    const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
+    return api.get<DashboardOverview>(`/reports/dashboard${params}`).then(r => r.data);
+  },
   getReviewsAnalytics: () => api.get<ReviewsOverview>('/reports/reviews').then(r => r.data),
   getOneOnOnesAnalytics: () => api.get<OneOnOnesOverview>('/reports/one-on-ones').then(r => r.data),
   getTasksAnalytics: () => api.get<TasksOverview>('/reports/tasks').then(r => r.data),

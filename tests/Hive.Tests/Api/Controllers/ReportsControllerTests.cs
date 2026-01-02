@@ -26,11 +26,11 @@ public class ReportsControllerTests
     {
         // Arrange
         var dashboard = CreateDashboardOverview();
-        _serviceMock.Setup(s => s.GetDashboardOverviewAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetDashboardOverviewAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(dashboard);
 
         // Act
-        var result = await _controller.GetDashboard(CancellationToken.None);
+        var result = await _controller.GetDashboard(null, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -42,14 +42,14 @@ public class ReportsControllerTests
     {
         // Arrange
         var dashboard = CreateDashboardOverview();
-        _serviceMock.Setup(s => s.GetDashboardOverviewAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetDashboardOverviewAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(dashboard);
 
         // Act
-        await _controller.GetDashboard(CancellationToken.None);
+        await _controller.GetDashboard(null, CancellationToken.None);
 
         // Assert
-        _serviceMock.Verify(s => s.GetDashboardOverviewAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.GetDashboardOverviewAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -101,7 +101,7 @@ public class ReportsControllerTests
     {
         // Arrange
         var tasks = CreateTasksOverview();
-        _serviceMock.Setup(s => s.GetTasksAnalyticsAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetTasksAnalyticsAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(tasks);
 
         // Act

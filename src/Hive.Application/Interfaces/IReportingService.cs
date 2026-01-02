@@ -10,7 +10,8 @@ public interface IReportingService
     /// <summary>
     /// Gets the complete dashboard overview with all metrics.
     /// </summary>
-    Task<DashboardOverviewDto> GetDashboardOverviewAsync(CancellationToken cancellationToken = default);
+    /// <param name="sprintCount">Optional number of recent sprints to include for task metrics. If null, returns all tasks.</param>
+    Task<DashboardOverviewDto> GetDashboardOverviewAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets performance reviews analytics.
@@ -25,7 +26,8 @@ public interface IReportingService
     /// <summary>
     /// Gets tasks and projects analytics.
     /// </summary>
-    Task<TasksOverviewDto> GetTasksAnalyticsAsync(CancellationToken cancellationToken = default);
+    /// <param name="sprintCount">Optional number of recent sprints to include for task metrics. If null, returns all tasks.</param>
+    Task<TasksOverviewDto> GetTasksAnalyticsAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets detailed analytics for a specific direct report.

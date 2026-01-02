@@ -26,13 +26,15 @@ public class ReportsController : ControllerBase
     /// <summary>
     /// Gets the complete dashboard overview with all key metrics.
     /// </summary>
+    /// <param name="sprintCount">Optional number of recent sprints to include for task metrics. If null, returns all tasks.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Dashboard overview with team, reviews, one-on-ones, and tasks metrics.</returns>
     [HttpGet("dashboard")]
     [ProducesResponseType(typeof(DashboardOverviewDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<DashboardOverviewDto>> GetDashboard(CancellationToken cancellationToken)
+    public async Task<ActionResult<DashboardOverviewDto>> GetDashboard([FromQuery] int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Generating dashboard overview");
-        var dashboard = await _service.GetDashboardOverviewAsync(cancellationToken);
+        _logger.LogInformation("Generating dashboard overview with sprintCount={SprintCount}", sprintCount);
+        var dashboard = await _service.GetDashboardOverviewAsync(sprintCount, cancellationToken);
         return Ok(dashboard);
     }
 
@@ -71,7 +73,7 @@ public class ReportsController : ControllerBase
     public async Task<ActionResult<TasksOverviewDto>> GetTasksAnalytics(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Generating tasks analytics");
-        var analytics = await _service.GetTasksAnalyticsAsync(cancellationToken);
+        var analytics = await _service.GetTasksAnalyticsAsync(null, cancellationToken);
         return Ok(analytics);
     }
 

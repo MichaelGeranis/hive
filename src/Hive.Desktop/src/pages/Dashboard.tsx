@@ -55,7 +55,7 @@ export default function Dashboard() {
     try {
       setLoading(true)
       const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData] = await Promise.all([
-        reportsApi.getDashboard(),
+        reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         reportsApi.getTeamVelocity(sprintFilter),
