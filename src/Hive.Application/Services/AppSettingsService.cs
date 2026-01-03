@@ -70,11 +70,13 @@ public class AppSettingsService : IAppSettingsService
     {
         return new List<StoryPointMapping>
         {
-            new() { Points = 1, Hours = 4, Label = "1 SP = 4 hours" },
-            new() { Points = 2, Hours = 8, Label = "2 SP = 8 hours (1 day)" },
-            new() { Points = 3, Hours = 12, Label = "3 SP = 12 hours (1.5 days)" },
+            new() { Points = 1, Hours = 2, Label = "1 SP = 2 hours" },
+            new() { Points = 2, Hours = 4, Label = "2 SP = 4 hours (4 hours)" },
+            new() { Points = 3, Hours = 8, Label = "3 SP = 8 hours (1 day)" },
             new() { Points = 5, Hours = 24, Label = "5 SP = 24 hours (3 days)" },
-            new() { Points = 8, Hours = 40, Label = "8 SP = 40 hours (1 week)" },
+            new() { Points = 8, Hours = 72, Label = "8 SP = 72 hours (1 sprint)" },
+            new() { Points = 13, Hours = 150, Label = "13 SP = 150 hours (2 sprints)" },
+            new() { Points = 21, Hours = 240, Label = "21 SP = 240 hours (1 month)" }
         };
     }
 

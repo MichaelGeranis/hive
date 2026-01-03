@@ -369,6 +369,7 @@ public class TeamTaskService : ITeamTaskService
 
     /// <summary>
     /// Calculates estimated hours from story points using the app settings mapping.
+    /// If story points don't match exactly, uses the next biggest mapping (or last one if none bigger).
     /// </summary>
     private async Task<int?> CalculateEstimatedHoursAsync(int? storyPoints, CancellationToken cancellationToken)
     {
@@ -388,41 +389,20 @@ public class TeamTaskService : ITeamTaskService
             if (mappings is null || mappings.Count == 0)
                 return null;
 
-            // Find exact match first
-            var mapping = mappings.FirstOrDefault(m => m.Points == storyPoints.Value);
-            if (mapping is not null)
-                return mapping.Hours;
-
-            // If no exact match, interpolate or use closest
             var sortedMappings = mappings.OrderBy(m => m.Points).ToList();
 
-            // If below minimum, use minimum's ratio
-            if (storyPoints.Value < sortedMappings.First().Points)
-            {
-                var first = sortedMappings.First();
-                var ratio = (double)first.Hours / first.Points;
-                return (int)Math.Round(storyPoints.Value * ratio);
-            }
+            // Find exact match first
+            var exactMatch = sortedMappings.FirstOrDefault(m => m.Points == storyPoints.Value);
+            if (exactMatch is not null)
+                return exactMatch.Hours;
 
-            // If above maximum, use maximum's ratio
-            if (storyPoints.Value > sortedMappings.Last().Points)
-            {
-                var last = sortedMappings.Last();
-                var ratio = (double)last.Hours / last.Points;
-                return (int)Math.Round(storyPoints.Value * ratio);
-            }
+            // Find next biggest mapping
+            var nextBiggest = sortedMappings.FirstOrDefault(m => m.Points > storyPoints.Value);
+            if (nextBiggest is not null)
+                return nextBiggest.Hours;
 
-            // Linear interpolation between two closest points
-            var lower = sortedMappings.LastOrDefault(m => m.Points <= storyPoints.Value);
-            var upper = sortedMappings.FirstOrDefault(m => m.Points >= storyPoints.Value);
-
-            if (lower is not null && upper is not null && lower.Points != upper.Points)
-            {
-                var ratio = (double)(storyPoints.Value - lower.Points) / (upper.Points - lower.Points);
-                return (int)Math.Round(lower.Hours + ratio * (upper.Hours - lower.Hours));
-            }
-
-            return null;
+            // If no bigger mapping exists, use the last (maximum) mapping
+            return sortedMappings.Last().Hours;
         }
         catch (JsonException)
         {

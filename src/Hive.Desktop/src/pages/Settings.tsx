@@ -6,11 +6,13 @@ import { useTheme } from '../contexts/ThemeContext'
 import type { StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest, Sprint, SprintCapacity, CreateSprintCapacityDto } from '../types'
 
 const DEFAULT_MAPPINGS: StoryPointMapping[] = [
-  { points: 1, hours: 4, label: '1 SP = 4 hours' },
-  { points: 2, hours: 8, label: '2 SP = 8 hours (1 day)' },
-  { points: 3, hours: 12, label: '3 SP = 12 hours (1.5 days)' },
+  { points: 1, hours: 2, label: '1 SP = 2 hours' },
+  { points: 2, hours: 4, label: '2 SP = 4 hours (4 hours)' },
+  { points: 3, hours: 8, label: '3 SP = 8 hours (1 day)' },
   { points: 5, hours: 24, label: '5 SP = 24 hours (3 days)' },
-  { points: 8, hours: 40, label: '8 SP = 40 hours (1 week)' },
+  { points: 8, hours: 72, label: '8 SP = 72 hours (1 sprint)' },
+  { points: 13, hours: 150, label: '13 SP = 150 hours (2 sprints)' },
+  { points: 21, hours: 240, label: '21 SP = 240 hours (1 month)' }
 ]
 
 export default function Settings() {

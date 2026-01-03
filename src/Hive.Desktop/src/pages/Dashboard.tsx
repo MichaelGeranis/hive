@@ -498,25 +498,6 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Task Distribution by Assignee - Members Workload*/}
-      <Card>
-        <CardHeader title="Members Workload" subtitle="" />
-        <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={tasksByAssigneeData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="overdue" stackId="a" fill="#ef4444" name="Overdue" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-
       {/* Estimation Accuracy */}
       {accuracy && accuracy.sprints.length > 0 && (
         <Card>
@@ -561,6 +542,27 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      
+      {/* Task Distribution by Assignee - Members Workload*/}
+      <Card>
+        <CardHeader title="Members Workload" subtitle="" />
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={tasksByAssigneeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="overdue" stackId="a" fill="#ef4444" name="Overdue" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+
+
 
       {/* Member Projects Modal */}
       {selectedMember && (

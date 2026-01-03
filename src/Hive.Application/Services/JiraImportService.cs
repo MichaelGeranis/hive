@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
@@ -18,6 +19,7 @@ public class JiraImportService : IJiraImportService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ISprintService _sprintService;
+    private readonly IAppSettingsRepository _appSettingsRepository;
 
     // Sprint name pattern: TeamName_QuarterQYear_SSprintNumber (e.g., LP_1Q25_S4)
     private static readonly Regex SprintPatternRegex = new(@"^(\w+)_(\d)Q(\d{2})_S(\d+)$", RegexOptions.Compiled);
@@ -41,12 +43,14 @@ public class JiraImportService : IJiraImportService
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
         IProjectRepository projectRepository,
-        ISprintService sprintService)
+        ISprintService sprintService,
+        IAppSettingsRepository appSettingsRepository)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _sprintService = sprintService ?? throw new ArgumentNullException(nameof(sprintService));
+        _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
     }
 
     public Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
@@ -125,10 +129,11 @@ public class JiraImportService : IJiraImportService
         var headerValidation = ValidateHeaders(headers);
         warnings.AddRange(headerValidation);
 
-        // Load all existing tasks, direct reports, and projects once
+        // Load all existing tasks, direct reports, projects, and app settings once
         var existingTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
 
         var totalRows = lines.Count - 1;
         var successCount = 0;
@@ -209,7 +214,7 @@ public class JiraImportService : IJiraImportService
                 }
 
                 // Map fields
-                var taskData = MapJiraRowToTask(rowData, directReports, projects, out var projectName);
+                var taskData = MapJiraRowToTask(rowData, directReports, projects, appSettings, out var projectName);
 
                 // Add warning if project was specified but not found
                 if (!string.IsNullOrWhiteSpace(projectName) && !taskData.ProjectId.HasValue)
@@ -489,6 +494,7 @@ public class JiraImportService : IJiraImportService
         Dictionary<string, string> rowData,
         IReadOnlyList<DirectReport> directReports,
         IReadOnlyList<Project> projects,
+        AppSettings? appSettings,
         out string? projectNameOut)
     {
         var issueKey = GetValue(rowData, IssueKeyColumns);
@@ -518,6 +524,9 @@ public class JiraImportService : IJiraImportService
         var dueDate = ParseDueDate(dueDateStr);
         var timeSpentMinutes = ParseTimeSpent(timeSpentStr);
 
+        // Calculate estimated hours from story points using the mapping
+        var estimatedHours = CalculateEstimatedHoursFromStoryPoints(storyPoints, appSettings);
+
         // Build tags with Jira Issue Key
         var tags = string.IsNullOrWhiteSpace(issueKey)
             ? "imported-from-jira"
@@ -533,6 +542,7 @@ public class JiraImportService : IJiraImportService
             AssigneeId = assigneeId,
             ProjectId = projectId,
             StoryPoints = storyPoints,
+            EstimatedHours = estimatedHours,
             DueDate = dueDate,
             Tags = tags,
             Labels = labels,
@@ -764,6 +774,50 @@ public class JiraImportService : IJiraImportService
                 break;
         }
     }
+
+    /// <summary>
+    /// Calculates estimated hours from story points using the app settings mapping.
+    /// If story points don't match exactly, uses the next biggest mapping (or last one if none bigger).
+    /// </summary>
+    private static int? CalculateEstimatedHoursFromStoryPoints(int? storyPoints, AppSettings? appSettings)
+    {
+        if (!storyPoints.HasValue || storyPoints.Value <= 0)
+            return null;
+
+        if (appSettings is null || string.IsNullOrEmpty(appSettings.StoryPointMappings))
+            return null;
+
+        try
+        {
+            var mappings = JsonSerializer.Deserialize<List<StoryPointMapping>>(
+                appSettings.StoryPointMappings,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (mappings is null || mappings.Count == 0)
+                return null;
+
+            var sortedMappings = mappings.OrderBy(m => m.Points).ToList();
+
+            // Find exact match first
+            var exactMatch = sortedMappings.FirstOrDefault(m => m.Points == storyPoints.Value);
+            if (exactMatch is not null)
+                return exactMatch.Hours;
+
+            // Find next biggest mapping
+            var nextBiggest = sortedMappings.FirstOrDefault(m => m.Points > storyPoints.Value);
+            if (nextBiggest is not null)
+                return nextBiggest.Hours;
+
+            // If no bigger mapping exists, use the last (maximum) mapping
+            return sortedMappings.Last().Hours;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private record StoryPointMapping(int Points, int Hours, string? Label);
 
     private class TaskData
     {
