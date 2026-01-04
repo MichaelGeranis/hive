@@ -690,12 +690,9 @@ public class ReportingService : IReportingService
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
 
-        // Only consider completed tasks with both estimated hours and time spent
-        var completedTasks = tasks.ToList();
-            // .Where(t => t.Status == TaskStatus.Done && t.EstimatedHours.HasValue && t.TimeSpentMinutes.HasValue)
-            // .ToList();
+        var allTasks = tasks.ToList();
 
-        if (completedTasks.Count == 0)
+        if (allTasks.Count == 0)
         {
             return new EstimationAccuracyDto
             {
@@ -714,7 +711,7 @@ public class ReportingService : IReportingService
         var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
 
         // Calculate by sprint, grouping by latest sprint per task
-        var tasksByLatestSprint = completedTasks
+        var tasksByLatestSprint = allTasks
             .Where(t => !string.IsNullOrEmpty(t.Sprint))
             .Select(t => new { Task = t, LatestSprint = GetLatestSprintFromTask(t.Sprint!) })
             .Where(x => !string.IsNullOrEmpty(x.LatestSprint))
@@ -756,14 +753,14 @@ public class ReportingService : IReportingService
         var filteredSprintNames = sprintGroups.Select(s => s.SprintName).ToHashSet();
 
         // Filter completedTasks to only include tasks from the filtered sprints (using latest sprint logic)
-        var filteredCompletedTasks = completedTasks
+        var filteredCompletedTasks = allTasks
             .Where(t => !string.IsNullOrEmpty(t.Sprint) && filteredSprintNames.Contains(GetLatestSprintFromTask(t.Sprint!)))
             .ToList();
 
         // If no tasks remain after filtering, use original completedTasks for assignee/project calculations
         if (filteredCompletedTasks.Count == 0)
         {
-            filteredCompletedTasks = completedTasks;
+            filteredCompletedTasks = allTasks;
         }
 
         // Calculate by assignee using filtered tasks
