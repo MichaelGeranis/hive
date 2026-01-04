@@ -9,8 +9,8 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi, tasksApi, projectsApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [velocity, setVelocity] = useState<TeamVelocity | null>(null)
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
+  const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -54,13 +55,14 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         reportsApi.getTeamVelocity(sprintFilter),
         reportsApi.getEstimationAccuracy(sprintFilter),
-        reportsApi.getCapacityAnalysis(sprintFilter)
+        reportsApi.getCapacityAnalysis(sprintFilter),
+        leavesApi.getOverview()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData)
@@ -68,6 +70,7 @@ export default function Dashboard() {
       setVelocity(velocityData)
       setAccuracy(accuracyData)
       setCapacityAnalysis(capacityData)
+      setLeaveOverview(leaveData)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -376,55 +379,154 @@ export default function Dashboard() {
       </div>
 
       {/* Capacity Analysis */}
-      {capacityAnalysis && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (
+      {capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (() => {
+        // Calculate average completed SP from past sprints
+        const avgCompletedSP = capacityAnalysis.pastSprints.length > 0
+          ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
+          : 0;
+
+        // Calculate available team members (total - on leave today)
+        const totalMembers = dashboard.team.totalDirectReports;
+        const membersOnLeave = leaveOverview.teamMembersOnLeaveToday;
+        const availableMembers = totalMembers - membersOnLeave;
+        const availabilityRatio = totalMembers > 0 ? availableMembers / totalMembers : 1;
+
+        // Calculate predicted capacity for next sprint
+        const predictedCapacity = Math.round(avgCompletedSP * availabilityRatio);
+
+        // Create a predicted future sprint
+        const predictedSprint: SprintCapacityAnalysis = {
+          sprintId: 'predicted',
+          sprintName: 'Next Sprint (Predicted)',
+          year: new Date().getFullYear(),
+          quarter: Math.floor(new Date().getMonth() / 3) + 1,
+          sprintNumber: 99,
+          committedPoints: 0,
+          completedPoints: predictedCapacity,
+          utilizationPercentage: 0,
+          status: 'Future'
+        };
+
+        // Prepare chart data with color coding
+        const chartData = [
+          ...capacityAnalysis.pastSprints.map(s => ({ ...s, name: s.sprintName, isPast: true })),
+          ...(capacityAnalysis.currentSprint ? [{ ...capacityAnalysis.currentSprint, name: capacityAnalysis.currentSprint.sprintName, isCurrent: true }] : []),
+          ...capacityAnalysis.futureSprints.map(s => ({ ...s, name: s.sprintName, isFuture: true })),
+          { ...predictedSprint, name: predictedSprint.sprintName, isPredicted: true }
+        ];
+
+        return (
+          <Card>
+            <CardHeader
+              title="Sprint Capacity Analysis"
+              subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%. Average Completed SP: ${avgCompletedSP}. Available Members: ${availableMembers}/${totalMembers} (${membersOnLeave} on leave).`}
+            />
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} tick={{ fontSize: 11 }} />
+                  <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [value, name]}
+                    labelFormatter={(label) => `Sprint: ${label}`}
+                  />
+                  <Legend />
+                  <ReferenceLine y={0} stroke="#000" />
+                  <ReferenceLine
+                    y={avgCompletedSP}
+                    stroke="#f59e0b"
+                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    label={{ value: `Avg SP: ${avgCompletedSP}`, position: 'right', fill: '#f59e0b', fontSize: 12 }}
+                  />
+                  <Bar dataKey="committedPoints" name="Committed SP">
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-committed-${index}`}
+                        fill={entry.isPredicted ? '#c084fc' : entry.isFuture ? '#a78bfa' : entry.isCurrent ? '#60a5fa' : '#3b82f6'}
+                      />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="completedPoints" name="Completed SP">
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-completed-${index}`}
+                        fill={entry.isPredicted ? '#a855f7' : entry.isFuture ? '#8b5cf6' : entry.isCurrent ? '#34d399' : '#10b981'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Current Sprint</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-500">{capacityAnalysis.futureSprints.length}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Future Sprints</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-violet-500">{predictedCapacity} SP</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Predicted Capacity</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Estimation Accuracy */}
+      {accuracy && accuracy.sprints.length > 0 && (
         <Card>
           <CardHeader
-            title="Sprint Capacity Analysis"
-            subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%. Average Completed SP: ${capacityAnalysis.pastSprints.length > 0
-                    ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
-                    : 0}.`}
+            title="Estimation Accuracy"
+            subtitle={`from all tasks`}
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[
-                ...capacityAnalysis.pastSprints,
-                ...(capacityAnalysis.currentSprint ? [capacityAnalysis.currentSprint] : []),
-                ...capacityAnalysis.futureSprints
-              ].map(s => ({
-                ...s,
-                name: s.sprintName
-              }))}>
+              <BarChart data={accuracy.sprints}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
-                <Tooltip
-                  formatter={(value: number, name: string) => [value, name]}
-                  labelFormatter={(label) => `Sprint: ${label}`}
-                />
+                <XAxis dataKey="sprintName" />
+                <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
                 <Legend />
-                <ReferenceLine y={0} stroke="#000" />
-                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed SP" />
-                <Bar dataKey="completedPoints" fill="#10b981" name="Completed SP" />
+                <Bar dataKey="estimatedHours" fill="#3b82f6" name="Estimated" />
+                <Bar dataKey="actualHours" fill="#10b981" name="Actual" />
               </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">
-                <p className="text-2xl font-bold text-slate-500">{capacityAnalysis.pastSprints.length}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Past Sprints</p>
+                <p className="text-2xl font-bold text-blue-500">{accuracy.totalEstimatedHours}h</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Estimated</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">{capacityAnalysis.currentSprint ? 1 : 0}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Current Sprint</p>
+                <p className="text-2xl font-bold text-green-500">{accuracy.totalActualHours}h</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Actual</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-500">{capacityAnalysis.futureSprints.length}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Future Sprints</p>
+                <p className={`text-2xl font-bold ${accuracy.totalVarianceHours <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {accuracy.totalVarianceHours > 0 ? '+' : ''}{accuracy.totalVarianceHours}h
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Variance</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${accuracy.overallAccuracyPercentage >= 80 ? 'text-green-500' : accuracy.overallAccuracyPercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                  {accuracy.overallAccuracyPercentage}%
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
-
+      
+      
       {/* Team Velocity */}
       {velocity && velocity.sprints.length > 0 && (
         <Card>
@@ -498,51 +600,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Estimation Accuracy */}
-      {accuracy && accuracy.sprints.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Estimation Accuracy"
-            subtitle={`from completed tasks`}
-          />
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={accuracy.sprints}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="sprintName" />
-                <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="estimatedHours" fill="#3b82f6" name="Estimated" />
-                <Bar dataKey="actualHours" fill="#10b981" name="Actual" />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">{accuracy.totalEstimatedHours}h</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Estimated</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-500">{accuracy.totalActualHours}h</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Actual</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.totalVarianceHours <= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {accuracy.totalVarianceHours > 0 ? '+' : ''}{accuracy.totalVarianceHours}h
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Variance</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.overallAccuracyPercentage >= 80 ? 'text-green-500' : accuracy.overallAccuracyPercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {accuracy.overallAccuracyPercentage}%
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
+
       {/* Task Distribution by Assignee - Members Workload*/}
       <Card>
         <CardHeader title="Members Workload" subtitle="" />
