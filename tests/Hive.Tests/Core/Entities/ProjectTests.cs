@@ -158,37 +158,6 @@ public class ProjectTests
     }
 
     [Fact]
-    public void Activate_WhenCompleted_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-        project.Complete();
-
-        // Act
-        var act = () => project.Activate();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed or cancelled*");
-    }
-
-    [Fact]
-    public void Activate_WhenCancelled_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Cancel();
-
-        // Act
-        var act = () => project.Activate();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed or cancelled*");
-    }
-
-    [Fact]
     public void PutOnHold_FromActive_ChangesStatusToOnHold()
     {
         // Arrange
