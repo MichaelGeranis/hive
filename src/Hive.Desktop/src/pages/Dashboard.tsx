@@ -409,10 +409,10 @@ export default function Dashboard() {
 
         // Prepare chart data with color coding
         const chartData = [
-          ...capacityAnalysis.pastSprints.map(s => ({ ...s, name: s.sprintName, isPast: true })),
-          ...(capacityAnalysis.currentSprint ? [{ ...capacityAnalysis.currentSprint, name: capacityAnalysis.currentSprint.sprintName, isCurrent: true }] : []),
-          ...capacityAnalysis.futureSprints.map(s => ({ ...s, name: s.sprintName, isFuture: true })),
-          { ...predictedSprint, name: predictedSprint.sprintName, isPredicted: true }
+          ...capacityAnalysis.pastSprints.map(s => ({ ...s, name: s.sprintName, isPast: true, isCurrent: false, isFuture: false, isPredicted: false })),
+          ...(capacityAnalysis.currentSprint ? [{ ...capacityAnalysis.currentSprint, name: capacityAnalysis.currentSprint.sprintName, isPast: false, isCurrent: true, isFuture: false, isPredicted: false }] : []),
+          ...capacityAnalysis.futureSprints.map(s => ({ ...s, name: s.sprintName, isPast: false, isCurrent: false, isFuture: true, isPredicted: false })),
+          { ...predictedSprint, name: predictedSprint.sprintName, isPast: false, isCurrent: false, isFuture: false, isPredicted: true }
         ];
 
         return (
