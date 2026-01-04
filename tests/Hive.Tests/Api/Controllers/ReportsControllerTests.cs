@@ -265,7 +265,7 @@ public class ReportsControllerTests
             TasksByAssignee = new List<TasksByAssigneeDto>(),
             TasksByType = new List<TasksByTypeDto>(),
             TasksByPriority = new List<TasksByPriorityDto>(),
-            Productivity = new ProductivityMetricsDto { TasksCompletedThisWeek = 10 }
+            Productivity = new ProductivityMetricsDto { }
         };
     }
 

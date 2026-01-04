@@ -213,9 +213,6 @@ public record ProductivityMetricsDto
     public int TotalEstimatedHours { get; init; }
     public int TotalActualHours { get; init; }
     public double EstimationAccuracy { get; init; }
-    public double AverageTaskCompletionDays { get; init; }
-    public int TasksCompletedThisWeek { get; init; }
-    public int TasksCompletedThisMonth { get; init; }
 }
 
 /// <summary>
@@ -286,7 +283,6 @@ public record TaskAnalyticsDto
     public double CompletionRate { get; init; }
     public int TotalEstimatedHours { get; init; }
     public int TotalActualHours { get; init; }
-    public double AverageTaskCompletionDays { get; init; }
 }
 
 /// <summary>
@@ -317,8 +313,6 @@ public record TeamVelocityDto
 public record SprintVelocityDto
 {
     public string SprintName { get; init; } = string.Empty;
-    public DateTime? StartDate { get; init; }
-    public DateTime? EndDate { get; init; }
     public int StoryPointsCompleted { get; init; }
     public int TasksCompleted { get; init; }
     public int TotalTimeSpentMinutes { get; init; }

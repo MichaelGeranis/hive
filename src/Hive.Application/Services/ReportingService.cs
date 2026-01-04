@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
 using Hive.Core.Entities;
@@ -41,19 +42,6 @@ public class ReportingService : IReportingService
         _sprintRepository = sprintRepository;
         _sprintCapacityRepository = sprintCapacityRepository;
         _appSettingsRepository = appSettingsRepository;
-    }
-
-    /// <summary>
-    /// Converts story points to estimated hours using the configured mapping.
-    /// </summary>
-    private static decimal ConvertStoryPointsToHours(int storyPoints, Dictionary<int, decimal> mapping)
-    {
-        if (mapping.TryGetValue(storyPoints, out var hours))
-        {
-            return hours;
-        }
-        // Fallback: if no mapping exists, return 0
-        return 0;
     }
 
     /// <summary>
@@ -304,8 +292,8 @@ public class ReportingService : IReportingService
                     InProgressTasks = inProgress,
                     OverdueTasks = overdue,
                     CompletionRate = assigneeTasks.Count > 0 ? Math.Round((double)completed / assigneeTasks.Count * 100, 1) : 0,
-                    TotalEstimatedHours = assigneeTasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value),
-                    TotalActualHours = (int)Math.Round(assigneeTasks.Where(t => t.TimeSpentMinutes.HasValue).Sum(t => t.TimeSpentMinutes!.Value) / 60.0)
+                    TotalEstimatedHours = assigneeTasks.Sum(t => t.EstimatedHours ?? 0),
+                    TotalActualHours = (int)Math.Round(assigneeTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0)
                 };
             })
             .OrderByDescending(a => a.TotalTasks)
@@ -346,27 +334,17 @@ public class ReportingService : IReportingService
             .Where(t => t.TotalTasks > 0)
             .ToList();
 
-        // Average completion days calculation removed since StartedAt/CompletedAt are no longer tracked
-        var avgCompletionDays = 0.0;
-
-        var totalEstimated = tasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value);
-        var totalActual = (int)Math.Round(tasks.Where(t => t.TimeSpentMinutes.HasValue).Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+        var totalEstimated = tasks.Sum(t => t.EstimatedHours ?? 0);
+        var totalActual = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
         var estimationAccuracy = totalEstimated > 0
             ? Math.Round((1 - Math.Abs(totalActual - totalEstimated) / (double)totalEstimated) * 100, 1)
             : 0;
-
-        var now = DateTime.UtcNow;
-        var weekAgo = now.AddDays(-7);
-        var monthAgo = now.AddDays(-30);
 
         var productivity = new ProductivityMetricsDto
         {
             TotalEstimatedHours = totalEstimated,
             TotalActualHours = totalActual,
             EstimationAccuracy = Math.Max(0, estimationAccuracy),
-            AverageTaskCompletionDays = avgCompletionDays,
-            TasksCompletedThisWeek = tasks.Count(t => t.Status == TaskStatus.Done && t.UpdatedAt.HasValue && t.UpdatedAt >= weekAgo),
-            TasksCompletedThisMonth = tasks.Count(t => t.Status == TaskStatus.Done && t.UpdatedAt.HasValue && t.UpdatedAt >= monthAgo)
         };
 
         return new TasksOverviewDto
@@ -449,9 +427,6 @@ public class ReportingService : IReportingService
         var inProgressTasks = tasks.Count(t => t.Status == TaskStatus.InProgress);
         var overdueTasks = tasks.Count(t => t.IsOverdue());
 
-        // Average task completion days removed since StartedAt/CompletedAt are no longer tracked
-        var avgTaskDays = 0.0;
-
         var taskAnalytics = new TaskAnalyticsDto
         {
             TotalTasks = tasks.Count,
@@ -459,9 +434,8 @@ public class ReportingService : IReportingService
             InProgressTasks = inProgressTasks,
             OverdueTasks = overdueTasks,
             CompletionRate = tasks.Count > 0 ? Math.Round((double)completedTasks.Count / tasks.Count * 100, 1) : 0,
-            TotalEstimatedHours = tasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value),
-            TotalActualHours = (int)Math.Round(tasks.Where(t => t.TimeSpentMinutes.HasValue).Sum(t => t.TimeSpentMinutes!.Value) / 60.0),
-            AverageTaskCompletionDays = avgTaskDays
+            TotalEstimatedHours = tasks.Sum(t => t.EstimatedHours ?? 0),
+            TotalActualHours = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0),
         };
 
         return new DirectReportAnalyticsDto
@@ -585,8 +559,8 @@ public class ReportingService : IReportingService
                     InProgressTasks = inProgress,
                     OverdueTasks = overdue,
                     CompletionRate = assigneeTasks.Count > 0 ? Math.Round((double)completed / assigneeTasks.Count * 100, 1) : 0,
-                    TotalEstimatedHours = assigneeTasks.Where(t => t.EstimatedHours.HasValue).Sum(t => t.EstimatedHours!.Value),
-                    TotalActualHours = (int)Math.Round(assigneeTasks.Where(t => t.TimeSpentMinutes.HasValue).Sum(t => t.TimeSpentMinutes!.Value) / 60.0)
+                    TotalEstimatedHours = assigneeTasks.Sum(t => t.EstimatedHours ?? 0),
+                    TotalActualHours = (int)Math.Round(assigneeTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0)
                 };
             })
             .OrderByDescending(a => a.TotalTasks)
@@ -632,24 +606,6 @@ public class ReportingService : IReportingService
         var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
 
-        // Parse story points to hours mapping
-        var storyPointsMapping = new Dictionary<int, decimal>();
-        if (appSettings != null && !string.IsNullOrEmpty(appSettings.StoryPointMappings))
-        {
-            try
-            {
-                var mappings = System.Text.Json.JsonSerializer.Deserialize<List<StoryPointMapping>>(appSettings.StoryPointMappings);
-                if (mappings != null)
-                {
-                    storyPointsMapping = mappings.ToDictionary(m => m.Points, m => m.Hours);
-                }
-            }
-            catch
-            {
-                // If deserialization fails, continue with empty mapping
-            }
-        }
-
         var completedTasks = tasks
             .Where(t => t.Status == TaskStatus.Done && t.StoryPoints.HasValue && !string.IsNullOrEmpty(t.Sprint))
             .ToList();
@@ -682,21 +638,15 @@ public class ReportingService : IReportingService
             .Select(sprint =>
             {
                 var sprintTasks = tasksByLatestSprint[sprint.Name];
-
-                // Calculate estimated hours from story points using the mapping
-                var estimatedHours = sprintTasks
-                    .Where(t => t.StoryPoints.HasValue)
-                    .Sum(t => ConvertStoryPointsToHours(t.StoryPoints!.Value, storyPointsMapping));
+                var estimatedHours = sprintTasks.Sum(t => t.EstimatedHours ?? 0);
 
                 return new SprintVelocityDto
                 {
                     SprintName = sprint.Name,
-                    StartDate = null, // No longer tracked since CompletedAt removed
-                    EndDate = null, // No longer tracked since CompletedAt removed
-                    StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints!.Value),
+                    StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints ?? 0),
                     TasksCompleted = sprintTasks.Count,
                     TotalTimeSpentMinutes = sprintTasks.Sum(t => t.TimeSpentMinutes ?? 0),
-                    TotalEstimatedHours = (int)estimatedHours
+                    TotalEstimatedHours = estimatedHours
                 };
             })
             .ToList();
@@ -741,9 +691,9 @@ public class ReportingService : IReportingService
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
 
         // Only consider completed tasks with both estimated hours and time spent
-        var completedTasks = tasks
-            .Where(t => t.Status == TaskStatus.Done && t.EstimatedHours.HasValue && t.TimeSpentMinutes.HasValue)
-            .ToList();
+        var completedTasks = tasks.ToList();
+            // .Where(t => t.Status == TaskStatus.Done && t.EstimatedHours.HasValue && t.TimeSpentMinutes.HasValue)
+            // .ToList();
 
         if (completedTasks.Count == 0)
         {
@@ -778,8 +728,8 @@ public class ReportingService : IReportingService
             .Select(sprint =>
             {
                 var tasks = tasksByLatestSprint[sprint.Name];
-                var estimated = tasks.Sum(t => t.EstimatedHours!.Value);
-                var actual = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var estimated = tasks.Sum(t => t.EstimatedHours ?? 0);
+                var actual = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
                 var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
 
@@ -787,7 +737,7 @@ public class ReportingService : IReportingService
                 {
                     SprintName = sprint.Name,
                     TasksCompleted = tasks.Count,
-                    StoryPointsCompleted = tasks.Where(t => t.StoryPoints.HasValue).Sum(t => t.StoryPoints!.Value),
+                    StoryPointsCompleted = tasks.Sum(t => t.StoryPoints ?? 0),
                     EstimatedHours = estimated,
                     ActualHours = actual,
                     VarianceHours = variance,
@@ -821,8 +771,8 @@ public class ReportingService : IReportingService
             .GroupBy(t => t.AssigneeId)
             .Select(g =>
             {
-                var estimated = g.Sum(t => t.EstimatedHours!.Value);
-                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var estimated = g.Sum(t => t.EstimatedHours ?? 0);
+                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
                 var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
 
@@ -848,8 +798,8 @@ public class ReportingService : IReportingService
             .GroupBy(t => t.ProjectId)
             .Select(g =>
             {
-                var estimated = g.Sum(t => t.EstimatedHours!.Value);
-                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+                var estimated = g.Sum(t => t.EstimatedHours ?? 0);
+                var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
                 var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
 
@@ -870,8 +820,8 @@ public class ReportingService : IReportingService
             .ToList();
 
         // Calculate overall metrics from filtered tasks
-        var totalEstimated = filteredCompletedTasks.Sum(t => t.EstimatedHours!.Value);
-        var totalActual = (int)Math.Round(filteredCompletedTasks.Sum(t => t.TimeSpentMinutes!.Value) / 60.0);
+        var totalEstimated = filteredCompletedTasks.Sum(t => t.EstimatedHours ?? 0);
+        var totalActual = (int)Math.Round(filteredCompletedTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
         var totalVariance = totalActual - totalEstimated;
         var overallAccuracy = totalEstimated > 0
             ? Math.Max(0, Math.Round(100 - Math.Abs(totalVariance * 100.0 / totalEstimated), 1))
@@ -1025,8 +975,8 @@ public class ReportingService : IReportingService
             capacityMap.TryGetValue(sprint.Id, out var capacity);
 
             var completedPoints = sprintTasks
-                .Where(t => t.Status == TaskStatus.Done && t.StoryPoints.HasValue)
-                .Sum(t => t.StoryPoints!.Value);
+                .Where(t => t.Status == TaskStatus.Done)
+                .Sum(t => t.StoryPoints ?? 0);
 
             var committedPoints = capacity?.TotalCapacityPoints ?? 0;
             var utilization = committedPoints > 0

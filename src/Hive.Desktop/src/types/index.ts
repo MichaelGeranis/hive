@@ -345,9 +345,6 @@ export interface ProductivityMetrics {
   totalEstimatedHours: number
   totalActualHours: number
   estimationAccuracy: number
-  averageTaskCompletionDays: number
-  tasksCompletedThisWeek: number
-  tasksCompletedThisMonth: number
 }
 
 // Team Velocity

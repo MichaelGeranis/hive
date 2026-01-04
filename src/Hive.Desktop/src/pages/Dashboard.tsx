@@ -403,8 +403,8 @@ export default function Dashboard() {
                 />
                 <Legend />
                 <ReferenceLine y={0} stroke="#000" />
-                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed" />
-                <Bar dataKey="completedPoints" fill="#10b981" name="Completed" />
+                <Bar dataKey="committedPoints" fill="#3b82f6" name="Committed SP" />
+                <Bar dataKey="completedPoints" fill="#10b981" name="Completed SP" />
               </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
@@ -430,7 +430,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Team Velocity"
-            subtitle={`Average: ${velocity.averageVelocity} SP per sprint | Trend: ${velocity.completionTrend > 0 ? '+' : ''}${velocity.completionTrend}%`}
+            subtitle={`from completed tasks`}
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -503,7 +503,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Estimation Accuracy"
-            subtitle={`Overall: ${accuracy.overallAccuracyPercentage}% | Variance: ${accuracy.totalVarianceHours > 0 ? '+' : ''}${accuracy.totalVarianceHours}h`}
+            subtitle={`from completed tasks`}
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
