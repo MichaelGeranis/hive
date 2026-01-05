@@ -402,8 +402,8 @@ export default function Leaves() {
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <CalendarIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Total Records</p>
@@ -413,8 +413,8 @@ export default function Leaves() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <User className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <User className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">On Leave Today</p>
@@ -424,8 +424,8 @@ export default function Leaves() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">This Week</p>
@@ -435,8 +435,8 @@ export default function Leaves() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Palmtree className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <Palmtree className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Upcoming</p>

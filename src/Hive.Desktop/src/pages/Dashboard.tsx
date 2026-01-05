@@ -232,7 +232,7 @@ export default function Dashboard() {
           title="Team Members"
           value={dashboard.team.totalDirectReports}
           icon={<Users className="w-6 h-6" />}
-          color="blue"
+          color="amber"
         />
         <StatCard
           title="Active Projects"
