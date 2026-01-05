@@ -5,7 +5,7 @@ import {
   AlertTriangle,
   X,
   FolderKanban,
-  TrendingUp
+  ZapIcon
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { reportsApi, tasksApi, projectsApi, leavesApi } from '../services/api'
@@ -246,7 +246,7 @@ export default function Dashboard() {
             title="Current Sprint"
             value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
             subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
-            icon={<TrendingUp className="w-6 h-6" />}
+            icon={<ZapIcon className="w-6 h-6" />}
             color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
           />
         )}

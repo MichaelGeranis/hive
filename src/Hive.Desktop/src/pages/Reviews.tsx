@@ -196,11 +196,11 @@ export default function Reviews() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Team Member</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Team Member</label>
                   <select
                     value={formData.directReportId}
                     onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
                     required={!editingId}
                     disabled={!!editingId}
                   >
@@ -209,28 +209,28 @@ export default function Reviews() {
                       <option key={dr.id} value={dr.id}>{dr.fullName}</option>
                     ))}
                   </select>
-                  {editingId && <p className="text-xs text-slate-500 mt-1">Team member cannot be changed when editing</p>}
+                  {editingId && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Team member cannot be changed when editing</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Review Period</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Review Period</label>
                     <input
                       type="text"
                       value={formData.reviewPeriod}
                       onChange={(e) => setFormData({ ...formData, reviewPeriod: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
                       placeholder="e.g., 2024 Q1"
                       required={!editingId}
                       disabled={!!editingId}
                     />
-                    {editingId && <p className="text-xs text-slate-500 mt-1">Period cannot be changed</p>}
+                    {editingId && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Period cannot be changed</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Rating</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rating</label>
                     <select
                       value={formData.rating}
                       onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
                     >
                       <option value="0">Not Rated</option>
                       <option value="1">Needs Improvement</option>
@@ -241,47 +241,47 @@ export default function Reviews() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Strengths</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Strengths</label>
                   <textarea
                     value={formData.strengths}
                     onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
                     rows={2}
                     placeholder="Key strengths and achievements..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Areas for Improvement</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Areas for Improvement</label>
                   <textarea
                     value={formData.areasForImprovement}
                     onChange={(e) => setFormData({ ...formData, areasForImprovement: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
                     rows={2}
                     placeholder="Areas to develop..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Goals for Next Period</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Goals for Next Period</label>
                   <textarea
                     value={formData.goalsForNextPeriod}
                     onChange={(e) => setFormData({ ...formData, goalsForNextPeriod: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
                     rows={2}
                     placeholder="Goals for next period..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Manager Notes</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Manager Notes</label>
                   <textarea
                     value={formData.managerNotes}
                     onChange={(e) => setFormData({ ...formData, managerNotes: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
                     rows={2}
                     placeholder="Additional notes..."
                   />
                 </div>
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
                     {error}
                   </div>
                 )}
@@ -289,7 +289,7 @@ export default function Reviews() {
                   <button
                     type="button"
                     onClick={() => { setShowForm(false); setEditingId(null); setError(null); resetForm() }}
-                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
                   >
                     Cancel
                   </button>
@@ -321,7 +321,7 @@ export default function Reviews() {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.value
                 ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
             {f.label}
@@ -343,15 +343,15 @@ export default function Reviews() {
               <CardContent>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-semibold">
+                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 font-semibold">
                       {review.directReportName.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{review.directReportName}</h3>
-                      <p className="text-sm text-slate-500">{review.reviewPeriod}</p>
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{review.directReportName}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{review.reviewPeriod}</p>
                       <div className="flex items-center gap-1 mt-2">
                         {ratingStars(review.rating)}
-                        <span className="ml-2 text-sm text-slate-500">{review.ratingDescription}</span>
+                        <span className="ml-2 text-sm text-slate-500 dark:text-slate-400">{review.ratingDescription}</span>
                       </div>
                     </div>
                   </div>
@@ -387,14 +387,14 @@ export default function Reviews() {
                       </button>
                     )}
                     <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 rounded">
+                      <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
-                      <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                         {review.status === ReviewStatus.Draft && (
                           <button
                             onClick={() => handleEdit(review)}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                           >
                             <Edit className="w-4 h-4" />
                             Edit
@@ -402,7 +402,7 @@ export default function Reviews() {
                         )}
                         <button
                           onClick={() => handleDelete(review.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -412,17 +412,17 @@ export default function Reviews() {
                   </div>
                 </div>
                 {(review.strengths || review.areasForImprovement) && (
-                  <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                  <div className="mt-4 pt-4 border-t dark:border-slate-700 grid grid-cols-2 gap-4">
                     {review.strengths && (
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Strengths</p>
-                        <p className="text-sm text-slate-500 mt-1">{review.strengths}</p>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Strengths</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{review.strengths}</p>
                       </div>
                     )}
                     {review.areasForImprovement && (
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Areas for Improvement</p>
-                        <p className="text-sm text-slate-500 mt-1">{review.areasForImprovement}</p>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Areas for Improvement</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{review.areasForImprovement}</p>
                       </div>
                     )}
                   </div>
