@@ -136,7 +136,7 @@ export default function DirectReports() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Team</h1>
-          <p className="text-slate-500 mt-1">Track direct reports</p>
+          <p className="text-slate-500 mt-1">Manage direct reports</p>
         </div>
         <button
           onClick={() => {

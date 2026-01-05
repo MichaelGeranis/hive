@@ -275,7 +275,7 @@ export default function Meetings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">1:1 Meetings</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Track one-on-one agenda & meeting notes</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Keep one-on-one agenda & meeting notes</p>
         </div>
         <button
           onClick={() => setShowForm(true)}

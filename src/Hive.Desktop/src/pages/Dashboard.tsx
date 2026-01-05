@@ -200,7 +200,7 @@ export default function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Overview team performance & activities</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Overview team performance</p>
       </div>
 
       {/* Sprint Filter */}
@@ -303,38 +303,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Task Type Distribution */}
-        <Card>
-          <CardHeader title="Tasks Distribution" subtitle="By type" />
-          <CardContent className="h-64">
-            {taskTypeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taskTypeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {taskTypeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
-                No tasks found
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Members Distribution by Project - Knowledge Silos */}
         <Card>
           <CardHeader
@@ -372,6 +340,38 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
                 No project assignments found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Task Type Distribution */}
+        <Card>
+          <CardHeader title="Tasks Distribution" subtitle="By type" />
+          <CardContent className="h-64">
+            {taskTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskTypeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {taskTypeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                No tasks found
               </div>
             )}
           </CardContent>
