@@ -74,11 +74,36 @@ public static class DependencyInjection
         services.AddScoped<ISprintRepository, SqliteSprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
 
+        // Register database backup service
+        services.AddSingleton<DatabaseBackupService>();
+
+        // Extract database path from connection string
+        var databasePath = ExtractDatabasePath(connectionString);
+
         // Always initialize database (creates tables), optionally seed data
         services.AddSingleton<IHostedService>(sp =>
-            new DatabaseInitializer(sp, seedData));
+            new DatabaseInitializer(sp, databasePath, seedData));
 
         return services;
+    }
+
+    /// <summary>
+    /// Extracts the database file path from a SQLite connection string.
+    /// </summary>
+    private static string ExtractDatabasePath(string connectionString)
+    {
+        // Simple extraction for "Data Source=path" format
+        var parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            if (trimmed.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed.Substring("Data Source=".Length).Trim();
+            }
+        }
+
+        throw new ArgumentException($"Could not extract database path from connection string: {connectionString}");
     }
 }
 
@@ -88,16 +113,22 @@ public static class DependencyInjection
 public class DatabaseInitializer : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly string _databasePath;
     private readonly bool _seedData;
 
-    public DatabaseInitializer(IServiceProvider serviceProvider, bool seedData = true)
+    public DatabaseInitializer(IServiceProvider serviceProvider, string databasePath, bool seedData = true)
     {
         _serviceProvider = serviceProvider;
+        _databasePath = databasePath;
         _seedData = seedData;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // Create backup before any database operations
+        var backupService = _serviceProvider.GetRequiredService<DatabaseBackupService>();
+        backupService.CreateBackup(_databasePath);
+
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<HiveDbContext>();
 
