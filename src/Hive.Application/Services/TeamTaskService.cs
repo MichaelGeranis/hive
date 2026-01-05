@@ -360,8 +360,12 @@ public class TeamTaskService : ITeamTaskService
     {
         TaskStatus.Backlog => "Backlog",
         TaskStatus.Todo => "To Do",
+        TaskStatus.Blocked => "Blocked",
         TaskStatus.InProgress => "In Progress",
         TaskStatus.InReview => "In Review",
+        TaskStatus.InTest => "In Test",
+        TaskStatus.POAcceptance => "PO Acceptance",
+        TaskStatus.ReadyToRelease => "Ready to Release",
         TaskStatus.Done => "Done",
         TaskStatus.Cancelled => "Cancelled",
         _ => "Unknown"

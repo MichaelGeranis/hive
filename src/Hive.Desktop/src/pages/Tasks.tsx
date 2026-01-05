@@ -9,8 +9,12 @@ import { useEscapeKey } from '../hooks/useEscapeKey'
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
   [TaskStatus.Todo]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  [TaskStatus.Blocked]: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
   [TaskStatus.InProgress]: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
   [TaskStatus.InReview]: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+  [TaskStatus.InTest]: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400',
+  [TaskStatus.POAcceptance]: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400',
+  [TaskStatus.ReadyToRelease]: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
   [TaskStatus.Done]: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
   [TaskStatus.Cancelled]: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
 }
@@ -271,8 +275,12 @@ export default function Tasks() {
   const overdueCount = tasks.filter(t => t.isOverdue).length
   const backlogCount = tasks.filter(t => t.status === TaskStatus.Backlog).length
   const todoCount = tasks.filter(t => t.status === TaskStatus.Todo).length
+  const blockedCount = tasks.filter(t => t.status === TaskStatus.Blocked).length
   const inProgressCount = tasks.filter(t => t.status === TaskStatus.InProgress).length
   const inReviewCount = tasks.filter(t => t.status === TaskStatus.InReview).length
+  const inTestCount = tasks.filter(t => t.status === TaskStatus.InTest).length
+  const poAcceptanceCount = tasks.filter(t => t.status === TaskStatus.POAcceptance).length
+  const readyToReleaseCount = tasks.filter(t => t.status === TaskStatus.ReadyToRelease).length
   const doneCount = tasks.filter(t => t.status === TaskStatus.Done).length
 
   return (
@@ -281,7 +289,7 @@ export default function Tasks() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tasks</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Track Jira tasks</p>
+          <p className="text-slate-500 dark:text-slate-400">Track Jira tasks</p>
         </div>
         <div className="flex items-center gap-3">
           {selectedIds.size > 0 && (
@@ -466,9 +474,13 @@ export default function Tasks() {
             { value: 'all', label: `All (${tasks.length})` },
             { value: 'overdue', label: `Overdue (${overdueCount})` },
             { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})` },
-            { value: TaskStatus.Todo, label: `Todo (${todoCount})` },
+            { value: TaskStatus.Todo, label: `To Do (${todoCount})` },
+            { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})` },
             { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})` },
             { value: TaskStatus.InReview, label: `In Review (${inReviewCount})` },
+            { value: TaskStatus.InTest, label: `In Test (${inTestCount})` },
+            { value: TaskStatus.POAcceptance, label: `PO Acceptance (${poAcceptanceCount})` },
+            { value: TaskStatus.ReadyToRelease, label: `Ready To Release (${readyToReleaseCount})` },
             { value: TaskStatus.Done, label: `Done (${doneCount})` },
           ].map((f) => (
             <button

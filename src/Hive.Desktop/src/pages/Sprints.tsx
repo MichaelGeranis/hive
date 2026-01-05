@@ -148,7 +148,7 @@ export default function Sprints() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Sprints</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage sprints and capacity planning</p>
+          <p className="text-slate-500 dark:text-slate-400">Manage sprints and capacity planning</p>
         </div>
         <button
           onClick={() => setCreatingNewSprint(true)}

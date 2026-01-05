@@ -158,10 +158,14 @@ export enum TaskPriority {
 export enum TaskStatus {
   Backlog = 0,
   Todo = 1,
-  InProgress = 2,
-  InReview = 3,
-  Done = 4,
-  Cancelled = 5
+  Blocked = 2,
+  InProgress = 3,
+  InReview = 4,
+  InTest = 5,
+  POAcceptance = 6,
+  ReadyToRelease = 7,
+  Done = 8,
+  Cancelled = 9
 }
 
 export enum TaskType {

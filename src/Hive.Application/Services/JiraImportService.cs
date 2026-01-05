@@ -578,28 +578,81 @@ public class JiraImportService : IJiraImportService
 
         return lower switch
         {
+            // Backlog
             "backlog" => TaskStatus.Backlog,
+
+            // To Do
             "todo" => TaskStatus.Todo,
             "to do" => TaskStatus.Todo,
             "toDo" => TaskStatus.Todo,
             "selected for development" => TaskStatus.Todo,
             "selectedfordevelopment" => TaskStatus.Todo,
+            "open" => TaskStatus.Todo,
+
+            // Blocked
+            "blocked" => TaskStatus.Blocked,
+            "blocker" => TaskStatus.Blocked,
+            "impediment" => TaskStatus.Blocked,
+
+            // In Progress
             "inprogress" => TaskStatus.InProgress,
             "in progress" => TaskStatus.InProgress,
             "inProgress" => TaskStatus.InProgress,
+            "development" => TaskStatus.InProgress,
+            "indevelopment" => TaskStatus.InProgress,
+
+            // In Review
             "inreview" => TaskStatus.InReview,
             "in review" => TaskStatus.InReview,
             "inReview" => TaskStatus.InReview,
             "review" => TaskStatus.InReview,
             "code review" => TaskStatus.InReview,
             "codeReview" => TaskStatus.InReview,
+            "peer review" => TaskStatus.InReview,
+            "peerreview" => TaskStatus.InReview,
+
+            // In Test
+            "intest" => TaskStatus.InTest,
+            "in test" => TaskStatus.InTest,
+            "inTest" => TaskStatus.InTest,
+            "testing" => TaskStatus.InTest,
+            "qa" => TaskStatus.InTest,
+            "qualityassurance" => TaskStatus.InTest,
+
+            // PO Acceptance
+            "poacceptance" => TaskStatus.POAcceptance,
+            "po acceptance" => TaskStatus.POAcceptance,
+            "poAcceptance" => TaskStatus.POAcceptance,
+            "productowneracceptance" => TaskStatus.POAcceptance,
+            "acceptance" => TaskStatus.POAcceptance,
+            "uat" => TaskStatus.POAcceptance,
+            "useracceptancetesting" => TaskStatus.POAcceptance,
+
+            // Ready To Release
+            "readytorelease" => TaskStatus.ReadyToRelease,
+            "ready to release" => TaskStatus.ReadyToRelease,
+            "readyToRelease" => TaskStatus.ReadyToRelease,
+            "readyfordeploy" => TaskStatus.ReadyToRelease,
+            "ready for deploy" => TaskStatus.ReadyToRelease,
+            "deployready" => TaskStatus.ReadyToRelease,
+
+            // Done
             "done" => TaskStatus.Done,
             "closed" => TaskStatus.Done,
             "resolved" => TaskStatus.Done,
             "complete" => TaskStatus.Done,
             "completed" => TaskStatus.Done,
+            "released" => TaskStatus.Done,
+            "deployed" => TaskStatus.Done,
+
+            // Cancelled
             "cancelled" => TaskStatus.Cancelled,
             "canceled" => TaskStatus.Cancelled,
+            "rejected" => TaskStatus.Cancelled,
+            "wontdo" => TaskStatus.Cancelled,
+            "won'tdo" => TaskStatus.Cancelled,
+
+            // Default to Backlog for anything not recognized
             _ => TaskStatus.Backlog
         };
     }
@@ -748,15 +801,23 @@ public class JiraImportService : IJiraImportService
             case TaskStatus.Backlog:
                 task.MoveToBacklog();
                 break;
+
             case TaskStatus.Todo:
                 task.MoveToTodo();
                 break;
+
+            case TaskStatus.Blocked:
+                // Block method needs to be defined in TeamTask entity
+                task.Block();
+                break;
+
             case TaskStatus.InProgress:
                 if (task.Status != TaskStatus.Done && task.Status != TaskStatus.Cancelled)
                     task.Start();
                 break;
+
             case TaskStatus.InReview:
-                if (task.Status == TaskStatus.InProgress)
+                if (task.Status == TaskStatus.InProgress || task.Status == TaskStatus.Blocked || task.Status == TaskStatus.InTest)
                     task.MoveToReview();
                 else if (task.Status != TaskStatus.Done && task.Status != TaskStatus.Cancelled)
                 {
@@ -764,10 +825,27 @@ public class JiraImportService : IJiraImportService
                     task.MoveToReview();
                 }
                 break;
+
+            case TaskStatus.InTest:
+                // MoveToTest method needs to be defined in TeamTask entity
+                task.MoveToTest();
+                break;
+
+            case TaskStatus.POAcceptance:
+                // MoveToPOAcceptance method needs to be defined in TeamTask entity
+                task.MoveToPOAcceptance();
+                break;
+
+            case TaskStatus.ReadyToRelease:
+                // MoveToReadyToRelease method needs to be defined in TeamTask entity
+                task.MoveToReadyToRelease();
+                break;
+
             case TaskStatus.Done:
                 if (task.Status != TaskStatus.Cancelled)
                     task.Complete();
                 break;
+
             case TaskStatus.Cancelled:
                 if (task.Status != TaskStatus.Done)
                     task.Cancel();

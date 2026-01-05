@@ -124,14 +124,58 @@ public class TeamTask
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void Block()
+    {
+        if (Status == TaskStatus.Done || Status == TaskStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot block a completed or cancelled task.");
+        }
+
+        Status = TaskStatus.Blocked;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void MoveToReview()
     {
-        if (Status != TaskStatus.InProgress)
+        if (Status != TaskStatus.InProgress && Status != TaskStatus.Blocked && Status != TaskStatus.InTest)
         {
-            throw new InvalidOperationException("Only in-progress tasks can be moved to review.");
+            throw new InvalidOperationException("Only in-progress, blocked, or tested tasks can be moved to review.");
         }
 
         Status = TaskStatus.InReview;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MoveToTest()
+    {
+        if (Status == TaskStatus.Done || Status == TaskStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot move a completed or cancelled task to test.");
+        }
+
+        Status = TaskStatus.InTest;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MoveToPOAcceptance()
+    {
+        if (Status == TaskStatus.Done || Status == TaskStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot move a completed or cancelled task to PO acceptance.");
+        }
+
+        Status = TaskStatus.POAcceptance;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MoveToReadyToRelease()
+    {
+        if (Status == TaskStatus.Done || Status == TaskStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot move a completed or cancelled task to ready to release.");
+        }
+
+        Status = TaskStatus.ReadyToRelease;
         UpdatedAt = DateTime.UtcNow;
     }
 
