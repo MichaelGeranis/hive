@@ -10,19 +10,19 @@ import {
   Hexagon,
   Palmtree,
   StickyNote,
-  Target
+  Zap
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
-  { name: 'Sprints', to: '/sprints', icon: Target },
+  { name: 'Sprints', to: '/sprints', icon: Zap },
   { name: 'Team', to: '/team', icon: Users },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
-  { name: 'Notes', to: '/notes', icon: StickyNote },
+  { name: 'TODOs', to: '/notes', icon: StickyNote },
 ]
 
 export default function Layout() {

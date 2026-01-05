@@ -239,7 +239,7 @@ export default function Dashboard() {
           title="Active Projects"
           value={dashboard.tasks.projects.activeProjects}
           subtitle={`${dashboard.tasks.projects.totalProjects} total`}
-          icon={<Target className="w-6 h-6" />}
+          icon={<FolderKanban className="w-6 h-6" />}
           color="purple"
         />
          {capacityAnalysis?.currentSprint && (
