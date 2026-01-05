@@ -10,7 +10,8 @@ import {
   Hexagon,
   Palmtree,
   StickyNote,
-  Zap
+  Zap,
+  FileText
 } from 'lucide-react'
 
 const navigation = [
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'TODOs', to: '/notes', icon: StickyNote },
+  { name: 'Documents', to: '/documents', icon: FileText },
 ]
 
 export default function Layout() {

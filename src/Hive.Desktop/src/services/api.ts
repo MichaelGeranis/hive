@@ -37,7 +37,10 @@ import type {
   SprintCapacity,
   CreateSprintCapacityDto,
   LateTasksReport,
-  CapacityAnalysis
+  CapacityAnalysis,
+  Document,
+  CreateDocumentDto,
+  UpdateDocumentDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -234,6 +237,16 @@ export const notesApi = {
   update: (id: string, data: UpdateManagerNoteDto) => api.put<ManagerNote>(`/managernotes/${id}`, data).then(r => r.data),
   toggle: (id: string) => api.post<ManagerNote>(`/managernotes/${id}/toggle`).then(r => r.data),
   delete: (id: string) => api.delete(`/managernotes/${id}`)
+}
+
+// Documents
+export const documentsApi = {
+  getAll: () => api.get<Document[]>('/documents').then(r => r.data),
+  getById: (id: string) => api.get<Document>(`/documents/${id}`).then(r => r.data),
+  getByTags: (tags: string) => api.get<Document[]>(`/documents/by-tags?tags=${encodeURIComponent(tags)}`).then(r => r.data),
+  create: (data: CreateDocumentDto) => api.post<Document>('/documents', data).then(r => r.data),
+  update: (id: string, data: UpdateDocumentDto) => api.put<Document>(`/documents/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/documents/${id}`)
 }
 
 export default api

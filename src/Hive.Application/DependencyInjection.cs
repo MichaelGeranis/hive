@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IManagerNoteService, ManagerNoteService>();
         services.AddScoped<ISprintService, SprintService>();
         services.AddScoped<ISprintCapacityService, SprintCapacityService>();
+        services.AddScoped<IDocumentService, DocumentService>();
         return services;
     }
 }

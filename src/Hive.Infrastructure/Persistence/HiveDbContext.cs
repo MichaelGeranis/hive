@@ -25,6 +25,7 @@ public class HiveDbContext : DbContext
     public DbSet<ManagerNote> ManagerNotes => Set<ManagerNote>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
+    public DbSet<Document> Documents => Set<Document>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,9 +172,18 @@ public class HiveDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.SprintId).IsUnique();
         });
-    }
 
-    /// <summary>
+        // Document configuration
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Content).HasMaxLength(4000);
+            entity.Property(e => e.Url).HasMaxLength(2000);
+            entity.Property(e => e.Tags).HasMaxLength(1000);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+    }
     /// Seeds initial data into the database.
     /// </summary>
     public void SeedData()

@@ -11,6 +11,7 @@ import Tasks from './pages/Tasks'
 import Sprints from './pages/Sprints'
 import Leaves from './pages/Leaves'
 import Notes from './pages/Notes'
+import Documents from './pages/Documents'
 import Settings from './pages/Settings'
 
 type AppStatus = 'loading' | 'ready' | 'error'
@@ -115,6 +116,7 @@ function App() {
         <Route path="sprints" element={<Sprints />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="notes" element={<Notes />} />
+        <Route path="documents" element={<Documents />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
