@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, Upload, FileText, CheckCircle, AlertCircle, XCircle, Users, TrendingUp } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, Upload, FileText, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { settingsApi, jiraImportApi, sprintsApi, sprintCapacityApi } from '../services/api'
+import { settingsApi, jiraImportApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
-import type { StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest, Sprint, SprintCapacity, CreateSprintCapacityDto } from '../types'
+import type { StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest } from '../types'
 
 const DEFAULT_MAPPINGS: StoryPointMapping[] = [
   { points: 1, hours: 2, label: '1 SP = 2 hours' },
@@ -33,16 +33,8 @@ export default function Settings() {
   const [matchField, setMatchField] = useState<'IssueKey' | 'Title'>('IssueKey')
   const [importError, setImportError] = useState<string | null>(null)
 
-  // Sprint Capacity state
-  const [sprints, setSprints] = useState<Sprint[]>([])
-  const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
-  const [editingCapacity, setEditingCapacity] = useState<{ sprintId: string; points: number; members: number } | null>(null)
-  const [capacitySaving, setCapacitySaving] = useState(false)
-  const [capacityError, setCapacityError] = useState<string | null>(null)
-
   useEffect(() => {
     loadSettings()
-    loadSprintCapacities()
   }, [])
 
   const loadSettings = async () => {
@@ -57,61 +49,6 @@ export default function Settings() {
       setMappings(DEFAULT_MAPPINGS)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadSprintCapacities = async () => {
-    try {
-      const [sprintsData, capacitiesData] = await Promise.all([
-        sprintsApi.getAll(),
-        sprintCapacityApi.getAll()
-      ])
-      // Sort sprints by year, quarter, sprint number (most recent first)
-      const sortedSprints = sprintsData.sort((a, b) => {
-        const aSort = a.year * 1000 + a.quarter * 100 + a.sprintNumber
-        const bSort = b.year * 1000 + b.quarter * 100 + b.sprintNumber
-        return bSort - aSort
-      })
-      setSprints(sortedSprints)
-      setSprintCapacities(capacitiesData)
-    } catch (err) {
-      console.error('Failed to load sprint capacities', err)
-    }
-  }
-
-  const getCapacityForSprint = (sprintId: string): SprintCapacity | undefined => {
-    return sprintCapacities.find(c => c.sprintId === sprintId)
-  }
-
-  const handleEditCapacity = (sprint: Sprint) => {
-    const existingCapacity = getCapacityForSprint(sprint.id)
-    setEditingCapacity({
-      sprintId: sprint.id,
-      points: existingCapacity?.totalCapacityPoints ?? 0,
-      members: existingCapacity?.availableMembers ?? 0
-    })
-    setCapacityError(null)
-  }
-
-  const handleSaveCapacity = async () => {
-    if (!editingCapacity) return
-
-    try {
-      setCapacitySaving(true)
-      setCapacityError(null)
-      const dto: CreateSprintCapacityDto = {
-        sprintId: editingCapacity.sprintId,
-        totalCapacityPoints: editingCapacity.points,
-        availableMembers: editingCapacity.members
-      }
-      await sprintCapacityApi.createOrUpdate(dto)
-      await loadSprintCapacities()
-      setEditingCapacity(null)
-    } catch (err) {
-      console.error('Failed to save capacity', err)
-      setCapacityError('Failed to save capacity. Please try again.')
-    } finally {
-      setCapacitySaving(false)
     }
   }
 
@@ -635,128 +572,6 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Sprint Capacity Management */}
-      <Card>
-        <CardHeader
-          title="Sprint Committed Points"
-          subtitle="Configure committed story points per sprint"
-        />
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Set the committed story points and available team members for each sprint.
-              This data is used for sprint utilization analysis (completed vs committed).
-            </p>
-
-            {sprints.length === 0 ? (
-              <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center text-slate-500 dark:text-slate-400">
-                No sprints found. Import tasks with sprint data to see sprints here.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {sprints.map(sprint => {
-                  const capacity = getCapacityForSprint(sprint.id)
-                  const isEditing = editingCapacity?.sprintId === sprint.id
-
-                  return (
-                    <div
-                      key={sprint.id}
-                      className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                          {sprint.name}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {sprint.teamName} | Q{sprint.quarter} {sprint.year}
-                        </div>
-                      </div>
-
-                      {isEditing ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-slate-400" />
-                            <input
-                              type="number"
-                              value={editingCapacity.points}
-                              onChange={(e) => setEditingCapacity({
-                                ...editingCapacity,
-                                points: parseInt(e.target.value) || 0
-                              })}
-                              className="w-20 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                              min="0"
-                              placeholder="SP"
-                            />
-                            <span className="text-xs text-slate-500">SP</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-slate-400" />
-                            <input
-                              type="number"
-                              value={editingCapacity.members}
-                              onChange={(e) => setEditingCapacity({
-                                ...editingCapacity,
-                                members: parseInt(e.target.value) || 0
-                              })}
-                              className="w-16 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                              min="0"
-                              placeholder="#"
-                            />
-                          </div>
-                          <button
-                            onClick={handleSaveCapacity}
-                            disabled={capacitySaving}
-                            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                          >
-                            {capacitySaving ? '...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={() => setEditingCapacity(null)}
-                            className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-4">
-                          {capacity ? (
-                            <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <TrendingUp className="w-4 h-4" />
-                                {capacity.totalCapacityPoints} SP
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Users className="w-4 h-4" />
-                                {capacity.availableMembers}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-400 dark:text-slate-500 italic">
-                              Not configured
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleEditCapacity(sprint)}
-                            className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-600"
-                          >
-                            {capacity ? 'Edit' : 'Set'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {capacityError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-                {capacityError}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

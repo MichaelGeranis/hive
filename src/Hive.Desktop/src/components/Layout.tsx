@@ -9,13 +9,15 @@ import {
   Settings,
   Hexagon,
   Palmtree,
-  StickyNote
+  StickyNote,
+  Target
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
+  { name: 'Sprints', to: '/sprints', icon: Target },
   { name: 'Team', to: '/team', icon: Users },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Reviews', to: '/reviews', icon: Star },
