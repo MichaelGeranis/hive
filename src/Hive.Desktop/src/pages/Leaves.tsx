@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   Plus,
   User,
   Palmtree,
   Thermometer,
   Briefcase,
-  Edit2,
-  Trash2,
-  Users
+  Users,
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react'
-import { leavesApi, directReportsApi } from '../services/api'
-import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, MonthlyLeaveSummary } from '../types'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { leavesApi, directReportsApi, sprintsApi, sprintCapacityApi } from '../services/api'
+import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, Sprint, SprintCapacity } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
-// Simple leave types: Vacation, Sick, Other
 const leaveTypes = ['Vacation', 'Sick', 'Other']
 
 const leaveTypeLabels: Record<string, string> = {
@@ -31,20 +32,38 @@ const typeIcons: Record<string, typeof Palmtree> = {
 }
 
 const typeColors: Record<string, string> = {
-  Vacation: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
-  Sick: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400',
-  Other: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400'
+  Vacation: 'bg-green-500',
+  Sick: 'bg-orange-500',
+  Other: 'bg-blue-500'
+}
+
+interface SprintCapacitySuggestion {
+  sprint: Sprint
+  currentCapacity: SprintCapacity | null
+  peopleOnLeave: number
+  totalTeamSize: number
+  suggestedAvailableMembers: number
+  leaveDaysInSprint: number
+  affectedMembers: Set<string>
+}
+
+interface DayHoverState {
+  date: Date | null
+  timeoutId: number | null
 }
 
 export default function Leaves() {
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [overview, setOverview] = useState<TeamLeaveOverview | null>(null)
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyLeaveSummary[]>([])
+  const [sprints, setSprints] = useState<Sprint[]>([])
+  const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingLeave, setEditingLeave] = useState<Leave | null>(null)
-  const [memberFilter, setMemberFilter] = useState<string>('all')
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [hoveredDay, setHoveredDay] = useState<DayHoverState>({ date: null, timeoutId: null })
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [formData, setFormData] = useState<CreateLeaveDto>({
     directReportId: '',
     type: 'Vacation',
@@ -78,16 +97,23 @@ export default function Leaves() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [leavesData, drData, overviewData, trendData] = await Promise.all([
+      const [leavesData, drData, overviewData, sprintsData, capacitiesData] = await Promise.all([
         leavesApi.getAll(),
         directReportsApi.getAll(),
         leavesApi.getOverview(),
-        leavesApi.getMonthlyTrend(6)
+        sprintsApi.getAll(),
+        sprintCapacityApi.getAll()
       ])
       setLeaves(leavesData)
       setDirectReports(drData)
       setOverview(overviewData)
-      setMonthlyTrend(trendData)
+      const sortedSprints = sprintsData.sort((a, b) => {
+        const aSort = a.year * 1000 + a.quarter * 100 + a.sprintNumber
+        const bSort = b.year * 1000 + b.quarter * 100 + b.sprintNumber
+        return bSort - aSort
+      })
+      setSprints(sortedSprints)
+      setSprintCapacities(capacitiesData)
     } catch (error) {
       console.error('Failed to load leaves:', error)
     } finally {
@@ -124,16 +150,6 @@ export default function Leaves() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this leave record?')) return
-    try {
-      await leavesApi.delete(id)
-      loadData()
-    } catch (error) {
-      console.error('Failed to delete leave:', error)
-    }
-  }
-
   const openEditForm = (leave: Leave) => {
     setEditingLeave(leave)
     setFormData({
@@ -146,11 +162,213 @@ export default function Leaves() {
     setShowForm(true)
   }
 
-  const filteredLeaves = memberFilter === 'all'
-    ? leaves
-    : leaves.filter(l => l.directReportId === memberFilter)
+  // Calendar functions
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    return new Date(year, month + 1, 0).getDate()
+  }
 
-  const formatDate = (date: string) => new Date(date).toLocaleDateString()
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const getMonthLabel = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  const isDateInRange = (date: Date, start: string, end: string) => {
+    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    return checkDate >= startDate && checkDate <= endDate
+  }
+
+  const getLeavesForDate = (date: Date) => {
+    return leaves.filter(leave =>
+      isDateInRange(date, leave.startDate, leave.endDate)
+    )
+  }
+
+  const isToday = (date: Date) => {
+    const today = new Date()
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear()
+  }
+
+  const isWeekend = (date: Date) => {
+    const day = date.getDay()
+    return day === 0 || day === 6
+  }
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const goToToday = () => {
+    setCurrentMonth(new Date())
+  }
+
+  // Hover functionality
+  const handleDayMouseEnter = (date: Date, event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    })
+
+    const timeoutId = window.setTimeout(() => {
+      setHoveredDay({ date, timeoutId: null })
+    }, 1000)
+
+    setHoveredDay({ date: null, timeoutId })
+  }
+
+  const handleDayMouseLeave = () => {
+    if (hoveredDay.timeoutId) {
+      clearTimeout(hoveredDay.timeoutId)
+    }
+    setHoveredDay({ date: null, timeoutId: null })
+  }
+
+  // Generate chart data for the current month
+  const generateChartData = () => {
+    const daysInMonth = getDaysInMonth(currentMonth)
+    const data = []
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      const dayLeaves = getLeavesForDate(date)
+      data.push({
+        day: day.toString(),
+        people: dayLeaves.length,
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      })
+    }
+
+    return data
+  }
+
+  // Sprint capacity suggestions
+  const calculateSprintSuggestions = (): SprintCapacitySuggestion[] => {
+    const today = new Date()
+    const threeMonthsLater = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
+
+    const upcomingSprints = sprints.filter(sprint => {
+      const sprintDate = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
+      return sprintDate >= today && sprintDate <= threeMonthsLater
+    })
+
+    return upcomingSprints.map(sprint => {
+      const sprintStart = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
+      const sprintEnd = new Date(sprintStart)
+      sprintEnd.setDate(sprintEnd.getDate() + 14)
+
+      const affectedMembers = new Set<string>()
+      let totalLeaveDays = 0
+
+      leaves.forEach(leave => {
+        const leaveStart = new Date(leave.startDate)
+        const leaveEnd = new Date(leave.endDate)
+
+        if (leaveStart <= sprintEnd && leaveEnd >= sprintStart) {
+          affectedMembers.add(leave.directReportId)
+
+          const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
+          const overlapEnd = leaveEnd < sprintEnd ? leaveEnd : sprintEnd
+          const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24))
+          totalLeaveDays += overlapDays
+        }
+      })
+
+      const currentCapacity = sprintCapacities.find(c => c.sprintId === sprint.id) || null
+      const totalTeamSize = directReports.length
+      const peopleOnLeave = affectedMembers.size
+      const suggestedAvailableMembers = Math.max(0, totalTeamSize - peopleOnLeave)
+
+      return {
+        sprint,
+        currentCapacity,
+        peopleOnLeave,
+        totalTeamSize,
+        suggestedAvailableMembers,
+        leaveDaysInSprint: totalLeaveDays,
+        affectedMembers
+      }
+    })
+  }
+
+  const sprintSuggestions = calculateSprintSuggestions()
+  const chartData = generateChartData()
+
+  // Render calendar for current month
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth)
+    const firstDay = getFirstDayOfMonth(currentMonth)
+    const days = []
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-28 bg-slate-100 dark:bg-slate-800/50" />)
+    }
+
+    // Actual days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      const dayLeaves = getLeavesForDate(date)
+      const isCurrentDay = isToday(date)
+      const isWeekendDay = isWeekend(date)
+
+      days.push(
+        <div
+          key={day}
+          className={`h-28 border border-slate-200 dark:border-slate-700 p-1.5 overflow-hidden relative ${
+            isCurrentDay ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 dark:border-amber-600' :
+            isWeekendDay ? 'bg-slate-50 dark:bg-slate-800/30' : 'bg-white dark:bg-slate-800'
+          }`}
+          onMouseEnter={(e) => handleDayMouseEnter(date, e)}
+          onMouseLeave={handleDayMouseLeave}
+        >
+          <div className={`text-sm font-semibold mb-1 ${
+            isCurrentDay ? 'text-amber-600 dark:text-amber-400' :
+            isWeekendDay ? 'text-slate-400' : 'text-slate-600 dark:text-slate-400'
+          }`}>
+            {day}
+          </div>
+          <div className="space-y-0.5">
+            {dayLeaves.slice(0, 4).map(leave => {
+              const TypeIcon = typeIcons[leave.type]
+              return (
+                <div
+                  key={leave.id}
+                  className={`text-[10px] ${typeColors[leave.type]} text-white rounded px-1 py-0.5 truncate cursor-pointer hover:opacity-80`}
+                  title={`${leave.directReportName} - ${leave.type}`}
+                  onClick={() => openEditForm(leave)}
+                >
+                  <div className="flex items-center gap-0.5">
+                    <TypeIcon className="w-2.5 h-2.5 flex-shrink-0" />
+                    <span className="truncate">{leave.directReportName.split(' ')[0]}</span>
+                  </div>
+                </div>
+              )
+            })}
+            {dayLeaves.length > 4 && (
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 px-1 font-medium">
+                +{dayLeaves.length - 4} more
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    return days
+  }
 
   if (loading) {
     return (
@@ -160,13 +378,15 @@ export default function Leaves() {
     )
   }
 
+  const hoveredDayLeaves = hoveredDay.date ? getLeavesForDate(hoveredDay.date) : []
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leave Tracking</h1>
-          <p className="text-slate-500 dark:text-slate-400">Track time off for capacity planning</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leave Calendar</h1>
+          <p className="text-slate-500 dark:text-slate-400">Visual leave tracking and capacity planning</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -183,7 +403,7 @@ export default function Leaves() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Total Records</p>
@@ -227,109 +447,238 @@ export default function Leaves() {
         </div>
       )}
 
-      {/* Monthly Trend Chart */}
-      {monthlyTrend.length > 0 && (
+      {/* Leave Trend Chart */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+          People on Leave per Day - {getMonthLabel(currentMonth)}
+        </h2>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+            <XAxis
+              dataKey="day"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-slate-600 dark:text-slate-400' }}
+            />
+            <YAxis
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-slate-600 dark:text-slate-400' }}
+              allowDecimals={false}
+            />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: 'rgb(30 41 59)',
+                border: '1px solid rgb(51 65 85)',
+                borderRadius: '0.5rem',
+                color: 'white'
+              }}
+              labelFormatter={(value) => {
+                const day = parseInt(value)
+                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="people"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              dot={{ fill: '#f59e0b', r: 4 }}
+              activeDot={{ r: 6 }}
+              name="People on Leave"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Sprint Capacity Suggestions */}
+      {sprintSuggestions.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Leave Days by Month</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyTrend}>
-              <XAxis dataKey="monthName" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="totalBusinessDays" name="Business Days" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Sprint Capacity Suggestions
+            </h2>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Based on upcoming leaves, here are suggested capacity adjustments for your sprints:
+          </p>
+          <div className="space-y-3">
+            {sprintSuggestions.map(suggestion => {
+              const needsAdjustment = suggestion.currentCapacity &&
+                suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
+
+              return (
+                <div
+                  key={suggestion.sprint.id}
+                  className={`p-4 rounded-lg border ${
+                    needsAdjustment
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+                      : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                          {suggestion.sprint.name}
+                        </h3>
+                        {needsAdjustment && (
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span className="text-xs font-medium">Needs Adjustment</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Team Size:</span>
+                          <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">{suggestion.totalTeamSize}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">On Leave:</span>
+                          <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">{suggestion.peopleOnLeave}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Current Capacity:</span>
+                          <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">
+                            {suggestion.currentCapacity?.availableMembers || 'Not set'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Suggested:</span>
+                          <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                            {suggestion.suggestedAvailableMembers} people
+                          </span>
+                        </div>
+                      </div>
+                      {suggestion.leaveDaysInSprint > 0 && (
+                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                          Total leave days in sprint: {suggestion.leaveDaysInSprint} days
+                        </div>
+                      )}
+                    </div>
+                    <a
+                      href="/sprints"
+                      className="ml-4 px-3 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                    >
+                      Update in Sprints
+                    </a>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <User className="w-5 h-5 text-slate-400" />
-        <select
-          value={memberFilter}
-          onChange={(e) => setMemberFilter(e.target.value)}
-          className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+      {/* Calendar Navigation */}
+      <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <button
+          onClick={prevMonth}
+          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
         >
-          <option value="all">All Team Members</option>
-          {directReports.map((dr) => (
-            <option key={dr.id} value={dr.id}>{dr.fullName}</option>
-          ))}
-        </select>
+          <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+        </button>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            {getMonthLabel(currentMonth)}
+          </h2>
+          <button
+            onClick={goToToday}
+            className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            Today
+          </button>
+        </div>
+        <button
+          onClick={nextMonth}
+          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+        >
+          <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+        </button>
       </div>
 
-      {/* Leave List */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-            <tr>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Team Member</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Type</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Dates</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Days</th>
-              <th className="text-left px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Notes</th>
-              <th className="text-right px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-            {filteredLeaves.map((leave) => {
-              const TypeIcon = typeIcons[leave.type] || Calendar
-              return (
-                <tr key={leave.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-slate-900 dark:text-slate-100">{leave.directReportName}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${typeColors[leave.type] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}>
-                        <TypeIcon className="w-3.5 h-3.5" />
-                        {leaveTypeLabels[leave.type] || leave.type}
-                      </span>
+      {/* Calendar Grid */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="grid grid-cols-7 gap-px bg-slate-300 dark:bg-slate-700 rounded-lg overflow-hidden">
+          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+            <div key={day} className="bg-slate-100 dark:bg-slate-800 px-2 py-3 text-center text-sm font-semibold text-slate-600 dark:text-slate-400">
+              {day}
+            </div>
+          ))}
+          {renderCalendar()}
+        </div>
+      </div>
+
+      {/* Hover Tooltip */}
+      {hoveredDay.date && hoveredDayLeaves.length > 0 && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y - 10}px`,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <div className="bg-slate-900 dark:bg-slate-950 text-white rounded-lg shadow-2xl border border-slate-700 p-4 max-w-sm">
+            <div className="text-sm font-semibold mb-2 text-amber-400">
+              {hoveredDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            <div className="space-y-2">
+              {hoveredDayLeaves.map(leave => {
+                const TypeIcon = typeIcons[leave.type]
+                return (
+                  <div key={leave.id} className="flex items-start gap-2 text-sm">
+                    <TypeIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">{leave.directReportName}</div>
+                      <div className="text-xs text-slate-400">{leaveTypeLabels[leave.type]}</div>
+                      {leave.notes && (
+                        <div className="text-xs text-slate-500 mt-1 italic">{leave.notes}</div>
+                      )}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                    {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                    {leave.businessDaysCount} days
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">
-                    {leave.notes || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => openEditForm(leave)}
-                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(leave.id)}
-                        className="p-1 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        {filteredLeaves.length === 0 && (
-          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            No leave records found
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-700 text-xs text-slate-400">
+              {hoveredDayLeaves.length} {hoveredDayLeaves.length === 1 ? 'person' : 'people'} on leave
+            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Legend</h3>
+        <div className="flex gap-6 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Vacation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-500 rounded"></div>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Sick Leave</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Other</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20 rounded"></div>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Today</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500 dark:text-slate-500 italic">💡 Hover over a day for 1 second to see all leaves</span>
+          </div>
+        </div>
       </div>
 
       {/* Create/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
               {editingLeave ? 'Edit Leave' : 'Add Leave'}
             </h2>

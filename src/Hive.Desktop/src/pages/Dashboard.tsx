@@ -3,7 +3,6 @@ import {
   Users,
   CheckSquare,
   AlertTriangle,
-  Target,
   X,
   FolderKanban,
   TrendingUp

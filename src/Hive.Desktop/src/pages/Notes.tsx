@@ -259,8 +259,8 @@ export default function Notes() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notes & TODOs</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Notes & TODOs</h1>
+          <p className="text-slate-500 dark:text-slate-400">
             Keep personal notes & action items
           </p>
         </div>
