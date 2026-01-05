@@ -93,3 +93,5 @@ src/Hive.Desktop/backend/*
 *.db-wal
 
 src/Hive.Desktop/dist/index.html
+INSTALLATION.md
+TROUBLESHOOTING.md
