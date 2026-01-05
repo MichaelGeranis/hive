@@ -10,7 +10,7 @@ help:
 	@echo "Development:"
 	@echo "  make install        - Install all dependencies (backend + frontend)"
 	@echo "  make dev            - Run backend and frontend in development mode"
-	@echo "  make backend        - Run backend only (port 5000)"
+	@echo "  make backend        - Run backend only (port 5002)"
 	@echo "  make frontend       - Run frontend only (port 5173)"
 	@echo "  make electron-dev   - Run Electron app in development mode"
 	@echo ""
@@ -76,7 +76,7 @@ electron-dev:
 # Run both backend and frontend in development mode
 dev:
 	@echo "Starting backend and frontend..."
-	@echo "Backend: http://localhost:5000"
+	@echo "Backend: http://localhost:5002"
 	@echo "Frontend: http://localhost:5173"
 	@echo ""
 	@make -j2 backend frontend

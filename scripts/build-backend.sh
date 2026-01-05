@@ -38,14 +38,26 @@ for RID in "${TARGETS[@]}"; do
 
     TARGET_DIR="$OUTPUT_DIR/$RID"
 
-    dotnet publish "$API_PROJECT" \
-        --configuration Release \
-        --runtime "$RID" \
-        --self-contained true \
-        --output "$TARGET_DIR" \
-        -p:PublishSingleFile=true \
-        -p:IncludeNativeLibrariesForSelfExtract=true \
-        -p:EnableCompressionInSingleFile=true
+    # macOS has issues with single-file publishing in .NET 9, so use folder publishing
+    if [[ "$RID" == osx-* ]]; then
+        echo "Using folder publishing for macOS (single-file has socket issues)"
+        dotnet publish "$API_PROJECT" \
+            --configuration Release \
+            --runtime "$RID" \
+            --self-contained true \
+            --output "$TARGET_DIR" \
+            -p:PublishSingleFile=false
+    else
+        # Windows can use single-file publishing
+        dotnet publish "$API_PROJECT" \
+            --configuration Release \
+            --runtime "$RID" \
+            --self-contained true \
+            --output "$TARGET_DIR" \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true
+    fi
 
     echo "Built: $TARGET_DIR"
 

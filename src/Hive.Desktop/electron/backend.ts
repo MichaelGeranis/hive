@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import { app } from 'electron'
 import * as http from 'http'
 
-const BACKEND_PORT = 5000
+const BACKEND_PORT = 5002
 const HEALTH_CHECK_URL = `http://localhost:${BACKEND_PORT}/health`
 const HEALTH_CHECK_INTERVAL = 500
 const HEALTH_CHECK_TIMEOUT = 30000

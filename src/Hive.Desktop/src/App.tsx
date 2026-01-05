@@ -14,7 +14,7 @@ import Settings from './pages/Settings'
 
 type AppStatus = 'loading' | 'ready' | 'error'
 
-const HEALTH_CHECK_URL = 'http://localhost:5000/health'
+const HEALTH_CHECK_URL = 'http://localhost:5002/health'
 const MAX_RETRIES = 30
 const RETRY_INTERVAL = 1000
 
@@ -22,19 +22,25 @@ function App() {
   const [status, setStatus] = useState<AppStatus>('loading')
   const [statusMessage, setStatusMessage] = useState('Connecting to backend...')
 
+  console.log('App component mounted, status:', status)
+
   const checkBackendHealth = useCallback(async (): Promise<boolean> => {
+    console.log('Checking backend health at:', HEALTH_CHECK_URL)
     try {
       const response = await fetch(HEALTH_CHECK_URL, {
         method: 'GET',
         signal: AbortSignal.timeout(2000)
       })
+      console.log('Health check response:', response.ok, response.status)
       return response.ok
-    } catch {
+    } catch (error) {
+      console.error('Health check failed:', error)
       return false
     }
   }, [])
 
   const initializeApp = useCallback(async () => {
+    console.log('Initializing app...')
     setStatus('loading')
     setStatusMessage('Connecting to backend...')
 
@@ -43,17 +49,20 @@ function App() {
       const isHealthy = await checkBackendHealth()
 
       if (isHealthy) {
+        console.log('Backend is healthy! Setting status to ready')
         setStatus('ready')
         return
       }
 
       retries++
+      console.log(`Health check failed, retry ${retries}/${MAX_RETRIES}`)
       setStatusMessage(`Waiting for backend... (${retries}/${MAX_RETRIES})`)
       await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL))
     }
 
+    console.error('Backend health check failed after max retries')
     setStatus('error')
-    setStatusMessage('Could not connect to the backend. Please ensure the API server is running on port 5000.')
+    setStatusMessage('Could not connect to the backend. Please ensure the API server is running on the correct port.')
   }, [checkBackendHealth])
 
   useEffect(() => {
@@ -78,7 +87,10 @@ function App() {
     return () => clearInterval(interval)
   }, [status, checkBackendHealth])
 
+  console.log('App render, status:', status, 'message:', statusMessage)
+
   if (status !== 'ready') {
+    console.log('Rendering LoadingScreen with status:', status)
     return (
       <LoadingScreen
         status={status}
@@ -88,6 +100,7 @@ function App() {
     )
   }
 
+  console.log('Status is ready, rendering main app')
   return (
     <Routes>
       <Route path="/" element={<Layout />}>

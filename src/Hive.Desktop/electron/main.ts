@@ -80,6 +80,8 @@ function createWindow() {
     }
 
     mainWindow.loadFile(indexPath)
+    // Temporarily enable DevTools for debugging
+    mainWindow.webContents.openDevTools()
   }
 
   mainWindow.on('closed', () => {
