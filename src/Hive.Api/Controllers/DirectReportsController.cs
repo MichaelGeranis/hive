@@ -146,4 +146,28 @@ public class DirectReportsController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Bulk imports direct reports from CSV.
+    /// </summary>
+    /// <param name="dto">The CSV content and import options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Import result with success/error counts.</returns>
+    [HttpPost("bulk-import")]
+    [ProducesResponseType(typeof(BulkImportResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BulkImportResultDto>> BulkImport([FromBody] BulkImportDirectReportsDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Bulk importing direct reports");
+
+        try
+        {
+            var result = await _service.BulkImportAsync(dto, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

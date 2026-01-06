@@ -2,6 +2,10 @@ import axios from 'axios'
 import type {
   DirectReport,
   CreateDirectReportDto,
+  BulkImportDirectReportsDto,
+  BulkImportResultDto,
+  BackupDto,
+  RestoreResultDto,
   PerformanceReview,
   OneOnOneMeeting,
   MeetingNote,
@@ -60,7 +64,8 @@ export const directReportsApi = {
   getById: (id: string) => api.get<DirectReport>(`/directreports/${id}`).then(r => r.data),
   create: (data: CreateDirectReportDto) => api.post<DirectReport>('/directreports', data).then(r => r.data),
   update: (id: string, data: Partial<CreateDirectReportDto>) => api.put<DirectReport>(`/directreports/${id}`, data).then(r => r.data),
-  delete: (id: string) => api.delete(`/directreports/${id}`)
+  delete: (id: string) => api.delete(`/directreports/${id}`),
+  bulkImport: (data: BulkImportDirectReportsDto) => api.post<BulkImportResultDto>('/directreports/bulk-import', data).then(r => r.data)
 }
 
 // Performance Reviews
@@ -247,6 +252,12 @@ export const documentsApi = {
   create: (data: CreateDocumentDto) => api.post<Document>('/documents', data).then(r => r.data),
   update: (id: string, data: UpdateDocumentDto) => api.put<Document>(`/documents/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/documents/${id}`)
+}
+
+// Backup & Restore
+export const backupApi = {
+  export: () => api.get<BackupDto>('/backup/export').then(r => r.data),
+  import: (data: BackupDto) => api.post<RestoreResultDto>('/backup/import', data).then(r => r.data)
 }
 
 export default api

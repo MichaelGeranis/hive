@@ -5,7 +5,10 @@ import {
   AlertTriangle,
   X,
   FolderKanban,
-  ZapIcon
+  ZapIcon,
+  Settings2,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { reportsApi, tasksApi, projectsApi, leavesApi } from '../services/api'
@@ -30,6 +33,41 @@ import {
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 
+const DASHBOARD_WIDGETS_KEY = 'hive-dashboard-widgets'
+
+interface WidgetVisibility {
+  topStats: boolean
+  projectsDistribution: boolean
+  membersByProject: boolean
+  tasksDistribution: boolean
+  capacityAnalysis: boolean
+  estimationAccuracy: boolean
+  teamVelocity: boolean
+  membersWorkload: boolean
+}
+
+const DEFAULT_WIDGETS: WidgetVisibility = {
+  topStats: true,
+  projectsDistribution: true,
+  membersByProject: true,
+  tasksDistribution: true,
+  capacityAnalysis: true,
+  estimationAccuracy: true,
+  teamVelocity: true,
+  membersWorkload: true
+}
+
+const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
+  topStats: 'Top Stats',
+  projectsDistribution: 'Projects Distribution',
+  membersByProject: 'Members by Project',
+  tasksDistribution: 'Tasks Distribution',
+  capacityAnalysis: 'Capacity Analysis',
+  estimationAccuracy: 'Estimation Accuracy',
+  teamVelocity: 'Team Velocity',
+  membersWorkload: 'Members Workload'
+}
+
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [tasks, setTasks] = useState<TeamTask[]>([])
@@ -44,8 +82,37 @@ export default function Dashboard() {
   const [memberProjects, setMemberProjects] = useState<Project[]>([])
   const [sprintFilter, setSprintFilter] = useState<number | undefined>(3) // Default: Last 3 sprints
 
+  // Widget customization state
+  const [showCustomize, setShowCustomize] = useState(false)
+  const [widgets, setWidgets] = useState<WidgetVisibility>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(DASHBOARD_WIDGETS_KEY)
+      if (stored) {
+        try {
+          return { ...DEFAULT_WIDGETS, ...JSON.parse(stored) }
+        } catch {
+          return DEFAULT_WIDGETS
+        }
+      }
+    }
+    return DEFAULT_WIDGETS
+  })
+
+  const toggleWidget = (widget: keyof WidgetVisibility) => {
+    const newWidgets = { ...widgets, [widget]: !widgets[widget] }
+    setWidgets(newWidgets)
+    localStorage.setItem(DASHBOARD_WIDGETS_KEY, JSON.stringify(newWidgets))
+  }
+
+  const resetWidgets = () => {
+    setWidgets(DEFAULT_WIDGETS)
+    localStorage.setItem(DASHBOARD_WIDGETS_KEY, JSON.stringify(DEFAULT_WIDGETS))
+  }
+
   const closeModal = useCallback(() => setSelectedMember(null), [])
+  const closeCustomizeModal = useCallback(() => setShowCustomize(false), [])
   useEscapeKey(closeModal, !!selectedMember)
+  useEscapeKey(closeCustomizeModal, showCustomize && !selectedMember)
 
   useEffect(() => {
     loadDashboard()
@@ -197,9 +264,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400">Overview team performance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400">Overview team performance</p>
+        </div>
+        <button
+          onClick={() => setShowCustomize(true)}
+          className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+        >
+          <Settings2 className="w-4 h-4" />
+          Customize
+        </button>
       </div>
 
       {/* Sprint Filter */}
@@ -227,6 +303,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Stats */}
+      {widgets.topStats && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard
           title="Team Members"
@@ -263,12 +340,14 @@ export default function Dashboard() {
           icon={<AlertTriangle className="w-6 h-6" />}
           color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
         />
-       
+
       </div>
+      )}
 
       {/* Distribution Charts Row - 3 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Projects Distribution by Member */}
+        {widgets.projectsDistribution && (
         <Card>
           <CardHeader title="Projects Distribution" subtitle="By member" />
           <CardContent className="h-64">
@@ -301,8 +380,10 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Members Distribution by Project - Knowledge Silos */}
+        {widgets.membersByProject && (
         <Card>
           <CardHeader
             title="Members by Project"
@@ -343,8 +424,10 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Task Type Distribution */}
+        {widgets.tasksDistribution && (
         <Card>
           <CardHeader title="Tasks Distribution" subtitle="By type" />
           <CardContent className="h-64">
@@ -375,10 +458,11 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Capacity Analysis */}
-      {capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (() => {
+      {widgets.capacityAnalysis && capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (() => {
         // Calculate average completed SP from past sprints
         const avgCompletedSP = capacityAnalysis.pastSprints.length > 0
           ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
@@ -481,7 +565,7 @@ export default function Dashboard() {
       })()}
 
       {/* Estimation Accuracy */}
-      {accuracy && accuracy.sprints.length > 0 && (
+      {widgets.estimationAccuracy && accuracy && accuracy.sprints.length > 0 && (
         <Card>
           <CardHeader
             title="Estimation Accuracy"
@@ -527,7 +611,7 @@ export default function Dashboard() {
       
       
       {/* Team Velocity */}
-      {velocity && velocity.sprints.length > 0 && (
+      {widgets.teamVelocity && velocity && velocity.sprints.length > 0 && (
         <Card>
           <CardHeader
             title="Team Velocity"
@@ -601,6 +685,7 @@ export default function Dashboard() {
 
 
       {/* Task Distribution by Assignee - Members Workload*/}
+      {widgets.membersWorkload && (
       <Card>
         <CardHeader title="Members Workload" subtitle="" />
         <CardContent className="h-80">
@@ -617,9 +702,61 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+      )}
 
-
-
+      {/* Customize Dashboard Modal */}
+      {showCustomize && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader
+              title="Customize Dashboard"
+              subtitle="Choose which widgets to display"
+              action={
+                <button
+                  onClick={closeCustomizeModal}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              }
+            />
+            <CardContent>
+              <div className="space-y-3">
+                {(Object.keys(widgets) as Array<keyof WidgetVisibility>).map((widget) => (
+                  <button
+                    key={widget}
+                    onClick={() => toggleWidget(widget)}
+                    className="flex items-center justify-between w-full p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {WIDGET_LABELS[widget]}
+                    </span>
+                    {widgets[widget] ? (
+                      <Eye className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <EyeOff className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t dark:border-slate-700 flex gap-3">
+                <button
+                  onClick={resetWidgets}
+                  className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Reset to Default
+                </button>
+                <button
+                  onClick={closeCustomizeModal}
+                  className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Member Projects Modal */}
       {selectedMember && (
