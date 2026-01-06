@@ -58,7 +58,12 @@ public class BackupService : IBackupService
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
         var reviews = await _reviewRepository.GetAllAsync(cancellationToken);
         var meetings = await _meetingRepository.GetAllAsync(cancellationToken);
-        var meetingNotes = await _meetingNoteRepository.GetAllAsync(cancellationToken);
+        var meetingNotes = new List<MeetingNote>();
+        foreach (var meeting in meetings)
+        {
+            var notes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, true, cancellationToken);
+            meetingNotes.AddRange(notes);
+        }
         var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
         var managerNotes = await _managerNoteRepository.GetAllAsync(cancellationToken);
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
@@ -136,10 +141,8 @@ public class BackupService : IBackupService
                     var existing = await _projectRepository.GetByIdAsync(p.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new Project(p.Name, p.Description, p.Labels);
+                        var entity = new Project(p.Name, p.Description, p.StartDate, p.TargetEndDate, p.Labels);
                         SetEntityId(entity, p.Id);
-                        if (p.StartDate.HasValue) entity.SetStartDate(p.StartDate.Value);
-                        if (p.TargetEndDate.HasValue) entity.SetTargetEndDate(p.TargetEndDate.Value);
                         await _projectRepository.AddAsync(entity, cancellationToken);
                         projectsRestored++;
                     }
@@ -186,16 +189,21 @@ public class BackupService : IBackupService
                     var existing = await _taskRepository.GetByIdAsync(t.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new TeamTask(t.Title, t.Description, (TaskType)t.Type, (TaskPriority)t.Priority);
+                        var entity = new TeamTask(
+                            t.Title, 
+                            t.Description, 
+                            (TaskType)t.Type, 
+                            (TaskPriority)t.Priority,
+                            t.AssigneeId,
+                            t.ProjectId,
+                            t.DueDate,
+                            t.EstimatedHours.HasValue ? (int?)t.EstimatedHours.Value : null,
+                            t.StoryPoints,
+                            t.Tags,
+                            t.Labels,
+                            t.Sprint,
+                            t.TimeSpentMinutes);
                         SetEntityId(entity, t.Id);
-                        if (t.AssigneeId.HasValue) entity.AssignTo(t.AssigneeId.Value);
-                        if (t.ProjectId.HasValue) entity.SetProject(t.ProjectId.Value);
-                        if (t.DueDate.HasValue) entity.SetDueDate(t.DueDate.Value);
-                        if (t.EstimatedHours.HasValue) entity.SetEstimatedHours(t.EstimatedHours.Value);
-                        if (t.StoryPoints.HasValue) entity.SetStoryPoints(t.StoryPoints.Value);
-                        entity.SetTags(t.Tags);
-                        entity.SetLabels(t.Labels);
-                        entity.SetSprint(t.Sprint);
                         await _taskRepository.AddAsync(entity, cancellationToken);
                         tasksRestored++;
                     }
@@ -220,7 +228,7 @@ public class BackupService : IBackupService
                     {
                         var entity = new PerformanceReview(r.DirectReportId, r.ReviewPeriod, r.ReviewDate);
                         SetEntityId(entity, r.Id);
-                        entity.UpdateContent(r.Strengths, r.AreasForImprovement, r.GoalsForNextPeriod, r.ManagerNotes);
+                        entity.UpdateContent(r.Strengths, r.AreasForImprovement, r.GoalsForNextPeriod, r.ManagerNotes, (PerformanceRating)r.Rating);
                         await _reviewRepository.AddAsync(entity, cancellationToken);
                         reviewsRestored++;
                     }
@@ -307,7 +315,7 @@ public class BackupService : IBackupService
                     var existing = await _managerNoteRepository.GetByIdAsync(n.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new ManagerNote(n.Title, n.Content, n.Tags, (NotePriority)n.Priority, n.DueDate);
+                        var entity = new ManagerNote(n.Title, n.Content, (NotePriority)n.Priority, n.DueDate, n.Tags);
                         SetEntityId(entity, n.Id);
                         await _managerNoteRepository.AddAsync(entity, cancellationToken);
                         managerNotesRestored++;
@@ -460,14 +468,12 @@ public class BackupService : IBackupService
         DueDate = t.DueDate,
         EstimatedHours = t.EstimatedHours,
         StoryPoints = t.StoryPoints,
-        ActualHours = t.ActualHours,
         Tags = t.Tags,
         Labels = t.Labels,
         Sprint = t.Sprint,
         TimeSpentMinutes = t.TimeSpentMinutes,
         CreatedAt = t.CreatedAt,
-        UpdatedAt = t.UpdatedAt,
-        CompletedAt = t.CompletedAt
+        UpdatedAt = t.UpdatedAt
     };
 
     private static PerformanceReviewBackup MapReview(PerformanceReview r) => new()
@@ -486,8 +492,7 @@ public class BackupService : IBackupService
         CreatedAt = r.CreatedAt,
         UpdatedAt = r.UpdatedAt,
         SubmittedAt = r.SubmittedAt,
-        AcknowledgedAt = r.AcknowledgedAt,
-        CompletedAt = r.CompletedAt
+        AcknowledgedAt = r.AcknowledgedAt
     };
 
     private static OneOnOneMeetingBackup MapMeeting(OneOnOneMeeting m) => new()
@@ -574,7 +579,7 @@ public class BackupService : IBackupService
     private static AppSettingsBackup MapSettings(AppSettings s) => new()
     {
         Id = s.Id,
-        StoryPointMappingsJson = s.StoryPointMappingsJson,
+        StoryPointMappingsJson = s.StoryPointMappings,
         CreatedAt = s.CreatedAt,
         UpdatedAt = s.UpdatedAt
     };

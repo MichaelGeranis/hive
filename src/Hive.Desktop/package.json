@@ -80,6 +80,8 @@
     "win": {
       "target": ["nsis", "zip"],
       "icon": "src/assets/icon.ico",
+      "signingHashAlgorithms": ["sha256"],
+      "sign": null,
       "extraResources": [
         {
           "from": "backend/win-x64",
