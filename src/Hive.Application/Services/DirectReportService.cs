@@ -87,6 +87,214 @@ public class DirectReportService : IDirectReportService
         await _repository.DeleteAsync(id, cancellationToken);
     }
 
+    public async Task<BulkImportResultDto> BulkImportAsync(BulkImportDirectReportsDto dto, CancellationToken cancellationToken = default)
+    {
+        var results = new List<BulkImportRowResult>();
+        var errors = new List<string>();
+        int successCount = 0;
+        int skippedCount = 0;
+        int errorCount = 0;
+
+        if (string.IsNullOrWhiteSpace(dto.CsvContent))
+        {
+            return new BulkImportResultDto
+            {
+                TotalRows = 0,
+                SuccessCount = 0,
+                SkippedCount = 0,
+                ErrorCount = 1,
+                Results = results,
+                Errors = new List<string> { "CSV content is empty" }
+            };
+        }
+
+        var lines = dto.CsvContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length < 2)
+        {
+            return new BulkImportResultDto
+            {
+                TotalRows = 0,
+                SuccessCount = 0,
+                SkippedCount = 0,
+                ErrorCount = 1,
+                Results = results,
+                Errors = new List<string> { "CSV must have a header row and at least one data row" }
+            };
+        }
+
+        // Parse header
+        var header = ParseCsvLine(lines[0]);
+        var columnMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < header.Length; i++)
+        {
+            columnMap[header[i].Trim()] = i;
+        }
+
+        // Validate required columns
+        var requiredColumns = new[] { "FirstName", "LastName", "Email" };
+        var missingColumns = requiredColumns.Where(c => !columnMap.ContainsKey(c)).ToList();
+        if (missingColumns.Any())
+        {
+            return new BulkImportResultDto
+            {
+                TotalRows = 0,
+                SuccessCount = 0,
+                SkippedCount = 0,
+                ErrorCount = 1,
+                Results = results,
+                Errors = new List<string> { $"Missing required columns: {string.Join(", ", missingColumns)}" }
+            };
+        }
+
+        // Process rows
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var rowNumber = i + 1;
+            var values = ParseCsvLine(lines[i]);
+
+            try
+            {
+                var firstName = GetColumnValue(values, columnMap, "FirstName");
+                var lastName = GetColumnValue(values, columnMap, "LastName");
+                var email = GetColumnValue(values, columnMap, "Email");
+                var jobTitle = GetColumnValue(values, columnMap, "JobTitle") ?? "";
+                var department = GetColumnValue(values, columnMap, "Department") ?? "";
+                var hireDateStr = GetColumnValue(values, columnMap, "HireDate");
+
+                if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(email))
+                {
+                    results.Add(new BulkImportRowResult
+                    {
+                        RowNumber = rowNumber,
+                        Email = email ?? "",
+                        Status = "Error",
+                        Message = "FirstName, LastName, and Email are required"
+                    });
+                    errorCount++;
+                    continue;
+                }
+
+                // Check for existing email
+                if (await _repository.EmailExistsAsync(email, cancellationToken: cancellationToken))
+                {
+                    if (dto.SkipDuplicates)
+                    {
+                        results.Add(new BulkImportRowResult
+                        {
+                            RowNumber = rowNumber,
+                            Email = email,
+                            Status = "Skipped",
+                            Message = "Email already exists"
+                        });
+                        skippedCount++;
+                        continue;
+                    }
+                    else
+                    {
+                        results.Add(new BulkImportRowResult
+                        {
+                            RowNumber = rowNumber,
+                            Email = email,
+                            Status = "Error",
+                            Message = "Email already exists"
+                        });
+                        errorCount++;
+                        continue;
+                    }
+                }
+
+                // Parse hire date
+                DateTime hireDate = DateTime.Today;
+                if (!string.IsNullOrWhiteSpace(hireDateStr))
+                {
+                    if (!DateTime.TryParse(hireDateStr, out hireDate))
+                    {
+                        hireDate = DateTime.Today;
+                    }
+                }
+
+                var entity = new DirectReport(firstName, lastName, email, jobTitle, department, hireDate);
+                var created = await _repository.AddAsync(entity, cancellationToken);
+
+                results.Add(new BulkImportRowResult
+                {
+                    RowNumber = rowNumber,
+                    Email = email,
+                    Status = "Created",
+                    DirectReport = MapToDto(created)
+                });
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                results.Add(new BulkImportRowResult
+                {
+                    RowNumber = rowNumber,
+                    Email = "",
+                    Status = "Error",
+                    Message = ex.Message
+                });
+                errorCount++;
+            }
+        }
+
+        return new BulkImportResultDto
+        {
+            TotalRows = lines.Length - 1,
+            SuccessCount = successCount,
+            SkippedCount = skippedCount,
+            ErrorCount = errorCount,
+            Results = results,
+            Errors = errors
+        };
+    }
+
+    private static string[] ParseCsvLine(string line)
+    {
+        var result = new List<string>();
+        var inQuotes = false;
+        var current = new System.Text.StringBuilder();
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                result.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+        result.Add(current.ToString().Trim());
+
+        return result.ToArray();
+    }
+
+    private static string? GetColumnValue(string[] values, Dictionary<string, int> columnMap, string columnName)
+    {
+        if (columnMap.TryGetValue(columnName, out int index) && index < values.Length)
+        {
+            var value = values[index].Trim();
+            return string.IsNullOrEmpty(value) ? null : value;
+        }
+        return null;
+    }
+
     private static DirectReportDto MapToDto(DirectReport entity) => new()
     {
         Id = entity.Id,

@@ -13,4 +13,5 @@ public interface IDirectReportService
     Task<DirectReportDto> CreateAsync(CreateDirectReportDto dto, CancellationToken cancellationToken = default);
     Task<DirectReportDto> UpdateAsync(Guid id, UpdateDirectReportDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<BulkImportResultDto> BulkImportAsync(BulkImportDirectReportsDto dto, CancellationToken cancellationToken = default);
 }

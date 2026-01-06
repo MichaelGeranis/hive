@@ -21,6 +21,29 @@ export interface CreateDirectReportDto {
   hireDate: string
 }
 
+// Bulk Import Direct Reports
+export interface BulkImportDirectReportsDto {
+  csvContent: string
+  skipDuplicates: boolean
+}
+
+export interface BulkImportResultDto {
+  totalRows: number
+  successCount: number
+  skippedCount: number
+  errorCount: number
+  results: BulkImportRowResult[]
+  errors: string[]
+}
+
+export interface BulkImportRowResult {
+  rowNumber: number
+  email: string
+  status: 'Created' | 'Skipped' | 'Error'
+  message?: string
+  directReport?: DirectReport
+}
+
 // Performance Reviews
 export enum PerformanceRating {
   NotRated = 0,
@@ -710,4 +733,40 @@ export interface UpdateDocumentDto {
   content: string
   url?: string
   tags?: string
+}
+
+// Backup & Restore
+export interface BackupDto {
+  version: string
+  exportedAt: string
+  directReports: any[]
+  projects: any[]
+  tasks: any[]
+  performanceReviews: any[]
+  meetings: any[]
+  meetingNotes: any[]
+  leaves: any[]
+  managerNotes: any[]
+  sprints: any[]
+  sprintCapacities: any[]
+  documents: any[]
+  settings?: any
+}
+
+export interface RestoreResultDto {
+  success: boolean
+  directReportsRestored: number
+  projectsRestored: number
+  tasksRestored: number
+  performanceReviewsRestored: number
+  meetingsRestored: number
+  meetingNotesRestored: number
+  leavesRestored: number
+  managerNotesRestored: number
+  sprintsRestored: number
+  sprintCapacitiesRestored: number
+  documentsRestored: number
+  settingsRestored: boolean
+  errors: string[]
+  warnings: string[]
 }
