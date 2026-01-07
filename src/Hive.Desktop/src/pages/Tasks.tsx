@@ -471,30 +471,32 @@ export default function Tasks() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {[
-            { value: 'all', label: `All (${tasks.length})` },
-            { value: 'overdue', label: `Overdue (${overdueCount})` },
-            { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})` },
-            { value: TaskStatus.Todo, label: `To Do (${todoCount})` },
-            { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})` },
-            { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})` },
-            { value: TaskStatus.InReview, label: `In Review (${inReviewCount})` },
-            { value: TaskStatus.InTest, label: `In Test (${inTestCount})` },
-            { value: TaskStatus.POAcceptance, label: `PO Acceptance (${poAcceptanceCount})` },
-            { value: TaskStatus.ReadyToRelease, label: `Ready To Release (${readyToReleaseCount})` },
-            { value: TaskStatus.Done, label: `Done (${doneCount})` },
-          ].map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value as any)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === f.value
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+            { value: 'all', label: `All (${tasks.length})`, count: tasks.length },
+            { value: 'overdue', label: `Overdue (${overdueCount})`, count: overdueCount },
+            { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})`, count: backlogCount },
+            { value: TaskStatus.Todo, label: `To Do (${todoCount})`, count: todoCount },
+            { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})`, count: blockedCount },
+            { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})`, count: inProgressCount },
+            { value: TaskStatus.InReview, label: `In Review (${inReviewCount})`, count: inReviewCount },
+            { value: TaskStatus.InTest, label: `In Test (${inTestCount})`, count: inTestCount },
+            { value: TaskStatus.POAcceptance, label: `PO Acceptance (${poAcceptanceCount})`, count: poAcceptanceCount },
+            { value: TaskStatus.ReadyToRelease, label: `Ready To Release (${readyToReleaseCount})`, count: readyToReleaseCount },
+            { value: TaskStatus.Done, label: `Done (${doneCount})`, count: doneCount },
+          ]
+            .filter((f) => f.value === 'all' || f.count > 0)
+            .map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value as any)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === f.value
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
         </div>
       </div>
 
