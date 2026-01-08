@@ -533,7 +533,7 @@ export default function Dashboard() {
             />
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
+                <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} tick={{ fontSize: 11 }} />
                   <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
@@ -550,23 +550,9 @@ export default function Dashboard() {
                     strokeWidth={2}
                     label={{ value: `Avg SP: ${avgCompletedSP}`, position: 'right', fill: '#f59e0b', fontSize: 12 }}
                   />
-                  <Bar dataKey="committedPoints" name="Committed SP">
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-committed-${index}`}
-                        fill={entry.isPredicted ? '#c084fc' : entry.isFuture ? '#a78bfa' : entry.isCurrent ? '#60a5fa' : '#3b82f6'}
-                      />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="completedPoints" name="Completed SP">
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-completed-${index}`}
-                        fill={entry.isPredicted ? '#a855f7' : entry.isFuture ? '#8b5cf6' : entry.isCurrent ? '#34d399' : '#10b981'}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <Line type="monotone" dataKey="committedPoints" stroke="#3b82f6" strokeWidth={2} name="Committed SP" dot={{ fill: '#3b82f6' }} />
+                  <Line type="monotone" dataKey="completedPoints" stroke="#10b981" strokeWidth={2} name="Completed SP" dot={{ fill: '#10b981' }} />
+                </LineChart>
               </ResponsiveContainer>
               <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
                 <div className="text-center">
@@ -600,15 +586,15 @@ export default function Dashboard() {
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={accuracy.sprints}>
+              <LineChart data={accuracy.sprints}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sprintName" />
                 <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="estimatedHours" fill="#3b82f6" name="Estimated" />
-                <Bar dataKey="actualHours" fill="#10b981" name="Actual" />
-              </BarChart>
+                <Line type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated" dot={{ fill: '#3b82f6' }} />
+                <Line type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual" dot={{ fill: '#10b981' }} />
+              </LineChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">
