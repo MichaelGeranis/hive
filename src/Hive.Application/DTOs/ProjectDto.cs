@@ -21,6 +21,7 @@ public record ProjectDto
     public int TotalTasks { get; init; }
     public int CompletedTasks { get; init; }
     public int OpenTasks { get; init; }
+    public int ParentCount { get; init; }
 }
 
 /// <summary>

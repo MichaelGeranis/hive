@@ -168,6 +168,7 @@ export interface Project {
   totalTasks: number
   completedTasks: number
   openTasks: number
+  parentCount: number
 }
 
 // Tasks
@@ -215,6 +216,8 @@ export interface TeamTask {
   assigneeName?: string
   projectId?: string
   projectName?: string
+  parentId?: string
+  parentName?: string
   dueDate?: string
   estimatedHours?: number
   storyPoints?: number
@@ -733,6 +736,30 @@ export interface UpdateDocumentDto {
   content: string
   url?: string
   tags?: string
+}
+
+// Parents (task groupings like Epics)
+export interface Parent {
+  id: string
+  name: string
+  labels: string
+  totalTasks: number
+  completedTasks: number
+  openTasks: number
+  totalStoryPoints: number
+  totalTimeSpentMinutes: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateParentDto {
+  name: string
+  labels?: string
+}
+
+export interface UpdateParentDto {
+  name: string
+  labels?: string
 }
 
 // Backup & Restore

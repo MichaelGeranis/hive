@@ -26,6 +26,7 @@ public class HiveDbContext : DbContext
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<Parent> Parents => Set<Parent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -118,6 +119,7 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Sprint).HasMaxLength(200);
             entity.HasIndex(e => e.AssigneeId);
             entity.HasIndex(e => e.ProjectId);
+            entity.HasIndex(e => e.ParentId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.DueDate);
         });
@@ -182,6 +184,15 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Url).HasMaxLength(2000);
             entity.Property(e => e.Tags).HasMaxLength(1000);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // Parent configuration
+        modelBuilder.Entity<Parent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(500).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.Labels).HasMaxLength(1000);
         });
     }
     /// Seeds initial data into the database.

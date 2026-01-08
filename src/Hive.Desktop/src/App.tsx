@@ -7,6 +7,7 @@ import DirectReports from './pages/DirectReports'
 import Reviews from './pages/Reviews'
 import Meetings from './pages/Meetings'
 import Projects from './pages/Projects'
+import Parents from './pages/Parents'
 import Tasks from './pages/Tasks'
 import Sprints from './pages/Sprints'
 import Leaves from './pages/Leaves'
@@ -112,6 +113,7 @@ function App() {
         <Route path="reviews" element={<Reviews />} />
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
+        <Route path="parents" element={<Parents />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="sprints" element={<Sprints />} />
         <Route path="leaves" element={<Leaves />} />

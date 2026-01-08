@@ -19,6 +19,7 @@ public class JiraImportService : IJiraImportService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ISprintService _sprintService;
+    private readonly IParentService _parentService;
     private readonly IAppSettingsRepository _appSettingsRepository;
 
     // Sprint name pattern: TeamName_QuarterQYear_SSprintNumber (e.g., LP_1Q25_S4)
@@ -38,18 +39,21 @@ public class JiraImportService : IJiraImportService
     private static readonly string[] TimeSpentColumns = { "Time Spent", "TimeSpent", "Time spent" };
     private static readonly string[] SprintColumns = { "Sprint" };
     private static readonly string[] LabelsColumns = { "Labels", "Label" };
+    private static readonly string[] ParentColumns = { "Parent", "Parent Link", "Parent Issue" };
 
     public JiraImportService(
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
         IProjectRepository projectRepository,
         ISprintService sprintService,
+        IParentService parentService,
         IAppSettingsRepository appSettingsRepository)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _sprintService = sprintService ?? throw new ArgumentNullException(nameof(sprintService));
+        _parentService = parentService ?? throw new ArgumentNullException(nameof(parentService));
         _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
     }
 
@@ -140,8 +144,9 @@ public class JiraImportService : IJiraImportService
         var skippedCount = 0;
         var errorCount = 0;
 
-        // Track created sprints to avoid duplicate creation attempts
+        // Track created sprints and parents to avoid duplicate creation attempts
         var createdSprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var createdParents = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
 
         for (int i = 1; i < lines.Count; i++)
         {
@@ -243,6 +248,30 @@ public class JiraImportService : IJiraImportService
                     }
                 }
 
+                // Auto-create parent and get ParentId
+                Guid? parentId = null;
+                var parentName = GetValue(rowData, ParentColumns);
+                if (!string.IsNullOrWhiteSpace(parentName))
+                {
+                    if (createdParents.TryGetValue(parentName, out var cachedParentId))
+                    {
+                        parentId = cachedParentId;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var parent = await _parentService.GetOrCreateAsync(parentName, cancellationToken);
+                            parentId = parent.Id;
+                            createdParents[parentName] = parent.Id;
+                        }
+                        catch (Exception ex)
+                        {
+                            warnings.Add($"Row {i + 1}: Failed to create parent '{parentName}': {ex.Message}");
+                        }
+                    }
+                }
+
                 if (existingTask != null)
                 {
                     // Update existing task
@@ -257,7 +286,8 @@ public class JiraImportService : IJiraImportService
                         taskData.Tags,
                         taskData.Labels,
                         taskData.Sprint,
-                        taskData.TimeSpentMinutes);
+                        taskData.TimeSpentMinutes,
+                        parentId);
 
                     if (taskData.AssigneeId != existingTask.AssigneeId)
                     {
@@ -299,7 +329,8 @@ public class JiraImportService : IJiraImportService
                         taskData.Tags,
                         taskData.Labels,
                         taskData.Sprint,
-                        taskData.TimeSpentMinutes);
+                        taskData.TimeSpentMinutes,
+                        parentId);
 
                     // Set status
                     UpdateTaskStatus(newTask, taskData.Status);

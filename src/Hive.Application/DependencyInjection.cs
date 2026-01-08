@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ISprintCapacityService, SprintCapacityService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IBackupService, BackupService>();
+        services.AddScoped<IParentService, ParentService>();
         return services;
     }
 }

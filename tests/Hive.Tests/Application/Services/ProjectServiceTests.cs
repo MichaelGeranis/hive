@@ -11,20 +11,22 @@ public class ProjectServiceTests
 {
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
+    private readonly Mock<IParentRepository> _parentRepositoryMock;
     private readonly ProjectService _service;
 
     public ProjectServiceTests()
     {
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
-        _service = new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object);
+        _parentRepositoryMock = new Mock<IParentRepository>();
+        _service = new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, _parentRepositoryMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullProjectRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ProjectService(null!, _taskRepositoryMock.Object);
+        var act = () => new ProjectService(null!, _taskRepositoryMock.Object, _parentRepositoryMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -35,11 +37,22 @@ public class ProjectServiceTests
     public void Constructor_WithNullTaskRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ProjectService(_projectRepositoryMock.Object, null!);
+        var act = () => new ProjectService(_projectRepositoryMock.Object, null!, _parentRepositoryMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("taskRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullParentRepository_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("parentRepository");
     }
 
     [Fact]
@@ -94,6 +107,10 @@ public class ProjectServiceTests
             It.Is<string[]>(labels => labels.Contains("ProjectA")),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask> { task1, task2, task3 });
+        _parentRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(
+            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetByIdAsync(project.Id);

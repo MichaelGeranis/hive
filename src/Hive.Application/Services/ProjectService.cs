@@ -14,11 +14,16 @@ public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ITeamTaskRepository _taskRepository;
+    private readonly IParentRepository _parentRepository;
 
-    public ProjectService(IProjectRepository projectRepository, ITeamTaskRepository taskRepository)
+    public ProjectService(
+        IProjectRepository projectRepository,
+        ITeamTaskRepository taskRepository,
+        IParentRepository parentRepository)
     {
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
+        _parentRepository = parentRepository ?? throw new ArgumentNullException(nameof(parentRepository));
     }
 
     public async Task<ProjectDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -156,6 +161,11 @@ public class ProjectService : IProjectService
             ? await _taskRepository.GetByMatchingLabelsAsync(projectLabels, cancellationToken)
             : Array.Empty<TeamTask>();
 
+        // Get parents that match project labels
+        var parents = projectLabels.Length > 0
+            ? await _parentRepository.GetByMatchingLabelsAsync(projectLabels, cancellationToken)
+            : Array.Empty<Parent>();
+
         var completedTasks = tasks.Count(t => t.Status == TaskStatus.Done);
         var openTasks = tasks.Count(t => t.Status != TaskStatus.Done && t.Status != TaskStatus.Cancelled);
 
@@ -174,7 +184,8 @@ public class ProjectService : IProjectService
             UpdatedAt = entity.UpdatedAt,
             TotalTasks = tasks.Count,
             CompletedTasks = completedTasks,
-            OpenTasks = openTasks
+            OpenTasks = openTasks,
+            ParentCount = parents.Count
         };
     }
 

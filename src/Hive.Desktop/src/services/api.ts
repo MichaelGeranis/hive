@@ -44,7 +44,10 @@ import type {
   CapacityAnalysis,
   Document,
   CreateDocumentDto,
-  UpdateDocumentDto
+  UpdateDocumentDto,
+  Parent,
+  CreateParentDto,
+  UpdateParentDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -252,6 +255,16 @@ export const documentsApi = {
   create: (data: CreateDocumentDto) => api.post<Document>('/documents', data).then(r => r.data),
   update: (id: string, data: UpdateDocumentDto) => api.put<Document>(`/documents/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/documents/${id}`)
+}
+
+// Parents (task groupings like Epics)
+export const parentsApi = {
+  getAll: () => api.get<Parent[]>('/parents').then(r => r.data),
+  getById: (id: string) => api.get<Parent>(`/parents/${id}`).then(r => r.data),
+  getByName: (name: string) => api.get<Parent>(`/parents/by-name/${encodeURIComponent(name)}`).then(r => r.data),
+  create: (data: CreateParentDto) => api.post<Parent>('/parents', data).then(r => r.data),
+  update: (id: string, data: UpdateParentDto) => api.put<Parent>(`/parents/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/parents/${id}`)
 }
 
 // Backup & Restore

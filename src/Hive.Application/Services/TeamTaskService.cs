@@ -16,17 +16,20 @@ public class TeamTaskService : ITeamTaskService
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IParentRepository _parentRepository;
     private readonly IAppSettingsRepository _appSettingsRepository;
 
     public TeamTaskService(
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
         IProjectRepository projectRepository,
+        IParentRepository parentRepository,
         IAppSettingsRepository appSettingsRepository)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+        _parentRepository = parentRepository ?? throw new ArgumentNullException(nameof(parentRepository));
         _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
     }
 
@@ -120,6 +123,15 @@ public class TeamTaskService : ITeamTaskService
             }
         }
 
+        if (dto.ParentId.HasValue)
+        {
+            var parent = await _parentRepository.GetByIdAsync(dto.ParentId.Value, cancellationToken);
+            if (parent is null)
+            {
+                throw new NotFoundException(nameof(Parent), dto.ParentId.Value);
+            }
+        }
+
         // Calculate estimated hours from story points using the mapping
         var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
 
@@ -136,7 +148,8 @@ public class TeamTaskService : ITeamTaskService
             dto.Tags,
             dto.Labels,
             dto.Sprint,
-            dto.TimeSpentMinutes);
+            dto.TimeSpentMinutes,
+            dto.ParentId);
 
         var created = await _taskRepository.AddAsync(entity, cancellationToken);
         return await MapToDtoAsync(created, cancellationToken);
@@ -146,10 +159,20 @@ public class TeamTaskService : ITeamTaskService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
+        if (dto.ParentId.HasValue)
+        {
+            var parent = await _parentRepository.GetByIdAsync(dto.ParentId.Value, cancellationToken);
+            if (parent is null)
+            {
+                throw new NotFoundException(nameof(Parent), dto.ParentId.Value);
+            }
+        }
+
         // Calculate estimated hours from story points using the mapping
         var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
 
         entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, estimatedHours, dto.StoryPoints, dto.Tags, dto.Labels, dto.Sprint, dto.TimeSpentMinutes);
+        entity.AssignToParent(dto.ParentId);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -284,6 +307,7 @@ public class TeamTaskService : ITeamTaskService
     {
         string? assigneeName = null;
         string? projectName = null;
+        string? parentName = null;
 
         if (entity.AssigneeId.HasValue)
         {
@@ -295,6 +319,12 @@ public class TeamTaskService : ITeamTaskService
         {
             var project = await _projectRepository.GetByIdAsync(entity.ProjectId.Value, cancellationToken);
             projectName = project?.Name;
+        }
+
+        if (entity.ParentId.HasValue)
+        {
+            var parent = await _parentRepository.GetByIdAsync(entity.ParentId.Value, cancellationToken);
+            parentName = parent?.Name;
         }
 
         return new TeamTaskDto
@@ -312,6 +342,8 @@ public class TeamTaskService : ITeamTaskService
             AssigneeName = assigneeName,
             ProjectId = entity.ProjectId,
             ProjectName = projectName,
+            ParentId = entity.ParentId,
+            ParentName = parentName,
             DueDate = entity.DueDate,
             EstimatedHours = entity.EstimatedHours,
             StoryPoints = entity.StoryPoints,

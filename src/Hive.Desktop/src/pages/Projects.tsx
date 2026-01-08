@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag } from 'lucide-react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag, Layers } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -383,6 +383,12 @@ export default function Projects() {
                     <Calendar className="w-4 h-4 text-slate-400" />
                     <span>{formatDate(project.startDate)} - {formatDate(project.targetEndDate)}</span>
                   </div>
+                  {project.parentCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-500" />
+                      <span>{project.parentCount} parent{project.parentCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Progress */}

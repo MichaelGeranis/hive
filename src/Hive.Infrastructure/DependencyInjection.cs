@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SprintCapacityRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IParentRepository, ParentRepository>();
 
         return services;
     }
@@ -75,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<ISprintRepository, SqliteSprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
         services.AddScoped<IDocumentRepository, SqliteDocumentRepository>();
+        services.AddScoped<IParentRepository, SqliteParentRepository>();
 
         // Register database backup service
         services.AddSingleton<DatabaseBackupService>();

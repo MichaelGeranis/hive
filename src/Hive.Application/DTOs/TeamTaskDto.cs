@@ -21,6 +21,8 @@ public record TeamTaskDto
     public string? AssigneeName { get; init; }
     public Guid? ProjectId { get; init; }
     public string? ProjectName { get; init; }
+    public Guid? ParentId { get; init; }
+    public string? ParentName { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }
@@ -44,6 +46,7 @@ public record CreateTeamTaskDto
     public TaskPriority Priority { get; init; } = TaskPriority.Medium;
     public Guid? AssigneeId { get; init; }
     public Guid? ProjectId { get; init; }
+    public Guid? ParentId { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }
@@ -62,6 +65,7 @@ public record UpdateTeamTaskDto
     public string Description { get; init; } = string.Empty;
     public TaskType Type { get; init; }
     public TaskPriority Priority { get; init; }
+    public Guid? ParentId { get; init; }
     public DateTime? DueDate { get; init; }
     public int? EstimatedHours { get; init; }
     public int? StoryPoints { get; init; }

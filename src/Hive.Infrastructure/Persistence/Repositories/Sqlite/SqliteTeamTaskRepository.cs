@@ -46,6 +46,15 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TeamTask>> GetByParentIdAsync(Guid parentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.TeamTasks
+            .Where(x => x.ParentId == parentId)
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<TeamTask>> GetByMatchingLabelsAsync(IEnumerable<string> labels, CancellationToken cancellationToken = default)
     {
         var labelSet = labels

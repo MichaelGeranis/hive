@@ -52,6 +52,16 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.FromResult<IReadOnlyList<TeamTask>>(entities);
     }
 
+    public Task<IReadOnlyList<TeamTask>> GetByParentIdAsync(Guid parentId, CancellationToken cancellationToken = default)
+    {
+        var entities = _context.TeamTasks.Values
+            .Where(x => x.ParentId == parentId)
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<TeamTask>>(entities);
+    }
+
     public Task<IReadOnlyList<TeamTask>> GetByMatchingLabelsAsync(IEnumerable<string> labels, CancellationToken cancellationToken = default)
     {
         var labelSet = labels

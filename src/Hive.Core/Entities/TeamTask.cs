@@ -20,6 +20,7 @@ public class TeamTask
     public string Labels { get; private set; } = string.Empty;
     public string Sprint { get; private set; } = string.Empty;
     public int? TimeSpentMinutes { get; private set; }
+    public Guid? ParentId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -38,7 +39,8 @@ public class TeamTask
         string? tags = null,
         string? labels = null,
         string? sprint = null,
-        int? timeSpentMinutes = null)
+        int? timeSpentMinutes = null,
+        Guid? parentId = null)
     {
         ValidateTitle(title);
 
@@ -57,6 +59,7 @@ public class TeamTask
         Labels = labels?.Trim() ?? string.Empty;
         Sprint = sprint?.Trim() ?? string.Empty;
         TimeSpentMinutes = timeSpentMinutes;
+        ParentId = parentId;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -71,7 +74,8 @@ public class TeamTask
         string? tags,
         string? labels = null,
         string? sprint = null,
-        int? timeSpentMinutes = null)
+        int? timeSpentMinutes = null,
+        Guid? parentId = null)
     {
         ValidateTitle(title);
 
@@ -86,6 +90,7 @@ public class TeamTask
         Labels = labels?.Trim() ?? string.Empty;
         Sprint = sprint?.Trim() ?? string.Empty;
         TimeSpentMinutes = timeSpentMinutes;
+        ParentId = parentId;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -98,6 +103,12 @@ public class TeamTask
     public void AssignToProject(Guid? projectId)
     {
         ProjectId = projectId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AssignToParent(Guid? parentId)
+    {
+        ParentId = parentId;
         UpdatedAt = DateTime.UtcNow;
     }
 

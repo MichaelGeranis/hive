@@ -5,6 +5,7 @@ import {
   Star,
   Calendar,
   FolderKanban,
+  Layers,
   CheckSquare,
   Settings,
   Hexagon,
@@ -17,6 +18,7 @@ import {
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
+  { name: 'Parents', to: '/parents', icon: Layers },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
   { name: 'Sprints', to: '/sprints', icon: Zap },
   { name: 'Team', to: '/team', icon: Users },
