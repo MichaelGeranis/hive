@@ -84,7 +84,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
   const [memberProjects, setMemberProjects] = useState<Project[]>([])
-  const [sprintFilter, setSprintFilter] = useState<number | undefined>(3) // Default: Last 3 sprints
+  const [sprintFilter, setSprintFilter] = useState<number | undefined>(undefined)
 
   // Widget customization state
   const [showCustomize, setShowCustomize] = useState(false)
@@ -310,10 +310,11 @@ export default function Dashboard() {
                        bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100
                        focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
           >
+            <option value="all">All sprints</option>
+            <option value="1">Current sprint</option>
             <option value="3">Last 3 sprints</option>
             <option value="6">Last 6 sprints</option>
             <option value="12">Last 12 sprints</option>
-            <option value="all">All sprints</option>
           </select>
         </div>
       </div>
@@ -451,6 +452,19 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
+          {siloCount > 0 && (
+            <div className="px-4 pb-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Knowledge silos detected</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    {siloCount} project{siloCount !== 1 ? 's have' : ' has'} only one member assigned. Consider cross-training or adding backup resources.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
         )}
 

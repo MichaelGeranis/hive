@@ -116,7 +116,9 @@ public class ReportingService : IReportingService
 
     private async Task<TeamOverviewDto> GetTeamOverviewAsync(CancellationToken cancellationToken)
     {
-        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var allReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        // Filter to only include direct reports (not indirect reports from team members)
+        var directReports = allReports.Where(dr => dr.IsDirect).ToList();
 
         return new TeamOverviewDto
         {

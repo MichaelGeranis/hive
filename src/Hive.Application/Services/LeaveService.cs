@@ -136,18 +136,24 @@ public class LeaveService : ILeaveService
         var today = DateTime.UtcNow.Date;
         var weekEnd = today.AddDays(7);
 
-        var currentLeaves = allLeaves.Where(l => l.IncludesDate(today)).ToList();
-        var thisWeekLeaves = allLeaves.Where(l => l.OverlapsWith(today, weekEnd)).ToList();
+        // Filter to only include leaves from direct reports (not indirect reports)
+        var allReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var directReportIds = allReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
+        var directReportLeaves = allLeaves.Where(l => directReportIds.Contains(l.DirectReportId)).ToList();
+
+        var currentLeaves = directReportLeaves.Where(l => l.IncludesDate(today)).ToList();
+        var thisWeekLeaves = directReportLeaves.Where(l => l.OverlapsWith(today, weekEnd)).ToList();
 
         var upcomingLeaves = await _leaveRepository.GetUpcomingAsync(30, cancellationToken);
+        var directReportUpcomingLeaves = upcomingLeaves.Where(l => directReportIds.Contains(l.DirectReportId)).ToList();
         var monthlyTrend = await GetMonthlyTrendAsync(6, cancellationToken);
 
         return new TeamLeaveOverviewDto
         {
-            TotalLeaveRecords = allLeaves.Count,
+            TotalLeaveRecords = directReportLeaves.Count,
             TeamMembersOnLeaveToday = currentLeaves.Select(l => l.DirectReportId).Distinct().Count(),
             TeamMembersOnLeaveThisWeek = thisWeekLeaves.Select(l => l.DirectReportId).Distinct().Count(),
-            UpcomingLeaves = (await MapToDtoListAsync(upcomingLeaves.Take(5).ToList(), cancellationToken)).ToList(),
+            UpcomingLeaves = (await MapToDtoListAsync(directReportUpcomingLeaves.Take(5).ToList(), cancellationToken)).ToList(),
             CurrentLeaves = (await MapToDtoListAsync(currentLeaves, cancellationToken)).ToList(),
             MonthlyTrend = monthlyTrend.ToList()
         };

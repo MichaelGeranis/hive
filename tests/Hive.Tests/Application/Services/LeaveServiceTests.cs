@@ -497,6 +497,8 @@ public class LeaveServiceTests
             .ReturnsAsync(new List<Leave> { leave3 });
         _leaveRepositoryMock.Setup(r => r.GetByMonthAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Leave>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
 
