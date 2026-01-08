@@ -151,7 +151,7 @@ export default function Parents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Parents</h1>
-          <p className="text-slate-500 dark:text-slate-400">Task groupings (like Epics)</p>
+          <p className="text-slate-500 dark:text-slate-400">Grouping tasks</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -278,7 +278,14 @@ export default function Parents() {
                       <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{parent.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">{parent.name}</h3>
+                        {parent.totalTasks === 0 && (
+                          <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">
+                            Epic
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="relative group">
@@ -320,48 +327,48 @@ export default function Parents() {
                   </div>
                 )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-slate-600 dark:text-slate-400">
-                      {parent.completedTasks}/{parent.totalTasks} tasks
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      {parent.totalStoryPoints} pts
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm col-span-2">
-                    <Clock className="w-4 h-4 text-blue-500" />
-                    <span className="text-slate-600 dark:text-slate-400">
-                      {formatTime(parent.totalTimeSpentMinutes)} logged
-                    </span>
-                  </div>
-                </div>
+                {/* Stats - only show if there are countable tasks */}
+                {parent.totalTasks > 0 && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {parent.completedTasks}/{parent.totalTasks} tasks
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {parent.totalStoryPoints} pts
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm col-span-2">
+                        <Clock className="w-4 h-4 text-blue-500" />
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {formatTime(parent.totalTimeSpentMinutes)} logged
+                        </span>
+                      </div>
+                    </div>
 
-                {/* Progress */}
-                <div className="mt-4">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-500 dark:text-slate-400">Progress</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100">
-                      {parent.totalTasks > 0
-                        ? `${Math.round((parent.completedTasks / parent.totalTasks) * 100)}%`
-                        : '0%'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
-                    <div
-                      className="bg-amber-500 h-2 rounded-full transition-all"
-                      style={{
-                        width: parent.totalTasks > 0
-                          ? `${(parent.completedTasks / parent.totalTasks) * 100}%`
-                          : '0%'
-                      }}
-                    />
-                  </div>
-                </div>
+                    {/* Progress */}
+                    <div className="mt-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-slate-500 dark:text-slate-400">Progress</span>
+                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                          {Math.round((parent.completedTasks / parent.totalTasks) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
+                        <div
+                          className="bg-amber-500 h-2 rounded-full transition-all"
+                          style={{
+                            width: `${(parent.completedTasks / parent.totalTasks) * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           ))}

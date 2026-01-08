@@ -216,6 +216,7 @@ export default function Dashboard() {
     total: assignee.totalTasks,
     completed: assignee.completedTasks,
     inProgress: assignee.inProgressTasks,
+    pending: assignee.totalTasks - assignee.completedTasks - assignee.inProgressTasks,
     overdue: assignee.overdueTasks
   }))
 
@@ -335,7 +336,7 @@ export default function Dashboard() {
         />
          {capacityAnalysis?.currentSprint && (
           <StatCard
-            title="Current Sprint"
+            title={'Current Sprint' + (capacityAnalysis.currentSprint.sprintName ? `: ${capacityAnalysis.currentSprint.sprintName}` : '')}
             value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
             subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
             icon={<ZapIcon className="w-6 h-6" />}
@@ -528,7 +529,7 @@ export default function Dashboard() {
         return (
           <Card>
             <CardHeader
-              title="Sprint Capacity Analysis"
+              title="Capacity"
               subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%. Average Completed SP: ${avgCompletedSP}. Available Members: ${availableMembers}/${totalMembers} (${membersOnLeave} on leave).`}
             />
             <CardContent>
@@ -572,64 +573,27 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Predicted Capacity</p>
                 </div>
               </div>
+              {(capacityAnalysis.averageUtilization ?? 0) < 75 && (
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Low capacity utilization detected</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                      Average utilization is below 75%.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         );
       })()}
-
-      {/* Estimation Accuracy */}
-      {widgets.estimationAccuracy && accuracy && accuracy.sprints.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Estimation Accuracy"
-            subtitle={`from all tasks`}
-          />
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={accuracy.sprints}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="sprintName" />
-                <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
-                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} label={{ value: 'Accuracy %', angle: 90, position: 'insideRight' }} />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated" dot={{ fill: '#3b82f6' }} />
-                <Line yAxisId="left" type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual" dot={{ fill: '#10b981' }} />
-                <Line yAxisId="right" type="monotone" dataKey="accuracyPercentage" stroke="#f59e0b" strokeWidth={2} name="Accuracy %" dot={{ fill: '#f59e0b' }} />
-              </LineChart>
-            </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">{accuracy.totalEstimatedHours}h</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Estimated</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-500">{accuracy.totalActualHours}h</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Actual</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.totalVarianceHours <= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {accuracy.totalVarianceHours > 0 ? '+' : ''}{accuracy.totalVarianceHours}h
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Variance</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.overallAccuracyPercentage >= 80 ? 'text-green-500' : accuracy.overallAccuracyPercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {accuracy.overallAccuracyPercentage}%
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
       
       {/* Team Velocity */}
       {widgets.teamVelocity && velocity && velocity.sprints.length > 0 && (
         <Card>
           <CardHeader
-            title="Team Velocity"
+            title="Velocity"
             subtitle={`from completed tasks`}
           />
           <CardContent>
@@ -679,13 +643,13 @@ export default function Dashboard() {
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-500">{velocity.averageVelocity}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Avg Velocity</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Avg Velocity (SP)</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-500">
                   {Math.round(velocity.sprints.reduce((sum, s) => sum + s.totalTimeSpentMinutes, 0) / 60)}h
                 </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total Logged</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Hours Logged</p>
               </div>
               <div className="text-center">
                 <p className={`text-2xl font-bold ${velocity.completionTrend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -694,10 +658,79 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">Trend</p>
               </div>
             </div>
+            {velocity.completionTrend < 0 && (
+              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Negative velocity trend detected</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Team velocity is declining.
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
+      {/* Estimation Accuracy */}
+      {widgets.estimationAccuracy && accuracy && accuracy.sprints.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Estimation Accuracy"
+            subtitle={`from all tasks`}
+          />
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={accuracy.sprints}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="sprintName" />
+                <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} label={{ value: 'Accuracy %', angle: 90, position: 'insideRight' }} />
+                <Tooltip />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated hours" dot={{ fill: '#3b82f6' }} />
+                <Line yAxisId="left" type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual hours" dot={{ fill: '#10b981' }} />
+                <Line yAxisId="right" type="monotone" dataKey="accuracyPercentage" stroke="#f59e0b" strokeWidth={2} name="Accuracy %" dot={{ fill: '#f59e0b' }} />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-500">{accuracy.totalEstimatedHours}h</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Estimated Hours</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-500">{accuracy.totalActualHours}h</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total Actual Hours</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${accuracy.totalVarianceHours <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {accuracy.totalVarianceHours > 0 ? '+' : ''}{accuracy.totalVarianceHours}h
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Variance</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${accuracy.overallAccuracyPercentage >= 80 ? 'text-green-500' : accuracy.overallAccuracyPercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                  {accuracy.overallAccuracyPercentage}%
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
+              </div>
+            </div>
+            {accuracy.sprints.some(s => s.accuracyPercentage < 75) && (
+              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Low estimation accuracy detected</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Some sprints show accuracy below 75%.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
 
       {/* Task Distribution by Assignee - Members Workload*/}
       {widgets.membersWorkload && (
@@ -712,7 +745,7 @@ export default function Dashboard() {
               <Tooltip />
               <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
               <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="overdue" stackId="a" fill="#ef4444" name="Overdue" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
