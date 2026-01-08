@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag, Layers } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag, Layers, X, Filter } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import { ProjectStatus } from '../types'
@@ -57,6 +57,28 @@ export default function Projects() {
     }
   }
 
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+
+  // Get all unique labels from projects
+  const allLabels = useMemo(() => {
+    const labelSet = new Set<string>()
+    projects.forEach(p => {
+      if (p.labels) {
+        p.labels.split(',').forEach(label => {
+          const trimmed = label.trim()
+          if (trimmed) labelSet.add(trimmed)
+        })
+      }
+    })
+    return Array.from(labelSet).sort()
+  }, [projects])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedLabel(null)
+    setFilter('all')
+  }
+
   const filteredProjects = () => {
     let result = projects
 
@@ -67,6 +89,13 @@ export default function Projects() {
         p.name.toLowerCase().includes(query) ||
         p.description?.toLowerCase().includes(query) ||
         p.labels?.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply label filter
+    if (selectedLabel) {
+      result = result.filter(p =>
+        p.labels?.split(',').some(label => label.trim().toLowerCase() === selectedLabel.toLowerCase())
       )
     }
 
@@ -268,38 +297,72 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search projects..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'active', label: 'Active' },
-            { value: ProjectStatus.Planning, label: 'Planning' },
-            { value: ProjectStatus.OnHold, label: 'On Hold' },
-            { value: ProjectStatus.Completed, label: 'Completed' },
-          ].map((f) => (
+          {(searchQuery || selectedLabel) && (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value as any)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === f.value
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              {f.label}
+              <X className="w-4 h-4" />
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* Labels/Tags */}
+        {allLabels.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag className="w-4 h-4 text-slate-400" />
+            {allLabels.map((label) => (
+              <button
+                key={label}
+                onClick={() => setSelectedLabel(selectedLabel === label ? null : label)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedLabel === label
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Status Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'active', label: 'Active' },
+              { value: ProjectStatus.Planning, label: 'Planning' },
+              { value: ProjectStatus.OnHold, label: 'On Hold' },
+              { value: ProjectStatus.Completed, label: 'Completed' },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value as any)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === f.value
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

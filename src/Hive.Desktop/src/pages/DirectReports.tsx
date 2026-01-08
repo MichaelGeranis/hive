@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Users, UserMinus } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Users, UserMinus, X, Filter } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto, BulkImportResultDto } from '../types'
@@ -187,18 +187,53 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
     return remainingMonths > 0 ? `${years}y ${remainingMonths}m` : `${years} years`
   }
 
-  const filteredDirectReports = () => {
-    if (!searchQuery.trim()) return directReports
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
+  const [reportFilter, setReportFilter] = useState<'all' | 'direct' | 'indirect'>('all')
 
-    const query = searchQuery.toLowerCase()
-    return directReports.filter(dr =>
-      dr.fullName.toLowerCase().includes(query) ||
-      dr.firstName.toLowerCase().includes(query) ||
-      dr.lastName.toLowerCase().includes(query) ||
-      dr.email.toLowerCase().includes(query) ||
-      dr.jobTitle?.toLowerCase().includes(query) ||
-      dr.department?.toLowerCase().includes(query)
-    )
+  // Get all unique departments
+  const allDepartments = useMemo(() => {
+    const deptSet = new Set<string>()
+    directReports.forEach(dr => {
+      if (dr.department) deptSet.add(dr.department.trim())
+    })
+    return Array.from(deptSet).sort()
+  }, [directReports])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedDepartment(null)
+    setReportFilter('all')
+  }
+
+  const filteredDirectReports = () => {
+    let result = directReports
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(dr =>
+        dr.fullName.toLowerCase().includes(query) ||
+        dr.firstName.toLowerCase().includes(query) ||
+        dr.lastName.toLowerCase().includes(query) ||
+        dr.email.toLowerCase().includes(query) ||
+        dr.jobTitle?.toLowerCase().includes(query) ||
+        dr.department?.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply department filter
+    if (selectedDepartment) {
+      result = result.filter(dr => dr.department?.trim() === selectedDepartment)
+    }
+
+    // Apply direct/indirect filter
+    if (reportFilter === 'direct') {
+      result = result.filter(dr => dr.isDirect)
+    } else if (reportFilter === 'indirect') {
+      result = result.filter(dr => !dr.isDirect)
+    }
+
+    return result
   }
 
   if (loading) {
@@ -245,16 +280,71 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search team members..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-        />
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search team members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+          />
+          {(searchQuery || selectedDepartment || reportFilter !== 'all') && (
+            <button
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Departments */}
+        {allDepartments.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Building2 className="w-4 h-4 text-slate-400" />
+            {allDepartments.map((dept) => (
+              <button
+                key={dept}
+                onClick={() => setSelectedDepartment(selectedDepartment === dept ? null : dept)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedDepartment === dept
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {dept}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Report Type Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'direct', label: 'Direct Reports' },
+              { value: 'indirect', label: 'Indirect Reports' },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setReportFilter(f.value as any)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  reportFilter === f.value
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Add/Edit Form Modal */}

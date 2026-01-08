@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, Layers, Search, Tag, Edit, Trash2, MoreVertical, CheckCircle, Clock } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Plus, Layers, Search, Tag, Edit, Trash2, MoreVertical, CheckCircle, Clock, X } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { parentsApi } from '../services/api'
 import type { Parent } from '../types'
@@ -44,14 +44,47 @@ export default function Parents() {
     }
   }
 
-  const filteredParents = () => {
-    if (!searchQuery.trim()) return parents
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
 
-    const query = searchQuery.toLowerCase()
-    return parents.filter(p =>
-      p.name.toLowerCase().includes(query) ||
-      p.labels?.toLowerCase().includes(query)
-    )
+  // Get all unique labels from parents
+  const allLabels = useMemo(() => {
+    const labelSet = new Set<string>()
+    parents.forEach(p => {
+      if (p.labels) {
+        p.labels.split(',').forEach(label => {
+          const trimmed = label.trim()
+          if (trimmed) labelSet.add(trimmed)
+        })
+      }
+    })
+    return Array.from(labelSet).sort()
+  }, [parents])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedLabel(null)
+  }
+
+  const filteredParents = () => {
+    let result = parents
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.labels?.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply label filter
+    if (selectedLabel) {
+      result = result.filter(p =>
+        p.labels?.split(',').some(label => label.trim().toLowerCase() === selectedLabel.toLowerCase())
+      )
+    }
+
+    return result
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,18 +213,47 @@ export default function Parents() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search parents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
+          {(searchQuery || selectedLabel) && (
+            <button
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+
+        {/* Labels/Tags */}
+        {allLabels.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag className="w-4 h-4 text-slate-400" />
+            {allLabels.map((label) => (
+              <button
+                key={label}
+                onClick={() => setSelectedLabel(selectedLabel === label ? null : label)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedLabel === label
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Parents Grid */}

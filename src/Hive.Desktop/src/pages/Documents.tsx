@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Plus, Search, Edit, Trash2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Search, Edit, Trash2, ExternalLink, ChevronDown, ChevronUp, Tag, X } from 'lucide-react'
 import { documentsApi } from '../services/api'
 import type { Document } from '../types'
 
@@ -84,11 +84,40 @@ export default function Documents() {
     })
   }
 
-  const filteredDocuments = (documents || []).filter(doc =>
-    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.tags.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+  // Get all unique tags from documents
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    documents.forEach(doc => {
+      if (doc.tags) {
+        doc.tags.split(',').forEach(tag => {
+          const trimmed = tag.trim()
+          if (trimmed) tagSet.add(trimmed)
+        })
+      }
+    })
+    return Array.from(tagSet).sort()
+  }, [documents])
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedTag(null)
+  }
+
+  const filteredDocuments = (documents || []).filter(doc => {
+    // Apply search filter
+    const matchesSearch = !searchTerm.trim() ||
+      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.tags.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Apply tag filter
+    const matchesTag = !selectedTag ||
+      doc.tags.split(',').some(tag => tag.trim().toLowerCase() === selectedTag.toLowerCase())
+
+    return matchesSearch && matchesTag
+  })
 
   if (loading) {
     return <div className="text-center py-8">Loading documents...</div>
@@ -107,17 +136,47 @@ export default function Documents() {
         </button>
       </div>
 
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
+          {(searchTerm || selectedTag) && (
+            <button
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+
+        {/* Tags */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag className="w-4 h-4 text-slate-400" />
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedTag === tag
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {showForm && (

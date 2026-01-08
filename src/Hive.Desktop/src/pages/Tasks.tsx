@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi, settingsApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -97,6 +97,39 @@ export default function Tasks() {
     }
   }
 
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+
+  // Get all unique labels from tasks
+  const allLabels = useMemo(() => {
+    const labelSet = new Set<string>()
+    tasks.forEach(t => {
+      if (t.labels) {
+        t.labels.split(',').forEach(label => {
+          const trimmed = label.trim()
+          if (trimmed) labelSet.add(trimmed)
+        })
+      }
+    })
+    return Array.from(labelSet).sort()
+  }, [tasks])
+
+  // Get all unique sprints from tasks
+  const allSprints = useMemo(() => {
+    const sprintSet = new Set<string>()
+    tasks.forEach(t => {
+      if (t.sprint) sprintSet.add(t.sprint.trim())
+    })
+    return Array.from(sprintSet).sort()
+  }, [tasks])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedLabel(null)
+    setSelectedSprint(null)
+    setFilter('all')
+  }
+
   const filteredTasks = () => {
     let result = tasks
 
@@ -112,6 +145,18 @@ export default function Tasks() {
         t.sprint?.toLowerCase().includes(query) ||
         t.tags?.toLowerCase().includes(query)
       )
+    }
+
+    // Apply label filter
+    if (selectedLabel) {
+      result = result.filter(t =>
+        t.labels?.split(',').some(label => label.trim().toLowerCase() === selectedLabel.toLowerCase())
+      )
+    }
+
+    // Apply sprint filter
+    if (selectedSprint) {
+      result = result.filter(t => t.sprint?.trim() === selectedSprint)
     }
 
     // Apply status filter
@@ -457,46 +502,100 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Search & Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
+          {(searchQuery || selectedLabel || selectedSprint) && (
+            <button
+              onClick={clearFilters}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { value: 'all', label: `All (${tasks.length})`, count: tasks.length },
-            { value: 'overdue', label: `Overdue (${overdueCount})`, count: overdueCount },
-            { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})`, count: backlogCount },
-            { value: TaskStatus.Todo, label: `To Do (${todoCount})`, count: todoCount },
-            { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})`, count: blockedCount },
-            { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})`, count: inProgressCount },
-            { value: TaskStatus.InReview, label: `In Review (${inReviewCount})`, count: inReviewCount },
-            { value: TaskStatus.InTest, label: `In Test (${inTestCount})`, count: inTestCount },
-            { value: TaskStatus.POAcceptance, label: `PO Acceptance (${poAcceptanceCount})`, count: poAcceptanceCount },
-            { value: TaskStatus.ReadyToRelease, label: `Ready To Release (${readyToReleaseCount})`, count: readyToReleaseCount },
-            { value: TaskStatus.Done, label: `Done (${doneCount})`, count: doneCount },
-          ]
-            .filter((f) => f.value === 'all' || f.count > 0)
-            .map((f) => (
+
+        {/* Labels/Tags */}
+        {allLabels.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag className="w-4 h-4 text-slate-400" />
+            {allLabels.map((label) => (
               <button
-                key={f.value}
-                onClick={() => setFilter(f.value as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filter === f.value
+                key={label}
+                onClick={() => setSelectedLabel(selectedLabel === label ? null : label)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedLabel === label
                     ? 'bg-amber-500 text-white'
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
-                {f.label}
+                {label}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Sprints */}
+        {allSprints.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Zap className="w-4 h-4 text-slate-400" />
+            {allSprints.map((sprint) => (
+              <button
+                key={sprint}
+                onClick={() => setSelectedSprint(selectedSprint === sprint ? null : sprint)}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedSprint === sprint
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {sprint}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Status Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: 'all', label: `All (${tasks.length})`, count: tasks.length },
+              { value: 'overdue', label: `Overdue (${overdueCount})`, count: overdueCount },
+              { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})`, count: backlogCount },
+              { value: TaskStatus.Todo, label: `To Do (${todoCount})`, count: todoCount },
+              { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})`, count: blockedCount },
+              { value: TaskStatus.InProgress, label: `In Progress (${inProgressCount})`, count: inProgressCount },
+              { value: TaskStatus.InReview, label: `In Review (${inReviewCount})`, count: inReviewCount },
+              { value: TaskStatus.InTest, label: `In Test (${inTestCount})`, count: inTestCount },
+              { value: TaskStatus.POAcceptance, label: `PO Acceptance (${poAcceptanceCount})`, count: poAcceptanceCount },
+              { value: TaskStatus.ReadyToRelease, label: `Ready To Release (${readyToReleaseCount})`, count: readyToReleaseCount },
+              { value: TaskStatus.Done, label: `Done (${doneCount})`, count: doneCount },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value as any)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filter === f.value
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+          </div>
         </div>
       </div>
 
