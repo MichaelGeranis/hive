@@ -17,6 +17,7 @@ public class ReportingServiceTests
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
     private readonly Mock<ISprintCapacityRepository> _sprintCapacityRepositoryMock;
     private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
+    private readonly Mock<IParentRepository> _parentRepositoryMock;
     private readonly ReportingService _service;
 
     public ReportingServiceTests()
@@ -30,6 +31,7 @@ public class ReportingServiceTests
         _sprintRepositoryMock = new Mock<ISprintRepository>();
         _sprintCapacityRepositoryMock = new Mock<ISprintCapacityRepository>();
         _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
+        _parentRepositoryMock = new Mock<IParentRepository>();
 
         _service = new ReportingService(
             _directReportRepositoryMock.Object,
@@ -40,7 +42,8 @@ public class ReportingServiceTests
             _projectRepositoryMock.Object,
             _sprintRepositoryMock.Object,
             _sprintCapacityRepositoryMock.Object,
-            _appSettingsRepositoryMock.Object);
+            _appSettingsRepositoryMock.Object,
+            _parentRepositoryMock.Object);
     }
 
     #region Dashboard Overview Tests
@@ -284,6 +287,8 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<Project>());
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetTasksAnalyticsAsync();
@@ -317,6 +322,8 @@ public class ReportingServiceTests
             .ReturnsAsync(projects);
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetTasksAnalyticsAsync();
@@ -328,6 +335,151 @@ public class ReportingServiceTests
         result.Projects.OnHoldProjects.Should().Be(1);
         result.Projects.CompletedProjects.Should().Be(1);
         result.Projects.CancelledProjects.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromTaskCounts()
+    {
+        // Arrange
+        var parent = new Parent("Epic Task 1");
+        var tasks = new List<TeamTask>
+        {
+            CreateTask(TaskStatus.Done, null, "Epic Task 1"),  // This is also a parent - should be excluded
+            CreateTask(TaskStatus.Done, null, "Regular Task 1"),
+            CreateTask(TaskStatus.InProgress, null, "Regular Task 2"),
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksAnalyticsAsync();
+
+        // Assert - Only 2 tasks should be counted (parent task excluded)
+        result.Tasks.TotalTasks.Should().Be(2);
+        result.Tasks.DoneTasks.Should().Be(1);
+        result.Tasks.InProgressTasks.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromStoryPoints()
+    {
+        // Arrange
+        var parent = new Parent("Epic Task");
+        var parentTask = CreateTask(TaskStatus.Done, null, "Epic Task");
+        SetTaskStoryPoints(parentTask, 100);  // This should be excluded
+        var regularTask1 = CreateTask(TaskStatus.Done, null, "Regular Task 1");
+        SetTaskStoryPoints(regularTask1, 5);
+        var regularTask2 = CreateTask(TaskStatus.Done, null, "Regular Task 2");
+        SetTaskStoryPoints(regularTask2, 3);
+
+        var tasks = new List<TeamTask> { parentTask, regularTask1, regularTask2 };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksAnalyticsAsync();
+
+        // Assert - Only regular tasks' story points should be counted
+        result.Tasks.TotalTasks.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromTimeSpent()
+    {
+        // Arrange
+        var parent = new Parent("Epic Task");
+        var parentTask = CreateTask(TaskStatus.Done, null, "Epic Task");
+        SetTaskTimeSpent(parentTask, 6000);  // 100 hours - should be excluded
+        var regularTask1 = CreateTask(TaskStatus.Done, null, "Regular Task 1");
+        SetTaskTimeSpent(regularTask1, 120);  // 2 hours
+        var regularTask2 = CreateTask(TaskStatus.Done, null, "Regular Task 2");
+        SetTaskTimeSpent(regularTask2, 60);  // 1 hour
+
+        var tasks = new List<TeamTask> { parentTask, regularTask1, regularTask2 };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksAnalyticsAsync();
+
+        // Assert - Only regular tasks' time should be counted (3 hours total)
+        result.Productivity.TotalActualHours.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_CaseInsensitive()
+    {
+        // Arrange
+        var parent = new Parent("EPIC TASK");
+        var tasks = new List<TeamTask>
+        {
+            CreateTask(TaskStatus.Done, null, "epic task"),  // Lowercase - should still be excluded
+            CreateTask(TaskStatus.Done, null, "Regular Task"),
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksAnalyticsAsync();
+
+        // Assert - Parent task should be excluded (case insensitive match)
+        result.Tasks.TotalTasks.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTasksByAssigneeReportAsync_ExcludesTasksThatAreParents()
+    {
+        // Arrange
+        var parent = new Parent("Epic Task");
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
+        var parentTask = CreateTask(TaskStatus.Done, directReport.Id, "Epic Task");
+        SetTaskTimeSpent(parentTask, 6000);  // Should be excluded
+        var regularTask = CreateTask(TaskStatus.Done, directReport.Id, "Regular Task");
+        SetTaskTimeSpent(regularTask, 120);
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { parentTask, regularTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { directReport });
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksByAssigneeReportAsync();
+
+        // Assert
+        var johnTasks = result.FirstOrDefault(r => r.AssigneeId == directReport.Id);
+        johnTasks.Should().NotBeNull();
+        johnTasks!.TotalTasks.Should().Be(1);  // Only regular task counted
+        johnTasks.TotalActualHours.Should().Be(2);  // Only 2 hours (120 min / 60)
     }
 
     #endregion
@@ -364,6 +516,8 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<TeamTask>());
         _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(directReport.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetDirectReportAnalyticsAsync(directReport.Id);
@@ -481,6 +635,8 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<TeamTask> { task1, task2, unassignedTask });
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { directReport });
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetTasksByAssigneeReportAsync();
@@ -511,6 +667,8 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<TeamTask>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
     }
 
     private void SetupRepositories(
@@ -533,6 +691,8 @@ public class ReportingServiceTests
             .ReturnsAsync(tasks);
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(projects);
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         foreach (var dr in directReports)
         {
@@ -605,9 +765,9 @@ public class ReportingServiceTests
             .ToList();
     }
 
-    private static TeamTask CreateTask(TaskStatus status, Guid? assigneeId = null)
+    private static TeamTask CreateTask(TaskStatus status, Guid? assigneeId = null, string? title = null)
     {
-        var task = new TeamTask($"Task {Guid.NewGuid()}", assigneeId: assigneeId);
+        var task = new TeamTask(title ?? $"Task {Guid.NewGuid()}", assigneeId: assigneeId);
         switch (status)
         {
             case TaskStatus.Todo:
@@ -632,6 +792,18 @@ public class ReportingServiceTests
                 break;
         }
         return task;
+    }
+
+    private static void SetTaskStoryPoints(TeamTask task, int storyPoints)
+    {
+        task.Update(task.Title, task.Description, task.Type, task.Priority, task.DueDate,
+            task.EstimatedHours, storyPoints, task.Tags, task.Labels, task.Sprint);
+    }
+
+    private static void SetTaskTimeSpent(TeamTask task, int timeSpentMinutes)
+    {
+        task.Update(task.Title, task.Description, task.Type, task.Priority, task.DueDate,
+            task.EstimatedHours, task.StoryPoints, task.Tags, task.Labels, task.Sprint, timeSpentMinutes);
     }
 
     private static List<Project> CreateProjects(int count)

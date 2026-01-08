@@ -21,6 +21,7 @@ public class ReportingService : IReportingService
     private readonly ISprintRepository _sprintRepository;
     private readonly ISprintCapacityRepository _sprintCapacityRepository;
     private readonly IAppSettingsRepository _appSettingsRepository;
+    private readonly IParentRepository _parentRepository;
 
     public ReportingService(
         IDirectReportRepository directReportRepository,
@@ -31,7 +32,8 @@ public class ReportingService : IReportingService
         IProjectRepository projectRepository,
         ISprintRepository sprintRepository,
         ISprintCapacityRepository sprintCapacityRepository,
-        IAppSettingsRepository appSettingsRepository)
+        IAppSettingsRepository appSettingsRepository,
+        IParentRepository parentRepository)
     {
         _directReportRepository = directReportRepository;
         _reviewRepository = reviewRepository;
@@ -42,6 +44,17 @@ public class ReportingService : IReportingService
         _sprintRepository = sprintRepository;
         _sprintCapacityRepository = sprintCapacityRepository;
         _appSettingsRepository = appSettingsRepository;
+        _parentRepository = parentRepository;
+    }
+
+    /// <summary>
+    /// Filters out tasks that are also parents (tasks whose title matches a parent name).
+    /// These tasks should not be included in counts and estimations.
+    /// </summary>
+    private static List<TeamTask> ExcludeParentTasks(IReadOnlyList<TeamTask> tasks, IReadOnlyList<Parent> parents)
+    {
+        var parentNames = parents.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return tasks.Where(t => !parentNames.Contains(t.Title)).ToList();
     }
 
     /// <summary>
@@ -215,15 +228,19 @@ public class ReportingService : IReportingService
         var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var filteredTasks = ExcludeParentTasks(allTasks, parents);
 
         // Filter tasks by sprint count if requested
-        var tasks = allTasks;
+        var tasks = filteredTasks.AsReadOnly() as IReadOnlyList<TeamTask> ?? filteredTasks;
         if (sprintCount.HasValue && sprintCount.Value > 0)
         {
             var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
 
             // Get unique sprint names from tasks (using latest sprint per task)
-            var uniqueSprintNames = allTasks
+            var uniqueSprintNames = filteredTasks
                 .Where(t => !string.IsNullOrEmpty(t.Sprint))
                 .Select(t => GetLatestSprintFromTask(t.Sprint!))
                 .Where(s => !string.IsNullOrEmpty(s))
@@ -241,7 +258,7 @@ public class ReportingService : IReportingService
             // Filter tasks to only those whose latest sprint is in the selected sprints
             if (sprintNames.Count > 0)
             {
-                tasks = allTasks
+                tasks = filteredTasks
                     .Where(t => !string.IsNullOrEmpty(t.Sprint) && sprintNames.Contains(GetLatestSprintFromTask(t.Sprint!)))
                     .ToList();
             }
@@ -371,7 +388,11 @@ public class ReportingService : IReportingService
 
         var reviews = await _reviewRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
         var meetings = await _meetingRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
-        var tasks = await _taskRepository.GetByAssigneeIdAsync(directReportId, cancellationToken);
+        var allTasks = await _taskRepository.GetByAssigneeIdAsync(directReportId, cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var tasks = ExcludeParentTasks(allTasks, parents);
 
         // Reviews analytics
         var completedReviews = reviews.Where(r => r.Status == ReviewStatus.Completed).ToList();
@@ -539,8 +560,12 @@ public class ReportingService : IReportingService
 
     public async Task<IReadOnlyList<TasksByAssigneeDto>> GetTasksByAssigneeReportAsync(CancellationToken cancellationToken = default)
     {
-        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var tasks = ExcludeParentTasks(allTasks, parents);
 
         var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
 
@@ -607,9 +632,13 @@ public class ReportingService : IReportingService
 
     public async Task<TeamVelocityDto> GetTeamVelocityAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
     {
-        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var tasks = ExcludeParentTasks(allTasks, parents);
 
         var completedTasks = tasks
             .Where(t => t.Status == TaskStatus.Done && t.StoryPoints.HasValue && !string.IsNullOrEmpty(t.Sprint))
@@ -694,8 +723,10 @@ public class ReportingService : IReportingService
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
 
-        var allTasks = tasks.ToList();
+        // Exclude tasks that are also parents from counts and estimations
+        var allTasks = ExcludeParentTasks(tasks, parents);
 
         if (allTasks.Count == 0)
         {
@@ -843,9 +874,13 @@ public class ReportingService : IReportingService
 
     public async Task<LateTasksReportDto> GetLateTasksReportAsync(CancellationToken cancellationToken = default)
     {
-        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var tasks = ExcludeParentTasks(allTasks, parents);
 
         var directReportMap = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
         var projectMap = projects.ToDictionary(p => p.Id, p => p.Name);
@@ -921,7 +956,11 @@ public class ReportingService : IReportingService
     {
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
-        var tasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+
+        // Exclude tasks that are also parents from counts and estimations
+        var tasks = ExcludeParentTasks(allTasks, parents);
 
         if (sprints.Count == 0)
         {
