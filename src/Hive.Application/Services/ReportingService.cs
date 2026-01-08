@@ -122,7 +122,12 @@ public class ReportingService : IReportingService
 
     public async Task<ReviewsOverviewDto> GetReviewsAnalyticsAsync(CancellationToken cancellationToken = default)
     {
-        var reviews = await _reviewRepository.GetAllAsync(cancellationToken);
+        var allReviews = await _reviewRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+
+        // Filter reviews to only include reviews for direct reports (IsDirect = true)
+        var directReportIds = directReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
+        var reviews = allReviews.Where(r => directReportIds.Contains(r.DirectReportId)).ToList();
 
         var draftCount = reviews.Count(r => r.Status == ReviewStatus.Draft);
         var submittedCount = reviews.Count(r => r.Status == ReviewStatus.Submitted);

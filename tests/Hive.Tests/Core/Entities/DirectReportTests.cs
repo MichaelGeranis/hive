@@ -192,7 +192,7 @@ public class DirectReportTests
         var newHireDate = new DateTime(2022, 5, 1);
 
         // Act
-        directReport.Update(newFirstName, newLastName, newEmail, newJobTitle, newDepartment, newHireDate);
+        directReport.Update(newFirstName, newLastName, newEmail, newJobTitle, newDepartment, newHireDate, true);
 
         // Assert
         directReport.FirstName.Should().Be(newFirstName);
@@ -212,7 +212,7 @@ public class DirectReportTests
         var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.Now);
 
         // Act
-        var act = () => directReport.Update("", "Smith", "jane@test.com", "Dev", "Eng", DateTime.Now);
+        var act = () => directReport.Update("", "Smith", "jane@test.com", "Dev", "Eng", DateTime.Now, true);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -226,7 +226,7 @@ public class DirectReportTests
         var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.Now);
 
         // Act
-        var act = () => directReport.Update("Jane", "Smith", "invalid", "Dev", "Eng", DateTime.Now);
+        var act = () => directReport.Update("Jane", "Smith", "invalid", "Dev", "Eng", DateTime.Now, true);
 
         // Assert
         act.Should().Throw<ArgumentException>()

@@ -96,6 +96,8 @@ public class ReportingServiceTests
         // Arrange
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PerformanceReview>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();
@@ -110,7 +112,8 @@ public class ReportingServiceTests
     public async Task GetReviewsAnalyticsAsync_CalculatesStatusBreakdownCorrectly()
     {
         // Arrange
-        var directReportId = Guid.NewGuid();
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.UtcNow);
+        var directReportId = directReport.Id;
         var reviews = new List<PerformanceReview>
         {
             CreateReview(directReportId, ReviewStatus.Draft),
@@ -122,6 +125,8 @@ public class ReportingServiceTests
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(reviews);
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { directReport });
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();
@@ -139,7 +144,8 @@ public class ReportingServiceTests
     public async Task GetReviewsAnalyticsAsync_CalculatesRatingDistribution()
     {
         // Arrange
-        var directReportId = Guid.NewGuid();
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.UtcNow);
+        var directReportId = directReport.Id;
         var reviews = new List<PerformanceReview>
         {
             CreateCompletedReviewWithRating(directReportId, PerformanceRating.ExceedsExpectations),
@@ -149,6 +155,8 @@ public class ReportingServiceTests
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(reviews);
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { directReport });
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();

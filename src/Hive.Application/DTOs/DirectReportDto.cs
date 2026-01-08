@@ -13,6 +13,7 @@ public record DirectReportDto
     public string JobTitle { get; init; } = string.Empty;
     public string Department { get; init; } = string.Empty;
     public DateTime HireDate { get; init; }
+    public bool IsDirect { get; init; } = true;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
@@ -28,6 +29,7 @@ public record CreateDirectReportDto
     public string JobTitle { get; init; } = string.Empty;
     public string Department { get; init; } = string.Empty;
     public DateTime HireDate { get; init; }
+    public bool IsDirect { get; init; } = true;
 }
 
 /// <summary>
@@ -41,6 +43,7 @@ public record UpdateDirectReportDto
     public string JobTitle { get; init; } = string.Empty;
     public string Department { get; init; } = string.Empty;
     public DateTime HireDate { get; init; }
+    public bool IsDirect { get; init; } = true;
 }
 
 /// <summary>

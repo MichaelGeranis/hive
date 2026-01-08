@@ -59,9 +59,10 @@ export default function Meetings() {
   })
 
   // Notes state
-  const [expandedMeetingId, setExpandedMeetingId] = useState<string | null>(null)
   const [meetingNotes, setMeetingNotes] = useState<Record<string, MeetingNote[]>>({})
   const [showNoteForm, setShowNoteForm] = useState(false)
+  const [expandedAgendas, setExpandedAgendas] = useState<Set<string>>(new Set())
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
   const [noteFormData, setNoteFormData] = useState<CreateMeetingNoteDto>({
     meetingId: '',
     content: '',
@@ -144,15 +145,20 @@ export default function Meetings() {
     }
   }
 
-  const handleToggleExpand = async (meetingId: string) => {
-    if (expandedMeetingId === meetingId) {
-      setExpandedMeetingId(null)
-    } else {
-      setExpandedMeetingId(meetingId)
-      if (!meetingNotes[meetingId]) {
-        await loadMeetingNotes(meetingId)
+  const toggleNotesExpand = async (meetingId: string) => {
+    setExpandedNotes(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(meetingId)) {
+        newSet.delete(meetingId)
+      } else {
+        newSet.add(meetingId)
+        // Load notes if not already loaded
+        if (!meetingNotes[meetingId]) {
+          loadMeetingNotes(meetingId)
+        }
       }
-    }
+      return newSet
+    })
   }
 
   const filteredMeetings = () => {
@@ -259,6 +265,18 @@ export default function Meetings() {
 
   const isPastMeeting = (meeting: OneOnOneMeeting) => {
     return new Date(meeting.meetingDate) < new Date()
+  }
+
+  const toggleAgendaExpand = (meetingId: string) => {
+    setExpandedAgendas(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(meetingId)) {
+        newSet.delete(meetingId)
+      } else {
+        newSet.add(meetingId)
+      }
+      return newSet
+    })
   }
 
   if (loading) {
@@ -539,16 +557,6 @@ export default function Meetings() {
                         {meeting.noteCount}
                       </span>
                     )}
-                    <button
-                      onClick={() => handleToggleExpand(meeting.id)}
-                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-                    >
-                      {expandedMeetingId === meeting.id ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </button>
                     <div className="relative group">
                       <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                         <MoreVertical className="w-5 h-5 text-slate-400" />
@@ -576,100 +584,125 @@ export default function Meetings() {
                 {/* Agenda */}
                 {meeting.agenda && (
                   <div className="mt-4 pt-4 border-t dark:border-slate-700">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Agenda</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 whitespace-pre-wrap">{meeting.agenda}</p>
+                    <button
+                      onClick={() => toggleAgendaExpand(meeting.id)}
+                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 w-full text-left"
+                    >
+                      {expandedAgendas.has(meeting.id) ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                      Agenda
+                    </button>
+                    {expandedAgendas.has(meeting.id) && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 whitespace-pre-wrap ml-6">{meeting.agenda}</p>
+                    )}
                   </div>
                 )}
 
-                {/* Expanded Notes Section */}
-                {expandedMeetingId === meeting.id && (
-                  <div className="mt-4 pt-4 border-t dark:border-slate-700">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <StickyNote className="w-4 h-4" />
-                        Notes
-                      </h4>
-                      <button
-                        onClick={() => openNoteForm(meeting.id)}
-                        className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Note
-                      </button>
-                    </div>
+                {/* Notes Section */}
+                <div className="mt-4 pt-4 border-t dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => toggleNotesExpand(meeting.id)}
+                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+                    >
+                      {expandedNotes.has(meeting.id) ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                      <StickyNote className="w-4 h-4" />
+                      Notes
+                      {meeting.noteCount > 0 && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">({meeting.noteCount})</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => openNoteForm(meeting.id)}
+                      className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
 
-                    {(() => {
-                      const notes = meetingNotes[meeting.id] || []
-                      return notes.length > 0 ? (
-                        <div className="space-y-2">
-                          {notes.map((note) => (
-                            <div
-                              key={note.id}
-                              className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
-                                note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
-                                      {note.categoryName}
-                                    </span>
-                                    {note.isPrivate && (
-                                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
-                                        Private
+                  {expandedNotes.has(meeting.id) && (
+                    <div className="mt-3 ml-6">
+                      {(() => {
+                        const notes = meetingNotes[meeting.id] || []
+                        return notes.length > 0 ? (
+                          <div className="space-y-2">
+                            {notes.map((note) => (
+                              <div
+                                key={note.id}
+                                className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
+                                  note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
+                                        {note.categoryName}
                                       </span>
-                                    )}
-                                    {note.actionStatusName && (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                        note.actionStatus === ActionItemStatus.Completed
-                                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                          : note.actionStatus === ActionItemStatus.InProgress
-                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                          : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                      }`}>
-                                        {note.actionStatusName}
-                                      </span>
+                                      {note.isPrivate && (
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
+                                          Private
+                                        </span>
+                                      )}
+                                      {note.actionStatusName && (
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                          note.actionStatus === ActionItemStatus.Completed
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            : note.actionStatus === ActionItemStatus.InProgress
+                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                            : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                        }`}>
+                                          {note.actionStatusName}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
+                                    {note.actionDueDate && (
+                                      <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                                        Due: {new Date(note.actionDueDate).toLocaleDateString()}
+                                        {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
+                                      </p>
                                     )}
                                   </div>
-                                  <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
-                                  {note.actionDueDate && (
-                                    <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-                                      Due: {new Date(note.actionDueDate).toLocaleDateString()}
-                                      {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
+                                  <div className="flex items-center gap-1">
+                                    {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
+                                      <button
+                                        onClick={() => handleCompleteAction(note.id, meeting.id)}
+                                        className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+                                        title="Complete action"
+                                      >
+                                        <Check className="w-4 h-4" />
+                                      </button>
+                                    )}
                                     <button
-                                      onClick={() => handleCompleteAction(note.id, meeting.id)}
-                                      className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
-                                      title="Complete action"
+                                      onClick={() => handleDeleteNote(note.id, meeting.id)}
+                                      className="p-1 text-slate-400 hover:text-red-500 rounded"
+                                      title="Delete note"
                                     >
-                                      <Check className="w-4 h-4" />
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteNote(note.id, meeting.id)}
-                                    className="p-1 text-slate-400 hover:text-red-500 rounded"
-                                    title="Delete note"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          No notes yet. Click "Add Note" to capture key takeaways.
-                        </p>
-                      )
-                    })()}
-                  </div>
-                )}
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            No notes yet. Click "Add" to capture key takeaways.
+                          </p>
+                        )
+                      })()}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))

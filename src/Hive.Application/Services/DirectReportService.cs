@@ -45,7 +45,8 @@ public class DirectReportService : IDirectReportService
             dto.Email,
             dto.JobTitle,
             dto.Department,
-            dto.HireDate);
+            dto.HireDate,
+            dto.IsDirect);
 
         var created = await _repository.AddAsync(entity, cancellationToken);
         return MapToDto(created);
@@ -71,7 +72,8 @@ public class DirectReportService : IDirectReportService
             dto.Email,
             dto.JobTitle,
             dto.Department,
-            dto.HireDate);
+            dto.HireDate,
+            dto.IsDirect);
 
         await _repository.UpdateAsync(entity, cancellationToken);
         return MapToDto(entity);
@@ -160,6 +162,7 @@ public class DirectReportService : IDirectReportService
                 var jobTitle = GetColumnValue(values, columnMap, "JobTitle") ?? "";
                 var department = GetColumnValue(values, columnMap, "Department") ?? "";
                 var hireDateStr = GetColumnValue(values, columnMap, "HireDate");
+                var isDirectStr = GetColumnValue(values, columnMap, "IsDirect");
 
                 if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(email))
                 {
@@ -213,7 +216,16 @@ public class DirectReportService : IDirectReportService
                     }
                 }
 
-                var entity = new DirectReport(firstName, lastName, email, jobTitle, department, hireDate);
+                // Parse IsDirect (default to true if not specified)
+                bool isDirect = true;
+                if (!string.IsNullOrWhiteSpace(isDirectStr))
+                {
+                    isDirect = isDirectStr.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                               isDirectStr.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                               isDirectStr.Equals("1", StringComparison.OrdinalIgnoreCase);
+                }
+
+                var entity = new DirectReport(firstName, lastName, email, jobTitle, department, hireDate, isDirect);
                 var created = await _repository.AddAsync(entity, cancellationToken);
 
                 results.Add(new BulkImportRowResult
@@ -305,6 +317,7 @@ public class DirectReportService : IDirectReportService
         JobTitle = entity.JobTitle,
         Department = entity.Department,
         HireDate = entity.HireDate,
+        IsDirect = entity.IsDirect,
         CreatedAt = entity.CreatedAt,
         UpdatedAt = entity.UpdatedAt
     };

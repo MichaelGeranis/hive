@@ -151,7 +151,7 @@ public class DirectReportRepositoryTests
     {
         // Arrange
         var entity = CreateAndAddDirectReport();
-        entity.Update("Updated", "Name", "updated@test.com", "New Title", "New Dept", DateTime.UtcNow);
+        entity.Update("Updated", "Name", "updated@test.com", "New Title", "New Dept", DateTime.UtcNow, true);
 
         // Act
         await _repository.UpdateAsync(entity);

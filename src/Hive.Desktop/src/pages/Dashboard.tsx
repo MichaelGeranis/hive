@@ -8,11 +8,13 @@ import {
   ZapIcon,
   Settings2,
   Eye,
-  EyeOff
+  EyeOff,
+  ListTodo,
+  Calendar
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi, tasksApi, projectsApi, leavesApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -76,6 +78,8 @@ export default function Dashboard() {
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
   const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
+  const [actionItems, setActionItems] = useState<MeetingNote[]>([])
+  const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -111,8 +115,10 @@ export default function Dashboard() {
 
   const closeModal = useCallback(() => setSelectedMember(null), [])
   const closeCustomizeModal = useCallback(() => setShowCustomize(false), [])
+  const closeActionItemsModal = useCallback(() => setShowActionItemsModal(false), [])
   useEscapeKey(closeModal, !!selectedMember)
   useEscapeKey(closeCustomizeModal, showCustomize && !selectedMember)
+  useEscapeKey(closeActionItemsModal, showActionItemsModal && !selectedMember && !showCustomize)
 
   useEffect(() => {
     loadDashboard()
@@ -121,14 +127,15 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData, actionItemsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         reportsApi.getTeamVelocity(sprintFilter),
         reportsApi.getEstimationAccuracy(sprintFilter),
         reportsApi.getCapacityAnalysis(sprintFilter),
-        leavesApi.getOverview()
+        leavesApi.getOverview(),
+        meetingNotesApi.getOpenActionItems()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData)
@@ -137,6 +144,14 @@ export default function Dashboard() {
       setAccuracy(accuracyData)
       setCapacityAnalysis(capacityData)
       setLeaveOverview(leaveData)
+      // Sort action items by due date descending (most recent first)
+      const sortedActionItems = actionItemsData.sort((a, b) => {
+        if (!a.actionDueDate && !b.actionDueDate) return 0
+        if (!a.actionDueDate) return 1
+        if (!b.actionDueDate) return -1
+        return new Date(b.actionDueDate).getTime() - new Date(a.actionDueDate).getTime()
+      })
+      setActionItems(sortedActionItems)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -340,6 +355,18 @@ export default function Dashboard() {
           icon={<AlertTriangle className="w-6 h-6" />}
           color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
         />
+        <div
+          onClick={() => setShowActionItemsModal(true)}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatCard
+            title="1:1 Action Items"
+            value={actionItems.length}
+            subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
+            icon={<ListTodo className="w-6 h-6" />}
+            color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
+          />
+        </div>
 
       </div>
       )}
@@ -809,6 +836,69 @@ export default function Dashboard() {
               ) : (
                 <p className="text-slate-500 dark:text-slate-400 text-center py-4">
                   No projects found for this member
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Action Items Modal */}
+      {showActionItemsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl mx-4">
+            <CardHeader
+              title="1:1 Action Items"
+              subtitle={`${actionItems.length} open item${actionItems.length !== 1 ? 's' : ''}${actionItems.filter(a => a.isOverdue).length > 0 ? ` (${actionItems.filter(a => a.isOverdue).length} overdue)` : ''}`}
+              action={
+                <button
+                  onClick={closeActionItemsModal}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              }
+            />
+            <CardContent>
+              {actionItems.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {actionItems.map(item => (
+                    <div
+                      key={item.id}
+                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg ${item.isOverdue ? 'border-l-4 border-red-500' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.content}</p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {item.directReportName}
+                            </span>
+                            {item.actionDueDate && (
+                              <span className={`flex items-center gap-1 ${item.isOverdue ? 'text-red-500 font-medium' : ''}`}>
+                                <Calendar className="w-3 h-3" />
+                                {new Date(item.actionDueDate).toLocaleDateString()}
+                                {item.isOverdue && ' (Overdue)'}
+                              </span>
+                            )}
+                            {item.actionAssignee && (
+                              <span>Assigned: {item.actionAssignee}</span>
+                            )}
+                          </div>
+                        </div>
+                        {item.isOverdue && (
+                          <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
+                            Overdue
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                  No open action items from 1:1 meetings
                 </p>
               )}
             </CardContent>

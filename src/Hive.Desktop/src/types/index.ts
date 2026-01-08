@@ -8,6 +8,7 @@ export interface DirectReport {
   jobTitle: string
   department: string
   hireDate: string
+  isDirect: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -19,6 +20,7 @@ export interface CreateDirectReportDto {
   jobTitle: string
   department: string
   hireDate: string
+  isDirect: boolean
 }
 
 // Bulk Import Direct Reports

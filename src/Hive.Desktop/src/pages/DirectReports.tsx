@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react'
+import { Plus, Mail, Building2, Calendar, MoreVertical, Trash2, Edit, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Users, UserMinus } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto, BulkImportResultDto } from '../types'
@@ -18,7 +18,8 @@ export default function DirectReports() {
     email: '',
     jobTitle: '',
     department: '',
-    hireDate: new Date().toISOString().split('T')[0]
+    hireDate: new Date().toISOString().split('T')[0],
+    isDirect: true
   })
 
   // Bulk import state
@@ -36,7 +37,8 @@ export default function DirectReports() {
       email: '',
       jobTitle: '',
       department: '',
-      hireDate: new Date().toISOString().split('T')[0]
+      hireDate: new Date().toISOString().split('T')[0],
+      isDirect: true
     })
   }, [])
 
@@ -97,7 +99,8 @@ export default function DirectReports() {
       email: dr.email,
       jobTitle: dr.jobTitle,
       department: dr.department,
-      hireDate: dr.hireDate.split('T')[0]
+      hireDate: dr.hireDate.split('T')[0],
+      isDirect: dr.isDirect
     })
     setEditingId(dr.id)
     setShowForm(true)
@@ -158,10 +161,10 @@ export default function DirectReports() {
   }
 
   const downloadSampleCsv = () => {
-    const sample = `FirstName,LastName,Email,JobTitle,Department,HireDate
-John,Doe,john.doe@example.com,Software Engineer,Engineering,2023-01-15
-Jane,Smith,jane.smith@example.com,Product Manager,Product,2022-06-01
-Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10`
+    const sample = `FirstName,LastName,Email,JobTitle,Department,HireDate,IsDirect
+John,Doe,john.doe@example.com,Software Engineer,Engineering,2023-01-15,true
+Jane,Smith,jane.smith@example.com,Product Manager,Product,2022-06-01,true
+Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
 
     const blob = new Blob([sample], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -335,6 +338,20 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10`
                     required
                   />
                 </div>
+                <div className="flex items-center gap-3 py-2">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDirect}
+                      onChange={(e) => setFormData({ ...formData, isDirect: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-amber-500"></div>
+                    <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {formData.isDirect ? 'Direct Report' : 'Indirect Report'}
+                    </span>
+                  </label>
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -370,7 +387,7 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10`
                     Required columns: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">FirstName</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">LastName</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">Email</code>
                   </p>
                   <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Optional columns: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">JobTitle</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">Department</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">HireDate</code>
+                    Optional columns: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">JobTitle</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">Department</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">HireDate</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">IsDirect</code> (true/false)
                   </p>
                   <button
                     onClick={downloadSampleCsv}
@@ -557,7 +574,17 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10`
                       {dr.firstName[0]}{dr.lastName[0]}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{dr.fullName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">{dr.fullName}</h3>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${
+                          dr.isDirect
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                        }`}>
+                          {dr.isDirect ? <Users className="w-3 h-3" /> : <UserMinus className="w-3 h-3" />}
+                          {dr.isDirect ? 'Direct' : 'Indirect'}
+                        </span>
+                      </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{dr.jobTitle || 'No title'}</p>
                     </div>
                   </div>

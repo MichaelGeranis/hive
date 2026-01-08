@@ -13,6 +13,7 @@ public class DirectReport
     public string JobTitle { get; private set; } = string.Empty;
     public string Department { get; private set; } = string.Empty;
     public DateTime HireDate { get; private set; }
+    public bool IsDirect { get; private set; } = true;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -25,7 +26,8 @@ public class DirectReport
         string email,
         string jobTitle,
         string department,
-        DateTime hireDate)
+        DateTime hireDate,
+        bool isDirect = true)
     {
         ValidateName(firstName, nameof(firstName));
         ValidateName(lastName, nameof(lastName));
@@ -38,6 +40,7 @@ public class DirectReport
         JobTitle = jobTitle?.Trim() ?? string.Empty;
         Department = department?.Trim() ?? string.Empty;
         HireDate = hireDate;
+        IsDirect = isDirect;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -49,7 +52,8 @@ public class DirectReport
         string email,
         string jobTitle,
         string department,
-        DateTime hireDate)
+        DateTime hireDate,
+        bool isDirect)
     {
         ValidateName(firstName, nameof(firstName));
         ValidateName(lastName, nameof(lastName));
@@ -61,6 +65,7 @@ public class DirectReport
         JobTitle = jobTitle?.Trim() ?? string.Empty;
         Department = department?.Trim() ?? string.Empty;
         HireDate = hireDate;
+        IsDirect = isDirect;
         UpdatedAt = DateTime.UtcNow;
     }
 
