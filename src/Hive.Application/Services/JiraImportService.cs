@@ -39,7 +39,7 @@ public class JiraImportService : IJiraImportService
     private static readonly string[] TimeSpentColumns = { "Time Spent", "TimeSpent", "Time spent" };
     private static readonly string[] SprintColumns = { "Sprint" };
     private static readonly string[] LabelsColumns = { "Labels", "Label" };
-    private static readonly string[] ParentColumns = { "Parent", "Parent Link", "Parent Issue" };
+    private static readonly string[] ParentColumns = { "Parent Summary"};
 
     public JiraImportService(
         ITeamTaskRepository taskRepository,
