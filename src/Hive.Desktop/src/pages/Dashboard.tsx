@@ -589,11 +589,13 @@ export default function Dashboard() {
               <LineChart data={accuracy.sprints}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sprintName" />
-                <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} label={{ value: 'Accuracy %', angle: 90, position: 'insideRight' }} />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated" dot={{ fill: '#3b82f6' }} />
-                <Line type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual" dot={{ fill: '#10b981' }} />
+                <Line yAxisId="left" type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated" dot={{ fill: '#3b82f6' }} />
+                <Line yAxisId="left" type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual" dot={{ fill: '#10b981' }} />
+                <Line yAxisId="right" type="monotone" dataKey="accuracyPercentage" stroke="#f59e0b" strokeWidth={2} name="Accuracy %" dot={{ fill: '#f59e0b' }} />
               </LineChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
