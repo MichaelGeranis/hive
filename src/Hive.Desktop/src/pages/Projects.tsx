@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag, Layers, X, Filter } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
@@ -15,9 +16,22 @@ const statusColors: Record<ProjectStatus, string> = {
 }
 
 export default function Projects() {
+  const [searchParams] = useSearchParams()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'active' | ProjectStatus>('all')
+
+  // Initialize filter from URL params if present
+  const initialFilter = useMemo(() => {
+    const filterParam = searchParams.get('filter')
+    if (filterParam === 'active') return 'active' as const
+    const statusValues = Object.values(ProjectStatus) as string[]
+    if (filterParam && statusValues.includes(filterParam)) {
+      return filterParam as unknown as ProjectStatus
+    }
+    return 'all' as const
+  }, [searchParams])
+
+  const [filter, setFilter] = useState<'all' | 'active' | ProjectStatus>(initialFilter)
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)

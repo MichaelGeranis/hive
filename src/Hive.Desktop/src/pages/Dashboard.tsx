@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Users,
   CheckSquare,
@@ -71,6 +72,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -321,12 +323,13 @@ export default function Dashboard() {
 
       {/* Top Stats */}
       {widgets.topStats && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-fr">
         <StatCard
           title="Team Members"
-          value={dashboard.team.totalDirectReports}
+          value={dashboard.team.totalReports}
           icon={<Users className="w-6 h-6" />}
           color="amber"
+          onClick={() => navigate('/team')}
         />
         <StatCard
           title="Active Projects"
@@ -334,6 +337,7 @@ export default function Dashboard() {
           subtitle={`${dashboard.tasks.projects.totalProjects} total`}
           icon={<FolderKanban className="w-6 h-6" />}
           color="purple"
+          onClick={() => navigate('/projects?filter=active')}
         />
          {capacityAnalysis?.currentSprint && (
           <StatCard
@@ -342,6 +346,7 @@ export default function Dashboard() {
             subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
             icon={<ZapIcon className="w-6 h-6" />}
             color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
+            onClick={() => navigate('/sprints')}
           />
         )}
         <StatCard
@@ -350,25 +355,23 @@ export default function Dashboard() {
           subtitle={`${dashboard.tasks.tasks.doneTasks} of ${dashboard.tasks.tasks.totalTasks} tasks`}
           icon={<CheckSquare className="w-6 h-6" />}
           color="green"
+          onClick={() => navigate('/tasks')}
         />
         <StatCard
           title="Overdue Tasks"
           value={dashboard.tasks.tasks.overdueTasks}
           icon={<AlertTriangle className="w-6 h-6" />}
           color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
+          onClick={() => navigate('/tasks?filter=overdue')}
         />
-        <div
+        <StatCard
+          title="1:1 Action Items"
+          value={actionItems.length}
+          subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
+          icon={<ListTodo className="w-6 h-6" />}
+          color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
           onClick={() => setShowActionItemsModal(true)}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatCard
-            title="1:1 Action Items"
-            value={actionItems.length}
-            subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
-            icon={<ListTodo className="w-6 h-6" />}
-            color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
-          />
-        </div>
+        />
 
       </div>
       )}

@@ -4,6 +4,7 @@ import {
   Users,
   Star,
   Calendar,
+  CalendarDays,
   FolderKanban,
   Layers,
   CheckSquare,
@@ -25,6 +26,7 @@ const navigation = [
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
+  { name: 'Calendar', to: '/calendar', icon: CalendarDays },
   { name: 'Notes', to: '/notes', icon: StickyNote },
   { name: 'Documents', to: '/documents', icon: FileText },
 ]

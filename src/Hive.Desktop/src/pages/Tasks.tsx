@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi, settingsApi, jiraImportApi } from '../services/api'
@@ -27,12 +28,25 @@ const priorityColors: Record<TaskPriority, string> = {
 }
 
 export default function Tasks() {
+  const [searchParams] = useSearchParams()
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [storyPointMappings, setStoryPointMappings] = useState<StoryPointMapping[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>('all')
+
+  // Initialize filter from URL params if present
+  const initialFilter = useMemo(() => {
+    const filterParam = searchParams.get('filter')
+    if (filterParam === 'overdue') return 'overdue' as const
+    const statusValues = Object.values(TaskStatus) as string[]
+    if (filterParam && statusValues.includes(filterParam)) {
+      return filterParam as unknown as TaskStatus
+    }
+    return 'all' as const
+  }, [searchParams])
+
+  const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>(initialFilter)
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)

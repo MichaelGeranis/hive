@@ -241,6 +241,7 @@ export interface DashboardOverview {
 }
 
 export interface TeamOverview {
+  totalReports: number
   totalDirectReports: number
   directReports: DirectReportSummary[]
 }

@@ -19,6 +19,7 @@ public record DashboardOverviewDto
 /// </summary>
 public record TeamOverviewDto
 {
+    public int TotalReports { get; init; }
     public int TotalDirectReports { get; init; }
     public IReadOnlyList<DirectReportSummaryDto> DirectReports { get; init; } = [];
 }

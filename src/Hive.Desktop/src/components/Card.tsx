@@ -50,6 +50,7 @@ interface StatCardProps {
     isPositive: boolean
   }
   color?: 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'slate'
+  onClick?: () => void
 }
 
 const colorStyles = {
@@ -61,26 +62,33 @@ const colorStyles = {
   slate: 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-400',
 }
 
-export function StatCard({ title, value, subtitle, icon, trend, color = 'blue' }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, trend, color = 'blue', onClick }: StatCardProps) {
+  const isClickable = !!onClick
+
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{value}</p>
-          {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
-          {trend && (
-            <p className={`text-sm mt-1 ${trend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {trend.isPositive ? '+' : ''}{trend.value}%
-            </p>
-          )}
-        </div>
-        {icon && (
-          <div className={`p-3 rounded-lg ${colorStyles[color]}`}>
-            {icon}
+    <div
+      onClick={onClick}
+      className={`h-full min-h-[140px] ${isClickable ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+    >
+      <Card className="h-full">
+        <CardContent className="flex items-start justify-between h-full">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{value}</p>
+            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
+            {trend && (
+              <p className={`text-sm mt-1 ${trend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {trend.isPositive ? '+' : ''}{trend.value}%
+              </p>
+            )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          {icon && (
+            <div className={`p-3 rounded-lg ${colorStyles[color]} flex-shrink-0`}>
+              {icon}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }

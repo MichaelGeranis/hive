@@ -11,6 +11,7 @@ import Parents from './pages/Parents'
 import Tasks from './pages/Tasks'
 import Sprints from './pages/Sprints'
 import Leaves from './pages/Leaves'
+import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
 import Documents from './pages/Documents'
 import Settings from './pages/Settings'
@@ -117,6 +118,7 @@ function App() {
         <Route path="tasks" element={<Tasks />} />
         <Route path="sprints" element={<Sprints />} />
         <Route path="leaves" element={<Leaves />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />
         <Route path="documents" element={<Documents />} />
         <Route path="settings" element={<Settings />} />

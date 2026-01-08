@@ -122,6 +122,7 @@ public class ReportingService : IReportingService
 
         return new TeamOverviewDto
         {
+            TotalReports = allReports.Count,
             TotalDirectReports = directReports.Count,
             DirectReports = directReports.Select(dr => new DirectReportSummaryDto
             {
