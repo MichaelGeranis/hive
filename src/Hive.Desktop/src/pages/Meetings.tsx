@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Plus, Calendar, Clock, MapPin, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
@@ -169,6 +169,16 @@ export default function Meetings() {
     setFilterDirectReportId('all')
     setStatusFilter('all')
   }
+
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const now = new Date()
+    return {
+      all: meetings.length,
+      upcoming: meetings.filter(m => new Date(m.meetingDate) >= now).length,
+      past: meetings.filter(m => new Date(m.meetingDate) < now).length,
+    }
+  }, [meetings])
 
   const filteredMeetings = () => {
     let result = meetings
@@ -554,12 +564,14 @@ export default function Meetings() {
         {/* Status Filter */}
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: 'All' },
-              { value: 'upcoming', label: 'Upcoming' },
-              { value: 'past', label: 'Past' },
-            ].map((f) => (
+              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
+              { value: 'upcoming', label: `Upcoming (${statusCounts.upcoming})`, count: statusCounts.upcoming },
+              { value: 'past', label: `Past (${statusCounts.past})`, count: statusCounts.past },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value as any)}

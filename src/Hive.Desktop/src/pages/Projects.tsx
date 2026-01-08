@@ -73,6 +73,19 @@ export default function Projects() {
     return Array.from(labelSet).sort()
   }, [projects])
 
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const activeCount = projects.filter(p => p.status === ProjectStatus.Planning || p.status === ProjectStatus.Active).length
+    return {
+      all: projects.length,
+      active: activeCount,
+      [ProjectStatus.Planning]: projects.filter(p => p.status === ProjectStatus.Planning).length,
+      [ProjectStatus.OnHold]: projects.filter(p => p.status === ProjectStatus.OnHold).length,
+      [ProjectStatus.Completed]: projects.filter(p => p.status === ProjectStatus.Completed).length,
+      [ProjectStatus.Cancelled]: projects.filter(p => p.status === ProjectStatus.Cancelled).length,
+    }
+  }, [projects])
+
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedLabel(null)
@@ -344,12 +357,15 @@ export default function Projects() {
           <Filter className="w-4 h-4 text-slate-400" />
           <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: 'All' },
-              { value: 'active', label: 'Active' },
-              { value: ProjectStatus.Planning, label: 'Planning' },
-              { value: ProjectStatus.OnHold, label: 'On Hold' },
-              { value: ProjectStatus.Completed, label: 'Completed' },
-            ].map((f) => (
+              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
+              { value: 'active', label: `Active (${statusCounts.active})`, count: statusCounts.active },
+              { value: ProjectStatus.Planning, label: `Planning (${statusCounts[ProjectStatus.Planning]})`, count: statusCounts[ProjectStatus.Planning] },
+              { value: ProjectStatus.OnHold, label: `On Hold (${statusCounts[ProjectStatus.OnHold]})`, count: statusCounts[ProjectStatus.OnHold] },
+              { value: ProjectStatus.Completed, label: `Completed (${statusCounts[ProjectStatus.Completed]})`, count: statusCounts[ProjectStatus.Completed] },
+              { value: ProjectStatus.Cancelled, label: `Cancelled (${statusCounts[ProjectStatus.Cancelled]})`, count: statusCounts[ProjectStatus.Cancelled] },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value as any)}

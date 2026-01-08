@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Plus, Star, CheckCircle, Send, MoreVertical, Edit, Trash2, Search, X, Filter, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
@@ -98,6 +98,15 @@ export default function Reviews() {
     setSelectedDirectReportId(null)
     setFilter('all')
   }
+
+  // Calculate status counts
+  const statusCounts = useMemo(() => ({
+    all: reviews.length,
+    [ReviewStatus.Draft]: reviews.filter(r => r.status === ReviewStatus.Draft).length,
+    [ReviewStatus.Submitted]: reviews.filter(r => r.status === ReviewStatus.Submitted).length,
+    [ReviewStatus.Acknowledged]: reviews.filter(r => r.status === ReviewStatus.Acknowledged).length,
+    [ReviewStatus.Completed]: reviews.filter(r => r.status === ReviewStatus.Completed).length,
+  }), [reviews])
 
   const filteredReviews = (() => {
     let result = reviews
@@ -383,14 +392,16 @@ export default function Reviews() {
         {/* Status Filter */}
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: 'All' },
-              { value: ReviewStatus.Draft, label: 'Draft' },
-              { value: ReviewStatus.Submitted, label: 'Submitted' },
-              { value: ReviewStatus.Acknowledged, label: 'Acknowledged' },
-              { value: ReviewStatus.Completed, label: 'Completed' },
-            ].map((f) => (
+              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
+              { value: ReviewStatus.Draft, label: `Draft (${statusCounts[ReviewStatus.Draft]})`, count: statusCounts[ReviewStatus.Draft] },
+              { value: ReviewStatus.Submitted, label: `Submitted (${statusCounts[ReviewStatus.Submitted]})`, count: statusCounts[ReviewStatus.Submitted] },
+              { value: ReviewStatus.Acknowledged, label: `Acknowledged (${statusCounts[ReviewStatus.Acknowledged]})`, count: statusCounts[ReviewStatus.Acknowledged] },
+              { value: ReviewStatus.Completed, label: `Completed (${statusCounts[ReviewStatus.Completed]})`, count: statusCounts[ReviewStatus.Completed] },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value as any)}

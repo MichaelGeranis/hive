@@ -25,7 +25,7 @@ const navigation = [
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
-  { name: 'TODOs', to: '/notes', icon: StickyNote },
+  { name: 'Notes', to: '/notes', icon: StickyNote },
   { name: 'Documents', to: '/documents', icon: FileText },
 ]
 

@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   StickyNote,
   Plus,
   Check,
   X,
   Clock,
-  AlertTriangle,
   Trash2,
   Edit2,
   Filter,
@@ -40,7 +39,7 @@ const priorityBorderColors: Record<number, string> = {
 type FilterType = 'all' | 'pending' | 'completed' | 'overdue'
 
 export default function Notes() {
-  const [notes, setNotes] = useState<ManagerNote[]>([])
+  const [allNotes, setAllNotes] = useState<ManagerNote[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -76,23 +75,8 @@ export default function Notes() {
 
   useEffect(() => {
     loadData()
-  }, [filter, selectedTag])
-
-  useEffect(() => {
     loadTags()
   }, [])
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm || selectedTag) {
-        searchNotes()
-      } else {
-        loadData()
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchTerm])
 
   const loadTags = async () => {
     try {
@@ -106,26 +90,8 @@ export default function Notes() {
   const loadData = async () => {
     try {
       setLoading(true)
-      let data: ManagerNote[]
-
-      if (selectedTag) {
-        data = await notesApi.getByTag(selectedTag)
-      } else {
-        switch (filter) {
-          case 'pending':
-            data = await notesApi.getPending()
-            break
-          case 'completed':
-            data = await notesApi.getCompleted()
-            break
-          case 'overdue':
-            data = await notesApi.getOverdue()
-            break
-          default:
-            data = await notesApi.getAll()
-        }
-      }
-      setNotes(data)
+      const data = await notesApi.getAll()
+      setAllNotes(data)
     } catch (error) {
       console.error('Failed to load notes:', error)
     } finally {
@@ -133,17 +99,54 @@ export default function Notes() {
     }
   }
 
-  const searchNotes = async () => {
-    try {
-      setLoading(true)
-      const data = await notesApi.search(searchTerm || undefined, selectedTag || undefined)
-      setNotes(data)
-    } catch (error) {
-      console.error('Failed to search notes:', error)
-    } finally {
-      setLoading(false)
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return {
+      all: allNotes.length,
+      pending: allNotes.filter(n => !n.isCompleted).length,
+      completed: allNotes.filter(n => n.isCompleted).length,
+      overdue: allNotes.filter(n => !n.isCompleted && n.dueDate && new Date(n.dueDate) < today).length,
     }
-  }
+  }, [allNotes])
+
+  // Filter notes based on current filter, search term, and selected tag
+  const notes = useMemo(() => {
+    let result = allNotes
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Apply status filter
+    switch (filter) {
+      case 'pending':
+        result = result.filter(n => !n.isCompleted)
+        break
+      case 'completed':
+        result = result.filter(n => n.isCompleted)
+        break
+      case 'overdue':
+        result = result.filter(n => !n.isCompleted && n.dueDate && new Date(n.dueDate) < today)
+        break
+    }
+
+    // Apply tag filter
+    if (selectedTag) {
+      result = result.filter(n => n.tags?.toLowerCase().includes(selectedTag.toLowerCase()))
+    }
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase()
+      result = result.filter(n =>
+        n.title.toLowerCase().includes(query) ||
+        n.content?.toLowerCase().includes(query) ||
+        n.tags?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allNotes, filter, selectedTag, searchTerm])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -243,10 +246,7 @@ export default function Notes() {
     return formatDate(dateString)
   }
 
-  const pendingCount = notes.filter(n => !n.isCompleted).length
-  const overdueCount = notes.filter(n => n.isOverdue).length
-
-  if (loading && notes.length === 0) {
+  if (loading && allNotes.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
@@ -318,37 +318,30 @@ export default function Notes() {
           </div>
         )}
 
-        {/* Stats & Filter */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <Clock className="w-4 h-4" />
-              <span>{pendingCount} pending</span>
-            </div>
-            {overdueCount > 0 && (
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                <AlertTriangle className="w-4 h-4" />
-                <span>{overdueCount} overdue</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value as FilterType)
-                setSelectedTag(null)
-                setSearchTerm('')
-              }}
-              className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-            >
-              <option value="all">All Notes</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="overdue">Overdue</option>
-            </select>
+        {/* Status Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
+              { value: 'pending', label: `Pending (${statusCounts.pending})`, count: statusCounts.pending },
+              { value: 'completed', label: `Completed (${statusCounts.completed})`, count: statusCounts.completed },
+              { value: 'overdue', label: `Overdue (${statusCounts.overdue})`, count: statusCounts.overdue },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value as FilterType)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === f.value
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -199,6 +199,13 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
     return Array.from(deptSet).sort()
   }, [directReports])
 
+  // Calculate report type counts
+  const reportCounts = useMemo(() => ({
+    all: directReports.length,
+    direct: directReports.filter(dr => dr.isDirect).length,
+    indirect: directReports.filter(dr => !dr.isDirect).length,
+  }), [directReports])
+
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedDepartment(null)
@@ -325,12 +332,14 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
         {/* Report Type Filter */}
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: 'All' },
-              { value: 'direct', label: 'Direct Reports' },
-              { value: 'indirect', label: 'Indirect Reports' },
-            ].map((f) => (
+              { value: 'all', label: `All (${reportCounts.all})`, count: reportCounts.all },
+              { value: 'direct', label: `Direct Reports (${reportCounts.direct})`, count: reportCounts.direct },
+              { value: 'indirect', label: `Indirect Reports (${reportCounts.indirect})`, count: reportCounts.indirect },
+            ]
+              .filter((f) => f.value === 'all' || f.count > 0)
+              .map((f) => (
               <button
                 key={f.value}
                 onClick={() => setReportFilter(f.value as any)}
