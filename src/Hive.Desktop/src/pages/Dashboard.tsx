@@ -1007,7 +1007,7 @@ export default function Dashboard() {
                       key={note.id}
                       onClick={() => {
                         closePriorityNotesModal()
-                        navigate('/notes')
+                        navigate(`/notes?search=${encodeURIComponent(note.title)}`)
                       }}
                       className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600/50 transition-colors ${note.priority === 3 ? 'border-l-4 border-red-500' : 'border-l-4 border-amber-500'}`}
                     >

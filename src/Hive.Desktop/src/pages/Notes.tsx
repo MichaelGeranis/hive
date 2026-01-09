@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   StickyNote,
   Plus,
@@ -39,14 +40,24 @@ const priorityBorderColors: Record<number, string> = {
 type FilterType = 'all' | 'pending' | 'completed' | 'overdue'
 
 export default function Notes() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialSearch = searchParams.get('search') || ''
+
   const [allNotes, setAllNotes] = useState<ManagerNote[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingNote, setEditingNote] = useState<ManagerNote | null>(null)
-  const [filter, setFilter] = useState<FilterType>('pending')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState<FilterType>(initialSearch ? 'all' : 'pending')
+  const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+  // Clear search param from URL after initial load
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [initialSearch, setSearchParams])
   const [formData, setFormData] = useState<CreateManagerNoteDto>({
     title: '',
     content: '',
