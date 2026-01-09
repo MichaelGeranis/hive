@@ -82,7 +82,7 @@ function createWindow() {
 
     mainWindow.loadFile(indexPath)
     // Temporarily enable DevTools for debugging
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
   }
 
   mainWindow.on('closed', () => {
@@ -127,6 +127,13 @@ function setupIpcHandlers() {
       const events = await fetchAppleCalendarEvents(calendarEmail)
       log(`Fetched ${events.length} events from Apple Calendar`)
 
+      // Debug: Print all event titles
+      log('--- Calendar Events ---')
+      events.forEach((event, index) => {
+        log(`${index + 1}. "${event.title}" - ${event.startDate}`)
+      })
+      log('--- End Events ---')
+
       // Convert to API format
       const apiEvents = events.map(event => ({
         id: event.id,
@@ -138,7 +145,7 @@ function setupIpcHandlers() {
       }))
 
       // Send to backend API
-      const response = await fetch('http://localhost:5000/api/calendarsync/sync', {
+      const response = await fetch('http://localhost:5002/api/calendarsync/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

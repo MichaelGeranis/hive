@@ -22,58 +22,72 @@ export async function fetchAppleCalendarEvents(
 ): Promise<AppleCalendarEvent[]> {
   const today = new Date();
   const endDate = new Date();
-  endDate.setDate(today.getDate() + 10);
+  endDate.setDate(today.getDate() + 30);
 
   // Use JavaScript for Automation (JXA) which has better permission handling
   const safeEmail = calendarEmail.replace(/"/g, '\\"').replace(/'/g, "\\'");
 
+  // Wrap in IIFE to allow return statements
+  // Use double quotes for Application name to avoid shell escaping issues
+  // Pass dates as ISO strings to avoid JXA date comparison issues
+  const todayISO = today.toISOString();
+  const endDateISO = endDate.toISOString();
+
   const jxaScript = `
-    const app = Application('Calendar');
-    app.includeStandardAdditions = true;
+    (function() {
+      var app = Application("Calendar");
+      app.includeStandardAdditions = true;
 
-    const today = new Date();
-    const endDate = new Date();
-    endDate.setDate(today.getDate() + 10);
+      var today = new Date("${todayISO}");
+      today.setHours(0, 0, 0, 0);
+      var endDate = new Date("${endDateISO}");
+      endDate.setHours(23, 59, 59, 999);
 
-    const targetEmail = "${safeEmail}";
+      var targetEmail = "${safeEmail}";
 
-    // Find calendar by name
-    let foundCalendar = null;
-    const calendars = app.calendars();
+      // Find calendar by name
+      var foundCalendar = null;
+      var calendars = app.calendars();
 
-    for (let i = 0; i < calendars.length; i++) {
-      if (calendars[i].name().includes(targetEmail)) {
-        foundCalendar = calendars[i];
-        break;
+      for (var i = 0; i < calendars.length; i++) {
+        if (calendars[i].name().indexOf(targetEmail) !== -1) {
+          foundCalendar = calendars[i];
+          break;
+        }
       }
-    }
 
-    if (!foundCalendar) {
-      return JSON.stringify({ error: "Calendar not found for email: " + targetEmail });
-    }
+      if (!foundCalendar) {
+        return JSON.stringify({ error: "Calendar not found for email: " + targetEmail });
+      }
 
-    // Get events
-    const events = foundCalendar.events.whose({
-      _and: [
-        { startDate: { _greaterThanEquals: today } },
-        { startDate: { _lessThanEquals: endDate } }
-      ]
-    })();
+      // Get ALL events and filter in JavaScript (JXA whose clause is unreliable with dates)
+      var allEvents = foundCalendar.events();
+      var eventData = [];
 
-    const eventData = [];
-    for (let i = 0; i < events.length; i++) {
-      const event = events[i];
-      eventData.push({
-        id: event.uid(),
-        title: event.summary(),
-        startDate: event.startDate().toISOString(),
-        endDate: event.endDate().toISOString(),
-        location: event.location() || "",
-        calendar: foundCalendar.name()
+      for (var j = 0; j < allEvents.length; j++) {
+        var evt = allEvents[j];
+        var evtStart = evt.startDate();
+
+        // Filter: only events from today to endDate
+        if (evtStart >= today && evtStart <= endDate) {
+          eventData.push({
+            id: evt.uid(),
+            title: evt.summary(),
+            startDate: evtStart.toISOString(),
+            endDate: evt.endDate().toISOString(),
+            location: evt.location() || "",
+            calendar: foundCalendar.name()
+          });
+        }
+      }
+
+      // Sort by start date
+      eventData.sort(function(a, b) {
+        return new Date(a.startDate) - new Date(b.startDate);
       });
-    }
 
-    return JSON.stringify(eventData);
+      return JSON.stringify(eventData);
+    })()
   `;
 
   try {

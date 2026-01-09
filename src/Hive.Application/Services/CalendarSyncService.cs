@@ -115,7 +115,9 @@ public class CalendarSyncService : ICalendarSyncService
 
     /// <summary>
     /// Extract direct report first name from meeting title
-    /// Pattern: "[FirstName] / [ManagerName]" (e.g., "George / Michail")
+    /// Patterns supported:
+    ///   - "[FirstName] / [ManagerName]" (e.g., "George / Michail")
+    ///   - "[FirstName] : [ManagerName]" (e.g., "Zaharenia : Michail")
     /// </summary>
     private static string? ExtractDirectReportName(string title)
     {
@@ -124,8 +126,21 @@ public class CalendarSyncService : ICalendarSyncService
             return null;
         }
 
-        // Split by "/" and get the first part (direct report name)
-        var parts = title.Split('/', StringSplitOptions.TrimEntries);
+        // Try splitting by "/" first, then by ":"
+        string[] parts;
+
+        if (title.Contains('/'))
+        {
+            parts = title.Split('/', StringSplitOptions.TrimEntries);
+        }
+        else if (title.Contains(':'))
+        {
+            parts = title.Split(':', StringSplitOptions.TrimEntries);
+        }
+        else
+        {
+            return null;
+        }
 
         if (parts.Length != 2)
         {
