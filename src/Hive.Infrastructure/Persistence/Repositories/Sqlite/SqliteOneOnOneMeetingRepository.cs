@@ -33,6 +33,12 @@ public class SqliteOneOnOneMeetingRepository : IOneOnOneMeetingRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<OneOnOneMeeting?> GetByAppleCalendarEventIdAsync(string appleCalendarEventId, CancellationToken cancellationToken = default)
+    {
+        return await _context.OneOnOneMeetings
+            .FirstOrDefaultAsync(x => x.AppleCalendarEventId == appleCalendarEventId, cancellationToken);
+    }
+
     public async Task<OneOnOneMeeting> AddAsync(OneOnOneMeeting meeting, CancellationToken cancellationToken = default)
     {
         _context.OneOnOneMeetings.Add(meeting);

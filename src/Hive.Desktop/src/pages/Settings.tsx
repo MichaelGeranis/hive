@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Calendar, RefreshCw } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi, backupApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
@@ -29,8 +29,16 @@ export default function Settings() {
   const [restoreResult, setRestoreResult] = useState<RestoreResultDto | null>(null)
   const [backupError, setBackupError] = useState<string | null>(null)
 
+  // Calendar Sync state
+  const [calendarSyncing, setCalendarSyncing] = useState(false)
+  const [calendarSyncResult, setCalendarSyncResult] = useState<any>(null)
+  const [calendarSyncError, setCalendarSyncError] = useState<string | null>(null)
+  const [calendarAccessChecked, setCalendarAccessChecked] = useState(false)
+  const [hasCalendarAccess, setHasCalendarAccess] = useState(false)
+
   useEffect(() => {
     loadSettings()
+    checkCalendarAccess()
   }, [])
 
   const loadSettings = async () => {
@@ -164,6 +172,52 @@ export default function Settings() {
 
     // Reset file input
     event.target.value = ''
+  }
+
+  // Calendar sync handlers
+  const checkCalendarAccess = async () => {
+    // Only available in Electron on macOS
+    if (!window.electronAPI?.calendar || window.electronAPI.platform !== 'darwin') {
+      setCalendarAccessChecked(true)
+      setHasCalendarAccess(false)
+      return
+    }
+
+    try {
+      const result = await window.electronAPI.calendar.checkAccess()
+      setHasCalendarAccess(result.hasAccess || false)
+    } catch (error) {
+      console.error('Failed to check calendar access', error)
+      setHasCalendarAccess(false)
+    } finally {
+      setCalendarAccessChecked(true)
+    }
+  }
+
+  const handleCalendarSync = async () => {
+    if (!window.electronAPI?.calendar) {
+      setCalendarSyncError('Calendar sync is only available in the desktop app')
+      return
+    }
+
+    try {
+      setCalendarSyncing(true)
+      setCalendarSyncError(null)
+      setCalendarSyncResult(null)
+
+      const result = await window.electronAPI.calendar.sync('michael.geranis@orfium.com')
+
+      if (result.success) {
+        setCalendarSyncResult(result.result)
+      } else {
+        setCalendarSyncError(result.error || 'Failed to sync calendar')
+      }
+    } catch (error: any) {
+      console.error('Calendar sync failed', error)
+      setCalendarSyncError(error.message || 'Failed to sync calendar')
+    } finally {
+      setCalendarSyncing(false)
+    }
   }
 
   if (loading) {
@@ -494,6 +548,203 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Apple Calendar Sync */}
+      {calendarAccessChecked && (
+        <Card>
+          <CardHeader
+            title="Apple Calendar Sync"
+            subtitle="Automatically sync 1:1 meetings from your Apple Calendar"
+          />
+          <CardContent>
+            <div className="space-y-4">
+              {!hasCalendarAccess && window.electronAPI?.platform === 'darwin' ? (
+                <>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="font-medium">Calendar access needed</span>
+                    </div>
+                    <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-500">
+                      Click the button below to request Calendar access. macOS will show a permission dialog.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t dark:border-slate-700">
+                    <button
+                      onClick={handleCalendarSync}
+                      disabled={calendarSyncing}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {calendarSyncing ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                          Requesting access...
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="w-5 h-5" />
+                          Request Calendar Access
+                        </>
+                      )}
+                    </button>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      After granting access, you can find Hive in System Settings → Privacy & Security → Calendar
+                    </p>
+                  </div>
+
+                  {/* Sync Error */}
+                  {calendarSyncError && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <XCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium">Calendar sync failed</span>
+                      </div>
+                      <p className="text-sm">{calendarSyncError.replace('PERMISSION_ERROR: ', '')}</p>
+                      {calendarSyncError.includes('Automation') && (
+                        <div className="mt-3 p-3 bg-white dark:bg-slate-700 rounded border border-red-200 dark:border-red-700">
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">How to grant Automation permission:</p>
+                          <ol className="text-xs text-slate-600 dark:text-slate-400 list-decimal list-inside space-y-1">
+                            <li>Open System Settings</li>
+                            <li>Go to Privacy & Security → Automation</li>
+                            <li>Find Hive in the list</li>
+                            <li>Enable the toggle next to Calendar</li>
+                            <li>Click "Request Calendar Access" again</li>
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sync Result */}
+                  {calendarSyncResult && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-3">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium">Calendar access granted and sync completed!</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-green-600 dark:text-green-400">{calendarSyncResult.createdCount}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Created</div>
+                        </div>
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{calendarSyncResult.updatedCount}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Updated</div>
+                        </div>
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{calendarSyncResult.totalEvents}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Total Events</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+
+              ) : window.electronAPI?.platform !== 'darwin' ? (
+                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Apple Calendar sync is only available on macOS
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">How it works</h3>
+                    <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-disc list-inside">
+                      <li>Click "Sync Now" to manually sync your calendar</li>
+                      <li>Reads events from your "michael.geranis@orfium.com" calendar</li>
+                      <li>Matches meeting titles with pattern "[DirectReport FirstName] / [Manager Name]"</li>
+                      <li>Creates or updates 1:1 meeting records in Hive</li>
+                      <li>Only fetches events for the next 10 days</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-4 border-t dark:border-slate-700">
+                    <button
+                      onClick={handleCalendarSync}
+                      disabled={calendarSyncing}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {calendarSyncing ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="w-5 h-5" />
+                          Sync Now
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Sync Error */}
+                  {calendarSyncError && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
+                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      {calendarSyncError}
+                    </div>
+                  )}
+
+                  {/* Sync Result */}
+                  {calendarSyncResult && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-3">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium">Calendar sync completed!</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-green-600 dark:text-green-400">{calendarSyncResult.createdCount}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Created</div>
+                        </div>
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{calendarSyncResult.updatedCount}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Updated</div>
+                        </div>
+                        <div className="p-2 bg-white dark:bg-slate-700 rounded text-center">
+                          <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{calendarSyncResult.totalEvents}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Total Events</div>
+                        </div>
+                      </div>
+
+                      {calendarSyncResult.skippedEvents?.length > 0 && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">
+                            {calendarSyncResult.skippedEvents.length} events skipped
+                          </summary>
+                          <ul className="mt-2 text-xs text-slate-600 dark:text-slate-400 space-y-1 max-h-32 overflow-y-auto">
+                            {calendarSyncResult.skippedEvents.map((msg: string, idx: number) => (
+                              <li key={idx} className="pl-2">• {msg}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+
+                      {calendarSyncResult.errors?.length > 0 && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-red-600 dark:text-red-400 cursor-pointer hover:text-red-700 dark:hover:text-red-300">
+                            {calendarSyncResult.errors.length} errors occurred
+                          </summary>
+                          <ul className="mt-2 text-xs text-red-600 dark:text-red-400 space-y-1 max-h-32 overflow-y-auto">
+                            {calendarSyncResult.errors.map((msg: string, idx: number) => (
+                              <li key={idx} className="pl-2">• {msg}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   )
