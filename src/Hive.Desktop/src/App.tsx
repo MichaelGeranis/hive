@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import LoadingScreen from './components/LoadingScreen'
+import { initializeLogCapture } from './services/logStore'
 import Dashboard from './pages/Dashboard'
 import DirectReports from './pages/DirectReports'
 import Reviews from './pages/Reviews'
@@ -14,7 +15,11 @@ import Leaves from './pages/Leaves'
 import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
 import Documents from './pages/Documents'
+import Logs from './pages/Logs'
 import Settings from './pages/Settings'
+
+// Initialize log capture immediately on app load
+initializeLogCapture()
 
 type AppStatus = 'loading' | 'ready' | 'error'
 
@@ -121,6 +126,7 @@ function App() {
         <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />
         <Route path="documents" element={<Documents />} />
+        <Route path="logs" element={<Logs />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

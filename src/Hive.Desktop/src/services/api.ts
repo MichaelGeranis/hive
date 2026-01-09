@@ -61,6 +61,91 @@ const api = axios.create({
   }
 })
 
+// Request interceptor - log outgoing requests
+api.interceptors.request.use(
+  (config) => {
+    const method = config.method?.toUpperCase() || 'GET'
+    const url = config.url || ''
+
+    // For mutations, log that we're starting the operation
+    if (['POST', 'PUT', 'DELETE'].includes(method)) {
+      console.log(`API ${method} ${url} - Starting...`)
+    }
+
+    return config
+  },
+  (error) => {
+    console.error('API Request Error:', error.message)
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor - log responses
+api.interceptors.response.use(
+  (response) => {
+    const method = response.config.method?.toUpperCase() || 'GET'
+    const url = response.config.url || ''
+    const status = response.status
+
+    // Log successful mutations with more detail
+    if (['POST', 'PUT', 'DELETE'].includes(method)) {
+      const data = response.data
+      let message = `API ${method} ${url} - Success (${status})`
+
+      // Add context for specific operations
+      if (url.includes('/jiraimport/import') && data) {
+        message += ` - Created: ${data.tasksCreated || 0}, Updated: ${data.tasksUpdated || 0}, Skipped: ${data.tasksSkipped || 0}`
+      } else if (url.includes('/jiraimport/preview') && data) {
+        message += ` - ${data.totalRows || 0} rows to import`
+      } else if (url.includes('/backup/export')) {
+        message += ' - Data exported successfully'
+      } else if (url.includes('/backup/import') && data) {
+        message += ` - Restored: ${Object.entries(data).filter(([k, v]) => k !== 'success' && typeof v === 'number').map(([k, v]) => `${k}: ${v}`).join(', ')}`
+      } else if (url.includes('/bulk-import') && data) {
+        message += ` - Imported: ${data.successCount || 0}, Failed: ${data.failureCount || 0}`
+      } else if (url.includes('/bulk-delete')) {
+        message += ` - Deleted ${JSON.parse(response.config.data || '[]').length} items`
+      } else if (method === 'DELETE') {
+        message += ' - Deleted successfully'
+      } else if (method === 'POST' && data?.id) {
+        message += ` - Created (ID: ${data.id.substring(0, 8)}...)`
+      } else if (method === 'PUT' && data?.id) {
+        message += ' - Updated successfully'
+      }
+
+      console.log(message)
+    }
+
+    return response
+  },
+  (error) => {
+    const method = error.config?.method?.toUpperCase() || 'GET'
+    const url = error.config?.url || ''
+    const status = error.response?.status || 'Network Error'
+    const statusText = error.response?.statusText || ''
+    const errorData = error.response?.data
+
+    let message = `API ${method} ${url} - Failed (${status} ${statusText})`
+
+    // Add error details if available
+    if (errorData) {
+      if (typeof errorData === 'string') {
+        message += `: ${errorData}`
+      } else if (errorData.message) {
+        message += `: ${errorData.message}`
+      } else if (errorData.title) {
+        message += `: ${errorData.title}`
+      } else if (errorData.errors) {
+        const errors = Object.values(errorData.errors).flat().join(', ')
+        message += `: ${errors}`
+      }
+    }
+
+    console.error(message)
+    return Promise.reject(error)
+  }
+)
+
 // Direct Reports
 export const directReportsApi = {
   getAll: () => api.get<DirectReport[]>('/directreports').then(r => r.data),

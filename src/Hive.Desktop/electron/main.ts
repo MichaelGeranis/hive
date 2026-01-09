@@ -11,9 +11,9 @@ let backendStarted = false
 // Log file for debugging packaged app issues
 const logFile = isDev ? null : path.join(app.getPath('userData'), 'hive-debug.log')
 
-function log(message: string) {
+function log(message: string, level: 'info' | 'warn' | 'error' | 'debug' = 'info') {
   const timestamp = new Date().toISOString()
-  const logMessage = `[${timestamp}] ${message}`
+  const logMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`
   console.log(logMessage)
 
   if (logFile) {
@@ -22,6 +22,16 @@ function log(message: string) {
     } catch {
       // Ignore logging errors
     }
+  }
+
+  // Send log to renderer if window exists
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('main-log', {
+      timestamp,
+      level,
+      message,
+      source: 'main'
+    })
   }
 }
 
@@ -59,11 +69,11 @@ function createWindow() {
 
   // Log any load errors
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-    log(`Failed to load: ${errorCode} - ${errorDescription}`)
+    log(`Failed to load: ${errorCode} - ${errorDescription}`, 'error')
   })
 
   mainWindow.webContents.on('crashed', () => {
-    log('Renderer process crashed')
+    log('Renderer process crashed', 'error')
   })
 
   if (isDev) {
@@ -75,7 +85,7 @@ function createWindow() {
     log(`Loading production file: ${indexPath}`)
 
     if (!fs.existsSync(indexPath)) {
-      log(`ERROR: index.html not found at ${indexPath}`)
+      log(`index.html not found at ${indexPath}`, 'error')
       dialog.showErrorBox('Application Error', `Could not find application files.\n\nExpected: ${indexPath}`)
     }
 
@@ -104,7 +114,7 @@ async function initializeApp() {
       backendStarted = true
       log('Backend started successfully')
     } catch (error) {
-      log(`Failed to start backend: ${error}`)
+      log(`Failed to start backend: ${error}`, 'error')
 
       // Show error dialog but still create window
       // The React app will show error state
@@ -129,7 +139,7 @@ async function initializeApp() {
 }
 
 app.whenReady().then(initializeApp).catch((error) => {
-  log(`App initialization failed: ${error}`)
+  log(`App initialization failed: ${error}`, 'error')
   dialog.showErrorBox('Startup Error', `Failed to start application: ${error}`)
   app.quit()
 })
@@ -161,9 +171,9 @@ app.on('before-quit', async (event) => {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  log(`Uncaught exception: ${error.stack || error}`)
+  log(`Uncaught exception: ${error.stack || error}`, 'error')
 })
 
 process.on('unhandledRejection', (reason) => {
-  log(`Unhandled rejection: ${reason}`)
+  log(`Unhandled rejection: ${reason}`, 'error')
 })
