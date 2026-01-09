@@ -1,8 +1,7 @@
-import { app, BrowserWindow, shell, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, dialog } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { startBackend, stopBackend } from './backend'
-import { fetchAppleCalendarEvents, extractDirectReportName, checkCalendarAccess } from './appleCalendar'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -91,97 +90,11 @@ function createWindow() {
   })
 }
 
-// IPC Handlers for Apple Calendar integration
-function setupIpcHandlers() {
-  // Check if Calendar access is available
-  ipcMain.handle('calendar:checkAccess', async () => {
-    try {
-      const hasAccess = await checkCalendarAccess()
-      log(`Calendar access check: ${hasAccess}`)
-      return { success: true, hasAccess }
-    } catch (error) {
-      log(`Calendar access check failed: ${error}`)
-      return { success: false, error: String(error) }
-    }
-  })
-
-  // Fetch calendar events
-  ipcMain.handle('calendar:fetchEvents', async (_event, calendarEmail: string) => {
-    try {
-      log(`Fetching calendar events from: ${calendarEmail}`)
-      const events = await fetchAppleCalendarEvents(calendarEmail)
-      log(`Fetched ${events.length} events`)
-      return { success: true, events }
-    } catch (error) {
-      log(`Failed to fetch calendar events: ${error}`)
-      return { success: false, error: String(error) }
-    }
-  })
-
-  // Sync calendar events to backend
-  ipcMain.handle('calendar:sync', async (_event, calendarEmail: string) => {
-    try {
-      log(`Starting calendar sync for: ${calendarEmail}`)
-
-      // Fetch events from Apple Calendar
-      const events = await fetchAppleCalendarEvents(calendarEmail)
-      log(`Fetched ${events.length} events from Apple Calendar`)
-
-      // Debug: Print all event titles
-      log('--- Calendar Events ---')
-      events.forEach((event, index) => {
-        log(`${index + 1}. "${event.title}" - ${event.startDate}`)
-      })
-      log('--- End Events ---')
-
-      // Convert to API format
-      const apiEvents = events.map(event => ({
-        id: event.id,
-        title: event.title,
-        startDate: new Date(event.startDate).toISOString(),
-        endDate: new Date(event.endDate).toISOString(),
-        location: event.location,
-        calendar: event.calendar
-      }))
-
-      // Send to backend API
-      const response = await fetch('http://localhost:5002/api/calendarsync/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + Buffer.from('admin:admin123').toString('base64')
-        },
-        body: JSON.stringify({
-          calendarEmail: calendarEmail,
-          events: apiEvents
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`API error: ${response.status} - ${errorText}`)
-      }
-
-      const result = await response.json()
-      log(`Sync completed. Created: ${result.createdCount}, Updated: ${result.updatedCount}`)
-
-      return { success: true, result }
-    } catch (error) {
-      log(`Calendar sync failed: ${error}`)
-      return { success: false, error: String(error) }
-    }
-  })
-}
-
 async function initializeApp() {
   log(`App initializing. isDev: ${isDev}, platform: ${process.platform}, arch: ${process.arch}`)
   log(`App path: ${app.getAppPath()}`)
   log(`Resources path: ${process.resourcesPath}`)
   log(`User data path: ${app.getPath('userData')}`)
-
-  // Setup IPC handlers
-  setupIpcHandlers()
-  log('IPC handlers registered')
 
   // Start backend before creating window (only in production)
   if (!isDev) {
@@ -213,10 +126,6 @@ async function initializeApp() {
   }
 
   createWindow()
-
-  // Note: Auto-sync disabled on startup to prevent Calendar app crashes.
-  // Users can manually sync from the Settings page.
-  log('Auto-sync disabled on startup. Use Settings page to manually sync calendar.')
 }
 
 app.whenReady().then(initializeApp).catch((error) => {

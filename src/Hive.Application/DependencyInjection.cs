@@ -29,7 +29,6 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<IParentService, ParentService>();
-        services.AddScoped<ICalendarSyncService, CalendarSyncService>();
         return services;
     }
 }

@@ -151,7 +151,7 @@ export default function Parents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Parents</h1>
-          <p className="text-slate-500 dark:text-slate-400">Grouping tasks</p>
+          <p className="text-slate-500 dark:text-slate-400">Track task groups</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
