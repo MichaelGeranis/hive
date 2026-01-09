@@ -11,11 +11,12 @@ import {
   Eye,
   EyeOff,
   ListTodo,
-  Calendar
+  Calendar,
+  StickyNote
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -82,6 +83,8 @@ export default function Dashboard() {
   const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
   const [actionItems, setActionItems] = useState<MeetingNote[]>([])
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
+  const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
+  const [showPriorityNotesModal, setShowPriorityNotesModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -118,9 +121,11 @@ export default function Dashboard() {
   const closeModal = useCallback(() => setSelectedMember(null), [])
   const closeCustomizeModal = useCallback(() => setShowCustomize(false), [])
   const closeActionItemsModal = useCallback(() => setShowActionItemsModal(false), [])
+  const closePriorityNotesModal = useCallback(() => setShowPriorityNotesModal(false), [])
   useEscapeKey(closeModal, !!selectedMember)
   useEscapeKey(closeCustomizeModal, showCustomize && !selectedMember)
   useEscapeKey(closeActionItemsModal, showActionItemsModal && !selectedMember && !showCustomize)
+  useEscapeKey(closePriorityNotesModal, showPriorityNotesModal && !selectedMember && !showCustomize && !showActionItemsModal)
 
   useEffect(() => {
     loadDashboard()
@@ -129,7 +134,7 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData, actionItemsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData, actionItemsData, notesData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
@@ -137,7 +142,8 @@ export default function Dashboard() {
         reportsApi.getEstimationAccuracy(sprintFilter),
         reportsApi.getCapacityAnalysis(sprintFilter),
         leavesApi.getOverview(),
-        meetingNotesApi.getOpenActionItems()
+        meetingNotesApi.getOpenActionItems(),
+        notesApi.getPending()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData)
@@ -154,6 +160,11 @@ export default function Dashboard() {
         return new Date(b.actionDueDate).getTime() - new Date(a.actionDueDate).getTime()
       })
       setActionItems(sortedActionItems)
+      // Filter for urgent (3) and high (2) priority notes, sort by priority descending
+      const highPriorityNotes = notesData
+        .filter((note: ManagerNote) => note.priority >= 2)
+        .sort((a: ManagerNote, b: ManagerNote) => b.priority - a.priority)
+      setPriorityNotes(highPriorityNotes)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -371,6 +382,14 @@ export default function Dashboard() {
           icon={<ListTodo className="w-6 h-6" />}
           color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
           onClick={() => setShowActionItemsModal(true)}
+        />
+        <StatCard
+          title="Priority Notes"
+          value={priorityNotes.length}
+          subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
+          icon={<StickyNote className="w-6 h-6" />}
+          color={priorityNotes.some(n => n.priority === 3) ? 'red' : priorityNotes.length > 0 ? 'amber' : 'green'}
+          onClick={() => setShowPriorityNotesModal(true)}
         />
 
       </div>
@@ -937,6 +956,87 @@ export default function Dashboard() {
               ) : (
                 <p className="text-slate-500 dark:text-slate-400 text-center py-8">
                   No open action items from 1:1 meetings
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Priority Notes Modal */}
+      {showPriorityNotesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl mx-4">
+            <CardHeader
+              title="Priority Notes & TODOs"
+              subtitle={`${priorityNotes.length} high priority item${priorityNotes.length !== 1 ? 's' : ''}${priorityNotes.filter(n => n.priority === 3).length > 0 ? ` (${priorityNotes.filter(n => n.priority === 3).length} urgent)` : ''}`}
+              action={
+                <button
+                  onClick={closePriorityNotesModal}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              }
+            />
+            <CardContent>
+              {priorityNotes.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {priorityNotes.map(note => (
+                    <div
+                      key={note.id}
+                      onClick={() => {
+                        closePriorityNotesModal()
+                        navigate('/notes')
+                      }}
+                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600/50 transition-colors ${note.priority === 3 ? 'border-l-4 border-red-500' : 'border-l-4 border-amber-500'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{note.title}</p>
+                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                              note.priority === 3
+                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                            }`}>
+                              {note.priorityName}
+                            </span>
+                          </div>
+                          {note.content && (
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                              {note.content}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            {note.dueDate && (
+                              <span className={`flex items-center gap-1 ${note.isOverdue ? 'text-red-500 font-medium' : ''}`}>
+                                <Calendar className="w-3 h-3" />
+                                {new Date(note.dueDate).toLocaleDateString()}
+                                {note.isOverdue && ' (Overdue)'}
+                              </span>
+                            )}
+                            {note.tagsList && note.tagsList.length > 0 && (
+                              <div className="flex gap-1">
+                                {note.tagsList.slice(0, 2).map((tag, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-600 rounded text-xs">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {note.tagsList.length > 2 && (
+                                  <span className="text-xs">+{note.tagsList.length - 2}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                  No urgent or high priority notes
                 </p>
               )}
             </CardContent>
