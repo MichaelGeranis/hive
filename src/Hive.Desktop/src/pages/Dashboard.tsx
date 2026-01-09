@@ -12,7 +12,8 @@ import {
   EyeOff,
   ListTodo,
   Calendar,
-  StickyNote
+  StickyNote,
+  Check
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi } from '../services/api'
@@ -152,12 +153,12 @@ export default function Dashboard() {
       setAccuracy(accuracyData)
       setCapacityAnalysis(capacityData)
       setLeaveOverview(leaveData)
-      // Sort action items by due date descending (most recent first)
+      // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
         if (!a.actionDueDate && !b.actionDueDate) return 0
         if (!a.actionDueDate) return 1
         if (!b.actionDueDate) return -1
-        return new Date(b.actionDueDate).getTime() - new Date(a.actionDueDate).getTime()
+        return new Date(a.actionDueDate).getTime() - new Date(b.actionDueDate).getTime()
       })
       setActionItems(sortedActionItems)
       // Filter for urgent (3) and high (2) priority notes, sort by priority descending
@@ -170,6 +171,16 @@ export default function Dashboard() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCompleteActionItem = async (noteId: string) => {
+    try {
+      await meetingNotesApi.completeAction(noteId)
+      // Remove the completed item from the list
+      setActionItems(prev => prev.filter(item => item.id !== noteId))
+    } catch (err) {
+      console.error('Failed to complete action item:', err)
     }
   }
 
@@ -944,11 +955,20 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
-                        {item.isOverdue && (
-                          <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
-                            Overdue
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {item.isOverdue && (
+                            <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
+                              Overdue
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleCompleteActionItem(item.id)}
+                            className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                            title="Mark as completed"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

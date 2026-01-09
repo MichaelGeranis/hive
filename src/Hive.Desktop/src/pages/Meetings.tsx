@@ -53,7 +53,7 @@ export default function Meetings() {
   const [formData, setFormData] = useState({
     directReportId: '',
     meetingDate: '',
-    durationMinutes: '30',
+    durationMinutes: '60',
     location: '',
     agenda: ''
   })

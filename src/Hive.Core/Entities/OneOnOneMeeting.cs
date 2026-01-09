@@ -39,13 +39,16 @@ public class OneOnOneMeeting
     }
 
     public void Update(
+        Guid directReportId,
         DateTime meetingDate,
         int durationMinutes,
         string? location,
         string? agenda)
     {
+        ValidateDirectReportId(directReportId);
         ValidateDuration(durationMinutes);
 
+        DirectReportId = directReportId;
         MeetingDate = meetingDate;
         DurationMinutes = durationMinutes;
         Location = location?.Trim() ?? string.Empty;

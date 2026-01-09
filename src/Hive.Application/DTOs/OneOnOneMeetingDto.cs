@@ -36,6 +36,7 @@ public record CreateOneOnOneMeetingDto
 /// </summary>
 public record UpdateOneOnOneMeetingDto
 {
+    public Guid DirectReportId { get; init; }
     public DateTime MeetingDate { get; init; }
     public int DurationMinutes { get; init; }
     public string Location { get; init; } = string.Empty;

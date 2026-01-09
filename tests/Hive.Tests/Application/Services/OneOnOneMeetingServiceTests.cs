@@ -291,6 +291,7 @@ public class OneOnOneMeetingServiceTests
         var meeting = CreateMeeting();
         var dto = new UpdateOneOnOneMeetingDto
         {
+            DirectReportId = _testDirectReportId,
             MeetingDate = DateTime.UtcNow.AddDays(2),
             DurationMinutes = 60,
             Location = "Updated Location",
@@ -309,6 +310,7 @@ public class OneOnOneMeetingServiceTests
 
         // Assert
         result.Should().NotBeNull();
+        result.DirectReportId.Should().Be(_testDirectReportId);
         result.DurationMinutes.Should().Be(60);
         result.Location.Should().Be("Updated Location");
         result.Agenda.Should().Be("Updated Agenda");
@@ -322,6 +324,7 @@ public class OneOnOneMeetingServiceTests
         var meetingId = Guid.NewGuid();
         var dto = new UpdateOneOnOneMeetingDto
         {
+            DirectReportId = _testDirectReportId,
             MeetingDate = DateTime.UtcNow.AddDays(1),
             DurationMinutes = 30
         };

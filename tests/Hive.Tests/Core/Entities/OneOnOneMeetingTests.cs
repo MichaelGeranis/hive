@@ -96,11 +96,13 @@ public class OneOnOneMeetingTests
         // Arrange
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
         var newDate = DateTime.UtcNow.AddDays(7);
+        var newDirectReportId = Guid.NewGuid();
 
         // Act
-        meeting.Update(newDate, 45, "Conference Room", "New agenda");
+        meeting.Update(newDirectReportId, newDate, 45, "Conference Room", "New agenda");
 
         // Assert
+        meeting.DirectReportId.Should().Be(newDirectReportId);
         meeting.MeetingDate.Should().Be(newDate);
         meeting.DurationMinutes.Should().Be(45);
         meeting.Location.Should().Be("Conference Room");
@@ -115,7 +117,7 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
 
         // Act
-        var act = () => meeting.Update(DateTime.UtcNow, 3, null, null);
+        var act = () => meeting.Update(_validDirectReportId, DateTime.UtcNow, 3, null, null);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -129,7 +131,7 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow, 30, "Initial Location");
 
         // Act
-        meeting.Update(DateTime.UtcNow, 30, null, null);
+        meeting.Update(_validDirectReportId, DateTime.UtcNow, 30, null, null);
 
         // Assert
         meeting.Location.Should().BeEmpty();
@@ -142,7 +144,7 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow, 30, null, "Initial Agenda");
 
         // Act
-        meeting.Update(DateTime.UtcNow, 30, null, null);
+        meeting.Update(_validDirectReportId, DateTime.UtcNow, 30, null, null);
 
         // Assert
         meeting.Agenda.Should().BeEmpty();
@@ -155,7 +157,7 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateTime.UtcNow);
 
         // Act
-        meeting.Update(DateTime.UtcNow, 30, "  Conference Room  ", "  Weekly sync  ");
+        meeting.Update(_validDirectReportId, DateTime.UtcNow, 30, "  Conference Room  ", "  Weekly sync  ");
 
         // Assert
         meeting.Location.Should().Be("Conference Room");

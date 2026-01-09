@@ -91,7 +91,14 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.Update(dto.MeetingDate, dto.DurationMinutes, dto.Location, dto.Agenda);
+        // Validate the new direct report exists
+        var directReport = await _directReportRepository.GetByIdAsync(dto.DirectReportId, cancellationToken);
+        if (directReport is null)
+        {
+            throw new NotFoundException(nameof(DirectReport), dto.DirectReportId);
+        }
+
+        entity.Update(dto.DirectReportId, dto.MeetingDate, dto.DurationMinutes, dto.Location, dto.Agenda);
         await _meetingRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
