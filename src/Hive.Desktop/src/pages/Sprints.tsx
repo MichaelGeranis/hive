@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Calendar, Plus, TrendingUp, Users, Edit2, Trash2, Save } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { sprintsApi, sprintCapacityApi } from '../services/api'
-import type { Sprint, SprintCapacity, CreateSprintCapacityDto } from '../types'
+import type { Sprint, SprintCapacity } from '../types'
 
 export default function Sprints() {
   const [sprints, setSprints] = useState<Sprint[]>([])
@@ -10,15 +10,16 @@ export default function Sprints() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Sprint capacity state
-  const [editingCapacity, setEditingCapacity] = useState<{ sprintId: string; points: number; members: number } | null>(null)
-  const [capacitySaving, setCapacitySaving] = useState(false)
-  const [capacityError, setCapacityError] = useState<string | null>(null)
-
-  // Sprint dates state
-  const [editingDates, setEditingDates] = useState<{ sprintId: string; startDate: string; endDate: string } | null>(null)
-  const [datesSaving, setDatesSaving] = useState(false)
-  const [datesError, setDatesError] = useState<string | null>(null)
+  // Unified sprint editing state (dates + capacity)
+  const [editingSprint, setEditingSprint] = useState<{
+    sprintId: string;
+    startDate: string;
+    endDate: string;
+    points: number;
+    members: number;
+  } | null>(null)
+  const [sprintSaving, setSprintSaving] = useState(false)
+  const [sprintError, setSprintError] = useState<string | null>(null)
 
   // New sprint state
   const [creatingNewSprint, setCreatingNewSprint] = useState(false)
@@ -66,64 +67,45 @@ export default function Sprints() {
     return sprintCapacities.find(c => c.sprintId === sprintId)
   }
 
-  const handleEditCapacity = (sprint: Sprint) => {
+  const handleEditSprint = (sprint: Sprint) => {
     const existingCapacity = getCapacityForSprint(sprint.id)
-    setEditingCapacity({
+    setEditingSprint({
       sprintId: sprint.id,
+      startDate: sprint.startDate || '',
+      endDate: sprint.endDate || '',
       points: existingCapacity?.totalCapacityPoints ?? 0,
       members: existingCapacity?.availableMembers ?? 0
     })
-    setCapacityError(null)
+    setSprintError(null)
   }
 
-  const handleSaveCapacity = async () => {
-    if (!editingCapacity) return
+  const handleSaveSprint = async () => {
+    if (!editingSprint) return
 
     try {
-      setCapacitySaving(true)
-      setCapacityError(null)
-      const dto: CreateSprintCapacityDto = {
-        sprintId: editingCapacity.sprintId,
-        totalCapacityPoints: editingCapacity.points,
-        availableMembers: editingCapacity.members
-      }
-      await sprintCapacityApi.createOrUpdate(dto)
+      setSprintSaving(true)
+      setSprintError(null)
+
+      // Save dates and capacity in parallel
+      await Promise.all([
+        sprintsApi.update(editingSprint.sprintId, {
+          startDate: editingSprint.startDate || undefined,
+          endDate: editingSprint.endDate || undefined
+        }),
+        sprintCapacityApi.createOrUpdate({
+          sprintId: editingSprint.sprintId,
+          totalCapacityPoints: editingSprint.points,
+          availableMembers: editingSprint.members
+        })
+      ])
+
       await loadData()
-      setEditingCapacity(null)
+      setEditingSprint(null)
     } catch (err) {
-      console.error('Failed to save capacity', err)
-      setCapacityError('Failed to save capacity. Please try again.')
+      console.error('Failed to save sprint', err)
+      setSprintError('Failed to save sprint. Please try again.')
     } finally {
-      setCapacitySaving(false)
-    }
-  }
-
-  const handleEditDates = (sprint: Sprint) => {
-    setEditingDates({
-      sprintId: sprint.id,
-      startDate: sprint.startDate || '',
-      endDate: sprint.endDate || ''
-    })
-    setDatesError(null)
-  }
-
-  const handleSaveDates = async () => {
-    if (!editingDates) return
-
-    try {
-      setDatesSaving(true)
-      setDatesError(null)
-      await sprintsApi.update(editingDates.sprintId, {
-        startDate: editingDates.startDate || undefined,
-        endDate: editingDates.endDate || undefined
-      })
-      await loadData()
-      setEditingDates(null)
-    } catch (err) {
-      console.error('Failed to save dates', err)
-      setDatesError('Failed to save dates. Please try again.')
-    } finally {
-      setDatesSaving(false)
+      setSprintSaving(false)
     }
   }
 
@@ -307,141 +289,14 @@ export default function Sprints() {
         </Card>
       )}
 
-      {/* Sprint Dates Management */}
+      {/* Sprint Configuration */}
       <Card>
         <CardHeader
-          title="Sprint Dates"
-          subtitle="Set start and end dates for each sprint"
+          title="Sprint Configuration"
+          subtitle="Configure dates, committed points, and capacity for each sprint"
         />
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Configure start and end dates for each sprint to track sprint timelines and planning.
-            </p>
-
-            {sprints.length === 0 ? (
-              <div className="p-8 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
-                <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-500 dark:text-slate-400">
-                  No sprints found. Create a sprint or import tasks with sprint data to get started.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {sprints.map(sprint => {
-                  const isEditing = editingDates?.sprintId === sprint.id
-
-                  return (
-                    <div
-                      key={sprint.id}
-                      className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                          {sprint.name}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {sprint.teamName} | Q{sprint.quarter} {sprint.year} | Sprint #{sprint.sprintNumber}
-                        </div>
-                      </div>
-
-                      {isEditing ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-slate-500 dark:text-slate-400">Start:</label>
-                            <input
-                              type="date"
-                              value={editingDates.startDate}
-                              onChange={(e) => setEditingDates({
-                                ...editingDates,
-                                startDate: e.target.value
-                              })}
-                              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-slate-500 dark:text-slate-400">End:</label>
-                            <input
-                              type="date"
-                              value={editingDates.endDate}
-                              onChange={(e) => setEditingDates({
-                                ...editingDates,
-                                endDate: e.target.value
-                              })}
-                              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                            />
-                          </div>
-                          <button
-                            onClick={handleSaveDates}
-                            disabled={datesSaving}
-                            className="px-3 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
-                          >
-                            {datesSaving ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={() => setEditingDates(null)}
-                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-4">
-                          {sprint.startDate || sprint.endDate ? (
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                                <Calendar className="w-4 h-4" />
-                                <span className="font-medium">
-                                  {sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : 'No start'}
-                                </span>
-                                <span className="text-xs">→</span>
-                                <span className="font-medium">
-                                  {sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : 'No end'}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-400 dark:text-slate-500 italic">
-                              No dates set
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleEditDates(sprint)}
-                            className="p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
-                            title="Edit dates"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {datesError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-                {datesError}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sprint Capacity Management */}
-      <Card>
-        <CardHeader
-          title="Sprint Committed Points & Capacity"
-          subtitle="Configure committed story points and team capacity for each sprint"
-        />
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Set the committed story points and available team members for each sprint.
-              This data is used for sprint utilization analysis (completed vs committed).
-            </p>
-
             {sprints.length === 0 ? (
               <div className="p-8 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
                 <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-3" />
@@ -453,102 +308,168 @@ export default function Sprints() {
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {sprints.map(sprint => {
                   const capacity = getCapacityForSprint(sprint.id)
-                  const isEditing = editingCapacity?.sprintId === sprint.id
+                  const isEditing = editingSprint?.sprintId === sprint.id
 
                   return (
                     <div
                       key={sprint.id}
-                      className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                          {sprint.name}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {sprint.teamName} | Q{sprint.quarter} {sprint.year} | Sprint #{sprint.sprintNumber}
-                        </div>
-                      </div>
-
                       {isEditing ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-slate-400" />
-                            <input
-                              type="number"
-                              value={editingCapacity.points}
-                              onChange={(e) => setEditingCapacity({
-                                ...editingCapacity,
-                                points: parseInt(e.target.value) || 0
-                              })}
-                              className="w-24 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                              min="0"
-                              placeholder="Points"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">SP</span>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-slate-900 dark:text-slate-100">
+                                {sprint.name}
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                {sprint.teamName} | Q{sprint.quarter} {sprint.year} | Sprint #{sprint.sprintNumber}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-slate-400" />
-                            <input
-                              type="number"
-                              value={editingCapacity.members}
-                              onChange={(e) => setEditingCapacity({
-                                ...editingCapacity,
-                                members: parseInt(e.target.value) || 0
-                              })}
-                              className="w-20 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                              min="0"
-                              placeholder="Members"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">people</span>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                              <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Start:</label>
+                              <input
+                                type="date"
+                                value={editingSprint.startDate}
+                                onChange={(e) => setEditingSprint({
+                                  ...editingSprint,
+                                  startDate: e.target.value
+                                })}
+                                className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                              <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">End:</label>
+                              <input
+                                type="date"
+                                value={editingSprint.endDate}
+                                onChange={(e) => setEditingSprint({
+                                  ...editingSprint,
+                                  endDate: e.target.value
+                                })}
+                                className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="w-4 h-4 text-slate-400 shrink-0" />
+                              <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Committed:</label>
+                              <input
+                                type="number"
+                                value={editingSprint.points}
+                                onChange={(e) => setEditingSprint({
+                                  ...editingSprint,
+                                  points: parseInt(e.target.value) || 0
+                                })}
+                                className="w-24 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                                min="0"
+                                placeholder="Points"
+                              />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">SP</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                              <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Team:</label>
+                              <input
+                                type="number"
+                                value={editingSprint.members}
+                                onChange={(e) => setEditingSprint({
+                                  ...editingSprint,
+                                  members: parseInt(e.target.value) || 0
+                                })}
+                                className="w-20 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                                min="0"
+                                placeholder="Members"
+                              />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">people</span>
+                            </div>
                           </div>
-                          <button
-                            onClick={handleSaveCapacity}
-                            disabled={capacitySaving}
-                            className="px-3 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
-                          >
-                            {capacitySaving ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={() => setEditingCapacity(null)}
-                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                            Cancel
-                          </button>
+
+                          <div className="flex items-center gap-3 pt-2 border-t dark:border-slate-600">
+                            <button
+                              onClick={handleSaveSprint}
+                              disabled={sprintSaving}
+                              className="px-3 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
+                            >
+                              {sprintSaving ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => setEditingSprint(null)}
+                              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex items-center gap-4">
-                          {capacity ? (
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                                <TrendingUp className="w-4 h-4" />
-                                <span className="font-medium">{capacity.totalCapacityPoints}</span>
-                                <span className="text-xs">SP</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                                <Users className="w-4 h-4" />
-                                <span className="font-medium">{capacity.availableMembers}</span>
-                                <span className="text-xs">people</span>
-                              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                              {sprint.name}
                             </div>
-                          ) : (
-                            <span className="text-sm text-slate-400 dark:text-slate-500 italic">
-                              No capacity set
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleEditCapacity(sprint)}
-                            className="p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
-                            title="Edit capacity"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSprint(sprint.id, sprint.name)}
-                            className="p-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
-                            title="Delete sprint"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              {sprint.teamName} | Q{sprint.quarter} {sprint.year} | Sprint #{sprint.sprintNumber}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-6 text-sm">
+                            {sprint.startDate || sprint.endDate ? (
+                              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                <Calendar className="w-4 h-4" />
+                                <span className="font-medium">
+                                  {sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : '?'}
+                                </span>
+                                <span className="text-xs">→</span>
+                                <span className="font-medium">
+                                  {sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : '?'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500 italic text-xs">
+                                No dates
+                              </span>
+                            )}
+
+                            {capacity ? (
+                              <>
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <TrendingUp className="w-4 h-4" />
+                                  <span className="font-medium">{capacity.totalCapacityPoints}</span>
+                                  <span className="text-xs">SP</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <Users className="w-4 h-4" />
+                                  <span className="font-medium">{capacity.availableMembers}</span>
+                                  <span className="text-xs">people</span>
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500 italic text-xs">
+                                No capacity
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditSprint(sprint)}
+                              className="p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
+                              title="Edit sprint"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSprint(sprint.id, sprint.name)}
+                              className="p-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
+                              title="Delete sprint"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -557,9 +478,9 @@ export default function Sprints() {
               </div>
             )}
 
-            {capacityError && (
+            {sprintError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-                {capacityError}
+                {sprintError}
               </div>
             )}
           </div>
