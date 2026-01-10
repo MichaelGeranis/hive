@@ -12,7 +12,7 @@ public class ManagerNoteRepository : IManagerNoteRepository
 
     public ManagerNoteRepository(InMemoryDbContext context)
     {
-        _context = context;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public Task<ManagerNote?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

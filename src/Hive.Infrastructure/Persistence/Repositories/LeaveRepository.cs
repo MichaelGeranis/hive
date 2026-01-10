@@ -12,7 +12,7 @@ public class LeaveRepository : ILeaveRepository
 
     public LeaveRepository(InMemoryDbContext context)
     {
-        _context = context;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public Task<Leave?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

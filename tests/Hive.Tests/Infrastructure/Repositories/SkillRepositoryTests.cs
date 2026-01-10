@@ -133,10 +133,11 @@ public class SkillRepositoryTests
         // Act
         var result = await _repository.GetAllAsync();
 
-        // Assert
-        result[0].Name.Should().Be("Beta"); // Leadership (category 2)
-        result[1].Name.Should().Be("Alpha"); // Technical, alphabetically first
-        result[2].Name.Should().Be("Zebra"); // Technical, alphabetically second
+        // Assert - Skills ordered by Category (ascending) then Name (ascending)
+        // Technical (0) comes before Leadership (2)
+        result[0].Name.Should().Be("Alpha"); // Technical (category 0), alphabetically first
+        result[1].Name.Should().Be("Zebra"); // Technical (category 0), alphabetically second
+        result[2].Name.Should().Be("Beta"); // Leadership (category 2)
     }
 
     [Fact]

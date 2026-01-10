@@ -343,11 +343,13 @@ public class LeaveRepositoryTests
         DateTime? endDate = null,
         LeaveType type = LeaveType.Vacation)
     {
+        var actualStartDate = startDate ?? DateTime.UtcNow.Date;
+        var actualEndDate = endDate ?? actualStartDate.AddDays(5);
         var leave = new Leave(
             directReportId ?? _directReportId,
             type,
-            startDate ?? DateTime.UtcNow.Date,
-            endDate ?? DateTime.UtcNow.Date.AddDays(5),
+            actualStartDate,
+            actualEndDate,
             "Test leave");
         _context.Leaves.TryAdd(leave.Id, leave);
         return leave;
