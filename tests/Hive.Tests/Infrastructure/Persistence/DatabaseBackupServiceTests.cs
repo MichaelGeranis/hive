@@ -189,8 +189,8 @@ public class DatabaseBackupServiceTests : IDisposable
         }
 
         // Assert - Oldest backup should be deleted
-        var backupFiles = Directory.GetFiles(_tempDirectory, "*.backup.*");
-        backupFiles.Should().HaveCount(10);
+        var remainingBackupFiles = Directory.GetFiles(_tempDirectory, "*.backup.*");
+        remainingBackupFiles.Should().HaveCount(10);
         File.Exists(oldestBackup).Should().BeFalse();
     }
 

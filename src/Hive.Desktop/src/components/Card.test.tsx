@@ -163,10 +163,10 @@ describe('Card Components', () => {
       )
 
       // Find and click the card
-      const card = screen.getByText('Clickable').closest('div[class*="cursor-pointer"]')
+      const card = screen.getByText('Clickable').closest('div[class*="cursor-pointer"]') as HTMLElement
       expect(card).toBeInTheDocument()
 
-      card?.click()
+      card.click()
       expect(handleClick).toHaveBeenCalledTimes(1)
     })
 

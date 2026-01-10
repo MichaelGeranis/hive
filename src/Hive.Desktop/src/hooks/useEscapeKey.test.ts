@@ -73,7 +73,7 @@ describe('useEscapeKey', () => {
 
     // The listener should not be added for keydown when inactive
     const keydownCalls = addEventListenerSpy.mock.calls.filter(
-      call => call[0] === 'keydown'
+      (call: [string, ...unknown[]]) => call[0] === 'keydown'
     )
     expect(keydownCalls.length).toBe(0)
   })

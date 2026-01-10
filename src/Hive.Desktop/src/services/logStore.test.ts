@@ -161,8 +161,7 @@ describe('logStore', () => {
       logStore.initializeLogCapture()
       console.log('Test')
 
-      const firstLog = logStore.getLogs()[0]
-      const firstId = firstLog.id
+      logStore.getLogs()[0]
 
       logStore.clearLogs()
 

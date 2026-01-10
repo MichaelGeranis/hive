@@ -419,9 +419,9 @@ public class BackupServiceTests
                     Id = taskId,
                     Title = "Test Task",
                     Description = "Test Description",
-                    Type = (int)TaskType.Feature,
+                    Type = (int)TaskType.Task,
                     Priority = (int)TaskPriority.High,
-                    Status = (int)TaskStatus.InProgress,
+                    Status = (int)Hive.Core.Entities.TaskStatus.InProgress,
                     Tags = "tag1,tag2",
                     Labels = "label1"
                 }
@@ -605,8 +605,8 @@ public class BackupServiceTests
                     Id = taskId,
                     Title = "Test Task",
                     Description = "Description",
-                    Type = (int)TaskType.Feature,
-                    Priority = (int)TaskPriority.Medium,
+                    Type = (int)TaskType.Task,
+                    Priority = (int)TaskPriority.High,
                     Tags = "",
                     Labels = ""
                 }
@@ -642,7 +642,7 @@ public class BackupServiceTests
                     Id = meetingNoteId,
                     MeetingId = meetingId,
                     Content = "Note content",
-                    Category = (int)NoteCategory.General,
+                    Category = (int)NoteCategory.Discussion,
                     IsPrivate = false
                 }
             },
@@ -666,7 +666,7 @@ public class BackupServiceTests
                     Title = "Note Title",
                     Content = "Note Content",
                     Tags = "tag1",
-                    Priority = (int)NotePriority.Medium
+                    Priority = (int)NotePriority.Normal
                 }
             },
             Sprints = new List<SprintBackup>
@@ -855,7 +855,7 @@ public class BackupServiceTests
         new("Test Project", "Description", DateTime.UtcNow, null, "label1,label2");
 
     private static TeamTask CreateTask() =>
-        new("Test Task", "Description", TaskType.Feature, TaskPriority.Medium, null, null, null, null, null, "tag1", "label1", null, null);
+        new("Test Task", "Description", TaskType.Task, TaskPriority.High, null, null, null, null, null, "tag1", "label1", null, null);
 
     private static PerformanceReview CreatePerformanceReview(Guid? directReportId = null) =>
         new(directReportId ?? Guid.NewGuid(), "2024-Q1", DateTime.UtcNow);
@@ -864,13 +864,13 @@ public class BackupServiceTests
         new(directReportId ?? Guid.NewGuid(), DateTime.UtcNow, 30, "Office", "Check-in");
 
     private static MeetingNote CreateMeetingNote(Guid meetingId) =>
-        new(meetingId, "Note content", NoteCategory.General, false);
+        new(meetingId, "Note content", NoteCategory.Discussion, false);
 
     private static Leave CreateLeave(Guid directReportId) =>
         new(directReportId, LeaveType.Vacation, DateTime.UtcNow, DateTime.UtcNow.AddDays(5), "Vacation");
 
     private static ManagerNote CreateManagerNote() =>
-        new("Note Title", "Note Content", NotePriority.Medium, null, "tag1");
+        new("Note Title", "Note Content", NotePriority.Normal, null, "tag1");
 
     private static Sprint CreateSprint() =>
         new("Sprint 1");
@@ -882,7 +882,7 @@ public class BackupServiceTests
         new("Document Title", "Document Content", null, "tag1");
 
     private static AppSettings CreateAppSettings() =>
-        new();
+        new("[]");
 
     #endregion
 }
