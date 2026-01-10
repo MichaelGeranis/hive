@@ -14,6 +14,7 @@ public interface ISprintService
     Task<IReadOnlyList<SprintDto>> GetByYearQuarterAsync(int year, int quarter, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SprintDto>> GetByYearAsync(int year, CancellationToken cancellationToken = default);
     Task<SprintDto> CreateAsync(CreateSprintDto dto, CancellationToken cancellationToken = default);
+    Task<SprintDto> UpdateAsync(Guid id, UpdateSprintDto dto, CancellationToken cancellationToken = default);
     Task<SprintDto> GetOrCreateAsync(string name, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

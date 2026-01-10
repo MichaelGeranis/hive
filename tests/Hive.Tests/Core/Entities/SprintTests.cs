@@ -216,4 +216,95 @@ public class SprintTests
         nonStandardSprint.IsBefore(standardSprint).Should().BeTrue();
         standardSprint.IsAfter(nonStandardSprint).Should().BeTrue();
     }
+
+    [Fact]
+    public void UpdateDates_WithValidDates_UpdatesSprintDates()
+    {
+        // Arrange
+        var sprint = new Sprint("LP_1Q25_S1");
+        var startDate = new DateTime(2025, 1, 1);
+        var endDate = new DateTime(2025, 1, 14);
+
+        // Act
+        sprint.UpdateDates(startDate, endDate);
+
+        // Assert
+        sprint.StartDate.Should().Be(startDate);
+        sprint.EndDate.Should().Be(endDate);
+        sprint.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void UpdateDates_WithNullDates_UpdatesSprintDates()
+    {
+        // Arrange
+        var sprint = new Sprint("LP_1Q25_S1");
+
+        // Act
+        sprint.UpdateDates(null, null);
+
+        // Assert
+        sprint.StartDate.Should().BeNull();
+        sprint.EndDate.Should().BeNull();
+        sprint.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void UpdateDates_WithOnlyStartDate_UpdatesSprintDates()
+    {
+        // Arrange
+        var sprint = new Sprint("LP_1Q25_S1");
+        var startDate = new DateTime(2025, 1, 1);
+
+        // Act
+        sprint.UpdateDates(startDate, null);
+
+        // Assert
+        sprint.StartDate.Should().Be(startDate);
+        sprint.EndDate.Should().BeNull();
+        sprint.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void UpdateDates_WithOnlyEndDate_UpdatesSprintDates()
+    {
+        // Arrange
+        var sprint = new Sprint("LP_1Q25_S1");
+        var endDate = new DateTime(2025, 1, 14);
+
+        // Act
+        sprint.UpdateDates(null, endDate);
+
+        // Assert
+        sprint.StartDate.Should().BeNull();
+        sprint.EndDate.Should().Be(endDate);
+        sprint.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void UpdateDates_WithStartDateAfterEndDate_ThrowsArgumentException()
+    {
+        // Arrange
+        var sprint = new Sprint("LP_1Q25_S1");
+        var startDate = new DateTime(2025, 1, 14);
+        var endDate = new DateTime(2025, 1, 1);
+
+        // Act
+        var act = () => sprint.UpdateDates(startDate, endDate);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Start date cannot be after end date.*");
+    }
+
+    [Fact]
+    public void Constructor_InitializesStartDateAndEndDateAsNull()
+    {
+        // Arrange & Act
+        var sprint = new Sprint("LP_1Q25_S1");
+
+        // Assert
+        sprint.StartDate.Should().BeNull();
+        sprint.EndDate.Should().BeNull();
+    }
 }

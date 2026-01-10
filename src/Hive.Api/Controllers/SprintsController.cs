@@ -157,6 +157,36 @@ public class SprintsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates a sprint's dates.
+    /// </summary>
+    /// <param name="id">The sprint ID.</param>
+    /// <param name="dto">The sprint update data.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated sprint.</returns>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(SprintDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SprintDto>> Update(Guid id, [FromBody] UpdateSprintDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Updating sprint with ID: {Id}", id);
+
+        try
+        {
+            var updated = await _service.UpdateAsync(id, dto, cancellationToken);
+            return Ok(updated);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Deletes a sprint.
     /// </summary>
     /// <param name="id">The sprint ID.</param>

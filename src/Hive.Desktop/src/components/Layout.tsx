@@ -19,14 +19,14 @@ import {
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { name: 'Sprints', to: '/sprints', icon: Zap },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Parents', to: '/parents', icon: Layers },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
-  { name: 'Sprints', to: '/sprints', icon: Zap },
   { name: 'Team', to: '/team', icon: Users },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
-  { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
+  { name: 'Reviews', to: '/reviews', icon: Star },
   { name: 'Calendar', to: '/calendar', icon: CalendarDays },
   { name: 'Notes', to: '/notes', icon: StickyNote },
   { name: 'Documents', to: '/documents', icon: FileText },

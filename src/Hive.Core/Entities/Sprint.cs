@@ -19,6 +19,8 @@ public class Sprint
     public int Quarter { get; private set; }
     public int Year { get; private set; }
     public int SprintNumber { get; private set; }
+    public DateTime? StartDate { get; private set; }
+    public DateTime? EndDate { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -68,6 +70,15 @@ public class Sprint
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateDates(DateTime? startDate, DateTime? endDate)
+    {
+        ValidateDates(startDate, endDate);
+
+        StartDate = startDate;
+        EndDate = endDate;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Gets the sort order for this sprint based on year, quarter, and sprint number.
     /// Higher values are more recent sprints.
@@ -104,6 +115,14 @@ public class Sprint
         if (name.Length > 100)
         {
             throw new ArgumentException("Sprint name cannot exceed 100 characters.", nameof(name));
+        }
+    }
+
+    private static void ValidateDates(DateTime? startDate, DateTime? endDate)
+    {
+        if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
+        {
+            throw new ArgumentException("Start date cannot be after end date.", nameof(startDate));
         }
     }
 }

@@ -625,12 +625,19 @@ export interface Sprint {
   quarter: number
   year: number
   sprintNumber: number
+  startDate?: string
+  endDate?: string
   createdAt: string
   updatedAt?: string
 }
 
 export interface CreateSprintDto {
   name: string
+}
+
+export interface UpdateSprintDto {
+  startDate?: string
+  endDate?: string
 }
 
 // Sprint Capacity

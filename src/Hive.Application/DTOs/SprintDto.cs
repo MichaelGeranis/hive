@@ -11,6 +11,8 @@ public record SprintDto
     public int Quarter { get; init; }
     public int Year { get; init; }
     public int SprintNumber { get; init; }
+    public DateTime? StartDate { get; init; }
+    public DateTime? EndDate { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
@@ -21,6 +23,15 @@ public record SprintDto
 public record CreateSprintDto
 {
     public string Name { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// Data transfer object for updating a Sprint's dates.
+/// </summary>
+public record UpdateSprintDto
+{
+    public DateTime? StartDate { get; init; }
+    public DateTime? EndDate { get; init; }
 }
 
 /// <summary>

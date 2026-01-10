@@ -15,6 +15,11 @@ export default function Sprints() {
   const [capacitySaving, setCapacitySaving] = useState(false)
   const [capacityError, setCapacityError] = useState<string | null>(null)
 
+  // Sprint dates state
+  const [editingDates, setEditingDates] = useState<{ sprintId: string; startDate: string; endDate: string } | null>(null)
+  const [datesSaving, setDatesSaving] = useState(false)
+  const [datesError, setDatesError] = useState<string | null>(null)
+
   // New sprint state
   const [creatingNewSprint, setCreatingNewSprint] = useState(false)
   const [teamName, setTeamName] = useState('')
@@ -90,6 +95,35 @@ export default function Sprints() {
       setCapacityError('Failed to save capacity. Please try again.')
     } finally {
       setCapacitySaving(false)
+    }
+  }
+
+  const handleEditDates = (sprint: Sprint) => {
+    setEditingDates({
+      sprintId: sprint.id,
+      startDate: sprint.startDate || '',
+      endDate: sprint.endDate || ''
+    })
+    setDatesError(null)
+  }
+
+  const handleSaveDates = async () => {
+    if (!editingDates) return
+
+    try {
+      setDatesSaving(true)
+      setDatesError(null)
+      await sprintsApi.update(editingDates.sprintId, {
+        startDate: editingDates.startDate || undefined,
+        endDate: editingDates.endDate || undefined
+      })
+      await loadData()
+      setEditingDates(null)
+    } catch (err) {
+      console.error('Failed to save dates', err)
+      setDatesError('Failed to save dates. Please try again.')
+    } finally {
+      setDatesSaving(false)
     }
   }
 
@@ -272,6 +306,128 @@ export default function Sprints() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sprint Dates Management */}
+      <Card>
+        <CardHeader
+          title="Sprint Dates"
+          subtitle="Set start and end dates for each sprint"
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Configure start and end dates for each sprint to track sprint timelines and planning.
+            </p>
+
+            {sprints.length === 0 ? (
+              <div className="p-8 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <p className="text-slate-500 dark:text-slate-400">
+                  No sprints found. Create a sprint or import tasks with sprint data to get started.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {sprints.map(sprint => {
+                  const isEditing = editingDates?.sprintId === sprint.id
+
+                  return (
+                    <div
+                      key={sprint.id}
+                      className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {sprint.name}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          {sprint.teamName} | Q{sprint.quarter} {sprint.year} | Sprint #{sprint.sprintNumber}
+                        </div>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-slate-500 dark:text-slate-400">Start:</label>
+                            <input
+                              type="date"
+                              value={editingDates.startDate}
+                              onChange={(e) => setEditingDates({
+                                ...editingDates,
+                                startDate: e.target.value
+                              })}
+                              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-slate-500 dark:text-slate-400">End:</label>
+                            <input
+                              type="date"
+                              value={editingDates.endDate}
+                              onChange={(e) => setEditingDates({
+                                ...editingDates,
+                                endDate: e.target.value
+                              })}
+                              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
+                            />
+                          </div>
+                          <button
+                            onClick={handleSaveDates}
+                            disabled={datesSaving}
+                            className="px-3 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
+                          >
+                            {datesSaving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setEditingDates(null)}
+                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          {sprint.startDate || sprint.endDate ? (
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                <Calendar className="w-4 h-4" />
+                                <span className="font-medium">
+                                  {sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : 'No start'}
+                                </span>
+                                <span className="text-xs">→</span>
+                                <span className="font-medium">
+                                  {sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : 'No end'}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-slate-400 dark:text-slate-500 italic">
+                              No dates set
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleEditDates(sprint)}
+                            className="p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
+                            title="Edit dates"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {datesError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {datesError}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Sprint Capacity Management */}
       <Card>

@@ -38,6 +38,7 @@ import type {
   UpdateManagerNoteDto,
   Sprint,
   CreateSprintDto,
+  UpdateSprintDto,
   SprintCapacity,
   CreateSprintCapacityDto,
   LateTasksReport,
@@ -270,6 +271,7 @@ export const sprintsApi = {
   getByYearQuarter: (year: number, quarter: number) =>
     api.get<Sprint[]>(`/sprints/year/${year}/quarter/${quarter}`).then(r => r.data),
   create: (data: CreateSprintDto) => api.post<Sprint>('/sprints', data).then(r => r.data),
+  update: (id: string, data: UpdateSprintDto) => api.put<Sprint>(`/sprints/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/sprints/${id}`)
 }
 

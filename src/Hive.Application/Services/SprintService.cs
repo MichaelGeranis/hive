@@ -67,6 +67,20 @@ public class SprintService : ISprintService
         return MapToDto(created);
     }
 
+    public async Task<SprintDto> UpdateAsync(Guid id, UpdateSprintDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _sprintRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
+        {
+            throw new NotFoundException(nameof(Sprint), id);
+        }
+
+        entity.UpdateDates(dto.StartDate, dto.EndDate);
+        await _sprintRepository.UpdateAsync(entity, cancellationToken);
+
+        return MapToDto(entity);
+    }
+
     public async Task<SprintDto> GetOrCreateAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -105,6 +119,8 @@ public class SprintService : ISprintService
         Quarter = entity.Quarter,
         Year = entity.Year,
         SprintNumber = entity.SprintNumber,
+        StartDate = entity.StartDate,
+        EndDate = entity.EndDate,
         CreatedAt = entity.CreatedAt,
         UpdatedAt = entity.UpdatedAt
     };
