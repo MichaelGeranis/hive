@@ -3,7 +3,6 @@ import {
   Award,
   Plus,
   Search,
-  Filter,
   X,
   Edit2,
   Trash2,
@@ -80,8 +79,6 @@ export default function Skills() {
   const [showAssessmentModal, setShowAssessmentModal] = useState(false)
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null)
   const [editingAssessment, setEditingAssessment] = useState<SkillAssessment | null>(null)
-  const [selectedDirectReportId, setSelectedDirectReportId] = useState<string>('')
-  const [selectedSkillId, setSelectedSkillId] = useState<string>('')
 
   // Form state
   const [skillForm, setSkillForm] = useState<CreateSkillDto>({
@@ -123,8 +120,25 @@ export default function Skills() {
         directReportsApi.getAll()
       ])
       setSkills(skillsData)
-      setMatrix(matrixData)
-      setGaps(gapsData)
+
+      // Filter matrix to show only direct reports
+      const directReportIds = new Set(
+        reportsData.filter(r => r.isDirect).map(r => r.id)
+      )
+      const filteredMatrix = {
+        skills: matrixData.skills,
+        directReports: matrixData.directReports.filter(dr =>
+          directReportIds.has(dr.directReportId)
+        )
+      }
+      setMatrix(filteredMatrix)
+
+      // Filter gaps to show only direct reports
+      const filteredGaps = gapsData.filter(gap =>
+        directReportIds.has(gap.directReportId)
+      )
+      setGaps(filteredGaps)
+
       setDirectReports(reportsData.filter(r => r.isDirect))
     } catch (err) {
       console.error('Failed to load skills data:', err)
@@ -249,7 +263,7 @@ export default function Skills() {
     }
   }
 
-  const handleCellClick = (directReportId: string, skillId: string, currentLevel?: ProficiencyLevel) => {
+  const handleCellClick = (directReportId: string, skillId: string, _currentLevel?: ProficiencyLevel) => {
     // Find existing assessment or create new one
     const assessment = allAssessments.find(
       a => a.directReportId === directReportId && a.skillId === skillId
@@ -340,7 +354,7 @@ export default function Skills() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Skills</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Manage team skills, track proficiency, and identify development opportunities
+            Manage direct reports' skills, track proficiency, and identify development opportunities
           </p>
         </div>
         <button
@@ -429,7 +443,7 @@ export default function Skills() {
             <StatCard
               title="Assessments"
               value={allAssessments.length}
-              subtitle={`Across ${matrix?.directReports.length || 0} team members`}
+              subtitle={`Across ${matrix?.directReports.length || 0} direct reports`}
               icon={<Users className="w-6 h-6" />}
               color="purple"
             />
@@ -510,7 +524,7 @@ export default function Skills() {
         <Card>
           <CardHeader
             title="Team Skills Matrix"
-            subtitle="View and edit team member proficiency levels across all skills"
+            subtitle="View and edit direct reports' proficiency levels across all skills"
           />
           <CardContent>
             <SkillsHeatmap
@@ -552,7 +566,7 @@ export default function Skills() {
                     <thead className="bg-slate-50 dark:bg-slate-800">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Team Member
+                          Direct Report
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                           Skill
@@ -791,7 +805,7 @@ export default function Skills() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Team Member
+                  Direct Report
                 </label>
                 <select
                   value={assessmentForm.directReportId}
@@ -799,7 +813,7 @@ export default function Skills() {
                   className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   disabled={!!editingAssessment}
                 >
-                  <option value="">Select team member</option>
+                  <option value="">Select direct report</option>
                   {directReports.map(dr => (
                     <option key={dr.id} value={dr.id}>{dr.fullName}</option>
                   ))}

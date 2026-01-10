@@ -12,7 +12,7 @@ const originalConsole = {
 
 // Store original stderr.write to filter jsdom error output
 const originalStderrWrite = process.stderr.write.bind(process.stderr)
-process.stderr.write = ((chunk: string | Uint8Array, ...args: unknown[]) => {
+process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding, cb?: (err?: Error | null) => void) => {
   const text = typeof chunk === 'string' ? chunk : chunk.toString()
   // Filter expected test errors from stderr
   if (
@@ -21,7 +21,7 @@ process.stderr.write = ((chunk: string | Uint8Array, ...args: unknown[]) => {
   ) {
     return true
   }
-  return originalStderrWrite(chunk, ...args)
+  return originalStderrWrite(chunk, encoding, cb)
 }) as typeof process.stderr.write
 
 // Start MSW server before all tests

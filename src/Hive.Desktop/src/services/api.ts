@@ -56,7 +56,25 @@ import type {
   CreateSkillDto,
   UpdateSkillDto,
   CreateSkillAssessmentDto,
-  UpdateSkillAssessmentDto
+  UpdateSkillAssessmentDto,
+  ChecklistTemplate,
+  ChecklistTemplateWithItems,
+  ChecklistTemplateItem,
+  ChecklistInstance,
+  ChecklistInstanceWithItems,
+  ChecklistInstanceItem,
+  ChecklistType,
+  CreateChecklistTemplateDto,
+  UpdateChecklistTemplateDto,
+  CreateChecklistTemplateItemDto,
+  UpdateChecklistTemplateItemDto,
+  CreateInterviewInstanceDto,
+  CreateOnboardingInstanceDto,
+  CompleteChecklistItemDto,
+  SkipChecklistItemDto,
+  UpdateChecklistItemDto,
+  ReorderItemsDto,
+  Activity
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -422,6 +440,78 @@ export const activityFeedApi = {
     api.get<Activity[]>(`/activityfeed/recent?days=${days}`).then(r => r.data),
   getByEntityType: (type: string) =>
     api.get<Activity[]>(`/activityfeed/by-entity-type/${type}`).then(r => r.data)
+}
+
+// Checklist Templates
+export const checklistTemplatesApi = {
+  getAll: () =>
+    api.get<ChecklistTemplate[]>('/checklisttemplates').then(r => r.data),
+  getById: (id: string) =>
+    api.get<ChecklistTemplate>(`/checklisttemplates/${id}`).then(r => r.data),
+  getWithItems: (id: string) =>
+    api.get<ChecklistTemplateWithItems>(`/checklisttemplates/${id}/with-items`).then(r => r.data),
+  getByType: (type: ChecklistType, includeInactive: boolean = false) =>
+    api.get<ChecklistTemplate[]>(`/checklisttemplates/by-type/${type}?includeInactive=${includeInactive}`).then(r => r.data),
+  getActive: (type?: ChecklistType) => {
+    const params = type !== undefined ? `?type=${type}` : ''
+    return api.get<ChecklistTemplate[]>(`/checklisttemplates/active${params}`).then(r => r.data)
+  },
+  create: (data: CreateChecklistTemplateDto) =>
+    api.post<ChecklistTemplate>('/checklisttemplates', data).then(r => r.data),
+  update: (id: string, data: UpdateChecklistTemplateDto) =>
+    api.put<ChecklistTemplate>(`/checklisttemplates/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/checklisttemplates/${id}`),
+  activate: (id: string) =>
+    api.post<ChecklistTemplate>(`/checklisttemplates/${id}/activate`).then(r => r.data),
+  deactivate: (id: string) =>
+    api.post<ChecklistTemplate>(`/checklisttemplates/${id}/deactivate`).then(r => r.data),
+  addItem: (templateId: string, data: CreateChecklistTemplateItemDto) =>
+    api.post<ChecklistTemplateItem>(`/checklisttemplates/${templateId}/items`, data).then(r => r.data),
+  updateItem: (itemId: string, data: UpdateChecklistTemplateItemDto) =>
+    api.put<ChecklistTemplateItem>(`/checklisttemplates/items/${itemId}`, data).then(r => r.data),
+  deleteItem: (itemId: string) =>
+    api.delete(`/checklisttemplates/items/${itemId}`),
+  reorderItems: (templateId: string, data: ReorderItemsDto) =>
+    api.post(`/checklisttemplates/${templateId}/reorder`, data)
+}
+
+// Checklist Instances
+export const checklistInstancesApi = {
+  getAll: () =>
+    api.get<ChecklistInstance[]>('/checklistinstances').then(r => r.data),
+  getById: (id: string) =>
+    api.get<ChecklistInstance>(`/checklistinstances/${id}`).then(r => r.data),
+  getWithItems: (id: string) =>
+    api.get<ChecklistInstanceWithItems>(`/checklistinstances/${id}/with-items`).then(r => r.data),
+  getByType: (type: ChecklistType) =>
+    api.get<ChecklistInstance[]>(`/checklistinstances/by-type/${type}`).then(r => r.data),
+  getActive: (type?: ChecklistType) => {
+    const params = type !== undefined ? `?type=${type}` : ''
+    return api.get<ChecklistInstance[]>(`/checklistinstances/active${params}`).then(r => r.data)
+  },
+  createInterview: (data: CreateInterviewInstanceDto) =>
+    api.post<ChecklistInstance>('/checklistinstances/interview', data).then(r => r.data),
+  createOnboarding: (data: CreateOnboardingInstanceDto) =>
+    api.post<ChecklistInstance>('/checklistinstances/onboarding', data).then(r => r.data),
+  start: (id: string) =>
+    api.post<ChecklistInstance>(`/checklistinstances/${id}/start`).then(r => r.data),
+  complete: (id: string) =>
+    api.post<ChecklistInstance>(`/checklistinstances/${id}/complete`).then(r => r.data),
+  cancel: (id: string) =>
+    api.post<ChecklistInstance>(`/checklistinstances/${id}/cancel`).then(r => r.data),
+  updateNotes: (id: string, notes: string) =>
+    api.put<ChecklistInstance>(`/checklistinstances/${id}/notes`, notes).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/checklistinstances/${id}`),
+  completeItem: (itemId: string, data: CompleteChecklistItemDto) =>
+    api.post<ChecklistInstanceItem>(`/checklistinstances/items/${itemId}/complete`, data).then(r => r.data),
+  skipItem: (itemId: string, data?: SkipChecklistItemDto) =>
+    api.post<ChecklistInstanceItem>(`/checklistinstances/items/${itemId}/skip`, data || {}).then(r => r.data),
+  updateItem: (itemId: string, data: UpdateChecklistItemDto) =>
+    api.put<ChecklistInstanceItem>(`/checklistinstances/items/${itemId}`, data).then(r => r.data),
+  getOverdueItems: () =>
+    api.get<ChecklistInstanceItem[]>('/checklistinstances/items/overdue').then(r => r.data)
 }
 
 export default api

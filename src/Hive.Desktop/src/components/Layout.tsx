@@ -16,7 +16,8 @@ import {
   FileText,
   ScrollText,
   Award,
-  Activity
+  Activity,
+  ClipboardList
 } from 'lucide-react'
 
 const navigation = [
@@ -31,6 +32,7 @@ const navigation = [
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'Reviews', to: '/reviews', icon: Star },
+  { name: 'Checklists', to: '/checklists', icon: ClipboardList },
   { name: 'Calendar', to: '/calendar', icon: CalendarDays },
   { name: 'Notes', to: '/notes', icon: StickyNote },
   { name: 'Documents', to: '/documents', icon: FileText },

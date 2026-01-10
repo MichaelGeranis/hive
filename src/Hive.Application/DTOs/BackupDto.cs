@@ -18,6 +18,9 @@ public record BackupDto
     public List<SprintBackup> Sprints { get; init; } = new();
     public List<SprintCapacityBackup> SprintCapacities { get; init; } = new();
     public List<DocumentBackup> Documents { get; init; } = new();
+    public List<ActivityBackup> Activities { get; init; } = new();
+    public List<SkillBackup> Skills { get; init; } = new();
+    public List<SkillAssessmentBackup> SkillAssessments { get; init; } = new();
     public AppSettingsBackup? Settings { get; init; }
 }
 
@@ -180,6 +183,41 @@ public record AppSettingsBackup
     public DateTime? UpdatedAt { get; init; }
 }
 
+public record ActivityBackup
+{
+    public Guid Id { get; init; }
+    public int ActivityType { get; init; }
+    public int EntityType { get; init; }
+    public Guid EntityId { get; init; }
+    public string EntityName { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public DateTime Timestamp { get; init; }
+    public DateTime CreatedAt { get; init; }
+}
+
+public record SkillBackup
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public int Category { get; init; }
+    public bool IsActive { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
+}
+
+public record SkillAssessmentBackup
+{
+    public Guid Id { get; init; }
+    public Guid DirectReportId { get; init; }
+    public Guid SkillId { get; init; }
+    public int Level { get; init; }
+    public int? TargetLevel { get; init; }
+    public string Notes { get; init; } = string.Empty;
+    public DateTime AssessedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
+}
+
 /// <summary>
 /// Result of a restore operation.
 /// </summary>
@@ -197,6 +235,9 @@ public record RestoreResultDto
     public int SprintsRestored { get; init; }
     public int SprintCapacitiesRestored { get; init; }
     public int DocumentsRestored { get; init; }
+    public int ActivitiesRestored { get; init; }
+    public int SkillsRestored { get; init; }
+    public int SkillAssessmentsRestored { get; init; }
     public bool SettingsRestored { get; init; }
     public List<string> Errors { get; init; } = new();
     public List<string> Warnings { get; init; } = new();

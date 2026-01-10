@@ -46,6 +46,10 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IParentRepository, ParentRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
+        services.AddScoped<IChecklistTemplateRepository, ChecklistTemplateRepository>();
+        services.AddScoped<IChecklistTemplateItemRepository, ChecklistTemplateItemRepository>();
+        services.AddScoped<IChecklistInstanceRepository, ChecklistInstanceRepository>();
+        services.AddScoped<IChecklistInstanceItemRepository, ChecklistInstanceItemRepository>();
 
         return services;
     }
@@ -79,6 +83,10 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepository, SqliteDocumentRepository>();
         services.AddScoped<IParentRepository, SqliteParentRepository>();
         services.AddScoped<IActivityRepository, SqliteActivityRepository>();
+        services.AddScoped<IChecklistTemplateRepository, SqliteChecklistTemplateRepository>();
+        services.AddScoped<IChecklistTemplateItemRepository, SqliteChecklistTemplateItemRepository>();
+        services.AddScoped<IChecklistInstanceRepository, SqliteChecklistInstanceRepository>();
+        services.AddScoped<IChecklistInstanceItemRepository, SqliteChecklistInstanceItemRepository>();
 
         // Register database backup service
         services.AddSingleton<DatabaseBackupService>();

@@ -76,7 +76,7 @@ export function SkillsHeatmap({ matrix, onCellClick, categoryFilter }: SkillsHea
   if (sortedDirectReports.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
-        No team members found. Add direct reports to see their skills matrix.
+        No direct reports found. Add direct reports to see their skills matrix.
       </div>
     )
   }
@@ -88,7 +88,7 @@ export function SkillsHeatmap({ matrix, onCellClick, categoryFilter }: SkillsHea
           {/* Category headers */}
           <tr className="bg-slate-50 dark:bg-slate-800">
             <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Team Member
+              Direct Report
             </th>
             {groupedSkills.map(([category, skills]) => (
               <th

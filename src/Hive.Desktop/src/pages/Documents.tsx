@@ -181,45 +181,45 @@ export default function Documents() {
 
       {showForm && (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
             {editingDocument ? 'Edit Document' : 'Add New Document'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Title</label>
+              <label className="block text-sm font-medium mb-1 text-slate-900 dark:text-slate-200">Title</label>
               <input
                 type="text"
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Content</label>
+              <label className="block text-sm font-medium mb-1 text-slate-900 dark:text-slate-200">Content</label>
               <textarea
                 rows={4}
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">URL (optional)</label>
+              <label className="block text-sm font-medium mb-1 text-slate-900 dark:text-slate-200">URL (optional)</label>
               <input
                 type="url"
                 value={formData.url}
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Tags (comma-separated)</label>
+              <label className="block text-sm font-medium mb-1 text-slate-900 dark:text-slate-200">Tags (comma-separated)</label>
               <input
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
             <div className="flex gap-2">
@@ -236,7 +236,7 @@ export default function Documents() {
                   setEditingDocument(null)
                   setFormData({ title: '', content: '', url: '', tags: '' })
                 }}
-                className="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded-lg"
+                className="bg-slate-300 hover:bg-slate-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg"
               >
                 Cancel
               </button>

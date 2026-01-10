@@ -21,6 +21,9 @@ public class BackupService : IBackupService
     private readonly ISprintRepository _sprintRepository;
     private readonly ISprintCapacityRepository _sprintCapacityRepository;
     private readonly IDocumentRepository _documentRepository;
+    private readonly IActivityRepository _activityRepository;
+    private readonly ISkillRepository _skillRepository;
+    private readonly ISkillAssessmentRepository _skillAssessmentRepository;
     private readonly IAppSettingsRepository _settingsRepository;
 
     public BackupService(
@@ -35,6 +38,9 @@ public class BackupService : IBackupService
         ISprintRepository sprintRepository,
         ISprintCapacityRepository sprintCapacityRepository,
         IDocumentRepository documentRepository,
+        IActivityRepository activityRepository,
+        ISkillRepository skillRepository,
+        ISkillAssessmentRepository skillAssessmentRepository,
         IAppSettingsRepository settingsRepository)
     {
         _directReportRepository = directReportRepository;
@@ -48,6 +54,9 @@ public class BackupService : IBackupService
         _sprintRepository = sprintRepository;
         _sprintCapacityRepository = sprintCapacityRepository;
         _documentRepository = documentRepository;
+        _activityRepository = activityRepository;
+        _skillRepository = skillRepository;
+        _skillAssessmentRepository = skillAssessmentRepository;
         _settingsRepository = settingsRepository;
     }
 
@@ -69,6 +78,9 @@ public class BackupService : IBackupService
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
         var documents = await _documentRepository.GetAllAsync(cancellationToken);
+        var activities = await _activityRepository.GetAllAsync(cancellationToken);
+        var skills = await _skillRepository.GetAllAsync(true, cancellationToken);
+        var skillAssessments = await _skillAssessmentRepository.GetAllAsync(cancellationToken);
         var settings = await _settingsRepository.GetAsync(cancellationToken);
 
         return new BackupDto
@@ -86,6 +98,9 @@ public class BackupService : IBackupService
             Sprints = sprints.Select(MapSprint).ToList(),
             SprintCapacities = sprintCapacities.Select(MapSprintCapacity).ToList(),
             Documents = documents.Select(MapDocument).ToList(),
+            Activities = activities.Select(MapActivity).ToList(),
+            Skills = skills.Select(MapSkill).ToList(),
+            SkillAssessments = skillAssessments.Select(MapSkillAssessment).ToList(),
             Settings = settings != null ? MapSettings(settings) : null
         };
     }
@@ -105,6 +120,9 @@ public class BackupService : IBackupService
         int sprintsRestored = 0;
         int sprintCapacitiesRestored = 0;
         int documentsRestored = 0;
+        int activitiesRestored = 0;
+        int skillsRestored = 0;
+        int skillAssessmentsRestored = 0;
         bool settingsRestored = false;
 
         try
@@ -367,6 +385,85 @@ public class BackupService : IBackupService
                 }
             }
 
+            // Import Skills
+            foreach (var s in backup.Skills)
+            {
+                try
+                {
+                    var existing = await _skillRepository.GetByIdAsync(s.Id, cancellationToken);
+                    if (existing == null)
+                    {
+                        var entity = new Skill(s.Name, s.Description, (SkillCategory)s.Category);
+                        SetEntityId(entity, s.Id);
+                        if (!s.IsActive)
+                        {
+                            entity.Deactivate();
+                        }
+                        await _skillRepository.AddAsync(entity, cancellationToken);
+                        skillsRestored++;
+                    }
+                    else
+                    {
+                        warnings.Add($"Skill {s.Name} already exists, skipping");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Failed to restore skill {s.Name}: {ex.Message}");
+                }
+            }
+
+            // Import Skill Assessments
+            foreach (var sa in backup.SkillAssessments)
+            {
+                try
+                {
+                    var existing = await _skillAssessmentRepository.GetByIdAsync(sa.Id, cancellationToken);
+                    if (existing == null)
+                    {
+                        var entity = new SkillAssessment(
+                            sa.DirectReportId,
+                            sa.SkillId,
+                            (ProficiencyLevel)sa.Level,
+                            sa.TargetLevel.HasValue ? (ProficiencyLevel?)sa.TargetLevel.Value : null,
+                            sa.Notes);
+                        SetEntityId(entity, sa.Id);
+                        await _skillAssessmentRepository.AddAsync(entity, cancellationToken);
+                        skillAssessmentsRestored++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Failed to restore skill assessment: {ex.Message}");
+                }
+            }
+
+            // Import Activities (append-only logs, should be last)
+            foreach (var a in backup.Activities)
+            {
+                try
+                {
+                    var existing = await _activityRepository.GetByIdAsync(a.Id, cancellationToken);
+                    if (existing == null)
+                    {
+                        var entity = new Activity(
+                            (ActivityType)a.ActivityType,
+                            (EntityType)a.EntityType,
+                            a.EntityId,
+                            a.EntityName,
+                            a.Description,
+                            a.Timestamp);
+                        SetEntityId(entity, a.Id);
+                        await _activityRepository.AddAsync(entity, cancellationToken);
+                        activitiesRestored++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Failed to restore activity: {ex.Message}");
+                }
+            }
+
             // Settings are typically singleton, update if exists
             if (backup.Settings != null)
             {
@@ -405,6 +502,9 @@ public class BackupService : IBackupService
             SprintsRestored = sprintsRestored,
             SprintCapacitiesRestored = sprintCapacitiesRestored,
             DocumentsRestored = documentsRestored,
+            ActivitiesRestored = activitiesRestored,
+            SkillsRestored = skillsRestored,
+            SkillAssessmentsRestored = skillAssessmentsRestored,
             SettingsRestored = settingsRestored,
             Errors = errors,
             Warnings = warnings
@@ -582,6 +682,41 @@ public class BackupService : IBackupService
         StoryPointMappingsJson = s.StoryPointMappings,
         CreatedAt = s.CreatedAt,
         UpdatedAt = s.UpdatedAt
+    };
+
+    private static ActivityBackup MapActivity(Activity a) => new()
+    {
+        Id = a.Id,
+        ActivityType = (int)a.ActivityType,
+        EntityType = (int)a.EntityType,
+        EntityId = a.EntityId,
+        EntityName = a.EntityName,
+        Description = a.Description,
+        Timestamp = a.Timestamp,
+        CreatedAt = a.CreatedAt
+    };
+
+    private static SkillBackup MapSkill(Skill s) => new()
+    {
+        Id = s.Id,
+        Name = s.Name,
+        Description = s.Description,
+        Category = (int)s.Category,
+        IsActive = s.IsActive,
+        CreatedAt = s.CreatedAt,
+        UpdatedAt = s.UpdatedAt
+    };
+
+    private static SkillAssessmentBackup MapSkillAssessment(SkillAssessment sa) => new()
+    {
+        Id = sa.Id,
+        DirectReportId = sa.DirectReportId,
+        SkillId = sa.SkillId,
+        Level = (int)sa.Level,
+        TargetLevel = sa.TargetLevel.HasValue ? (int?)sa.TargetLevel.Value : null,
+        Notes = sa.Notes,
+        AssessedAt = sa.AssessedAt,
+        UpdatedAt = sa.UpdatedAt
     };
 
     #endregion

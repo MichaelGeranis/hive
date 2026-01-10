@@ -18,6 +18,7 @@ import Notes from './pages/Notes'
 import Documents from './pages/Documents'
 import ActivityFeed from './pages/ActivityFeed'
 import Logs from './pages/Logs'
+import Checklists from './pages/Checklists'
 import Settings from './pages/Settings'
 
 // Initialize log capture immediately on app load
@@ -119,6 +120,7 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="team" element={<DirectReports />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="checklists" element={<Checklists />} />
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
         <Route path="parents" element={<Parents />} />
