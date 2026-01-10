@@ -5,6 +5,8 @@ using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using FluentAssertions;
+using Moq;
 using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Tests.Api.Controllers;
@@ -95,6 +97,38 @@ public class TeamTasksControllerTests
 
         // Act
         var result = await _controller.GetByProject(projectId, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByStatus_ReturnsOkWithTasks()
+    {
+        // Arrange
+        var status = TaskStatus.InProgress;
+        var tasks = new List<TeamTaskDto> { CreateDto() };
+        _serviceMock.Setup(s => s.GetByStatusAsync(status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+
+        // Act
+        var result = await _controller.GetByStatus(status, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByPriority_ReturnsOkWithTasks()
+    {
+        // Arrange
+        var priority = TaskPriority.High;
+        var tasks = new List<TeamTaskDto> { CreateDto() };
+        _serviceMock.Setup(s => s.GetByPriorityAsync(priority, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+
+        // Act
+        var result = await _controller.GetByPriority(priority, CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
@@ -307,6 +341,49 @@ public class TeamTasksControllerTests
 
         // Act
         var result = await _controller.Delete(id, CancellationToken.None);
+
+        // Assert
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteMany_WithValidIds_ReturnsNoContent()
+    {
+        // Arrange
+        var ids = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        _serviceMock.Setup(s => s.DeleteManyAsync(ids, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.DeleteMany(ids, CancellationToken.None);
+
+        // Assert
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task DeleteMany_WithEmptyList_ReturnsBadRequest()
+    {
+        // Arrange
+        var ids = new List<Guid>();
+
+        // Act
+        var result = await _controller.DeleteMany(ids, CancellationToken.None);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteMany_WhenTaskNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var ids = new List<Guid> { Guid.NewGuid() };
+        _serviceMock.Setup(s => s.DeleteManyAsync(ids, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("TeamTask", ids[0]));
+
+        // Act
+        var result = await _controller.DeleteMany(ids, CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();

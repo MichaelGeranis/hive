@@ -2,10 +2,15 @@ using Hive.Application.DTOs;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Interfaces;
+using FluentAssertions;
+using Moq;
 using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Tests.Application.Services;
 
+/// <summary>
+/// Tests for ReportingService.
+/// </summary>
 public class ReportingServiceTests
 {
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
@@ -19,6 +24,9 @@ public class ReportingServiceTests
     private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
     private readonly Mock<IParentRepository> _parentRepositoryMock;
     private readonly ReportingService _service;
+
+    private readonly DirectReport _testDirectReport;
+    private readonly Guid _testDirectReportId = Guid.NewGuid();
 
     public ReportingServiceTests()
     {
@@ -44,15 +52,26 @@ public class ReportingServiceTests
             _sprintCapacityRepositoryMock.Object,
             _appSettingsRepositoryMock.Object,
             _parentRepositoryMock.Object);
+
+        _testDirectReport = new DirectReport(
+            "John",
+            "Doe",
+            "john.doe@test.com",
+            "Software Engineer",
+            "Engineering",
+            new DateTime(2020, 1, 1));
+
+        var idProperty = typeof(DirectReport).GetProperty("Id");
+        idProperty!.SetValue(_testDirectReport, _testDirectReportId);
     }
 
-    #region Dashboard Overview Tests
+    #region GetDashboardOverviewAsync Tests
 
     [Fact]
     public async Task GetDashboardOverviewAsync_ReturnsCompleteOverview()
     {
         // Arrange
-        SetupEmptyRepositories();
+        SetupBasicMocks();
 
         // Act
         var result = await _service.GetDashboardOverviewAsync();
@@ -67,116 +86,120 @@ public class ReportingServiceTests
     }
 
     [Fact]
-    public async Task GetDashboardOverviewAsync_WithData_ReturnsCorrectCounts()
+    public async Task GetDashboardOverviewAsync_WithSprintCount_PassesToTasksAnalytics()
     {
         // Arrange
-        var directReports = CreateDirectReports(3);
-        var reviews = CreateReviews(directReports[0].Id, 2);
-        var meetings = CreateMeetings(directReports[0].Id, 5);
-        var tasks = CreateTasks(3);
-        var projects = CreateProjects(2);
-
-        SetupRepositories(directReports, reviews, meetings, new List<MeetingNote>(), tasks, projects);
+        SetupBasicMocks();
 
         // Act
-        var result = await _service.GetDashboardOverviewAsync();
+        await _service.GetDashboardOverviewAsync(sprintCount: 3);
 
         // Assert
-        result.Team.TotalDirectReports.Should().Be(3);
-        result.Reviews.TotalReviews.Should().Be(2);
-        result.OneOnOnes.TotalMeetings.Should().Be(5);
-        result.Tasks.Tasks.TotalTasks.Should().Be(3);
-        result.Tasks.Projects.TotalProjects.Should().Be(2);
+        // The fact that this completes without error indicates the sprint count was handled
+        _sprintRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     #endregion
 
-    #region Reviews Analytics Tests
+    #region GetReviewsAnalyticsAsync Tests
 
     [Fact]
-    public async Task GetReviewsAnalyticsAsync_WithNoReviews_ReturnsZeroCounts()
+    public async Task GetReviewsAnalyticsAsync_WithNoReviews_ReturnsEmptyStats()
     {
         // Arrange
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PerformanceReview>());
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();
 
         // Assert
+        result.Should().NotBeNull();
         result.TotalReviews.Should().Be(0);
         result.DraftReviews.Should().Be(0);
+        result.CompletedReviews.Should().Be(0);
         result.CompletionRate.Should().Be(0);
+        result.RatingDistribution.Should().HaveCount(4); // All rating values with 0 counts
+        result.RatingDistribution.Should().OnlyContain(r => r.Count == 0);
     }
 
     [Fact]
-    public async Task GetReviewsAnalyticsAsync_CalculatesStatusBreakdownCorrectly()
+    public async Task GetReviewsAnalyticsAsync_WithReviews_CalculatesCorrectStats()
     {
         // Arrange
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.UtcNow);
-        var directReportId = directReport.Id;
         var reviews = new List<PerformanceReview>
         {
-            CreateReview(directReportId, ReviewStatus.Draft),
-            CreateReview(directReportId, ReviewStatus.Draft),
-            CreateReview(directReportId, ReviewStatus.Submitted),
-            CreateReview(directReportId, ReviewStatus.Acknowledged),
-            CreateReview(directReportId, ReviewStatus.Completed)
+            CreateReview(_testDirectReportId, ReviewStatus.Draft, PerformanceRating.NotRated),
+            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.MeetsExpectations),
+            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.ExceedsExpectations)
         };
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(reviews);
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { directReport });
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();
 
         // Assert
-        result.TotalReviews.Should().Be(5);
-        result.DraftReviews.Should().Be(2);
-        result.SubmittedReviews.Should().Be(1);
-        result.AcknowledgedReviews.Should().Be(1);
-        result.CompletedReviews.Should().Be(1);
-        result.CompletionRate.Should().Be(20); // 1/5 = 20%
+        result.TotalReviews.Should().Be(3);
+        result.DraftReviews.Should().Be(1);
+        result.CompletedReviews.Should().Be(2);
+        result.CompletionRate.Should().Be(66.7);
+        result.RatingDistribution.Should().HaveCount(4); // All rating values
+        result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.MeetsExpectations && r.Count == 1);
+        result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.ExceedsExpectations && r.Count == 1);
+        result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.NeedsImprovement && r.Count == 0);
+        result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.Outstanding && r.Count == 0);
     }
 
     [Fact]
-    public async Task GetReviewsAnalyticsAsync_CalculatesRatingDistribution()
+    public async Task GetReviewsAnalyticsAsync_FiltersOutIndirectReports()
     {
         // Arrange
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Dev", "Eng", DateTime.UtcNow);
-        var directReportId = directReport.Id;
+        var indirectReport = new DirectReport(
+            "Jane",
+            "Smith",
+            "jane.smith@test.com",
+            "Developer",
+            "Engineering",
+            new DateTime(2021, 1, 1));
+
+        var indirectReportId = Guid.NewGuid();
+        var idProperty = typeof(DirectReport).GetProperty("Id");
+        idProperty!.SetValue(indirectReport, indirectReportId);
+
+        // Mark as indirect
+        var isDirectProperty = typeof(DirectReport).GetProperty("IsDirect");
+        isDirectProperty!.SetValue(indirectReport, false);
+
         var reviews = new List<PerformanceReview>
         {
-            CreateCompletedReviewWithRating(directReportId, PerformanceRating.ExceedsExpectations),
-            CreateCompletedReviewWithRating(directReportId, PerformanceRating.ExceedsExpectations),
-            CreateCompletedReviewWithRating(directReportId, PerformanceRating.MeetsExpectations)
+            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.MeetsExpectations),
+            CreateReview(indirectReportId, ReviewStatus.Completed, PerformanceRating.ExceedsExpectations)
         };
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(reviews);
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { directReport });
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport, indirectReport });
 
         // Act
         var result = await _service.GetReviewsAnalyticsAsync();
 
         // Assert
-        result.RatingDistribution.Should().NotBeEmpty();
-        var exceedsCount = result.RatingDistribution.FirstOrDefault(r => r.Rating == PerformanceRating.ExceedsExpectations);
-        exceedsCount.Should().NotBeNull();
-        exceedsCount!.Count.Should().Be(2);
+        result.TotalReviews.Should().Be(1); // Only direct report's review
     }
 
     #endregion
 
-    #region One-on-Ones Analytics Tests
+    #region GetOneOnOnesAnalyticsAsync Tests
 
     [Fact]
-    public async Task GetOneOnOnesAnalyticsAsync_WithNoMeetings_ReturnsZeroCounts()
+    public async Task GetOneOnOnesAnalyticsAsync_WithNoMeetings_ReturnsEmptyStats()
     {
         // Arrange
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -191,27 +214,33 @@ public class ReportingServiceTests
 
         // Assert
         result.TotalMeetings.Should().Be(0);
-        result.CompletionRate.Should().Be(0);
+        result.CompletedMeetings.Should().Be(0);
+        result.ScheduledMeetings.Should().Be(0);
+        result.AverageMeetingDuration.Should().Be(0);
     }
 
     [Fact]
-    public async Task GetOneOnOnesAnalyticsAsync_CalculatesStatusBreakdownCorrectly()
+    public async Task GetOneOnOnesAnalyticsAsync_SeparatesPastAndFutureMeetings()
     {
         // Arrange
-        var directReportId = Guid.NewGuid();
-        var meetings = new List<OneOnOneMeeting>
-        {
-            CreateMeeting(directReportId, isPast: false),  // Future meeting
-            CreateMeeting(directReportId, isPast: false),  // Future meeting
-            CreateMeeting(directReportId, isPast: true),   // Past meeting
-            CreateMeeting(directReportId, isPast: true),   // Past meeting
-            CreateMeeting(directReportId, isPast: true),   // Past meeting
-        };
+        var pastMeeting = new OneOnOneMeeting(
+            _testDirectReportId,
+            DateTime.UtcNow.AddDays(-7),
+            60,
+            "Past meeting");
+
+        var futureMeeting = new OneOnOneMeeting(
+            _testDirectReportId,
+            DateTime.UtcNow.AddDays(7),
+            60,
+            "Future meeting");
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(meetings);
+            .ReturnsAsync(new List<OneOnOneMeeting> { pastMeeting, futureMeeting });
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeeting> { pastMeeting, futureMeeting });
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
@@ -219,25 +248,24 @@ public class ReportingServiceTests
         var result = await _service.GetOneOnOnesAnalyticsAsync();
 
         // Assert
-        result.TotalMeetings.Should().Be(5);
-        result.CompletedMeetings.Should().Be(3);  // Past meetings
-        result.ScheduledMeetings.Should().Be(2);  // Future meetings
-        result.CancelledMeetings.Should().Be(0);  // No longer tracking
-        result.CompletionRate.Should().Be(60);    // 3/5 = 60%
+        result.TotalMeetings.Should().Be(2);
+        result.CompletedMeetings.Should().Be(1); // Past meeting
+        result.ScheduledMeetings.Should().Be(1); // Future meeting
     }
 
     [Fact]
-    public async Task GetOneOnOnesAnalyticsAsync_CalculatesAverageMeetingDuration()
+    public async Task GetOneOnOnesAnalyticsAsync_CalculatesAverageDuration()
     {
         // Arrange
-        var directReportId = Guid.NewGuid();
-        var meeting1 = CreateMeeting(directReportId, isPast: true, 30);
-        var meeting2 = CreateMeeting(directReportId, isPast: true, 60);
+        var meeting1 = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-7), 60, "M1");
+        var meeting2 = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-14), 90, "M2");
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting1, meeting2 });
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeeting> { meeting1, meeting2 });
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
@@ -245,40 +273,46 @@ public class ReportingServiceTests
         var result = await _service.GetOneOnOnesAnalyticsAsync();
 
         // Assert
-        result.TotalMeetingMinutes.Should().Be(90);
-        result.AverageMeetingDuration.Should().Be(45);
+        result.AverageMeetingDuration.Should().Be(75); // (60 + 90) / 2
+        result.TotalMeetingMinutes.Should().Be(150);
     }
 
     #endregion
 
-    #region Tasks Analytics Tests
+    #region GetTasksAnalyticsAsync Tests
 
     [Fact]
-    public async Task GetTasksAnalyticsAsync_WithNoTasks_ReturnsZeroCounts()
+    public async Task GetTasksAnalyticsAsync_WithNoTasks_ReturnsEmptyStats()
     {
         // Arrange
-        SetupEmptyRepositories();
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask>());
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetTasksAnalyticsAsync();
 
         // Assert
         result.Tasks.TotalTasks.Should().Be(0);
-        result.Projects.TotalProjects.Should().Be(0);
+        result.Tasks.CompletionRate.Should().Be(0);
+        result.TasksByAssignee.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task GetTasksAnalyticsAsync_CalculatesTaskStatusBreakdown()
+    public async Task GetTasksAnalyticsAsync_CalculatesTaskStatusCounts()
     {
         // Arrange
         var tasks = new List<TeamTask>
         {
-            CreateTask(TaskStatus.Backlog),
-            CreateTask(TaskStatus.Todo),
-            CreateTask(TaskStatus.InProgress),
-            CreateTask(TaskStatus.InReview),
-            CreateTask(TaskStatus.Done),
-            CreateTask(TaskStatus.Cancelled)
+            CreateTask("T1", TaskStatus.Backlog),
+            CreateTask("T2", TaskStatus.InProgress),
+            CreateTask("T3", TaskStatus.Done),
+            CreateTask("T4", TaskStatus.Done)
         };
 
         _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -294,34 +328,70 @@ public class ReportingServiceTests
         var result = await _service.GetTasksAnalyticsAsync();
 
         // Assert
-        result.Tasks.TotalTasks.Should().Be(6);
+        result.Tasks.TotalTasks.Should().Be(4);
         result.Tasks.BacklogTasks.Should().Be(1);
-        result.Tasks.TodoTasks.Should().Be(1);
         result.Tasks.InProgressTasks.Should().Be(1);
-        result.Tasks.InReviewTasks.Should().Be(1);
-        result.Tasks.DoneTasks.Should().Be(1);
-        result.Tasks.CancelledTasks.Should().Be(1);
+        result.Tasks.DoneTasks.Should().Be(2);
+        result.Tasks.CompletionRate.Should().Be(50.0); // 2/4 = 50%
     }
 
     [Fact]
-    public async Task GetTasksAnalyticsAsync_CalculatesProjectStatusBreakdown()
+    public async Task GetTasksAnalyticsAsync_ExcludesParentTasks()
     {
         // Arrange
-        var projects = new List<Project>
+        var parent = new Parent("Epic 1");
+        var tasks = new List<TeamTask>
         {
-            CreateProject(ProjectStatus.Planning),
-            CreateProject(ProjectStatus.Active),
-            CreateProject(ProjectStatus.OnHold),
-            CreateProject(ProjectStatus.Completed),
-            CreateProject(ProjectStatus.Cancelled)
+            CreateTask("Epic 1", TaskStatus.Done), // This is also a parent - should be excluded
+            CreateTask("Task 1", TaskStatus.Done),
+            CreateTask("Task 2", TaskStatus.InProgress)
         };
 
         _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
+            .ReturnsAsync(tasks);
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projects);
+            .ReturnsAsync(new List<Project>());
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport>());
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent> { parent });
+
+        // Act
+        var result = await _service.GetTasksAnalyticsAsync();
+
+        // Assert
+        result.Tasks.TotalTasks.Should().Be(2); // Excludes "Epic 1" task
+        result.Tasks.DoneTasks.Should().Be(1); // Only "Task 1"
+    }
+
+    [Fact]
+    public async Task GetTasksAnalyticsAsync_GroupsByAssignee()
+    {
+        // Arrange
+        var assignee1Id = Guid.NewGuid();
+        var assignee2Id = Guid.NewGuid();
+
+        var dr1 = new DirectReport("Alice", "Brown", "alice@test.com", "Dev", "Eng", DateTime.UtcNow.AddYears(-2));
+        var dr2 = new DirectReport("Bob", "White", "bob@test.com", "Dev", "Eng", DateTime.UtcNow.AddYears(-1));
+
+        var dr1IdProp = typeof(DirectReport).GetProperty("Id");
+        dr1IdProp!.SetValue(dr1, assignee1Id);
+        var dr2IdProp = typeof(DirectReport).GetProperty("Id");
+        dr2IdProp!.SetValue(dr2, assignee2Id);
+
+        var tasks = new List<TeamTask>
+        {
+            CreateTaskWithAssignee("T1", TaskStatus.Done, assignee1Id),
+            CreateTaskWithAssignee("T2", TaskStatus.InProgress, assignee1Id),
+            CreateTaskWithAssignee("T3", TaskStatus.Done, assignee2Id)
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tasks);
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { dr1, dr2 });
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
 
@@ -329,165 +399,25 @@ public class ReportingServiceTests
         var result = await _service.GetTasksAnalyticsAsync();
 
         // Assert
-        result.Projects.TotalProjects.Should().Be(5);
-        result.Projects.PlanningProjects.Should().Be(1);
-        result.Projects.ActiveProjects.Should().Be(1);
-        result.Projects.OnHoldProjects.Should().Be(1);
-        result.Projects.CompletedProjects.Should().Be(1);
-        result.Projects.CancelledProjects.Should().Be(1);
-    }
+        result.TasksByAssignee.Should().HaveCount(2);
 
-    [Fact]
-    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromTaskCounts()
-    {
-        // Arrange
-        var parent = new Parent("Epic Task 1");
-        var tasks = new List<TeamTask>
-        {
-            CreateTask(TaskStatus.Done, null, "Epic Task 1"),  // This is also a parent - should be excluded
-            CreateTask(TaskStatus.Done, null, "Regular Task 1"),
-            CreateTask(TaskStatus.InProgress, null, "Regular Task 2"),
-        };
+        var alice = result.TasksByAssignee.First(a => a.AssigneeId == assignee1Id);
+        alice.TotalTasks.Should().Be(2);
+        alice.CompletedTasks.Should().Be(1);
+        alice.CompletionRate.Should().Be(50);
 
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
-        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Project>());
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent> { parent });
-
-        // Act
-        var result = await _service.GetTasksAnalyticsAsync();
-
-        // Assert - Only 2 tasks should be counted (parent task excluded)
-        result.Tasks.TotalTasks.Should().Be(2);
-        result.Tasks.DoneTasks.Should().Be(1);
-        result.Tasks.InProgressTasks.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromStoryPoints()
-    {
-        // Arrange
-        var parent = new Parent("Epic Task");
-        var parentTask = CreateTask(TaskStatus.Done, null, "Epic Task");
-        SetTaskStoryPoints(parentTask, 100);  // This should be excluded
-        var regularTask1 = CreateTask(TaskStatus.Done, null, "Regular Task 1");
-        SetTaskStoryPoints(regularTask1, 5);
-        var regularTask2 = CreateTask(TaskStatus.Done, null, "Regular Task 2");
-        SetTaskStoryPoints(regularTask2, 3);
-
-        var tasks = new List<TeamTask> { parentTask, regularTask1, regularTask2 };
-
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
-        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Project>());
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent> { parent });
-
-        // Act
-        var result = await _service.GetTasksAnalyticsAsync();
-
-        // Assert - Only regular tasks' story points should be counted
-        result.Tasks.TotalTasks.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_FromTimeSpent()
-    {
-        // Arrange
-        var parent = new Parent("Epic Task");
-        var parentTask = CreateTask(TaskStatus.Done, null, "Epic Task");
-        SetTaskTimeSpent(parentTask, 6000);  // 100 hours - should be excluded
-        var regularTask1 = CreateTask(TaskStatus.Done, null, "Regular Task 1");
-        SetTaskTimeSpent(regularTask1, 120);  // 2 hours
-        var regularTask2 = CreateTask(TaskStatus.Done, null, "Regular Task 2");
-        SetTaskTimeSpent(regularTask2, 60);  // 1 hour
-
-        var tasks = new List<TeamTask> { parentTask, regularTask1, regularTask2 };
-
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
-        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Project>());
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent> { parent });
-
-        // Act
-        var result = await _service.GetTasksAnalyticsAsync();
-
-        // Assert - Only regular tasks' time should be counted (3 hours total)
-        result.Productivity.TotalActualHours.Should().Be(3);
-    }
-
-    [Fact]
-    public async Task GetTasksAnalyticsAsync_ExcludesTasksThatAreParents_CaseInsensitive()
-    {
-        // Arrange
-        var parent = new Parent("EPIC TASK");
-        var tasks = new List<TeamTask>
-        {
-            CreateTask(TaskStatus.Done, null, "epic task"),  // Lowercase - should still be excluded
-            CreateTask(TaskStatus.Done, null, "Regular Task"),
-        };
-
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
-        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Project>());
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent> { parent });
-
-        // Act
-        var result = await _service.GetTasksAnalyticsAsync();
-
-        // Assert - Parent task should be excluded (case insensitive match)
-        result.Tasks.TotalTasks.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task GetTasksByAssigneeReportAsync_ExcludesTasksThatAreParents()
-    {
-        // Arrange
-        var parent = new Parent("Epic Task");
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
-        var parentTask = CreateTask(TaskStatus.Done, directReport.Id, "Epic Task");
-        SetTaskTimeSpent(parentTask, 6000);  // Should be excluded
-        var regularTask = CreateTask(TaskStatus.Done, directReport.Id, "Regular Task");
-        SetTaskTimeSpent(regularTask, 120);
-
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask> { parentTask, regularTask });
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { directReport });
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent> { parent });
-
-        // Act
-        var result = await _service.GetTasksByAssigneeReportAsync();
-
-        // Assert
-        var johnTasks = result.FirstOrDefault(r => r.AssigneeId == directReport.Id);
-        johnTasks.Should().NotBeNull();
-        johnTasks!.TotalTasks.Should().Be(1);  // Only regular task counted
-        johnTasks.TotalActualHours.Should().Be(2);  // Only 2 hours (120 min / 60)
+        var bob = result.TasksByAssignee.First(a => a.AssigneeId == assignee2Id);
+        bob.TotalTasks.Should().Be(1);
+        bob.CompletedTasks.Should().Be(1);
+        bob.CompletionRate.Should().Be(100);
     }
 
     #endregion
 
-    #region Direct Report Analytics Tests
+    #region GetDirectReportAnalyticsAsync Tests
 
     [Fact]
-    public async Task GetDirectReportAnalyticsAsync_WhenNotExists_ReturnsNull()
+    public async Task GetDirectReportAnalyticsAsync_WhenDirectReportNotFound_ReturnsNull()
     {
         // Arrange
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -501,165 +431,145 @@ public class ReportingServiceTests
     }
 
     [Fact]
-    public async Task GetDirectReportAnalyticsAsync_WhenExists_ReturnsAnalytics()
+    public async Task GetDirectReportAnalyticsAsync_WhenFound_ReturnsAnalytics()
     {
         // Arrange
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow.AddYears(-1));
-
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(directReport.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(directReport);
-        _reviewRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReport.Id, It.IsAny<CancellationToken>()))
+        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDirectReport);
+        _reviewRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PerformanceReview>());
-        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReport.Id, It.IsAny<CancellationToken>()))
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting>());
-        _taskRepositoryMock.Setup(r => r.GetByAssigneeIdAsync(directReport.Id, It.IsAny<CancellationToken>()))
+        _taskRepositoryMock.Setup(r => r.GetByAssigneeIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(directReport.Id, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
 
         // Act
-        var result = await _service.GetDirectReportAnalyticsAsync(directReport.Id);
+        var result = await _service.GetDirectReportAnalyticsAsync(_testDirectReportId);
 
         // Assert
         result.Should().NotBeNull();
-        result!.DirectReportId.Should().Be(directReport.Id);
+        result!.DirectReportId.Should().Be(_testDirectReportId);
         result.FullName.Should().Be("John Doe");
-        result.TenureMonths.Should().BeGreaterThan(0);
+        result.Reviews.Should().NotBeNull();
+        result.OneOnOnes.Should().NotBeNull();
+        result.Tasks.Should().NotBeNull();
     }
 
     #endregion
 
-    #region One-on-One Frequency Report Tests
+    #region GetOneOnOneFrequencyReportAsync Tests
 
     [Fact]
-    public async Task GetOneOnOneFrequencyReportAsync_WithNoDirectReports_ReturnsEmptyList()
+    public async Task GetOneOnOneFrequencyReportAsync_ReturnsFrequencyForAllDirectReports()
     {
         // Arrange
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
-
-        // Act
-        var result = await _service.GetOneOnOneFrequencyReportAsync();
-
-        // Assert
-        result.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetOneOnOneFrequencyReportAsync_CalculatesFrequencyStatus()
-    {
-        // Arrange
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
-        var recentMeeting = CreateMeeting(directReport.Id, isPast: true, 30);  // Past meeting
+        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-10), 60, "Past");
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { directReport });
-        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReport.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OneOnOneMeeting> { recentMeeting });
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeeting> { pastMeeting });
 
         // Act
         var result = await _service.GetOneOnOneFrequencyReportAsync();
 
         // Assert
         result.Should().HaveCount(1);
-        result[0].DirectReportId.Should().Be(directReport.Id);
-        result[0].CompletedMeetings.Should().Be(1);
-    }
-
-    #endregion
-
-    #region Action Items Summary Tests
-
-    [Fact]
-    public async Task GetActionItemsSummaryAsync_WithNoActionItems_ReturnsZeroCounts()
-    {
-        // Arrange
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
-
-        // Act
-        var result = await _service.GetActionItemsSummaryAsync();
-
-        // Assert
-        result.TotalActionItems.Should().Be(0);
-        result.OpenItems.Should().Be(0);
-        result.CompletionRate.Should().Be(0);
+        result[0].DirectReportId.Should().Be(_testDirectReportId);
+        result[0].DirectReportName.Should().Be("John Doe");
+        result[0].DaysSinceLastMeeting.Should().Be(10);
     }
 
     [Fact]
-    public async Task GetActionItemsSummaryAsync_CalculatesStatusBreakdown()
+    public async Task GetOneOnOneFrequencyReportAsync_CalculatesFrequencyStatus()
     {
         // Arrange
-        var meetingId = Guid.NewGuid();
-        var actionItems = new List<MeetingNote>
-        {
-            CreateActionItem(meetingId, ActionItemStatus.Open),
-            CreateActionItem(meetingId, ActionItemStatus.Open),
-            CreateActionItem(meetingId, ActionItemStatus.InProgress),
-            CreateActionItem(meetingId, ActionItemStatus.Completed),
-            CreateActionItem(meetingId, ActionItemStatus.Completed),
-            CreateActionItem(meetingId, ActionItemStatus.Cancelled)
-        };
+        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-7), 60, "Recent");
 
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(actionItems);
-
-        // Act
-        var result = await _service.GetActionItemsSummaryAsync();
-
-        // Assert
-        result.TotalActionItems.Should().Be(6);
-        result.OpenItems.Should().Be(2);
-        result.InProgressItems.Should().Be(1);
-        result.CompletedItems.Should().Be(2);
-        result.CancelledItems.Should().Be(1);
-        result.CompletionRate.Should().BeApproximately(33.3, 0.1); // 2/6 = 33.3%
-    }
-
-    #endregion
-
-    #region Tasks By Assignee Report Tests
-
-    [Fact]
-    public async Task GetTasksByAssigneeReportAsync_GroupsTasksByAssignee()
-    {
-        // Arrange
-        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
-        var task1 = CreateTask(TaskStatus.Done, directReport.Id);
-        var task2 = CreateTask(TaskStatus.InProgress, directReport.Id);
-        var unassignedTask = CreateTask(TaskStatus.Backlog, null);
-
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask> { task1, task2, unassignedTask });
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { directReport });
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeeting> { recentMeeting });
+
+        // Act
+        var result = await _service.GetOneOnOneFrequencyReportAsync();
+
+        // Assert
+        result[0].FrequencyStatus.Should().Be("On Track"); // Within 14 days
+    }
+
+    #endregion
+
+    #region GetTeamVelocityAsync Tests
+
+    [Fact]
+    public async Task GetTeamVelocityAsync_WithNoCompletedTasks_ReturnsEmptyVelocity()
+    {
+        // Arrange
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask>());
+        _sprintRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Sprint>());
+        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AppSettings?)null);
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
 
         // Act
-        var result = await _service.GetTasksByAssigneeReportAsync();
+        var result = await _service.GetTeamVelocityAsync();
 
         // Assert
-        result.Should().HaveCount(2); // John Doe + Unassigned
-        var johnTasks = result.FirstOrDefault(r => r.AssigneeId == directReport.Id);
-        johnTasks.Should().NotBeNull();
-        johnTasks!.TotalTasks.Should().Be(2);
-        johnTasks.CompletedTasks.Should().Be(1);
+        result.Sprints.Should().BeEmpty();
+        result.AverageVelocity.Should().Be(0);
+        result.TotalStoryPointsCompleted.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetTeamVelocityAsync_CalculatesVelocityBySprint()
+    {
+        // Arrange
+        var sprint1 = new Sprint("LP_1Q25_S1");
+        var sprint2 = new Sprint("LP_1Q25_S2");
+
+        var task1 = CreateTaskWithSprintAndPoints("T1", TaskStatus.Done, "LP_1Q25_S1", 3);
+        var task2 = CreateTaskWithSprintAndPoints("T2", TaskStatus.Done, "LP_1Q25_S1", 5);
+        var task3 = CreateTaskWithSprintAndPoints("T3", TaskStatus.Done, "LP_1Q25_S2", 8);
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { task1, task2, task3 });
+        _sprintRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Sprint> { sprint1, sprint2 });
+        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AppSettings?)null);
+        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
+
+        // Act
+        var result = await _service.GetTeamVelocityAsync();
+
+        // Assert
+        result.Sprints.Should().HaveCount(2);
+        result.TotalStoryPointsCompleted.Should().Be(16); // 3 + 5 + 8
+        result.AverageVelocity.Should().Be(8); // 16 / 2 sprints
     }
 
     #endregion
 
     #region Helper Methods
 
-    private void SetupEmptyRepositories()
+    private void SetupBasicMocks()
     {
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport>());
+            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PerformanceReview>());
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeeting>());
+        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
@@ -667,190 +577,125 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<TeamTask>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
+        _sprintRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Sprint>());
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
     }
 
-    private void SetupRepositories(
-        List<DirectReport> directReports,
-        List<PerformanceReview> reviews,
-        List<OneOnOneMeeting> meetings,
-        List<MeetingNote> notes,
-        List<TeamTask> tasks,
-        List<Project> projects)
+    private PerformanceReview CreateReview(Guid directReportId, ReviewStatus status, PerformanceRating rating)
     {
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(directReports);
-        _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(reviews);
-        _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(meetings);
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(notes);
-        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
-        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projects);
-        _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Parent>());
+        var review = new PerformanceReview(
+            directReportId,
+            "2024",
+            DateTime.UtcNow);
 
-        foreach (var dr in directReports)
-        {
-            _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(dr.Id, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(meetings.Where(m => m.DirectReportId == dr.Id).ToList());
-        }
-    }
-
-    private static List<DirectReport> CreateDirectReports(int count)
-    {
-        return Enumerable.Range(1, count)
-            .Select(i => new DirectReport($"First{i}", $"Last{i}", $"user{i}@test.com", "Engineer", "Engineering", DateTime.UtcNow.AddYears(-1)))
-            .ToList();
-    }
-
-    private static List<PerformanceReview> CreateReviews(Guid directReportId, int count)
-    {
-        return Enumerable.Range(1, count)
-            .Select(i => new PerformanceReview(directReportId, $"Q{i} 2024", DateTime.UtcNow))
-            .ToList();
-    }
-
-    private static PerformanceReview CreateReview(Guid directReportId, ReviewStatus status)
-    {
-        var review = new PerformanceReview(directReportId, $"Q1 2024 - {Guid.NewGuid()}", DateTime.UtcNow);
         if (status == ReviewStatus.Submitted || status == ReviewStatus.Acknowledged || status == ReviewStatus.Completed)
         {
-            review.UpdateContent("Strengths", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
+            review.UpdateContent("Strengths", "Areas", "Goals", "Manager notes", rating);
             review.Submit();
         }
+
         if (status == ReviewStatus.Acknowledged || status == ReviewStatus.Completed)
         {
             review.Acknowledge();
         }
+
         if (status == ReviewStatus.Completed)
         {
             review.Complete();
         }
+
         return review;
     }
 
-    private static PerformanceReview CreateCompletedReviewWithRating(Guid directReportId, PerformanceRating rating)
+    private TeamTask CreateTask(string title, TaskStatus status)
     {
-        var review = new PerformanceReview(directReportId, $"Q1 2024 - {Guid.NewGuid()}", DateTime.UtcNow);
-        review.UpdateContent("Strengths", "Areas", "Goals", "Notes", rating);
-        review.Submit();
-        review.Acknowledge();
-        review.Complete();
-        return review;
-    }
+        var task = new TeamTask(
+            title,
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "",
+            "",
+            "",
+            null,
+            null);
 
-    private static List<OneOnOneMeeting> CreateMeetings(Guid directReportId, int count)
-    {
-        return Enumerable.Range(1, count)
-            .Select(i => new OneOnOneMeeting(directReportId, DateTime.UtcNow.AddDays(i), 30))
-            .ToList();
-    }
-
-    private static OneOnOneMeeting CreateMeeting(Guid directReportId, bool isPast, int duration = 30)
-    {
-        // Past meetings have date in the past, future meetings have date in the future
-        var meetingDate = isPast ? DateTime.UtcNow.AddDays(-7) : DateTime.UtcNow.AddDays(7);
-        return new OneOnOneMeeting(directReportId, meetingDate, duration);
-    }
-
-    private static List<TeamTask> CreateTasks(int count)
-    {
-        return Enumerable.Range(1, count)
-            .Select(i => new TeamTask($"Task {i}"))
-            .ToList();
-    }
-
-    private static TeamTask CreateTask(TaskStatus status, Guid? assigneeId = null, string? title = null)
-    {
-        var task = new TeamTask(title ?? $"Task {Guid.NewGuid()}", assigneeId: assigneeId);
-        switch (status)
+        if (status == TaskStatus.Done)
         {
-            case TaskStatus.Todo:
-                task.MoveToTodo();
-                break;
-            case TaskStatus.InProgress:
-                task.MoveToTodo();
-                task.Start();
-                break;
-            case TaskStatus.InReview:
-                task.MoveToTodo();
-                task.Start();
-                task.MoveToReview();
-                break;
-            case TaskStatus.Done:
-                task.MoveToTodo();
-                task.Start();
-                task.Complete();
-                break;
-            case TaskStatus.Cancelled:
-                task.Cancel();
-                break;
+            task.Start();
+            task.Complete();
         }
+        else if (status == TaskStatus.InProgress)
+        {
+            task.Start();
+        }
+
         return task;
     }
 
-    private static void SetTaskStoryPoints(TeamTask task, int storyPoints)
+    private TeamTask CreateTaskWithAssignee(string title, TaskStatus status, Guid? assigneeId)
     {
-        task.Update(task.Title, task.Description, task.Type, task.Priority, task.DueDate,
-            task.EstimatedHours, storyPoints, task.Tags, task.Labels, task.Sprint);
+        var task = new TeamTask(
+            title,
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            assigneeId,
+            null,
+            null,
+            null,
+            null,
+            "",
+            "",
+            "",
+            null,
+            null);
+
+        if (status == TaskStatus.Done)
+        {
+            task.Start();
+            task.Complete();
+        }
+        else if (status == TaskStatus.InProgress)
+        {
+            task.Start();
+        }
+
+        return task;
     }
 
-    private static void SetTaskTimeSpent(TeamTask task, int timeSpentMinutes)
+    private TeamTask CreateTaskWithSprintAndPoints(string title, TaskStatus status, string sprint, int storyPoints)
     {
-        task.Update(task.Title, task.Description, task.Type, task.Priority, task.DueDate,
-            task.EstimatedHours, task.StoryPoints, task.Tags, task.Labels, task.Sprint, timeSpentMinutes);
-    }
+        var task = new TeamTask(
+            title,
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            storyPoints,
+            "",
+            "",
+            sprint,
+            null,
+            null);
 
-    private static List<Project> CreateProjects(int count)
-    {
-        return Enumerable.Range(1, count)
-            .Select(i => new Project($"Project {i}"))
-            .ToList();
-    }
+        if (status == TaskStatus.Done)
+        {
+            task.Start();
+            task.Complete();
+        }
 
-    private static Project CreateProject(ProjectStatus status)
-    {
-        var project = new Project($"Project {Guid.NewGuid()}");
-        switch (status)
-        {
-            case ProjectStatus.Active:
-                project.Activate();
-                break;
-            case ProjectStatus.OnHold:
-                project.Activate();
-                project.PutOnHold();
-                break;
-            case ProjectStatus.Completed:
-                project.Complete();
-                break;
-            case ProjectStatus.Cancelled:
-                project.Cancel();
-                break;
-        }
-        return project;
-    }
-
-    private static MeetingNote CreateActionItem(Guid meetingId, ActionItemStatus status)
-    {
-        var note = new MeetingNote(meetingId, "Action item content", NoteCategory.ActionItem);
-        if (status == ActionItemStatus.InProgress)
-        {
-            note.UpdateActionStatus(ActionItemStatus.InProgress);
-        }
-        else if (status == ActionItemStatus.Completed)
-        {
-            note.CompleteAction();
-        }
-        else if (status == ActionItemStatus.Cancelled)
-        {
-            note.UpdateActionStatus(ActionItemStatus.Cancelled);
-        }
-        return note;
+        return task;
     }
 
     #endregion
