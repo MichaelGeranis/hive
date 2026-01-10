@@ -25,14 +25,22 @@ public class ManagerNotesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all notes.
+    /// Gets all notes with pagination.
     /// </summary>
+    /// <param name="pageNumber">Page number (1-based, default: 1).</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paginated list of notes ordered by Priority desc, DueDate asc.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<ManagerNoteDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ManagerNoteDto>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PagedResult<ManagerNoteDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ManagerNoteDto>>> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting all manager notes");
-        var notes = await _service.GetAllAsync(cancellationToken);
+        _logger.LogInformation("Getting notes page {PageNumber} with size {PageSize}", pageNumber, pageSize);
+        var pagination = new PaginationParams { PageNumber = pageNumber, PageSize = pageSize };
+        var notes = await _service.GetAllPagedAsync(pagination, cancellationToken);
         return Ok(notes);
     }
 

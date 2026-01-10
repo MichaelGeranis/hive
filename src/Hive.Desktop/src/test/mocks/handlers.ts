@@ -121,8 +121,22 @@ export const handlers = [
   }),
 
   // Manager Notes
-  http.get(`${API_BASE}/managernotes`, () => {
-    return HttpResponse.json(mockNotes)
+  http.get(`${API_BASE}/managernotes`, ({ request }) => {
+    const url = new URL(request.url)
+    const pageNumber = parseInt(url.searchParams.get('pageNumber') || '1')
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20')
+    const totalCount = mockNotes.length
+    const totalPages = Math.ceil(totalCount / pageSize)
+    const items = mockNotes.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)
+    return HttpResponse.json({
+      items,
+      totalCount,
+      pageNumber,
+      pageSize,
+      totalPages,
+      hasPreviousPage: pageNumber > 1,
+      hasNextPage: pageNumber < totalPages
+    })
   }),
 
   http.get(`${API_BASE}/managernotes/pending`, () => {
@@ -219,8 +233,22 @@ export const handlers = [
   }),
 
   // Tasks
-  http.get(`${API_BASE}/teamtasks`, () => {
-    return HttpResponse.json(mockTasks)
+  http.get(`${API_BASE}/teamtasks`, ({ request }) => {
+    const url = new URL(request.url)
+    const pageNumber = parseInt(url.searchParams.get('pageNumber') || '1')
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20')
+    const totalCount = mockTasks.length
+    const totalPages = Math.ceil(totalCount / pageSize)
+    const items = mockTasks.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)
+    return HttpResponse.json({
+      items,
+      totalCount,
+      pageNumber,
+      pageSize,
+      totalPages,
+      hasPreviousPage: pageNumber > 1,
+      hasNextPage: pageNumber < totalPages
+    })
   }),
 
   http.get(`${API_BASE}/teamtasks/overdue`, () => {

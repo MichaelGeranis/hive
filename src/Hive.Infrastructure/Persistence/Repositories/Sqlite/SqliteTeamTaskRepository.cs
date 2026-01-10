@@ -28,6 +28,20 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetAllPagedAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = _context.TeamTasks
+            .OrderByDescending(x => x.Sprint)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ThenBy(x => x.CreatedAt);
+
+        var totalCount = await _context.TeamTasks.CountAsync(cancellationToken);
+        var items = await query.Skip(skip).Take(take).ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         return await _context.TeamTasks

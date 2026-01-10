@@ -28,6 +28,19 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetAllPagedAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes
+            .OrderByDescending(n => n.Priority)
+            .ThenBy(n => n.DueDate)
+            .ThenByDescending(n => n.CreatedAt);
+
+        var totalCount = await _context.ManagerNotes.CountAsync(cancellationToken);
+        var items = await query.Skip(skip).Take(take).ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         return await _context.ManagerNotes

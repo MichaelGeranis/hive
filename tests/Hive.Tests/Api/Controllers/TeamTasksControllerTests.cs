@@ -25,19 +25,26 @@ public class TeamTasksControllerTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsOkWithAllTasks()
+    public async Task GetAll_ReturnsOkWithPaginatedTasks()
     {
         // Arrange
         var tasks = new List<TeamTaskDto> { CreateDto(), CreateDto("Task 2") };
-        _serviceMock.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tasks);
+        var pagedResult = new PagedResult<TeamTaskDto>
+        {
+            Items = tasks,
+            TotalCount = 2,
+            PageNumber = 1,
+            PageSize = 20
+        };
+        _serviceMock.Setup(s => s.GetAllPagedAsync(It.IsAny<PaginationParams>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pagedResult);
 
         // Act
-        var result = await _controller.GetAll(CancellationToken.None);
+        var result = await _controller.GetAll(1, 20, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<TeamTaskDto>>();
+        okResult.Value.Should().BeOfType<PagedResult<TeamTaskDto>>();
     }
 
     [Fact]

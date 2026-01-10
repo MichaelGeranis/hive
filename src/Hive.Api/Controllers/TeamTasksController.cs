@@ -27,15 +27,22 @@ public class TeamTasksController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all tasks.
+    /// Gets all tasks with pagination.
     /// </summary>
-    /// <returns>List of all tasks.</returns>
+    /// <param name="pageNumber">Page number (1-based, default: 1).</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paginated list of tasks ordered by Sprint desc, Priority desc, DueDate asc.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<TeamTaskDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<TeamTaskDto>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PagedResult<TeamTaskDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<TeamTaskDto>>> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting all tasks");
-        var tasks = await _service.GetAllAsync(cancellationToken);
+        _logger.LogInformation("Getting tasks page {PageNumber} with size {PageSize}", pageNumber, pageSize);
+        var pagination = new PaginationParams { PageNumber = pageNumber, PageSize = pageSize };
+        var tasks = await _service.GetAllPagedAsync(pagination, cancellationToken);
         return Ok(tasks);
     }
 

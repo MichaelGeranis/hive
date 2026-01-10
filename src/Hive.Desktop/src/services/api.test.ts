@@ -68,10 +68,11 @@ describe('API Service', () => {
 
   describe('notesApi', () => {
     it('should fetch all notes', async () => {
-      const notes = await notesApi.getAll()
+      const result = await notesApi.getAll()
 
-      expect(Array.isArray(notes)).toBe(true)
-      expect(notes.length).toBeGreaterThan(0)
+      expect(result).toHaveProperty('items')
+      expect(Array.isArray(result.items)).toBe(true)
+      expect(result.items.length).toBeGreaterThan(0)
     })
 
     it('should fetch pending notes', async () => {
@@ -152,10 +153,11 @@ describe('API Service', () => {
 
   describe('tasksApi', () => {
     it('should fetch all tasks', async () => {
-      const tasks = await tasksApi.getAll()
+      const result = await tasksApi.getAll()
 
-      expect(Array.isArray(tasks)).toBe(true)
-      expect(tasks.length).toBeGreaterThan(0)
+      expect(result).toHaveProperty('items')
+      expect(Array.isArray(result.items)).toBe(true)
+      expect(result.items.length).toBeGreaterThan(0)
     })
 
     it('should fetch overdue tasks', async () => {

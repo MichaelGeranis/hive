@@ -74,7 +74,8 @@ import type {
   SkipChecklistItemDto,
   UpdateChecklistItemDto,
   ReorderItemsDto,
-  Activity
+  Activity,
+  PagedResult
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -242,7 +243,8 @@ export const projectsApi = {
 
 // Tasks
 export const tasksApi = {
-  getAll: () => api.get<TeamTask[]>('/teamtasks').then(r => r.data),
+  getAll: (pageNumber = 1, pageSize = 20) =>
+    api.get<PagedResult<TeamTask>>(`/teamtasks?pageNumber=${pageNumber}&pageSize=${pageSize}`).then(r => r.data),
   getById: (id: string) => api.get<TeamTask>(`/teamtasks/${id}`).then(r => r.data),
   getByAssignee: (assigneeId: string) => api.get<TeamTask[]>(`/teamtasks/assignee/${assigneeId}`).then(r => r.data),
   getByProject: (projectId: string) => api.get<TeamTask[]>(`/teamtasks/project/${projectId}`).then(r => r.data),
@@ -345,7 +347,8 @@ export const jiraImportApi = {
 
 // Manager Notes (TODOs)
 export const notesApi = {
-  getAll: () => api.get<ManagerNote[]>('/managernotes').then(r => r.data),
+  getAll: (pageNumber = 1, pageSize = 20) =>
+    api.get<PagedResult<ManagerNote>>(`/managernotes?pageNumber=${pageNumber}&pageSize=${pageSize}`).then(r => r.data),
   getPending: () => api.get<ManagerNote[]>('/managernotes/pending').then(r => r.data),
   getCompleted: () => api.get<ManagerNote[]>('/managernotes/completed').then(r => r.data),
   getOverdue: () => api.get<ManagerNote[]>('/managernotes/overdue').then(r => r.data),

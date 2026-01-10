@@ -29,6 +29,19 @@ public class ManagerNoteRepository : IManagerNoteRepository
         return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
     }
 
+    public Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetAllPagedAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes.Values
+            .OrderByDescending(n => n.Priority)
+            .ThenBy(n => n.DueDate)
+            .ThenByDescending(n => n.CreatedAt);
+
+        var totalCount = _context.ManagerNotes.Count;
+        var items = query.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<ManagerNote>, int)>((items, totalCount));
+    }
+
     public Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         var notes = _context.ManagerNotes.Values

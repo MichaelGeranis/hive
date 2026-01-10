@@ -95,7 +95,7 @@ export default function Calendar() {
       })
 
       // Add task deadlines as events
-      tasks.forEach((task: TeamTask) => {
+      tasks.items.forEach((task: TeamTask) => {
         if (task.dueDate) {
           calendarEvents.push({
             id: `task-${task.id}`,

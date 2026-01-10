@@ -32,6 +32,20 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.FromResult<IReadOnlyList<TeamTask>>(entities);
     }
 
+    public Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetAllPagedAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = _context.TeamTasks.Values
+            .OrderByDescending(x => x.Sprint)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ThenBy(x => x.CreatedAt);
+
+        var totalCount = _context.TeamTasks.Count;
+        var items = query.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<TeamTask>, int)>((items, totalCount));
+    }
+
     public Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         var entities = _context.TeamTasks.Values

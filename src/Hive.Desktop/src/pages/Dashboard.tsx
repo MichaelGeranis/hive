@@ -173,7 +173,7 @@ export default function Dashboard() {
         notesApi.getPending()
       ])
       setDashboard(dashboardData)
-      setTasks(tasksData)
+      setTasks(tasksData.items)
       setProjects(projectsData)
       setLeaveOverview(leaveData)
       // Sort action items by due date ascending (earliest first)

@@ -30,6 +30,13 @@ public class ManagerNoteService : IManagerNoteService
         return entities.Select(MapToDto).ToList();
     }
 
+    public async Task<PagedResult<ManagerNoteDto>> GetAllPagedAsync(PaginationParams pagination, CancellationToken cancellationToken = default)
+    {
+        var (entities, totalCount) = await _repository.GetAllPagedAsync(pagination.Skip, pagination.PageSize, cancellationToken);
+        var dtos = entities.Select(MapToDto).ToList();
+        return PagedResult<ManagerNoteDto>.Create(dtos, totalCount, pagination);
+    }
+
     public async Task<IReadOnlyList<ManagerNoteDto>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _repository.GetPendingAsync(cancellationToken);

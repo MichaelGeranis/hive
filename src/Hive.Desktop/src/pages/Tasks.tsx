@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, projectsApi, settingsApi, jiraImportApi } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -48,6 +48,12 @@ export default function Tasks() {
 
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>(initialFilter)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Pagination state
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -116,16 +122,19 @@ export default function Tasks() {
     loadData()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (page = pageNumber) => {
     try {
       setLoading(true)
-      const [tasksData, drData, projectsData, settingsData] = await Promise.all([
-        tasksApi.getAll(),
+      const [tasksResult, drData, projectsData, settingsData] = await Promise.all([
+        tasksApi.getAll(page, pageSize),
         directReportsApi.getAll(),
         projectsApi.getAll(),
         settingsApi.get()
       ])
-      setTasks(tasksData)
+      setTasks(tasksResult.items)
+      setTotalCount(tasksResult.totalCount)
+      setTotalPages(tasksResult.totalPages)
+      setPageNumber(tasksResult.pageNumber)
       setDirectReports(drData)
       setProjects(projectsData)
       setStoryPointMappings(settingsData.storyPointMappings || [])
@@ -134,6 +143,24 @@ export default function Tasks() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      loadData(newPage)
+    }
+  }
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setPageNumber(1)
+    // Reload with new page size
+    tasksApi.getAll(1, newSize).then(result => {
+      setTasks(result.items)
+      setTotalCount(result.totalCount)
+      setTotalPages(result.totalPages)
+      setPageNumber(result.pageNumber)
+    })
   }
 
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
@@ -1160,6 +1187,51 @@ export default function Tasks() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Showing {((pageNumber - 1) * pageSize) + 1} - {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} tasks
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(pageNumber - 1)}
+              disabled={pageNumber <= 1}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
+              Page {pageNumber} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(pageNumber + 1)}
+              disabled={pageNumber >= totalPages}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

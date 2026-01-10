@@ -29,7 +29,7 @@ public class ManagerNotesControllerTests
     #region GetAll Tests
 
     [Fact]
-    public async Task GetAll_ReturnsOkWithAllNotes()
+    public async Task GetAll_ReturnsOkWithPaginatedNotes()
     {
         // Arrange
         var notes = new List<ManagerNoteDto>
@@ -37,18 +37,25 @@ public class ManagerNotesControllerTests
             CreateDto("Note 1"),
             CreateDto("Note 2")
         };
+        var pagedResult = new PagedResult<ManagerNoteDto>
+        {
+            Items = notes,
+            TotalCount = 2,
+            PageNumber = 1,
+            PageSize = 20
+        };
 
-        _serviceMock.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(notes);
+        _serviceMock.Setup(s => s.GetAllPagedAsync(It.IsAny<PaginationParams>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pagedResult);
 
         // Act
-        var result = await _controller.GetAll(CancellationToken.None);
+        var result = await _controller.GetAll(1, 20, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<ManagerNoteDto>>();
-        var resultNotes = okResult.Value as IEnumerable<ManagerNoteDto>;
-        resultNotes.Should().HaveCount(2);
+        okResult.Value.Should().BeOfType<PagedResult<ManagerNoteDto>>();
+        var resultPaged = okResult.Value as PagedResult<ManagerNoteDto>;
+        resultPaged!.Items.Should().HaveCount(2);
     }
 
     #endregion

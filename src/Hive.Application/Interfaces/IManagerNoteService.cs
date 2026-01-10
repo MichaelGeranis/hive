@@ -9,6 +9,7 @@ public interface IManagerNoteService
 {
     Task<ManagerNoteDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<ManagerNoteDto>> GetAllPagedAsync(PaginationParams pagination, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetPendingAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetCompletedAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManagerNoteDto>> GetOverdueAsync(CancellationToken cancellationToken = default);

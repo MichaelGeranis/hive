@@ -50,6 +50,13 @@ public class TeamTaskService : ITeamTaskService
         return await MapToDtosAsync(entities, cancellationToken);
     }
 
+    public async Task<PagedResult<TeamTaskDto>> GetAllPagedAsync(PaginationParams pagination, CancellationToken cancellationToken = default)
+    {
+        var (entities, totalCount) = await _taskRepository.GetAllPagedAsync(pagination.Skip, pagination.PageSize, cancellationToken);
+        var dtos = await MapToDtosAsync(entities, cancellationToken);
+        return PagedResult<TeamTaskDto>.Create(dtos, totalCount, pagination);
+    }
+
     public async Task<IReadOnlyList<TeamTaskDto>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         var entities = await _taskRepository.GetByAssigneeIdAsync(assigneeId, cancellationToken);
