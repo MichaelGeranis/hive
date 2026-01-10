@@ -20,22 +20,37 @@ import {
   ClipboardList
 } from 'lucide-react'
 
-const navigation = [
-  { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
-  { name: 'Sprints', to: '/sprints', icon: Zap },
-  { name: 'Projects', to: '/projects', icon: FolderKanban },
-  { name: 'Parents', to: '/parents', icon: Layers },
-  { name: 'Tasks', to: '/tasks', icon: CheckSquare },
-  { name: 'Team', to: '/team', icon: Users },
-  { name: 'Skills', to: '/skills', icon: Award },
-  { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
-  { name: 'Leaves', to: '/leaves', icon: Palmtree },
-  { name: 'Reviews', to: '/reviews', icon: Star },
-  { name: 'Checklists', to: '/checklists', icon: ClipboardList },
-  { name: 'Calendar', to: '/calendar', icon: CalendarDays },
-  { name: 'Notes', to: '/notes', icon: StickyNote },
-  { name: 'Documents', to: '/documents', icon: FileText },
+const navigationGroups = [
+  // Overview
+  [
+    { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+    { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
+  ],
+  // Delivery
+  [
+    { name: 'Sprints', to: '/sprints', icon: Zap },
+    { name: 'Projects', to: '/projects', icon: FolderKanban },
+    { name: 'Parents', to: '/parents', icon: Layers },
+    { name: 'Tasks', to: '/tasks', icon: CheckSquare },
+  ],
+  // People
+  [
+    { name: 'Team', to: '/team', icon: Users },
+    { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
+    { name: 'Leaves', to: '/leaves', icon: Palmtree },
+    { name: 'Reviews', to: '/reviews', icon: Star },
+    { name: 'Skills', to: '/skills', icon: Award },
+  ],
+  // Planning
+  [
+    { name: 'Notes', to: '/notes', icon: StickyNote },
+    { name: 'Hiring', to: '/checklists', icon: ClipboardList },
+  ],
+  // Resources
+  [
+    { name: 'Documents', to: '/documents', icon: FileText },
+    { name: 'Calendar', to: '/calendar', icon: CalendarDays },
+  ],
 ]
 
 export default function Layout() {
@@ -55,22 +70,32 @@ export default function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-amber-500 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </NavLink>
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+          {navigationGroups.map((group, groupIndex) => (
+            <div key={groupIndex}>
+              <div className="space-y-1">
+                {group.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-amber-500 text-white'
+                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+              {/* Divider between groups (except after last group) */}
+              {groupIndex < navigationGroups.length - 1 && (
+                <div className="my-3 border-t border-slate-700 dark:border-slate-800" />
+              )}
+            </div>
           ))}
         </nav>
 
