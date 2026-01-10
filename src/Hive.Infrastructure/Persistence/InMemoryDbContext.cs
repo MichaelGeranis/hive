@@ -23,6 +23,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, SprintCapacity> SprintCapacities { get; } = new();
     public ConcurrentDictionary<Guid, Document> Documents { get; } = new();
     public ConcurrentDictionary<Guid, Parent> Parents { get; } = new();
+    public ConcurrentDictionary<Guid, Activity> Activities { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>

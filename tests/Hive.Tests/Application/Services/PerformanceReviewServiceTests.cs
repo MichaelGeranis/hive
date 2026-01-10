@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -10,6 +11,7 @@ public class PerformanceReviewServiceTests
 {
     private readonly Mock<IPerformanceReviewRepository> _reviewRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly PerformanceReviewService _service;
     private readonly DirectReport _testDirectReport;
 
@@ -17,7 +19,8 @@ public class PerformanceReviewServiceTests
     {
         _reviewRepositoryMock = new Mock<IPerformanceReviewRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
-        _service = new PerformanceReviewService(_reviewRepositoryMock.Object, _directReportRepositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new PerformanceReviewService(_reviewRepositoryMock.Object, _directReportRepositoryMock.Object, _activityServiceMock.Object);
         _testDirectReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Eng", DateTime.UtcNow.AddYears(-1));
     }
 
@@ -25,7 +28,7 @@ public class PerformanceReviewServiceTests
     public void Constructor_WithNullReviewRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new PerformanceReviewService(null!, _directReportRepositoryMock.Object);
+        var act = () => new PerformanceReviewService(null!, _directReportRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -36,7 +39,7 @@ public class PerformanceReviewServiceTests
     public void Constructor_WithNullDirectReportRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new PerformanceReviewService(_reviewRepositoryMock.Object, null!);
+        var act = () => new PerformanceReviewService(_reviewRepositoryMock.Object, null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()

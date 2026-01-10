@@ -27,6 +27,7 @@ public class HiveDbContext : DbContext
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<Parent> Parents => Set<Parent>();
+    public DbSet<Activity> Activities => Set<Activity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -193,6 +194,17 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(500).IsRequired();
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Labels).HasMaxLength(1000);
+        });
+
+        // Activity configuration
+        modelBuilder.Entity<Activity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityName).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(1000).IsRequired();
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.EntityType);
+            entity.HasIndex(e => new { e.Timestamp, e.EntityType });
         });
     }
     /// Seeds initial data into the database.

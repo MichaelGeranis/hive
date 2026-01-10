@@ -11,10 +11,12 @@ import Projects from './pages/Projects'
 import Parents from './pages/Parents'
 import Tasks from './pages/Tasks'
 import Sprints from './pages/Sprints'
+import Skills from './pages/Skills'
 import Leaves from './pages/Leaves'
 import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
 import Documents from './pages/Documents'
+import ActivityFeed from './pages/ActivityFeed'
 import Logs from './pages/Logs'
 import Settings from './pages/Settings'
 
@@ -122,6 +124,8 @@ function App() {
         <Route path="parents" element={<Parents />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="sprints" element={<Sprints />} />
+        <Route path="activity-feed" element={<ActivityFeed />} />
+        <Route path="skills" element={<Skills />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />

@@ -14,16 +14,20 @@ import {
   StickyNote,
   Zap,
   FileText,
-  ScrollText
+  ScrollText,
+  Award,
+  Activity
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
   { name: 'Sprints', to: '/sprints', icon: Zap },
   { name: 'Projects', to: '/projects', icon: FolderKanban },
   { name: 'Parents', to: '/parents', icon: Layers },
   { name: 'Tasks', to: '/tasks', icon: CheckSquare },
   { name: 'Team', to: '/team', icon: Users },
+  { name: 'Skills', to: '/skills', icon: Award },
   { name: '1:1 Meetings', to: '/meetings', icon: Calendar },
   { name: 'Leaves', to: '/leaves', icon: Palmtree },
   { name: 'Reviews', to: '/reviews', icon: Star },

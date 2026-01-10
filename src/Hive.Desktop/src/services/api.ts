@@ -48,7 +48,15 @@ import type {
   UpdateDocumentDto,
   Parent,
   CreateParentDto,
-  UpdateParentDto
+  UpdateParentDto,
+  Skill,
+  SkillCategory,
+  SkillAssessment,
+  SkillMatrix,
+  CreateSkillDto,
+  UpdateSkillDto,
+  CreateSkillAssessmentDto,
+  UpdateSkillAssessmentDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -362,6 +370,58 @@ export const parentsApi = {
 export const backupApi = {
   export: () => api.get<BackupDto>('/backup/export').then(r => r.data),
   import: (data: BackupDto) => api.post<RestoreResultDto>('/backup/import', data).then(r => r.data)
+}
+
+// Skills
+export const skillsApi = {
+  getAll: (includeInactive: boolean = false) =>
+    api.get<Skill[]>(`/skills?includeInactive=${includeInactive}`).then(r => r.data),
+  getById: (id: string) =>
+    api.get<Skill>(`/skills/${id}`).then(r => r.data),
+  getByCategory: (category: SkillCategory) =>
+    api.get<Skill[]>(`/skills/by-category/${category}`).then(r => r.data),
+  create: (data: CreateSkillDto) =>
+    api.post<Skill>('/skills', data).then(r => r.data),
+  update: (id: string, data: UpdateSkillDto) =>
+    api.put<Skill>(`/skills/${id}`, data).then(r => r.data),
+  activate: (id: string) =>
+    api.post<Skill>(`/skills/${id}/activate`).then(r => r.data),
+  deactivate: (id: string) =>
+    api.post<Skill>(`/skills/${id}/deactivate`).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/skills/${id}`)
+}
+
+// Skill Assessments
+export const skillAssessmentsApi = {
+  getAll: () =>
+    api.get<SkillAssessment[]>('/skillassessments').then(r => r.data),
+  getMatrix: () =>
+    api.get<SkillMatrix>('/skillassessments/matrix').then(r => r.data),
+  getGaps: () =>
+    api.get<SkillAssessment[]>('/skillassessments/gaps').then(r => r.data),
+  getById: (id: string) =>
+    api.get<SkillAssessment>(`/skillassessments/${id}`).then(r => r.data),
+  getByDirectReport: (directReportId: string) =>
+    api.get<SkillAssessment[]>(`/skillassessments/by-direct-report/${directReportId}`).then(r => r.data),
+  getBySkill: (skillId: string) =>
+    api.get<SkillAssessment[]>(`/skillassessments/by-skill/${skillId}`).then(r => r.data),
+  create: (data: CreateSkillAssessmentDto) =>
+    api.post<SkillAssessment>('/skillassessments', data).then(r => r.data),
+  update: (id: string, data: UpdateSkillAssessmentDto) =>
+    api.put<SkillAssessment>(`/skillassessments/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/skillassessments/${id}`)
+}
+
+// Activity Feed
+export const activityFeedApi = {
+  getAll: () =>
+    api.get<Activity[]>('/activityfeed').then(r => r.data),
+  getRecent: (days: number = 7) =>
+    api.get<Activity[]>(`/activityfeed/recent?days=${days}`).then(r => r.data),
+  getByEntityType: (type: string) =>
+    api.get<Activity[]>(`/activityfeed/by-entity-type/${type}`).then(r => r.data)
 }
 
 export default api

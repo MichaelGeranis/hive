@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Interfaces;
@@ -15,6 +16,7 @@ public class LeaveServiceTests
 {
     private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly LeaveService _service;
 
     private readonly Guid _testDirectReportId = Guid.NewGuid();
@@ -24,9 +26,11 @@ public class LeaveServiceTests
     {
         _leaveRepositoryMock = new Mock<ILeaveRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
+        _activityServiceMock = new Mock<IActivityService>();
         _service = new LeaveService(
             _leaveRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         _testDirectReport = new DirectReport(
             "John",

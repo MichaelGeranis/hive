@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -14,6 +15,7 @@ public class TeamTaskServiceTests
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<IParentRepository> _parentRepositoryMock;
     private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly TeamTaskService _service;
     private readonly DirectReport _testDirectReport;
     private readonly Project _testProject;
@@ -25,12 +27,14 @@ public class TeamTaskServiceTests
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _parentRepositoryMock = new Mock<IParentRepository>();
         _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
+        _activityServiceMock = new Mock<IActivityService>();
         _service = new TeamTaskService(
             _taskRepositoryMock.Object,
             _directReportRepositoryMock.Object,
             _projectRepositoryMock.Object,
             _parentRepositoryMock.Object,
-            _appSettingsRepositoryMock.Object);
+            _appSettingsRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         _testDirectReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Eng", DateTime.UtcNow);
         _testProject = new Project("Test Project");
@@ -40,7 +44,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullTaskRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(null!, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object);
+        var act = () => new TeamTaskService(null!, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -51,7 +55,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullDirectReportRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, null!, _projectRepositoryMock.Object, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, null!, _projectRepositoryMock.Object, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -62,7 +66,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullProjectRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, null!, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, null!, _parentRepositoryMock.Object, _appSettingsRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -73,7 +77,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullParentRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, null!, _appSettingsRepositoryMock.Object);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, null!, _appSettingsRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -84,7 +88,7 @@ public class TeamTaskServiceTests
     public void Constructor_WithNullAppSettingsRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, _parentRepositoryMock.Object, null!);
+        var act = () => new TeamTaskService(_taskRepositoryMock.Object, _directReportRepositoryMock.Object, _projectRepositoryMock.Object, _parentRepositoryMock.Object, null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()

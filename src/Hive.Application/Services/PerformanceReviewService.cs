@@ -13,13 +13,16 @@ public class PerformanceReviewService : IPerformanceReviewService
 {
     private readonly IPerformanceReviewRepository _reviewRepository;
     private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
 
     public PerformanceReviewService(
         IPerformanceReviewRepository reviewRepository,
-        IDirectReportRepository directReportRepository)
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
     {
         _reviewRepository = reviewRepository ?? throw new ArgumentNullException(nameof(reviewRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<PerformanceReviewDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -67,6 +70,15 @@ public class PerformanceReviewService : IPerformanceReviewService
         var entity = new PerformanceReview(dto.DirectReportId, dto.ReviewPeriod, dto.ReviewDate);
         var created = await _reviewRepository.AddAsync(entity, cancellationToken);
 
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Review,
+            created.Id,
+            $"Performance Review - {created.ReviewPeriod}",
+            "New performance review created",
+            cancellationToken);
+
         return MapToDto(created, directReport.FullName);
     }
 
@@ -105,6 +117,15 @@ public class PerformanceReviewService : IPerformanceReviewService
         entity.Submit();
         await _reviewRepository.UpdateAsync(entity, cancellationToken);
 
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.StatusChanged,
+            EntityType.Review,
+            entity.Id,
+            $"Performance Review - {entity.ReviewPeriod}",
+            "Performance review submitted",
+            cancellationToken);
+
         var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
         return MapToDto(entity, directReport?.FullName ?? "Unknown");
     }
@@ -126,6 +147,15 @@ public class PerformanceReviewService : IPerformanceReviewService
 
         entity.Complete();
         await _reviewRepository.UpdateAsync(entity, cancellationToken);
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.Completed,
+            EntityType.Review,
+            entity.Id,
+            $"Performance Review - {entity.ReviewPeriod}",
+            "Performance review completed",
+            cancellationToken);
 
         var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
         return MapToDto(entity, directReport?.FullName ?? "Unknown");

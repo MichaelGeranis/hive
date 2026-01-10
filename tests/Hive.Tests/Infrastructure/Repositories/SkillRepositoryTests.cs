@@ -182,7 +182,7 @@ public class SkillRepositoryTests
     public async Task AddAsync_AddsSkillToContext()
     {
         // Arrange
-        var skill = new Skill("TypeScript", SkillCategory.Technical);
+        var skill = new Skill("TypeScript", "Programming language", SkillCategory.Technical);
 
         // Act
         var result = await _repository.AddAsync(skill);
@@ -227,7 +227,7 @@ public class SkillRepositoryTests
     public async Task UpdateAsync_WithNonExistentSkill_ThrowsInvalidOperationException()
     {
         // Arrange
-        var skill = new Skill("Test", SkillCategory.Technical);
+        var skill = new Skill("Test", "Test description", SkillCategory.Technical);
 
         // Act
         var act = () => _repository.UpdateAsync(skill);
@@ -350,7 +350,7 @@ public class SkillRepositoryTests
         string name = "Test Skill",
         SkillCategory category = SkillCategory.Technical)
     {
-        var skill = new Skill(name, category, "Test description");
+        var skill = new Skill(name, "Test description", category);
         _context.Skills.TryAdd(skill.Id, skill);
         return skill;
     }

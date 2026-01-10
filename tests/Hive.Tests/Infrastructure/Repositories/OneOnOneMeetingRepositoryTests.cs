@@ -116,33 +116,6 @@ public class OneOnOneMeetingRepositoryTests
     }
 
     [Fact]
-    public async Task GetByAppleCalendarEventIdAsync_WhenExists_ReturnsMeeting()
-    {
-        // Arrange
-        var meeting = CreateAndAddMeeting();
-        meeting.SetCalendarSync("APPLE-EVENT-123");
-        _context.OneOnOneMeetings[meeting.Id] = meeting;
-
-        // Act
-        var result = await _repository.GetByAppleCalendarEventIdAsync("APPLE-EVENT-123");
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(meeting.Id);
-        result.AppleCalendarEventId.Should().Be("APPLE-EVENT-123");
-    }
-
-    [Fact]
-    public async Task GetByAppleCalendarEventIdAsync_WhenNotExists_ReturnsNull()
-    {
-        // Act
-        var result = await _repository.GetByAppleCalendarEventIdAsync("NONEXISTENT");
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    [Fact]
     public async Task AddAsync_AddsMeetingToContext()
     {
         // Arrange

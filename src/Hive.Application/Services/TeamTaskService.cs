@@ -18,19 +18,22 @@ public class TeamTaskService : ITeamTaskService
     private readonly IProjectRepository _projectRepository;
     private readonly IParentRepository _parentRepository;
     private readonly IAppSettingsRepository _appSettingsRepository;
+    private readonly IActivityService _activityService;
 
     public TeamTaskService(
         ITeamTaskRepository taskRepository,
         IDirectReportRepository directReportRepository,
         IProjectRepository projectRepository,
         IParentRepository parentRepository,
-        IAppSettingsRepository appSettingsRepository)
+        IAppSettingsRepository appSettingsRepository,
+        IActivityService activityService)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _parentRepository = parentRepository ?? throw new ArgumentNullException(nameof(parentRepository));
         _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<TeamTaskDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -152,6 +155,16 @@ public class TeamTaskService : ITeamTaskService
             dto.ParentId);
 
         var created = await _taskRepository.AddAsync(entity, cancellationToken);
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Task,
+            created.Id,
+            $"Task - {created.Title}",
+            "New task created",
+            cancellationToken);
+
         return await MapToDtoAsync(created, cancellationToken);
     }
 
@@ -243,6 +256,15 @@ public class TeamTaskService : ITeamTaskService
 
         entity.Complete();
         await _taskRepository.UpdateAsync(entity, cancellationToken);
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.Completed,
+            EntityType.Task,
+            entity.Id,
+            $"Task - {entity.Title}",
+            "Task completed",
+            cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
     }

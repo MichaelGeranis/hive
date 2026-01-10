@@ -95,3 +95,4 @@ src/Hive.Desktop/backend/*
 src/Hive.Desktop/dist/index.html
 INSTALLATION.md
 TROUBLESHOOTING.md
+.claude/agents/dotnet-backend-architect.md

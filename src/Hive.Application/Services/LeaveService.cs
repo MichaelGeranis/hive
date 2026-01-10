@@ -14,13 +14,16 @@ public class LeaveService : ILeaveService
 {
     private readonly ILeaveRepository _leaveRepository;
     private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
 
     public LeaveService(
         ILeaveRepository leaveRepository,
-        IDirectReportRepository directReportRepository)
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
     {
         _leaveRepository = leaveRepository;
         _directReportRepository = directReportRepository;
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<LeaveDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -88,6 +91,16 @@ public class LeaveService : ILeaveService
             dto.Notes);
 
         var created = await _leaveRepository.AddAsync(leave, cancellationToken);
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Leave,
+            created.Id,
+            $"Leave - {leaveType} ({created.StartDate:MMM d} - {created.EndDate:MMM d})",
+            "Leave request created",
+            cancellationToken);
+
         return MapToDto(created, directReport.FullName);
     }
 

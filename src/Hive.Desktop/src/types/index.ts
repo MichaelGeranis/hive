@@ -807,3 +807,116 @@ export interface RestoreResultDto {
   errors: string[]
   warnings: string[]
 }
+
+// Skills & Assessments
+export enum SkillCategory {
+  Technical = 0,
+  SoftSkills = 1,
+  Leadership = 2,
+  DomainKnowledge = 3,
+  Tools = 4
+}
+
+export enum ProficiencyLevel {
+  None = 0,
+  Novice = 1,
+  Beginner = 2,
+  Intermediate = 3,
+  Advanced = 4,
+  Expert = 5
+}
+
+export interface Skill {
+  id: string
+  name: string
+  description: string
+  category: SkillCategory
+  categoryName: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface SkillAssessment {
+  id: string
+  directReportId: string
+  directReportName: string
+  skillId: string
+  skillName: string
+  skillCategory: SkillCategory
+  level: ProficiencyLevel
+  levelName: string
+  targetLevel?: ProficiencyLevel
+  targetLevelName?: string
+  skillGap?: number
+  meetsTarget: boolean
+  notes: string
+  assessedAt: string
+  updatedAt?: string
+}
+
+export interface DirectReportSkills {
+  directReportId: string
+  directReportName: string
+  assessments: SkillAssessment[]
+}
+
+export interface SkillMatrix {
+  skills: Skill[]
+  directReports: DirectReportSkills[]
+}
+
+export interface CreateSkillDto {
+  name: string
+  description: string
+  category: SkillCategory
+}
+
+export interface UpdateSkillDto {
+  name: string
+  description: string
+  category: SkillCategory
+}
+
+export interface CreateSkillAssessmentDto {
+  directReportId: string
+  skillId: string
+  level: ProficiencyLevel
+  targetLevel?: ProficiencyLevel
+  notes: string
+}
+
+export interface UpdateSkillAssessmentDto {
+  level: ProficiencyLevel
+  targetLevel?: ProficiencyLevel
+  notes: string
+}
+
+// Activity Feed
+export enum ActivityType {
+  Created = 0,
+  Updated = 1,
+  StatusChanged = 2,
+  Approved = 3,
+  Rejected = 4,
+  Completed = 5
+}
+
+export enum EntityType {
+  Review = 0,
+  Task = 1,
+  Leave = 2
+}
+
+export interface Activity {
+  id: string
+  activityType: string
+  activityTypeName: string
+  entityType: string
+  entityTypeName: string
+  entityId: string
+  entityName: string
+  description: string
+  timestamp: string
+  createdAt: string
+}

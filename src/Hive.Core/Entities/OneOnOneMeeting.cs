@@ -12,7 +12,6 @@ public class OneOnOneMeeting
     public int DurationMinutes { get; private set; }
     public string Location { get; private set; } = string.Empty;
     public string Agenda { get; private set; } = string.Empty;
-    public string? AppleCalendarEventId { get; private set; }
     public bool IsSyncedFromCalendar { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
@@ -53,18 +52,6 @@ public class OneOnOneMeeting
         DurationMinutes = durationMinutes;
         Location = location?.Trim() ?? string.Empty;
         Agenda = agenda?.Trim() ?? string.Empty;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void SetAppleCalendarSync(string appleCalendarEventId)
-    {
-        if (string.IsNullOrWhiteSpace(appleCalendarEventId))
-        {
-            throw new ArgumentException("Apple Calendar Event ID cannot be empty.", nameof(appleCalendarEventId));
-        }
-
-        AppleCalendarEventId = appleCalendarEventId;
-        IsSyncedFromCalendar = true;
         UpdatedAt = DateTime.UtcNow;
     }
 

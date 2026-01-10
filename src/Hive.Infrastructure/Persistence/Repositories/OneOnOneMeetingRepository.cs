@@ -38,13 +38,6 @@ public class OneOnOneMeetingRepository : IOneOnOneMeetingRepository
         return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
     }
 
-    public Task<OneOnOneMeeting?> GetByAppleCalendarEventIdAsync(string appleCalendarEventId, CancellationToken cancellationToken = default)
-    {
-        var meeting = _context.OneOnOneMeetings.Values
-            .FirstOrDefault(x => x.AppleCalendarEventId == appleCalendarEventId);
-        return Task.FromResult(meeting);
-    }
-
     public Task<OneOnOneMeeting> AddAsync(OneOnOneMeeting meeting, CancellationToken cancellationToken = default)
     {
         if (!_context.OneOnOneMeetings.TryAdd(meeting.Id, meeting))

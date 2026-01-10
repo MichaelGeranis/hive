@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<IParentService, ParentService>();
+        services.AddScoped<IActivityService, ActivityService>();
         return services;
     }
 }
