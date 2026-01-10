@@ -92,6 +92,13 @@ export default function Dashboard() {
   const [memberProjects, setMemberProjects] = useState<Project[]>([])
   const [sprintFilter, setSprintFilter] = useState<number | undefined>(undefined)
 
+  // Individual loading states for lazy-loaded widgets
+  const [loadingStates, setLoadingStates] = useState({
+    velocity: false,
+    accuracy: false,
+    capacity: false
+  })
+
   // Widget customization state
   const [showCustomize, setShowCustomize] = useState(false)
   const [widgets, setWidgets] = useState<WidgetVisibility>(() => {
@@ -128,20 +135,39 @@ export default function Dashboard() {
   useEscapeKey(closeActionItemsModal, showActionItemsModal && !selectedMember && !showCustomize)
   useEscapeKey(closePriorityNotesModal, showPriorityNotesModal && !selectedMember && !showCustomize && !showActionItemsModal)
 
+  // Load core data (always needed)
   useEffect(() => {
-    loadDashboard()
-  }, [sprintFilter]) // Re-fetch when filter changes
+    loadCoreData()
+  }, [sprintFilter])
 
-  const loadDashboard = async () => {
+  // Lazy load velocity data when widget becomes visible
+  useEffect(() => {
+    if (widgets.teamVelocity && !velocity && !loadingStates.velocity) {
+      loadVelocityData()
+    }
+  }, [widgets.teamVelocity, sprintFilter])
+
+  // Lazy load accuracy data when widget becomes visible
+  useEffect(() => {
+    if (widgets.estimationAccuracy && !accuracy && !loadingStates.accuracy) {
+      loadAccuracyData()
+    }
+  }, [widgets.estimationAccuracy, sprintFilter])
+
+  // Lazy load capacity data when widget becomes visible
+  useEffect(() => {
+    if (widgets.capacityAnalysis && !capacityAnalysis && !loadingStates.capacity) {
+      loadCapacityData()
+    }
+  }, [widgets.capacityAnalysis, sprintFilter])
+
+  const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, velocityData, accuracyData, capacityData, leaveData, actionItemsData, notesData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
-        reportsApi.getTeamVelocity(sprintFilter),
-        reportsApi.getEstimationAccuracy(sprintFilter),
-        reportsApi.getCapacityAnalysis(sprintFilter),
         leavesApi.getOverview(),
         meetingNotesApi.getOpenActionItems(),
         notesApi.getPending()
@@ -149,9 +175,6 @@ export default function Dashboard() {
       setDashboard(dashboardData)
       setTasks(tasksData)
       setProjects(projectsData)
-      setVelocity(velocityData)
-      setAccuracy(accuracyData)
-      setCapacityAnalysis(capacityData)
       setLeaveOverview(leaveData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
@@ -171,6 +194,42 @@ export default function Dashboard() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadVelocityData = async () => {
+    try {
+      setLoadingStates(prev => ({ ...prev, velocity: true }))
+      const velocityData = await reportsApi.getTeamVelocity(sprintFilter)
+      setVelocity(velocityData)
+    } catch (err) {
+      console.error('Failed to load velocity data:', err)
+    } finally {
+      setLoadingStates(prev => ({ ...prev, velocity: false }))
+    }
+  }
+
+  const loadAccuracyData = async () => {
+    try {
+      setLoadingStates(prev => ({ ...prev, accuracy: true }))
+      const accuracyData = await reportsApi.getEstimationAccuracy(sprintFilter)
+      setAccuracy(accuracyData)
+    } catch (err) {
+      console.error('Failed to load accuracy data:', err)
+    } finally {
+      setLoadingStates(prev => ({ ...prev, accuracy: false }))
+    }
+  }
+
+  const loadCapacityData = async () => {
+    try {
+      setLoadingStates(prev => ({ ...prev, capacity: true }))
+      const capacityData = await reportsApi.getCapacityAnalysis(sprintFilter)
+      setCapacityAnalysis(capacityData)
+    } catch (err) {
+      console.error('Failed to load capacity data:', err)
+    } finally {
+      setLoadingStates(prev => ({ ...prev, capacity: false }))
     }
   }
 
@@ -537,7 +596,17 @@ export default function Dashboard() {
       </div>
 
       {/* Capacity Analysis */}
-      {widgets.capacityAnalysis && capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) && (() => {
+      {widgets.capacityAnalysis && (
+        loadingStates.capacity ? (
+          <Card>
+            <CardHeader title="Capacity" />
+            <CardContent>
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) ? (() => {
         // Calculate average completed SP from past sprints
         const avgCompletedSP = capacityAnalysis.pastSprints.length > 0
           ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
@@ -634,10 +703,21 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         );
-      })()}
-      
+      })() : null
+      )}
+
       {/* Team Velocity */}
-      {widgets.teamVelocity && velocity && velocity.sprints.length > 0 && (
+      {widgets.teamVelocity && (
+        loadingStates.velocity ? (
+          <Card>
+            <CardHeader title="Team Velocity" />
+            <CardContent>
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : velocity && velocity.sprints.length > 0 ? (
         <Card>
           <CardHeader
             title="Velocity"
@@ -718,10 +798,21 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        ) : null
       )}
 
       {/* Estimation Accuracy */}
-      {widgets.estimationAccuracy && accuracy && accuracy.sprints.length > 0 && (
+      {widgets.estimationAccuracy && (
+        loadingStates.accuracy ? (
+          <Card>
+            <CardHeader title="Estimation Accuracy" />
+            <CardContent>
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : accuracy && accuracy.sprints.length > 0 ? (
         <Card>
           <CardHeader
             title="Estimation Accuracy"
@@ -776,8 +867,8 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        ) : null
       )}
-      
 
       {/* Task Distribution by Assignee - Members Workload*/}
       {widgets.membersWorkload && (
