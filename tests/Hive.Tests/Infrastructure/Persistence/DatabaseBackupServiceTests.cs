@@ -173,7 +173,8 @@ public class DatabaseBackupServiceTests : IDisposable
         {
             _service.CreateBackup(dbPath);
             var backupFiles = Directory.GetFiles(_tempDirectory, "*.backup.*");
-            var latestBackup = backupFiles.OrderByDescending(f => File.GetCreationTime(f)).First();
+            // Sort by filename (contains timestamp) - same ordering as implementation
+            var latestBackup = backupFiles.OrderByDescending(f => Path.GetFileName(f)).First();
             backupPaths.Add(latestBackup);
             Thread.Sleep(1100); // Wait to ensure different timestamps
         }
@@ -209,6 +210,9 @@ public class DatabaseBackupServiceTests : IDisposable
 
         // Note: File locking behavior is platform-specific, so this test just ensures
         // the service handles cleanup errors gracefully
+
+        // Wait to ensure different timestamp for next backup
+        Thread.Sleep(1100);
 
         // Act - Create more backups
         var result = _service.CreateBackup(dbPath);

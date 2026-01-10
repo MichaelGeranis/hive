@@ -528,7 +528,7 @@ public class BackupService : IBackupService
         Type = (int)l.Type,
         StartDate = l.StartDate,
         EndDate = l.EndDate,
-        Notes = l.Notes,
+        Notes = l.Notes ?? string.Empty,
         CreatedAt = l.CreatedAt,
         UpdatedAt = l.UpdatedAt
     };

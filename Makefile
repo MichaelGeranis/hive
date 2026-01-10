@@ -40,25 +40,18 @@ install:
 	dotnet restore Hive.sln
 	cd src/Hive.Desktop && npm install
 
-# Restore NuGet packages
-restore:
-	dotnet restore Hive.sln
-
 # Build everything
 build:
-	dotnet build Hive.sln
+	dotnet build Hive.sln --restore
 	cd src/Hive.Desktop && npm run build
 
 # Run all tests
 test:
 	dotnet test Hive.sln
-
-# Run tests in watch mode
-test-watch:
-	dotnet watch test --project tests/Hive.Tests/Hive.Tests.csproj
+	cd src/Hive.Desktop && npm test
 
 # Run backend (development mode with in-memory database)
-backend:
+backend-inmemory:
 	dotnet run --project src/Hive.Api/Hive.Api.csproj
 
 # Run backend with SQLite (production mode)
@@ -69,29 +62,9 @@ backend-sqlite:
 frontend:
 	cd src/Hive.Desktop && npm run dev
 
-# Run Electron in development mode (requires backend running separately)
-electron-dev:
-	cd src/Hive.Desktop && npm run electron:dev
-
-# Run both backend and frontend in development mode
-dev:
-	@echo "Starting backend and frontend..."
-	@echo "Backend: http://localhost:5002"
-	@echo "Frontend: http://localhost:5173"
-	@echo ""
-	@make -j2 backend frontend
-
 # Build backend for current platform
 build-backend:
 	./scripts/build-backend.sh
-
-# Build backend for macOS ARM64
-build-backend-mac:
-	./scripts/build-backend.sh osx-arm64
-
-# Build backend for Windows
-build-backend-win:
-	./scripts/build-backend.sh win-x64
 
 # Build backend for all platforms
 build-all:
@@ -100,14 +73,6 @@ build-all:
 # Build standalone Electron app for current platform
 electron-build:
 	cd src/Hive.Desktop && npm run electron:build
-
-# Build Electron app for macOS
-electron-build-mac:
-	cd src/Hive.Desktop && npm run electron:build:mac
-
-# Build Electron app for Windows
-electron-build-win:
-	cd src/Hive.Desktop && npm run electron:build:win
 
 # Clean build artifacts
 clean:
@@ -123,18 +88,6 @@ clean:
 check:
 	dotnet build Hive.sln --warnaserror
 	cd src/Hive.Desktop && npx tsc --noEmit
-
-# Reset the SQLite database (backs up existing database)
-reset-db:
-	@echo "Resetting SQLite database..."
-	@if [ -f "$$HOME/Library/Application Support/Hive/hive.db" ]; then \
-		echo "Backing up existing database..."; \
-		cp "$$HOME/Library/Application Support/Hive/hive.db" "$$HOME/Library/Application Support/Hive/hive.db.backup.$$(date +%Y%m%d_%H%M%S)"; \
-		rm "$$HOME/Library/Application Support/Hive/hive.db"; \
-		echo "Database deleted. It will be recreated on next backend start."; \
-	else \
-		echo "No database file found."; \
-	fi
 
 # Create a new migration
 migration-add:

@@ -72,7 +72,7 @@ public class DatabaseBackupService
             var backupPattern = $"{databaseFileName}.backup.*";
             var backupFiles = Directory.GetFiles(directory, backupPattern)
                 .Select(f => new FileInfo(f))
-                .OrderByDescending(f => f.CreationTime)
+                .OrderByDescending(f => f.Name) // Sort by filename (contains timestamp yyyy-MM-dd_HH-mm-ss)
                 .ToList();
 
             // Keep only the most recent backups

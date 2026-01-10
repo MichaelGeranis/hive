@@ -11,10 +11,16 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   routerProps?: MemoryRouterProps
 }
 
+// React Router v7 future flags to silence deprecation warnings
+const routerFutureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+}
+
 function AllTheProviders({ children }: WrapperProps) {
   return (
     <ThemeProvider>
-      <MemoryRouter>
+      <MemoryRouter future={routerFutureFlags}>
         {children}
       </MemoryRouter>
     </ThemeProvider>
@@ -25,7 +31,7 @@ function createWrapper(routerProps?: MemoryRouterProps) {
   return function Wrapper({ children }: WrapperProps) {
     return (
       <ThemeProvider>
-        <MemoryRouter {...routerProps}>
+        <MemoryRouter {...routerProps} future={{ ...routerFutureFlags, ...routerProps?.future }}>
           {children}
         </MemoryRouter>
       </ThemeProvider>
