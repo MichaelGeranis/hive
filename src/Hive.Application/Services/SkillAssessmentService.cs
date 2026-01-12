@@ -206,7 +206,6 @@ public class SkillAssessmentService : ISkillAssessmentService
                         SkillGap = a.GetSkillGap(),
                         MeetsTarget = a.MeetsTarget(),
                         Notes = a.Notes,
-                        AssessedAt = a.AssessedAt,
                         UpdatedAt = a.UpdatedAt
                     };
                 })
@@ -274,7 +273,6 @@ public class SkillAssessmentService : ISkillAssessmentService
             SkillGap = entity.GetSkillGap(),
             MeetsTarget = entity.MeetsTarget(),
             Notes = entity.Notes,
-            AssessedAt = entity.AssessedAt,
             UpdatedAt = entity.UpdatedAt
         };
     }
@@ -305,7 +303,6 @@ public class SkillAssessmentService : ISkillAssessmentService
                 SkillGap = e.GetSkillGap(),
                 MeetsTarget = e.MeetsTarget(),
                 Notes = e.Notes,
-                AssessedAt = e.AssessedAt,
                 UpdatedAt = e.UpdatedAt
             };
         }).ToList();

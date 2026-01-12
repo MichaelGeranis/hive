@@ -211,7 +211,6 @@ public record SkillAssessmentBackup
     public int Level { get; init; }
     public int? TargetLevel { get; init; }
     public string Notes { get; init; } = string.Empty;
-    public DateTime AssessedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
 

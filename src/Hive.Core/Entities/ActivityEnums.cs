@@ -129,5 +129,10 @@ public enum EntityType
     /// <summary>
     /// Parent (reporting hierarchy) entity.
     /// </summary>
-    Parent = 15
+    Parent = 15,
+
+    /// <summary>
+    /// Project knowledge assessment entity.
+    /// </summary>
+    ProjectKnowledge = 16
 }

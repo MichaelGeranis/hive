@@ -712,7 +712,6 @@ public class BackupService : IBackupService
         Level = (int)sa.Level,
         TargetLevel = sa.TargetLevel.HasValue ? (int?)sa.TargetLevel.Value : null,
         Notes = sa.Notes,
-        AssessedAt = sa.AssessedAt,
         UpdatedAt = sa.UpdatedAt
     };
 

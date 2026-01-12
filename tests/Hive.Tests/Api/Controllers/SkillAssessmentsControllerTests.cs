@@ -584,8 +584,7 @@ public class SkillAssessmentsControllerTests
             TargetLevelName = targetLevel?.ToString(),
             SkillGap = gap,
             MeetsTarget = gap.HasValue ? gap.Value <= 0 : true,
-            Notes = "Test notes",
-            AssessedAt = DateTime.UtcNow
+            Notes = "Test notes"
         };
     }
 

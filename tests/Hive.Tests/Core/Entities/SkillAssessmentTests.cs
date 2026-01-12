@@ -25,8 +25,7 @@ public class SkillAssessmentTests
         assessment.Level.Should().Be(ProficiencyLevel.Intermediate);
         assessment.TargetLevel.Should().Be(ProficiencyLevel.Advanced);
         assessment.Notes.Should().Be("Working on improving");
-        assessment.AssessedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        assessment.UpdatedAt.Should().BeNull();
+        assessment.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using System;
 using Hive.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hive.Infrastructure.Migrations
 {
     [DbContext(typeof(HiveDbContext))]
-    partial class HiveDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260112153511_RemoveNotesAndAssessedAtFromProjectKnowledge")]
+    partial class RemoveNotesAndAssessedAtFromProjectKnowledge
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -775,6 +778,9 @@ namespace Hive.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AssessedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("DirectReportId")

@@ -20,7 +20,6 @@ public record SkillAssessmentDto
     public int? SkillGap { get; init; }
     public bool MeetsTarget { get; init; }
     public string Notes { get; init; } = string.Empty;
-    public DateTime AssessedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
 

@@ -850,7 +850,6 @@ export interface SkillAssessment {
   skillGap?: number
   meetsTarget: boolean
   notes: string
-  assessedAt: string
   updatedAt?: string
 }
 
@@ -1090,4 +1089,38 @@ export interface UpdateChecklistItemDto {
 
 export interface ReorderItemsDto {
   itemIds: string[]
+}
+
+// Project Knowledge
+export interface ProjectKnowledge {
+  id: string
+  directReportId: string
+  directReportName: string
+  projectId: string
+  projectName: string
+  knowledgeLevel: number
+  knowledgeLevelLabel: string
+  updatedAt?: string
+}
+
+export interface CreateOrUpdateProjectKnowledgeDto {
+  directReportId: string
+  projectId: string
+  knowledgeLevel: number
+}
+
+export interface ProjectKnowledgeMatrix {
+  projects: KnowledgeMatrixProject[]
+  directReports: KnowledgeMatrixMember[]
+  scores: ProjectKnowledge[]
+}
+
+export interface KnowledgeMatrixProject {
+  id: string
+  name: string
+}
+
+export interface KnowledgeMatrixMember {
+  id: string
+  name: string
 }

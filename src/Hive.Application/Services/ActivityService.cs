@@ -120,6 +120,7 @@ public class ActivityService : IActivityService
             EntityType.ChecklistTemplate => "Checklist Template",
             EntityType.ChecklistInstance => "Checklist",
             EntityType.Parent => "Reporting Structure",
+            EntityType.ProjectKnowledge => "Knowledge Assessment",
             _ => entityType.ToString()
         };
     }

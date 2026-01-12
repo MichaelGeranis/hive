@@ -8,6 +8,7 @@ import DirectReports from './pages/DirectReports'
 import Reviews from './pages/Reviews'
 import Meetings from './pages/Meetings'
 import Projects from './pages/Projects'
+import ProjectKnowledge from './pages/ProjectKnowledge'
 import Parents from './pages/Parents'
 import Tasks from './pages/Tasks'
 import Sprints from './pages/Sprints'
@@ -123,6 +124,7 @@ function App() {
         <Route path="checklists" element={<Checklists />} />
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
+        <Route path="project-knowledge" element={<ProjectKnowledge />} />
         <Route path="parents" element={<Parents />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="sprints" element={<Sprints />} />

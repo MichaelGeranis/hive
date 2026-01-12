@@ -479,7 +479,7 @@ export default function Dashboard() {
         {/* Projects Distribution by Member */}
         {widgets.projectsDistribution && (
         <Card>
-          <CardHeader title="Projects Distribution" subtitle="By member" />
+          <CardHeader title="Projects Distribution" subtitle="How many projects each team member is engaged in" />
           <CardContent className="h-64">
             {projectDistributionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -517,7 +517,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Members by Project"
-            subtitle={siloCount > 0 ? `${siloCount} potential silo${siloCount !== 1 ? 's' : ''}` : 'No silos detected'}
+            subtitle="How many members are engaged per project"
           />
           <CardContent className="h-64">
             {membersDistributionData.length > 0 ? (
@@ -751,6 +751,7 @@ export default function Dashboard() {
                   dataKey="storyPointsCompleted"
                   stroke="#f59e0b"
                   strokeWidth={2}
+                  strokeDasharray="5 5"
                   name="Story Points"
                 />
                 <Line
@@ -759,7 +760,6 @@ export default function Dashboard() {
                   dataKey="estimatedHours"
                   stroke="#3b82f6"
                   strokeWidth={2}
-                  strokeDasharray="5 5"
                   name="Estimated Hours"
                 />
                 <Line
@@ -838,7 +838,7 @@ export default function Dashboard() {
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="estimatedHours" stroke="#3b82f6" strokeWidth={2} name="Estimated hours" dot={{ fill: '#3b82f6' }} />
                 <Line yAxisId="left" type="monotone" dataKey="actualHours" stroke="#10b981" strokeWidth={2} name="Actual hours" dot={{ fill: '#10b981' }} />
-                <Line yAxisId="right" type="monotone" dataKey="accuracyPercentage" stroke="#f59e0b" strokeWidth={2} name="Accuracy %" dot={{ fill: '#f59e0b' }} />
+                <Line yAxisId="right" type="monotone" dataKey="accuracyPercentage" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" name="Accuracy %" dot={{ fill: '#f59e0b' }} />
               </LineChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">

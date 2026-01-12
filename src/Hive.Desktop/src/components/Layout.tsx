@@ -17,7 +17,8 @@ import {
   ScrollText,
   Award,
   Activity,
-  ClipboardList
+  ClipboardList,
+  BookOpen
 } from 'lucide-react'
 
 const navigationGroups = [
@@ -29,9 +30,10 @@ const navigationGroups = [
   // Delivery
   [
     { name: 'Sprints', to: '/sprints', icon: Zap },
-    { name: 'Projects', to: '/projects', icon: FolderKanban },
     { name: 'Parents', to: '/parents', icon: Layers },
     { name: 'Tasks', to: '/tasks', icon: CheckSquare },
+    { name: 'Projects', to: '/projects', icon: FolderKanban },
+    { name: 'Knowledge Matrix', to: '/project-knowledge', icon: BookOpen },
   ],
   // People
   [

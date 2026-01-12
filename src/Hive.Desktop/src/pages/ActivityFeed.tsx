@@ -14,7 +14,8 @@ import {
   Star,
   ClipboardList,
   ClipboardCheck,
-  Network
+  Network,
+  BookOpen
 } from 'lucide-react'
 import { activityFeedApi } from '../services/api'
 import { Activity } from '../types'
@@ -77,6 +78,8 @@ const ActivityFeed = () => {
         return <ClipboardCheck className="w-5 h-5 text-emerald-600" />
       case 'parent':
         return <Network className="w-5 h-5 text-rose-500" />
+      case 'projectknowledge':
+        return <BookOpen className="w-5 h-5 text-lime-500" />
       default:
         return <FileText className="w-5 h-5 text-gray-500" />
     }
@@ -116,6 +119,8 @@ const ActivityFeed = () => {
         return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
       case 'parent':
         return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
+      case 'projectknowledge':
+        return 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
     }

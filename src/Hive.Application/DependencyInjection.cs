@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IParentService, ParentService>();
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IChecklistService, ChecklistService>();
+        services.AddScoped<IProjectKnowledgeService, ProjectKnowledgeService>();
         return services;
     }
 }

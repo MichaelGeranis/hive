@@ -75,7 +75,10 @@ import type {
   UpdateChecklistItemDto,
   ReorderItemsDto,
   Activity,
-  PagedResult
+  PagedResult,
+  ProjectKnowledge,
+  ProjectKnowledgeMatrix,
+  CreateOrUpdateProjectKnowledgeDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -437,6 +440,24 @@ export const activityFeedApi = {
     api.get<Activity[]>(`/activityfeed/recent?days=${days}`).then(r => r.data),
   getByEntityType: (type: string) =>
     api.get<Activity[]>(`/activityfeed/by-entity-type/${type}`).then(r => r.data)
+}
+
+// Project Knowledge
+export const projectKnowledgeApi = {
+  getAll: () =>
+    api.get<ProjectKnowledge[]>('/projectknowledge').then(r => r.data),
+  getMatrix: () =>
+    api.get<ProjectKnowledgeMatrix>('/projectknowledge/matrix').then(r => r.data),
+  getById: (id: string) =>
+    api.get<ProjectKnowledge>(`/projectknowledge/${id}`).then(r => r.data),
+  getByDirectReport: (directReportId: string) =>
+    api.get<ProjectKnowledge[]>(`/projectknowledge/by-direct-report/${directReportId}`).then(r => r.data),
+  getByProject: (projectId: string) =>
+    api.get<ProjectKnowledge[]>(`/projectknowledge/by-project/${projectId}`).then(r => r.data),
+  createOrUpdate: (data: CreateOrUpdateProjectKnowledgeDto) =>
+    api.put<ProjectKnowledge>('/projectknowledge', data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/projectknowledge/${id}`)
 }
 
 // Checklist Templates

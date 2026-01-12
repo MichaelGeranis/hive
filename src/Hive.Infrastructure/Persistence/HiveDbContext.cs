@@ -32,6 +32,7 @@ public class HiveDbContext : DbContext
     public DbSet<ChecklistTemplateItem> ChecklistTemplateItems => Set<ChecklistTemplateItem>();
     public DbSet<ChecklistInstance> ChecklistInstances => Set<ChecklistInstance>();
     public DbSet<ChecklistInstanceItem> ChecklistInstanceItems => Set<ChecklistInstanceItem>();
+    public DbSet<ProjectKnowledge> ProjectKnowledge => Set<ProjectKnowledge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -257,6 +258,15 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.InstanceId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => new { e.InstanceId, e.SortOrder });
+        });
+
+        // ProjectKnowledge configuration
+        modelBuilder.Entity<ProjectKnowledge>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.DirectReportId);
+            entity.HasIndex(e => e.ProjectId);
+            entity.HasIndex(e => new { e.DirectReportId, e.ProjectId }).IsUnique();
         });
     }
     /// Seeds initial data into the database.

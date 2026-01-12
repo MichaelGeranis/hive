@@ -12,7 +12,6 @@ public class SkillAssessment
     public ProficiencyLevel Level { get; private set; }
     public ProficiencyLevel? TargetLevel { get; private set; }
     public string Notes { get; private set; } = string.Empty;
-    public DateTime AssessedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
     private SkillAssessment() { }
@@ -33,7 +32,7 @@ public class SkillAssessment
         Level = level;
         TargetLevel = targetLevel;
         Notes = notes?.Trim() ?? string.Empty;
-        AssessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void UpdateAssessment(

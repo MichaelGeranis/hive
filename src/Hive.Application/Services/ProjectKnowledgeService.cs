@@ -1,0 +1,218 @@
+using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
+using Hive.Core.Entities;
+using Hive.Core.Exceptions;
+using Hive.Core.Interfaces;
+
+namespace Hive.Application.Services;
+
+/// <summary>
+/// Service implementing use cases for ProjectKnowledge management.
+/// </summary>
+public class ProjectKnowledgeService : IProjectKnowledgeService
+{
+    private readonly IProjectKnowledgeRepository _knowledgeRepository;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
+
+    public ProjectKnowledgeService(
+        IProjectKnowledgeRepository knowledgeRepository,
+        IProjectRepository projectRepository,
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
+    {
+        _knowledgeRepository = knowledgeRepository ?? throw new ArgumentNullException(nameof(knowledgeRepository));
+        _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+        _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
+    }
+
+    public async Task<ProjectKnowledgeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _knowledgeRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null) return null;
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectKnowledgeDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _knowledgeRepository.GetAllAsync(cancellationToken);
+        return await MapToDtosAsync(entities, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectKnowledgeDto>> GetByDirectReportIdAsync(Guid directReportId, CancellationToken cancellationToken = default)
+    {
+        var entities = await _knowledgeRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
+        return await MapToDtosAsync(entities, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectKnowledgeDto>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        var entities = await _knowledgeRepository.GetByProjectIdAsync(projectId, cancellationToken);
+        return await MapToDtosAsync(entities, cancellationToken);
+    }
+
+    public async Task<ProjectKnowledgeMatrixDto> GetMatrixAsync(CancellationToken cancellationToken = default)
+    {
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var allScores = await _knowledgeRepository.GetAllAsync(cancellationToken);
+
+        // Only include direct reports (not indirect reports)
+        var directOnly = directReports.Where(dr => dr.IsDirect).ToList();
+
+        var projectSummaries = projects.Select(p => new KnowledgeMatrixProjectDto
+        {
+            Id = p.Id,
+            Name = p.Name
+        }).ToList();
+
+        var directReportSummaries = directOnly.Select(dr => new KnowledgeMatrixMemberDto
+        {
+            Id = dr.Id,
+            Name = dr.FullName
+        }).ToList();
+
+        var scoreDtos = allScores.Select(s =>
+        {
+            var project = projects.FirstOrDefault(p => p.Id == s.ProjectId);
+            var directReport = directReports.FirstOrDefault(dr => dr.Id == s.DirectReportId);
+            return new ProjectKnowledgeDto
+            {
+                Id = s.Id,
+                DirectReportId = s.DirectReportId,
+                DirectReportName = directReport?.FullName ?? "Unknown",
+                ProjectId = s.ProjectId,
+                ProjectName = project?.Name ?? "Unknown",
+                KnowledgeLevel = s.KnowledgeLevel,
+                KnowledgeLevelLabel = s.GetKnowledgeLevelLabel(),
+                UpdatedAt = s.UpdatedAt
+            };
+        }).ToList();
+
+        return new ProjectKnowledgeMatrixDto
+        {
+            Projects = projectSummaries,
+            DirectReports = directReportSummaries,
+            Scores = scoreDtos
+        };
+    }
+
+    public async Task<ProjectKnowledgeDto> CreateOrUpdateAsync(CreateOrUpdateProjectKnowledgeDto dto, CancellationToken cancellationToken = default)
+    {
+        await ValidateReferencesAsync(dto.DirectReportId, dto.ProjectId, cancellationToken);
+
+        var existing = await _knowledgeRepository.GetByDirectReportAndProjectAsync(
+            dto.DirectReportId, dto.ProjectId, cancellationToken);
+
+        var project = await _projectRepository.GetByIdAsync(dto.ProjectId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(dto.DirectReportId, cancellationToken);
+
+        if (existing is not null)
+        {
+            existing.Update(dto.KnowledgeLevel);
+            await _knowledgeRepository.UpdateAsync(existing, cancellationToken);
+
+            await _activityService.LogActivityAsync(
+                ActivityType.Updated,
+                EntityType.ProjectKnowledge,
+                existing.Id,
+                $"Knowledge: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
+                $"Knowledge assessment updated to level {dto.KnowledgeLevel}",
+                cancellationToken);
+
+            return await MapToDtoAsync(existing, cancellationToken);
+        }
+
+        var entity = new ProjectKnowledge(dto.DirectReportId, dto.ProjectId, dto.KnowledgeLevel);
+        var created = await _knowledgeRepository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ProjectKnowledge,
+            created.Id,
+            $"Knowledge: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
+            $"Knowledge assessment created at level {dto.KnowledgeLevel}",
+            cancellationToken);
+
+        return await MapToDtoAsync(created, cancellationToken);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _knowledgeRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
+        {
+            throw new NotFoundException(nameof(ProjectKnowledge), id);
+        }
+
+        var project = await _projectRepository.GetByIdAsync(entity.ProjectId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
+
+        await _knowledgeRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.ProjectKnowledge,
+            id,
+            $"Knowledge: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
+            $"Knowledge assessment was deleted",
+            cancellationToken);
+    }
+
+    private async Task ValidateReferencesAsync(Guid directReportId, Guid projectId, CancellationToken cancellationToken)
+    {
+        var directReport = await _directReportRepository.GetByIdAsync(directReportId, cancellationToken);
+        if (directReport is null)
+        {
+            throw new NotFoundException(nameof(DirectReport), directReportId);
+        }
+
+        var project = await _projectRepository.GetByIdAsync(projectId, cancellationToken);
+        if (project is null)
+        {
+            throw new NotFoundException(nameof(Project), projectId);
+        }
+    }
+
+    private async Task<ProjectKnowledgeDto> MapToDtoAsync(ProjectKnowledge entity, CancellationToken cancellationToken)
+    {
+        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
+        var project = await _projectRepository.GetByIdAsync(entity.ProjectId, cancellationToken);
+
+        return new ProjectKnowledgeDto
+        {
+            Id = entity.Id,
+            DirectReportId = entity.DirectReportId,
+            DirectReportName = directReport?.FullName ?? "Unknown",
+            ProjectId = entity.ProjectId,
+            ProjectName = project?.Name ?? "Unknown",
+            KnowledgeLevel = entity.KnowledgeLevel,
+            KnowledgeLevelLabel = entity.GetKnowledgeLevelLabel(),
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    private async Task<IReadOnlyList<ProjectKnowledgeDto>> MapToDtosAsync(IEnumerable<ProjectKnowledge> entities, CancellationToken cancellationToken)
+    {
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+
+        var drLookup = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
+        var projectLookup = projects.ToDictionary(p => p.Id, p => p.Name);
+
+        return entities.Select(e => new ProjectKnowledgeDto
+        {
+            Id = e.Id,
+            DirectReportId = e.DirectReportId,
+            DirectReportName = drLookup.GetValueOrDefault(e.DirectReportId, "Unknown"),
+            ProjectId = e.ProjectId,
+            ProjectName = projectLookup.GetValueOrDefault(e.ProjectId, "Unknown"),
+            KnowledgeLevel = e.KnowledgeLevel,
+            KnowledgeLevelLabel = e.GetKnowledgeLevelLabel(),
+            UpdatedAt = e.UpdatedAt
+        }).ToList();
+    }
+}

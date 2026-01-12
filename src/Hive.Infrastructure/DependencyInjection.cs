@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IChecklistTemplateItemRepository, ChecklistTemplateItemRepository>();
         services.AddScoped<IChecklistInstanceRepository, ChecklistInstanceRepository>();
         services.AddScoped<IChecklistInstanceItemRepository, ChecklistInstanceItemRepository>();
+        services.AddScoped<IProjectKnowledgeRepository, ProjectKnowledgeRepository>();
 
         return services;
     }
@@ -87,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<IChecklistTemplateItemRepository, SqliteChecklistTemplateItemRepository>();
         services.AddScoped<IChecklistInstanceRepository, SqliteChecklistInstanceRepository>();
         services.AddScoped<IChecklistInstanceItemRepository, SqliteChecklistInstanceItemRepository>();
+        services.AddScoped<IProjectKnowledgeRepository, SqliteProjectKnowledgeRepository>();
 
         // Register database backup service
         services.AddSingleton<DatabaseBackupService>();
