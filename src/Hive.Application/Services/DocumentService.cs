@@ -12,10 +12,12 @@ namespace Hive.Application.Services;
 public class DocumentService : IDocumentService
 {
     private readonly IDocumentRepository _documentRepository;
+    private readonly IActivityService _activityService;
 
-    public DocumentService(IDocumentRepository documentRepository)
+    public DocumentService(IDocumentRepository documentRepository, IActivityService activityService)
     {
         _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<DocumentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -40,6 +42,15 @@ public class DocumentService : IDocumentService
     {
         var entity = new Document(dto.Title, dto.Content, dto.Url, dto.Tags);
         await _documentRepository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Document,
+            entity.Id,
+            $"Document '{entity.Title}'",
+            $"Document '{entity.Title}' was created",
+            cancellationToken);
+
         return MapToDto(entity);
     }
 
@@ -53,6 +64,15 @@ public class DocumentService : IDocumentService
 
         entity.Update(dto.Title, dto.Content, dto.Url, dto.Tags);
         await _documentRepository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Document,
+            entity.Id,
+            $"Document '{entity.Title}'",
+            $"Document '{entity.Title}' was updated",
+            cancellationToken);
+
         return MapToDto(entity);
     }
 
@@ -65,6 +85,14 @@ public class DocumentService : IDocumentService
         }
 
         await _documentRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Document,
+            id,
+            $"Document '{entity.Title}'",
+            $"Document '{entity.Title}' was deleted",
+            cancellationToken);
     }
 
     private static DocumentDto MapToDto(Document entity)

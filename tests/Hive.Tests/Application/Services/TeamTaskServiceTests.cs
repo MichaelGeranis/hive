@@ -445,15 +445,15 @@ public class TeamTaskServiceTests
     public async Task DeleteAsync_WhenExists_DeletesTask()
     {
         // Arrange
-        var taskId = Guid.NewGuid();
-        _taskRepositoryMock.Setup(r => r.ExistsAsync(taskId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var task = new TeamTask("Test Task", "Description", TaskType.Task, TaskPriority.High);
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
 
         // Act
-        await _service.DeleteAsync(taskId);
+        await _service.DeleteAsync(task.Id);
 
         // Assert
-        _taskRepositoryMock.Verify(r => r.DeleteAsync(taskId, It.IsAny<CancellationToken>()), Times.Once);
+        _taskRepositoryMock.Verify(r => r.DeleteAsync(task.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -461,8 +461,8 @@ public class TeamTaskServiceTests
     {
         // Arrange
         var taskId = Guid.NewGuid();
-        _taskRepositoryMock.Setup(r => r.ExistsAsync(taskId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(taskId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TeamTask?)null);
 
         // Act
         var act = () => _service.DeleteAsync(taskId);

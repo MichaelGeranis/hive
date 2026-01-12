@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -9,23 +10,36 @@ namespace Hive.Tests.Application.Services;
 public class DirectReportServiceTests
 {
     private readonly Mock<IDirectReportRepository> _repositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly DirectReportService _service;
 
     public DirectReportServiceTests()
     {
         _repositoryMock = new Mock<IDirectReportRepository>();
-        _service = new DirectReportService(_repositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new DirectReportService(_repositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new DirectReportService(null!);
+        var act = () => new DirectReportService(null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("repository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new DirectReportService(_repositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]
@@ -240,15 +254,15 @@ public class DirectReportServiceTests
     public async Task DeleteAsync_WhenExists_DeletesEntity()
     {
         // Arrange
-        var id = Guid.NewGuid();
-        _repositoryMock.Setup(r => r.ExistsAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var entity = CreateDirectReport();
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
 
         // Act
-        await _service.DeleteAsync(id);
+        await _service.DeleteAsync(entity.Id);
 
         // Assert
-        _repositoryMock.Verify(r => r.DeleteAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.DeleteAsync(entity.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -256,8 +270,8 @@ public class DirectReportServiceTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _repositoryMock.Setup(r => r.ExistsAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _repositoryMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DirectReport?)null);
 
         // Act
         var act = () => _service.DeleteAsync(id);

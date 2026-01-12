@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -16,6 +17,7 @@ public class MeetingNoteServiceTests
     private readonly Mock<IMeetingNoteRepository> _noteRepositoryMock;
     private readonly Mock<IOneOnOneMeetingRepository> _meetingRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly MeetingNoteService _service;
 
     private readonly Guid _testNoteId = Guid.NewGuid();
@@ -29,11 +31,13 @@ public class MeetingNoteServiceTests
         _noteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _meetingRepositoryMock = new Mock<IOneOnOneMeetingRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
+        _activityServiceMock = new Mock<IActivityService>();
 
         _service = new MeetingNoteService(
             _noteRepositoryMock.Object,
             _meetingRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         _testDirectReport = new DirectReport(
             "Jane",
@@ -65,7 +69,8 @@ public class MeetingNoteServiceTests
         var act = () => new MeetingNoteService(
             null!,
             _meetingRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -79,7 +84,8 @@ public class MeetingNoteServiceTests
         var act = () => new MeetingNoteService(
             _noteRepositoryMock.Object,
             null!,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -93,11 +99,27 @@ public class MeetingNoteServiceTests
         var act = () => new MeetingNoteService(
             _noteRepositoryMock.Object,
             _meetingRepositoryMock.Object,
-            null!);
+            null!,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("directReportRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new MeetingNoteService(
+            _noteRepositoryMock.Object,
+            _meetingRepositoryMock.Object,
+            _directReportRepositoryMock.Object,
+            null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     #endregion
@@ -567,8 +589,12 @@ public class MeetingNoteServiceTests
     public async Task DeleteAsync_WhenNoteExists_DeletesNote()
     {
         // Arrange
-        _noteRepositoryMock.Setup(r => r.ExistsAsync(_testNoteId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var note = new MeetingNote(_testMeetingId, "Test content", NoteCategory.Discussion, false);
+        var noteIdProperty = typeof(MeetingNote).GetProperty("Id");
+        noteIdProperty!.SetValue(note, _testNoteId);
+
+        _noteRepositoryMock.Setup(r => r.GetByIdAsync(_testNoteId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(note);
 
         _noteRepositoryMock.Setup(r => r.DeleteAsync(_testNoteId, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -584,8 +610,8 @@ public class MeetingNoteServiceTests
     public async Task DeleteAsync_WhenNoteDoesNotExist_ThrowsNotFoundException()
     {
         // Arrange
-        _noteRepositoryMock.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _noteRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MeetingNote?)null);
 
         // Act
         var act = async () => await _service.DeleteAsync(Guid.NewGuid());

@@ -15,15 +15,18 @@ public class ProjectService : IProjectService
     private readonly IProjectRepository _projectRepository;
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IParentRepository _parentRepository;
+    private readonly IActivityService _activityService;
 
     public ProjectService(
         IProjectRepository projectRepository,
         ITeamTaskRepository taskRepository,
-        IParentRepository parentRepository)
+        IParentRepository parentRepository,
+        IActivityService activityService)
     {
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _parentRepository = parentRepository ?? throw new ArgumentNullException(nameof(parentRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<ProjectDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,6 +53,14 @@ public class ProjectService : IProjectService
         var entity = new Project(dto.Name, dto.Description, dto.Labels, dto.Url);
         var created = await _projectRepository.AddAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Project,
+            created.Id,
+            created.Name,
+            $"Project '{created.Name}' was created",
+            cancellationToken);
+
         return await MapToDtoAsync(created, cancellationToken);
     }
 
@@ -65,17 +76,34 @@ public class ProjectService : IProjectService
         entity.Update(dto.Name, dto.Description, dto.Labels, dto.Url);
         await _projectRepository.UpdateAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Project,
+            entity.Id,
+            entity.Name,
+            $"Project '{entity.Name}' was updated",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _projectRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _projectRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(Project), id);
         }
 
         await _projectRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Project,
+            id,
+            entity.Name,
+            $"Project '{entity.Name}' was deleted",
+            cancellationToken);
     }
 
     private async Task<Project> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)

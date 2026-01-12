@@ -13,13 +13,16 @@ public class SprintCapacityService : ISprintCapacityService
 {
     private readonly ISprintCapacityRepository _capacityRepository;
     private readonly ISprintRepository _sprintRepository;
+    private readonly IActivityService _activityService;
 
     public SprintCapacityService(
         ISprintCapacityRepository capacityRepository,
-        ISprintRepository sprintRepository)
+        ISprintRepository sprintRepository,
+        IActivityService activityService)
     {
         _capacityRepository = capacityRepository ?? throw new ArgumentNullException(nameof(capacityRepository));
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<SprintCapacityDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -64,12 +67,29 @@ public class SprintCapacityService : ISprintCapacityService
         {
             existing.Update(dto.TotalCapacityPoints, dto.AvailableMembers);
             await _capacityRepository.UpdateAsync(existing, cancellationToken);
+
+            await _activityService.LogActivityAsync(
+                ActivityType.Updated,
+                EntityType.SprintCapacity,
+                existing.Id,
+                $"Capacity for '{sprint.Name}'",
+                $"Sprint capacity for '{sprint.Name}' was updated",
+                cancellationToken);
+
             return await MapToDtoAsync(existing, cancellationToken);
         }
 
         // Create new capacity
         var entity = new SprintCapacity(dto.SprintId, dto.TotalCapacityPoints, dto.AvailableMembers);
         var created = await _capacityRepository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.SprintCapacity,
+            created.Id,
+            $"Capacity for '{sprint.Name}'",
+            $"Sprint capacity for '{sprint.Name}' was created",
+            cancellationToken);
 
         return await MapToDtoAsync(created, cancellationToken);
     }
@@ -82,7 +102,17 @@ public class SprintCapacityService : ISprintCapacityService
             throw new NotFoundException(nameof(SprintCapacity), id);
         }
 
+        var sprint = await _sprintRepository.GetByIdAsync(entity.SprintId, cancellationToken);
+
         await _capacityRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.SprintCapacity,
+            id,
+            $"Capacity for '{sprint?.Name ?? "Unknown"}'",
+            $"Sprint capacity for '{sprint?.Name ?? "Unknown"}' was deleted",
+            cancellationToken);
     }
 
     private async Task<SprintCapacityDto> MapToDtoAsync(SprintCapacity entity, CancellationToken cancellationToken)

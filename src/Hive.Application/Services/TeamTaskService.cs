@@ -195,6 +195,14 @@ public class TeamTaskService : ITeamTaskService
         entity.AssignToParent(dto.ParentId);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Task,
+            entity.Id,
+            entity.Title,
+            $"Task '{entity.Title}' was updated",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
@@ -283,6 +291,14 @@ public class TeamTaskService : ITeamTaskService
         entity.Cancel();
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Cancelled,
+            EntityType.Task,
+            entity.Id,
+            entity.Title,
+            $"Task '{entity.Title}' was cancelled",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
@@ -298,12 +314,21 @@ public class TeamTaskService : ITeamTaskService
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _taskRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(TeamTask), id);
         }
 
         await _taskRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Task,
+            id,
+            entity.Title,
+            $"Task '{entity.Title}' was deleted",
+            cancellationToken);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)

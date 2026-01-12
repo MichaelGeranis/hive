@@ -13,10 +13,12 @@ namespace Hive.Application.Services;
 public class DirectReportService : IDirectReportService
 {
     private readonly IDirectReportRepository _repository;
+    private readonly IActivityService _activityService;
 
-    public DirectReportService(IDirectReportRepository repository)
+    public DirectReportService(IDirectReportRepository repository, IActivityService activityService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<DirectReportDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -49,6 +51,15 @@ public class DirectReportService : IDirectReportService
             dto.IsDirect);
 
         var created = await _repository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.DirectReport,
+            created.Id,
+            created.FullName,
+            $"Team member {created.FullName} was added",
+            cancellationToken);
+
         return MapToDto(created);
     }
 
@@ -76,17 +87,35 @@ public class DirectReportService : IDirectReportService
             dto.IsDirect);
 
         await _repository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.DirectReport,
+            entity.Id,
+            entity.FullName,
+            $"Team member {entity.FullName} was updated",
+            cancellationToken);
+
         return MapToDto(entity);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _repository.ExistsAsync(id, cancellationToken))
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(DirectReport), id);
         }
 
         await _repository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.DirectReport,
+            id,
+            entity.FullName,
+            $"Team member {entity.FullName} was removed",
+            cancellationToken);
     }
 
     public async Task<BulkImportResultDto> BulkImportAsync(BulkImportDirectReportsDto dto, CancellationToken cancellationToken = default)

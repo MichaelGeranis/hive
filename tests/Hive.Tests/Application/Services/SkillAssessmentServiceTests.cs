@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -13,6 +14,7 @@ public class SkillAssessmentServiceTests
     private readonly Mock<ISkillAssessmentRepository> _assessmentRepositoryMock;
     private readonly Mock<ISkillRepository> _skillRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly SkillAssessmentService _service;
 
     private readonly Guid _testDirectReportId = Guid.NewGuid();
@@ -25,10 +27,12 @@ public class SkillAssessmentServiceTests
         _assessmentRepositoryMock = new Mock<ISkillAssessmentRepository>();
         _skillRepositoryMock = new Mock<ISkillRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
+        _activityServiceMock = new Mock<IActivityService>();
         _service = new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             _skillRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         _testDirectReport = CreateDirectReport();
         _testSkill = CreateSkill();
@@ -43,7 +47,8 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             null!,
             _skillRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -57,7 +62,8 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             null!,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -71,11 +77,27 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             _skillRepositoryMock.Object,
-            null!);
+            null!,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("directReportRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new SkillAssessmentService(
+            _assessmentRepositoryMock.Object,
+            _skillRepositoryMock.Object,
+            _directReportRepositoryMock.Object,
+            null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     #endregion
@@ -547,15 +569,19 @@ public class SkillAssessmentServiceTests
     public async Task DeleteAsync_WhenExists_DeletesAssessment()
     {
         // Arrange
-        var assessmentId = Guid.NewGuid();
-        _assessmentRepositoryMock.Setup(r => r.ExistsAsync(assessmentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var assessment = CreateAssessment();
+        _assessmentRepositoryMock.Setup(r => r.GetByIdAsync(assessment.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(assessment);
+        _skillRepositoryMock.Setup(r => r.GetByIdAsync(_testSkillId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testSkill);
+        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDirectReport);
 
         // Act
-        await _service.DeleteAsync(assessmentId);
+        await _service.DeleteAsync(assessment.Id);
 
         // Assert
-        _assessmentRepositoryMock.Verify(r => r.DeleteAsync(assessmentId, It.IsAny<CancellationToken>()), Times.Once);
+        _assessmentRepositoryMock.Verify(r => r.DeleteAsync(assessment.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -563,8 +589,8 @@ public class SkillAssessmentServiceTests
     {
         // Arrange
         var assessmentId = Guid.NewGuid();
-        _assessmentRepositoryMock.Setup(r => r.ExistsAsync(assessmentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _assessmentRepositoryMock.Setup(r => r.GetByIdAsync(assessmentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SkillAssessment?)null);
 
         // Act
         var act = () => _service.DeleteAsync(assessmentId);

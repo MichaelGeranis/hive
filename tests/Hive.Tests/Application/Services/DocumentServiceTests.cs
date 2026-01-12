@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -11,23 +12,36 @@ namespace Hive.Tests.Application.Services;
 public class DocumentServiceTests
 {
     private readonly Mock<IDocumentRepository> _repositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly DocumentService _service;
 
     public DocumentServiceTests()
     {
         _repositoryMock = new Mock<IDocumentRepository>();
-        _service = new DocumentService(_repositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new DocumentService(_repositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new DocumentService(null!);
+        var act = () => new DocumentService(null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("documentRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new DocumentService(_repositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]

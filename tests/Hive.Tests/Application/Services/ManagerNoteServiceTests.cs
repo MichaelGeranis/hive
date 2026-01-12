@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -11,23 +12,36 @@ namespace Hive.Tests.Application.Services;
 public class ManagerNoteServiceTests
 {
     private readonly Mock<IManagerNoteRepository> _repositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly ManagerNoteService _service;
 
     public ManagerNoteServiceTests()
     {
         _repositoryMock = new Mock<IManagerNoteRepository>();
-        _service = new ManagerNoteService(_repositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new ManagerNoteService(_repositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ManagerNoteService(null!);
+        var act = () => new ManagerNoteService(null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("repository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new ManagerNoteService(_repositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]
@@ -299,23 +313,23 @@ public class ManagerNoteServiceTests
     public async Task DeleteAsync_WhenNoteExists_DeletesNote()
     {
         // Arrange
-        var noteId = Guid.NewGuid();
-        _repositoryMock.Setup(r => r.ExistsAsync(noteId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var entity = new ManagerNote("Test Note");
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
 
         // Act
-        await _service.DeleteAsync(noteId);
+        await _service.DeleteAsync(entity.Id);
 
         // Assert
-        _repositoryMock.Verify(r => r.DeleteAsync(noteId, It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.DeleteAsync(entity.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_WhenNoteNotFound_ThrowsNotFoundException()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote?)null);
 
         // Act
         var act = async () => await _service.DeleteAsync(Guid.NewGuid());

@@ -12,10 +12,12 @@ namespace Hive.Application.Services;
 public class SprintService : ISprintService
 {
     private readonly ISprintRepository _sprintRepository;
+    private readonly IActivityService _activityService;
 
-    public SprintService(ISprintRepository sprintRepository)
+    public SprintService(ISprintRepository sprintRepository, IActivityService activityService)
     {
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<SprintDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -64,6 +66,14 @@ public class SprintService : ISprintService
         var entity = new Sprint(dto.Name);
         var created = await _sprintRepository.AddAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Sprint,
+            created.Id,
+            $"Sprint '{created.Name}'",
+            $"Sprint '{created.Name}' was created",
+            cancellationToken);
+
         return MapToDto(created);
     }
 
@@ -77,6 +87,14 @@ public class SprintService : ISprintService
 
         entity.UpdateDates(dto.StartDate, dto.EndDate);
         await _sprintRepository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Sprint,
+            entity.Id,
+            $"Sprint '{entity.Name}'",
+            $"Sprint '{entity.Name}' was updated",
+            cancellationToken);
 
         return MapToDto(entity);
     }
@@ -109,6 +127,14 @@ public class SprintService : ISprintService
         }
 
         await _sprintRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Sprint,
+            id,
+            $"Sprint '{entity.Name}'",
+            $"Sprint '{entity.Name}' was deleted",
+            cancellationToken);
     }
 
     private static SprintDto MapToDto(Sprint entity) => new()

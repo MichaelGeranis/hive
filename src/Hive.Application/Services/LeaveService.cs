@@ -129,18 +129,35 @@ public class LeaveService : ILeaveService
         leave.Update(leaveType, dto.StartDate, dto.EndDate, dto.Notes);
         await _leaveRepository.UpdateAsync(leave, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Leave,
+            leave.Id,
+            $"Leave - {leaveType} ({leave.StartDate:MMM d} - {leave.EndDate:MMM d})",
+            "Leave request updated",
+            cancellationToken);
+
         var directReport = await _directReportRepository.GetByIdAsync(leave.DirectReportId, cancellationToken);
         return MapToDto(leave, directReport?.FullName ?? "Unknown");
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _leaveRepository.ExistsAsync(id, cancellationToken))
+        var leave = await _leaveRepository.GetByIdAsync(id, cancellationToken);
+        if (leave is null)
         {
             throw new KeyNotFoundException($"Leave with ID {id} not found.");
         }
 
         await _leaveRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Leave,
+            id,
+            $"Leave - {leave.Type} ({leave.StartDate:MMM d} - {leave.EndDate:MMM d})",
+            "Leave request deleted",
+            cancellationToken);
     }
 
     public async Task<TeamLeaveOverviewDto> GetTeamOverviewAsync(CancellationToken cancellationToken = default)

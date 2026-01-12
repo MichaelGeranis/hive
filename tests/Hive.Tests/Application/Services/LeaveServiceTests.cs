@@ -453,15 +453,15 @@ public class LeaveServiceTests
     public async Task DeleteAsync_WhenExists_DeletesLeave()
     {
         // Arrange
-        var leaveId = Guid.NewGuid();
-        _leaveRepositoryMock.Setup(r => r.ExistsAsync(leaveId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var leave = new Leave(_testDirectReportId, LeaveType.Vacation, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(5));
+        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leave.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(leave);
 
         // Act
-        await _service.DeleteAsync(leaveId);
+        await _service.DeleteAsync(leave.Id);
 
         // Assert
-        _leaveRepositoryMock.Verify(r => r.DeleteAsync(leaveId, It.IsAny<CancellationToken>()), Times.Once);
+        _leaveRepositoryMock.Verify(r => r.DeleteAsync(leave.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -469,8 +469,8 @@ public class LeaveServiceTests
     {
         // Arrange
         var leaveId = Guid.NewGuid();
-        _leaveRepositoryMock.Setup(r => r.ExistsAsync(leaveId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _leaveRepositoryMock.Setup(r => r.GetByIdAsync(leaveId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Leave?)null);
 
         // Act
         var act = () => _service.DeleteAsync(leaveId);

@@ -174,12 +174,21 @@ public class PerformanceReviewService : IPerformanceReviewService
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _reviewRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _reviewRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(PerformanceReview), id);
         }
 
         await _reviewRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Review,
+            id,
+            $"Performance Review - {entity.ReviewPeriod}",
+            $"Performance review was deleted",
+            cancellationToken);
     }
 
     private async Task<PerformanceReview> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)

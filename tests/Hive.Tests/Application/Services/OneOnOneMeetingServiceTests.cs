@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -13,6 +14,7 @@ public class OneOnOneMeetingServiceTests
     private readonly Mock<IOneOnOneMeetingRepository> _meetingRepositoryMock;
     private readonly Mock<IMeetingNoteRepository> _noteRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly OneOnOneMeetingService _service;
 
     private readonly Guid _testDirectReportId = Guid.NewGuid();
@@ -23,10 +25,12 @@ public class OneOnOneMeetingServiceTests
         _meetingRepositoryMock = new Mock<IOneOnOneMeetingRepository>();
         _noteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
+        _activityServiceMock = new Mock<IActivityService>();
         _service = new OneOnOneMeetingService(
             _meetingRepositoryMock.Object,
             _noteRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         _testDirectReport = CreateDirectReport();
     }
@@ -40,7 +44,8 @@ public class OneOnOneMeetingServiceTests
         var act = () => new OneOnOneMeetingService(
             null!,
             _noteRepositoryMock.Object,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -54,7 +59,8 @@ public class OneOnOneMeetingServiceTests
         var act = () => new OneOnOneMeetingService(
             _meetingRepositoryMock.Object,
             null!,
-            _directReportRepositoryMock.Object);
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -68,11 +74,27 @@ public class OneOnOneMeetingServiceTests
         var act = () => new OneOnOneMeetingService(
             _meetingRepositoryMock.Object,
             _noteRepositoryMock.Object,
-            null!);
+            null!,
+            _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("directReportRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new OneOnOneMeetingService(
+            _meetingRepositoryMock.Object,
+            _noteRepositoryMock.Object,
+            _directReportRepositoryMock.Object,
+            null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     #endregion
@@ -348,15 +370,17 @@ public class OneOnOneMeetingServiceTests
     public async Task DeleteAsync_WhenExists_DeletesMeeting()
     {
         // Arrange
-        var meetingId = Guid.NewGuid();
-        _meetingRepositoryMock.Setup(r => r.ExistsAsync(meetingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var meeting = CreateMeeting();
+        _meetingRepositoryMock.Setup(r => r.GetByIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(meeting);
+        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDirectReport);
 
         // Act
-        await _service.DeleteAsync(meetingId);
+        await _service.DeleteAsync(meeting.Id);
 
         // Assert
-        _meetingRepositoryMock.Verify(r => r.DeleteAsync(meetingId, It.IsAny<CancellationToken>()), Times.Once);
+        _meetingRepositoryMock.Verify(r => r.DeleteAsync(meeting.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -364,8 +388,8 @@ public class OneOnOneMeetingServiceTests
     {
         // Arrange
         var meetingId = Guid.NewGuid();
-        _meetingRepositoryMock.Setup(r => r.ExistsAsync(meetingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _meetingRepositoryMock.Setup(r => r.GetByIdAsync(meetingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OneOnOneMeeting?)null);
 
         // Act
         var act = () => _service.DeleteAsync(meetingId);

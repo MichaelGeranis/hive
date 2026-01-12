@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -12,20 +13,22 @@ public class SprintCapacityServiceTests
 {
     private readonly Mock<ISprintCapacityRepository> _capacityRepositoryMock;
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly SprintCapacityService _service;
 
     public SprintCapacityServiceTests()
     {
         _capacityRepositoryMock = new Mock<ISprintCapacityRepository>();
         _sprintRepositoryMock = new Mock<ISprintRepository>();
-        _service = new SprintCapacityService(_capacityRepositoryMock.Object, _sprintRepositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new SprintCapacityService(_capacityRepositoryMock.Object, _sprintRepositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullCapacityRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SprintCapacityService(null!, _sprintRepositoryMock.Object);
+        var act = () => new SprintCapacityService(null!, _sprintRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -36,11 +39,22 @@ public class SprintCapacityServiceTests
     public void Constructor_WithNullSprintRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SprintCapacityService(_capacityRepositoryMock.Object, null!);
+        var act = () => new SprintCapacityService(_capacityRepositoryMock.Object, null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("sprintRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new SprintCapacityService(_capacityRepositoryMock.Object, _sprintRepositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]

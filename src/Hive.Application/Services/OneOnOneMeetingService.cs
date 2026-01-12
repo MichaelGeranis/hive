@@ -15,15 +15,18 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
     private readonly IOneOnOneMeetingRepository _meetingRepository;
     private readonly IMeetingNoteRepository _noteRepository;
     private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
 
     public OneOnOneMeetingService(
         IOneOnOneMeetingRepository meetingRepository,
         IMeetingNoteRepository noteRepository,
-        IDirectReportRepository directReportRepository)
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
     {
         _meetingRepository = meetingRepository ?? throw new ArgumentNullException(nameof(meetingRepository));
         _noteRepository = noteRepository ?? throw new ArgumentNullException(nameof(noteRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<OneOnOneMeetingDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -84,6 +87,15 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             dto.Agenda);
 
         var created = await _meetingRepository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Meeting,
+            created.Id,
+            $"1:1 with {directReport.FullName} on {created.MeetingDate:MMM d, yyyy}",
+            $"Meeting with {directReport.FullName} was created",
+            cancellationToken);
+
         return await MapToDtoAsync(created, cancellationToken);
     }
 
@@ -101,17 +113,36 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         entity.Update(dto.DirectReportId, dto.MeetingDate, dto.DurationMinutes, dto.Location, dto.Agenda);
         await _meetingRepository.UpdateAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Meeting,
+            entity.Id,
+            $"1:1 with {directReport.FullName} on {entity.MeetingDate:MMM d, yyyy}",
+            $"Meeting with {directReport.FullName} was updated",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _meetingRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _meetingRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(OneOnOneMeeting), id);
         }
 
+        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
+
         await _meetingRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Meeting,
+            id,
+            $"1:1 with {directReport?.FullName ?? "Unknown"} on {entity.MeetingDate:MMM d, yyyy}",
+            $"Meeting with {directReport?.FullName ?? "Unknown"} was deleted",
+            cancellationToken);
     }
 
     private async Task<OneOnOneMeeting> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)

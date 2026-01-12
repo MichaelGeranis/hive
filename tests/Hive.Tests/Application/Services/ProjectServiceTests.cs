@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -12,6 +13,7 @@ public class ProjectServiceTests
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
     private readonly Mock<IParentRepository> _parentRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly ProjectService _service;
 
     public ProjectServiceTests()
@@ -19,14 +21,15 @@ public class ProjectServiceTests
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
         _parentRepositoryMock = new Mock<IParentRepository>();
-        _service = new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, _parentRepositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, _parentRepositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullProjectRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ProjectService(null!, _taskRepositoryMock.Object, _parentRepositoryMock.Object);
+        var act = () => new ProjectService(null!, _taskRepositoryMock.Object, _parentRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -37,7 +40,7 @@ public class ProjectServiceTests
     public void Constructor_WithNullTaskRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ProjectService(_projectRepositoryMock.Object, null!, _parentRepositoryMock.Object);
+        var act = () => new ProjectService(_projectRepositoryMock.Object, null!, _parentRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -48,11 +51,22 @@ public class ProjectServiceTests
     public void Constructor_WithNullParentRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, null!);
+        var act = () => new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("parentRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new ProjectService(_projectRepositoryMock.Object, _taskRepositoryMock.Object, _parentRepositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]
@@ -235,15 +249,15 @@ public class ProjectServiceTests
     public async Task DeleteAsync_WhenExists_DeletesProject()
     {
         // Arrange
-        var projectId = Guid.NewGuid();
-        _projectRepositoryMock.Setup(r => r.ExistsAsync(projectId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var project = new Project("Test Project", "Description");
+        _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
 
         // Act
-        await _service.DeleteAsync(projectId);
+        await _service.DeleteAsync(project.Id);
 
         // Assert
-        _projectRepositoryMock.Verify(r => r.DeleteAsync(projectId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepositoryMock.Verify(r => r.DeleteAsync(project.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -251,8 +265,8 @@ public class ProjectServiceTests
     {
         // Arrange
         var projectId = Guid.NewGuid();
-        _projectRepositoryMock.Setup(r => r.ExistsAsync(projectId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _projectRepositoryMock.Setup(r => r.GetByIdAsync(projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Project?)null);
 
         // Act
         var act = () => _service.DeleteAsync(projectId);

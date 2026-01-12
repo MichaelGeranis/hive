@@ -423,9 +423,8 @@ export default function Dashboard() {
           onClick={() => navigate('/team')}
         />
         <StatCard
-          title="Active Projects"
-          value={dashboard.tasks.projects.activeProjects}
-          subtitle={`${dashboard.tasks.projects.totalProjects} total`}
+          title="Projects"
+          value={dashboard.tasks.projects.totalProjects}
           icon={<FolderKanban className="w-6 h-6" />}
           color="purple"
           onClick={() => navigate('/projects?filter=active')}
@@ -464,7 +463,7 @@ export default function Dashboard() {
           onClick={() => setShowActionItemsModal(true)}
         />
         <StatCard
-          title="Priority Notes"
+          title="Priority TODOs"
           value={priorityNotes.length}
           subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
           icon={<StickyNote className="w-6 h-6" />}
@@ -1089,7 +1088,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-2xl mx-4">
             <CardHeader
-              title="Priority Notes & TODOs"
+              title="Priority TODOs"
               subtitle={`${priorityNotes.length} high priority item${priorityNotes.length !== 1 ? 's' : ''}${priorityNotes.filter(n => n.priority === 3).length > 0 ? ` (${priorityNotes.filter(n => n.priority === 3).length} urgent)` : ''}`}
               action={
                 <button
@@ -1166,7 +1165,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                  No urgent or high priority notes
+                  No urgent or high priority TODO items found
                 </p>
               )}
             </CardContent>

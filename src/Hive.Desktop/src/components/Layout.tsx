@@ -43,7 +43,7 @@ const navigationGroups = [
   ],
   // Planning
   [
-    { name: 'Notes', to: '/notes', icon: StickyNote },
+    { name: 'TODOs', to: '/notes', icon: StickyNote },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
   ],
   // Resources

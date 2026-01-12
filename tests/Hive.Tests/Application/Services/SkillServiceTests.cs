@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -11,23 +12,36 @@ namespace Hive.Tests.Application.Services;
 public class SkillServiceTests
 {
     private readonly Mock<ISkillRepository> _repositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly SkillService _service;
 
     public SkillServiceTests()
     {
         _repositoryMock = new Mock<ISkillRepository>();
-        _service = new SkillService(_repositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new SkillService(_repositoryMock.Object, _activityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SkillService(null!);
+        var act = () => new SkillService(null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("repository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new SkillService(_repositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     [Fact]
@@ -304,23 +318,23 @@ public class SkillServiceTests
     public async Task DeleteAsync_WhenSkillExists_DeletesSkill()
     {
         // Arrange
-        var skillId = Guid.NewGuid();
-        _repositoryMock.Setup(r => r.ExistsAsync(skillId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var entity = new Skill("Test Skill", "Description", SkillCategory.Technical);
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
 
         // Act
-        await _service.DeleteAsync(skillId);
+        await _service.DeleteAsync(entity.Id);
 
         // Assert
-        _repositoryMock.Verify(r => r.DeleteAsync(skillId, It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.DeleteAsync(entity.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_WhenSkillNotFound_ThrowsNotFoundException()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Skill?)null);
 
         // Act
         var act = async () => await _service.DeleteAsync(Guid.NewGuid());

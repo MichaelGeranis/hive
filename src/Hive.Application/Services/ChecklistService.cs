@@ -12,17 +12,20 @@ public class ChecklistService : IChecklistService
     private readonly IChecklistTemplateItemRepository _templateItemRepository;
     private readonly IChecklistInstanceRepository _instanceRepository;
     private readonly IChecklistInstanceItemRepository _instanceItemRepository;
+    private readonly IActivityService _activityService;
 
     public ChecklistService(
         IChecklistTemplateRepository templateRepository,
         IChecklistTemplateItemRepository templateItemRepository,
         IChecklistInstanceRepository instanceRepository,
-        IChecklistInstanceItemRepository instanceItemRepository)
+        IChecklistInstanceItemRepository instanceItemRepository,
+        IActivityService activityService)
     {
         _templateRepository = templateRepository ?? throw new ArgumentNullException(nameof(templateRepository));
         _templateItemRepository = templateItemRepository ?? throw new ArgumentNullException(nameof(templateItemRepository));
         _instanceRepository = instanceRepository ?? throw new ArgumentNullException(nameof(instanceRepository));
         _instanceItemRepository = instanceItemRepository ?? throw new ArgumentNullException(nameof(instanceItemRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     // ============== Templates ==============
@@ -84,6 +87,14 @@ public class ChecklistService : IChecklistService
         var entity = new ChecklistTemplate(dto.Name, dto.Description, dto.Type);
         var created = await _templateRepository.AddAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ChecklistTemplate,
+            created.Id,
+            $"Template '{created.Name}'",
+            $"Checklist template '{created.Name}' was created",
+            cancellationToken);
+
         return await MapToTemplateDtoAsync(created, cancellationToken);
     }
 
@@ -99,12 +110,21 @@ public class ChecklistService : IChecklistService
         entity.Update(dto.Name, dto.Description);
         await _templateRepository.UpdateAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.ChecklistTemplate,
+            entity.Id,
+            $"Template '{entity.Name}'",
+            $"Checklist template '{entity.Name}' was updated",
+            cancellationToken);
+
         return await MapToTemplateDtoAsync(entity, cancellationToken);
     }
 
     public async Task DeleteTemplateAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _templateRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _templateRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(ChecklistTemplate), id);
         }
@@ -121,6 +141,14 @@ public class ChecklistService : IChecklistService
 
         // Delete the template
         await _templateRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.ChecklistTemplate,
+            id,
+            $"Template '{entity.Name}'",
+            $"Checklist template '{entity.Name}' was deleted",
+            cancellationToken);
     }
 
     public async Task<ChecklistTemplateDto> ActivateTemplateAsync(Guid id, CancellationToken cancellationToken = default)
@@ -301,6 +329,14 @@ public class ChecklistService : IChecklistService
         // Copy template items to instance items
         await CopyTemplateItemsToInstanceAsync(template.Id, instance.Id, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ChecklistInstance,
+            instance.Id,
+            $"Interview '{instance.Title}'",
+            $"Interview checklist '{instance.Title}' was created",
+            cancellationToken);
+
         return await MapToInstanceDtoAsync(instance, cancellationToken);
     }
 
@@ -329,6 +365,14 @@ public class ChecklistService : IChecklistService
         // Copy template items to instance items
         await CopyTemplateItemsToInstanceAsync(template.Id, instance.Id, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ChecklistInstance,
+            instance.Id,
+            $"Onboarding '{instance.Title}'",
+            $"Onboarding checklist '{instance.Title}' was created",
+            cancellationToken);
+
         return await MapToInstanceDtoAsync(instance, cancellationToken);
     }
 
@@ -346,6 +390,14 @@ public class ChecklistService : IChecklistService
         var entity = await GetInstanceOrThrowAsync(id, cancellationToken);
         entity.Complete();
         await _instanceRepository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Completed,
+            EntityType.ChecklistInstance,
+            entity.Id,
+            $"Checklist '{entity.Title}'",
+            $"Checklist '{entity.Title}' was completed",
+            cancellationToken);
 
         return await MapToInstanceDtoAsync(entity, cancellationToken);
     }
@@ -370,7 +422,8 @@ public class ChecklistService : IChecklistService
 
     public async Task DeleteInstanceAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _instanceRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _instanceRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(ChecklistInstance), id);
         }
@@ -380,6 +433,14 @@ public class ChecklistService : IChecklistService
 
         // Delete the instance
         await _instanceRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.ChecklistInstance,
+            id,
+            $"Checklist '{entity.Title}'",
+            $"Checklist '{entity.Title}' was deleted",
+            cancellationToken);
     }
 
     // ============== Instance Items ==============

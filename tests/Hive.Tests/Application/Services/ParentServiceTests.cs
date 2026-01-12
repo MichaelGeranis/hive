@@ -1,4 +1,5 @@
 using Hive.Application.DTOs;
+using Hive.Application.Interfaces;
 using Hive.Application.Services;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
@@ -16,13 +17,15 @@ public class ParentServiceTests
 {
     private readonly Mock<IParentRepository> _parentRepositoryMock;
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
+    private readonly Mock<IActivityService> _activityServiceMock;
     private readonly ParentService _service;
 
     public ParentServiceTests()
     {
         _parentRepositoryMock = new Mock<IParentRepository>();
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
-        _service = new ParentService(_parentRepositoryMock.Object, _taskRepositoryMock.Object);
+        _activityServiceMock = new Mock<IActivityService>();
+        _service = new ParentService(_parentRepositoryMock.Object, _taskRepositoryMock.Object, _activityServiceMock.Object);
     }
 
     #region Constructor Tests
@@ -31,7 +34,7 @@ public class ParentServiceTests
     public void Constructor_WithNullParentRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ParentService(null!, _taskRepositoryMock.Object);
+        var act = () => new ParentService(null!, _taskRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -42,11 +45,22 @@ public class ParentServiceTests
     public void Constructor_WithNullTaskRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new ParentService(_parentRepositoryMock.Object, null!);
+        var act = () => new ParentService(_parentRepositoryMock.Object, null!, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("taskRepository");
+    }
+
+    [Fact]
+    public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new ParentService(_parentRepositoryMock.Object, _taskRepositoryMock.Object, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("activityService");
     }
 
     #endregion

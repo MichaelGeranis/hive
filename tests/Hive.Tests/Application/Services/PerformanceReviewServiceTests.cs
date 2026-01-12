@@ -299,15 +299,15 @@ public class PerformanceReviewServiceTests
     public async Task DeleteAsync_WhenExists_DeletesReview()
     {
         // Arrange
-        var reviewId = Guid.NewGuid();
-        _reviewRepositoryMock.Setup(r => r.ExistsAsync(reviewId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var review = new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow);
+        _reviewRepositoryMock.Setup(r => r.GetByIdAsync(review.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(review);
 
         // Act
-        await _service.DeleteAsync(reviewId);
+        await _service.DeleteAsync(review.Id);
 
         // Assert
-        _reviewRepositoryMock.Verify(r => r.DeleteAsync(reviewId, It.IsAny<CancellationToken>()), Times.Once);
+        _reviewRepositoryMock.Verify(r => r.DeleteAsync(review.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -315,8 +315,8 @@ public class PerformanceReviewServiceTests
     {
         // Arrange
         var reviewId = Guid.NewGuid();
-        _reviewRepositoryMock.Setup(r => r.ExistsAsync(reviewId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _reviewRepositoryMock.Setup(r => r.GetByIdAsync(reviewId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PerformanceReview?)null);
 
         // Act
         var act = () => _service.DeleteAsync(reviewId);

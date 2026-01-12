@@ -12,10 +12,12 @@ namespace Hive.Application.Services;
 public class SkillService : ISkillService
 {
     private readonly ISkillRepository _repository;
+    private readonly IActivityService _activityService;
 
-    public SkillService(ISkillRepository repository)
+    public SkillService(ISkillRepository repository, IActivityService activityService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<SkillDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -46,6 +48,14 @@ public class SkillService : ISkillService
         var entity = new Skill(dto.Name, dto.Description, dto.Category);
         var created = await _repository.AddAsync(entity, cancellationToken);
 
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Skill,
+            created.Id,
+            $"Skill '{created.Name}'",
+            $"Skill '{created.Name}' was created",
+            cancellationToken);
+
         return MapToDto(created);
     }
 
@@ -64,6 +74,14 @@ public class SkillService : ISkillService
 
         entity.Update(dto.Name, dto.Description, dto.Category);
         await _repository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Skill,
+            entity.Id,
+            $"Skill '{entity.Name}'",
+            $"Skill '{entity.Name}' was updated",
+            cancellationToken);
 
         return MapToDto(entity);
     }
@@ -98,12 +116,21 @@ public class SkillService : ISkillService
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _repository.ExistsAsync(id, cancellationToken))
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(Skill), id);
         }
 
         await _repository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.Skill,
+            id,
+            $"Skill '{entity.Name}'",
+            $"Skill '{entity.Name}' was deleted",
+            cancellationToken);
     }
 
     private static SkillDto MapToDto(Skill entity) => new()

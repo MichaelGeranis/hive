@@ -14,15 +14,18 @@ public class MeetingNoteService : IMeetingNoteService
     private readonly IMeetingNoteRepository _noteRepository;
     private readonly IOneOnOneMeetingRepository _meetingRepository;
     private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
 
     public MeetingNoteService(
         IMeetingNoteRepository noteRepository,
         IOneOnOneMeetingRepository meetingRepository,
-        IDirectReportRepository directReportRepository)
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
     {
         _noteRepository = noteRepository ?? throw new ArgumentNullException(nameof(noteRepository));
         _meetingRepository = meetingRepository ?? throw new ArgumentNullException(nameof(meetingRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<MeetingNoteDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -73,6 +76,16 @@ public class MeetingNoteService : IMeetingNoteService
         }
 
         var created = await _noteRepository.AddAsync(entity, cancellationToken);
+
+        var contentPreview = created.Content.Length > 50 ? created.Content[..50] + "..." : created.Content;
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.MeetingNote,
+            created.Id,
+            $"Meeting note '{contentPreview}'",
+            $"Meeting note was created",
+            cancellationToken);
+
         return await MapToDtoAsync(created, cancellationToken);
     }
 
@@ -88,6 +101,16 @@ public class MeetingNoteService : IMeetingNoteService
         }
 
         await _noteRepository.UpdateAsync(entity, cancellationToken);
+
+        var contentPreview = entity.Content.Length > 50 ? entity.Content[..50] + "..." : entity.Content;
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.MeetingNote,
+            entity.Id,
+            $"Meeting note '{contentPreview}'",
+            $"Meeting note was updated",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
@@ -108,17 +131,36 @@ public class MeetingNoteService : IMeetingNoteService
         entity.CompleteAction();
         await _noteRepository.UpdateAsync(entity, cancellationToken);
 
+        var contentPreview = entity.Content.Length > 50 ? entity.Content[..50] + "..." : entity.Content;
+        await _activityService.LogActivityAsync(
+            ActivityType.Completed,
+            EntityType.MeetingNote,
+            entity.Id,
+            $"Action item '{contentPreview}'",
+            $"Action item was completed",
+            cancellationToken);
+
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _noteRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _noteRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(MeetingNote), id);
         }
 
         await _noteRepository.DeleteAsync(id, cancellationToken);
+
+        var contentPreview = entity.Content.Length > 50 ? entity.Content[..50] + "..." : entity.Content;
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.MeetingNote,
+            id,
+            $"Meeting note '{contentPreview}'",
+            $"Meeting note was deleted",
+            cancellationToken);
     }
 
     private async Task<MeetingNote> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)

@@ -94,6 +94,8 @@ public class ActivityService : IActivityService
             ActivityType.Approved => "Approved",
             ActivityType.Rejected => "Rejected",
             ActivityType.Completed => "Completed",
+            ActivityType.Deleted => "Deleted",
+            ActivityType.Cancelled => "Cancelled",
             _ => activityType.ToString()
         };
     }
@@ -105,6 +107,19 @@ public class ActivityService : IActivityService
             EntityType.Review => "Performance Review",
             EntityType.Task => "Task",
             EntityType.Leave => "Leave",
+            EntityType.DirectReport => "Team Member",
+            EntityType.Meeting => "1:1 Meeting",
+            EntityType.MeetingNote => "Meeting Note",
+            EntityType.ManagerNote => "Note/TODO",
+            EntityType.Project => "Project",
+            EntityType.Sprint => "Sprint",
+            EntityType.SprintCapacity => "Sprint Capacity",
+            EntityType.Document => "Document",
+            EntityType.Skill => "Skill",
+            EntityType.SkillAssessment => "Skill Assessment",
+            EntityType.ChecklistTemplate => "Checklist Template",
+            EntityType.ChecklistInstance => "Checklist",
+            EntityType.Parent => "Reporting Structure",
             _ => entityType.ToString()
         };
     }

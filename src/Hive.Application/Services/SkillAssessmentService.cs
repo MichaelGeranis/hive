@@ -14,15 +14,18 @@ public class SkillAssessmentService : ISkillAssessmentService
     private readonly ISkillAssessmentRepository _assessmentRepository;
     private readonly ISkillRepository _skillRepository;
     private readonly IDirectReportRepository _directReportRepository;
+    private readonly IActivityService _activityService;
 
     public SkillAssessmentService(
         ISkillAssessmentRepository assessmentRepository,
         ISkillRepository skillRepository,
-        IDirectReportRepository directReportRepository)
+        IDirectReportRepository directReportRepository,
+        IActivityService activityService)
     {
         _assessmentRepository = assessmentRepository ?? throw new ArgumentNullException(nameof(assessmentRepository));
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<SkillAssessmentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -63,6 +66,17 @@ public class SkillAssessmentService : ISkillAssessmentService
         var entity = new SkillAssessment(dto.DirectReportId, dto.SkillId, dto.Level, dto.TargetLevel, dto.Notes);
         var created = await _assessmentRepository.AddAsync(entity, cancellationToken);
 
+        var skill = await _skillRepository.GetByIdAsync(dto.SkillId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(dto.DirectReportId, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.SkillAssessment,
+            created.Id,
+            $"Assessment for '{skill?.Name ?? "Unknown"}' - {directReport?.FullName ?? "Unknown"}",
+            $"Skill assessment was created",
+            cancellationToken);
+
         return await MapToDtoAsync(created, cancellationToken);
     }
 
@@ -76,6 +90,17 @@ public class SkillAssessmentService : ISkillAssessmentService
 
         entity.UpdateAssessment(dto.Level, dto.TargetLevel, dto.Notes);
         await _assessmentRepository.UpdateAsync(entity, cancellationToken);
+
+        var skill = await _skillRepository.GetByIdAsync(entity.SkillId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.SkillAssessment,
+            entity.Id,
+            $"Assessment for '{skill?.Name ?? "Unknown"}' - {directReport?.FullName ?? "Unknown"}",
+            $"Skill assessment was updated",
+            cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
     }
@@ -119,12 +144,24 @@ public class SkillAssessmentService : ISkillAssessmentService
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _assessmentRepository.ExistsAsync(id, cancellationToken))
+        var entity = await _assessmentRepository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(SkillAssessment), id);
         }
 
+        var skill = await _skillRepository.GetByIdAsync(entity.SkillId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
+
         await _assessmentRepository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.SkillAssessment,
+            id,
+            $"Assessment for '{skill?.Name ?? "Unknown"}' - {directReport?.FullName ?? "Unknown"}",
+            $"Skill assessment was deleted",
+            cancellationToken);
     }
 
     public async Task<SkillMatrixDto> GetSkillMatrixAsync(CancellationToken cancellationToken = default)

@@ -12,10 +12,12 @@ namespace Hive.Application.Services;
 public class ManagerNoteService : IManagerNoteService
 {
     private readonly IManagerNoteRepository _repository;
+    private readonly IActivityService _activityService;
 
-    public ManagerNoteService(IManagerNoteRepository repository)
+    public ManagerNoteService(IManagerNoteRepository repository, IActivityService activityService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
     public async Task<ManagerNoteDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -82,6 +84,15 @@ public class ManagerNoteService : IManagerNoteService
             dto.Tags);
 
         var created = await _repository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ManagerNote,
+            created.Id,
+            $"Note '{created.Title}'",
+            $"Note '{created.Title}' was created",
+            cancellationToken);
+
         return MapToDto(created);
     }
 
@@ -91,6 +102,14 @@ public class ManagerNoteService : IManagerNoteService
 
         entity.Update(dto.Title, dto.Content, dto.Priority, dto.DueDate, dto.Tags);
         await _repository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.ManagerNote,
+            entity.Id,
+            $"Note '{entity.Title}'",
+            $"Note '{entity.Title}' was updated",
+            cancellationToken);
 
         return MapToDto(entity);
     }
@@ -102,17 +121,39 @@ public class ManagerNoteService : IManagerNoteService
         entity.ToggleComplete();
         await _repository.UpdateAsync(entity, cancellationToken);
 
+        var activityType = entity.IsCompleted ? ActivityType.Completed : ActivityType.Updated;
+        var description = entity.IsCompleted
+            ? $"Note '{entity.Title}' was completed"
+            : $"Note '{entity.Title}' was reopened";
+
+        await _activityService.LogActivityAsync(
+            activityType,
+            EntityType.ManagerNote,
+            entity.Id,
+            $"Note '{entity.Title}'",
+            description,
+            cancellationToken);
+
         return MapToDto(entity);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        if (!await _repository.ExistsAsync(id, cancellationToken))
+        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        if (entity is null)
         {
             throw new NotFoundException(nameof(ManagerNote), id);
         }
 
         await _repository.DeleteAsync(id, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Deleted,
+            EntityType.ManagerNote,
+            id,
+            $"Note '{entity.Title}'",
+            $"Note '{entity.Title}' was deleted",
+            cancellationToken);
     }
 
     private async Task<ManagerNote> GetEntityOrThrowAsync(Guid id, CancellationToken cancellationToken)
