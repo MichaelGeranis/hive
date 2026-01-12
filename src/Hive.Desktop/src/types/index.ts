@@ -160,24 +160,12 @@ export interface UpdateMeetingNoteDto {
 }
 
 // Projects
-export enum ProjectStatus {
-  Planning = 0,
-  Active = 1,
-  OnHold = 2,
-  Completed = 3,
-  Cancelled = 4
-}
-
 export interface Project {
   id: string
   name: string
   description: string
   labels: string
-  status: ProjectStatus
-  statusName: string
-  startDate?: string
-  targetEndDate?: string
-  actualEndDate?: string
+  url: string
   totalTasks: number
   completedTasks: number
   openTasks: number

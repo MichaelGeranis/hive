@@ -134,7 +134,6 @@ public class BackupServiceTests
         backup.Id.Should().Be(project.Id);
         backup.Name.Should().Be(project.Name);
         backup.Description.Should().Be(project.Description);
-        backup.Status.Should().Be((int)project.Status);
     }
 
     [Fact]
@@ -408,8 +407,7 @@ public class BackupServiceTests
                     Name = "Test Project",
                     Description = "Test Description",
                     Labels = "label1,label2",
-                    Status = (int)ProjectStatus.Active,
-                    StartDate = DateTime.UtcNow
+                    Url = "https://github.com/test/project"
                 }
             }
         };
@@ -556,8 +554,7 @@ public class BackupServiceTests
                     Id = projectId,
                     Name = "Test Project",
                     Description = "Test Description",
-                    Labels = "",
-                    StartDate = DateTime.UtcNow
+                    Labels = ""
                 }
             }
         };
@@ -618,8 +615,7 @@ public class BackupServiceTests
                     Id = projectId,
                     Name = "Test Project",
                     Description = "Description",
-                    Labels = "",
-                    StartDate = DateTime.UtcNow
+                    Labels = ""
                 }
             },
             Tasks = new List<TeamTaskBackup>
@@ -894,7 +890,7 @@ public class BackupServiceTests
         new("John", "Doe", "john.doe@test.com", "Engineer", "Engineering", DateTime.UtcNow);
 
     private static Project CreateProject() =>
-        new("Test Project", "Description", DateTime.UtcNow, null, "label1,label2");
+        new("Test Project", "Description", "label1,label2", "https://github.com/test/project");
 
     private static TeamTask CreateTask() =>
         new("Test Task", "Description", TaskType.Task, TaskPriority.High, null, null, null, null, null, "tag1", "label1", null, null);

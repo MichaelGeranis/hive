@@ -55,8 +55,8 @@ public class JiraImportServiceTests
         _testProject = new Project(
             "Test Project",
             "Test Description",
-            new DateTime(2024, 1, 1),
-            new DateTime(2024, 12, 31));
+            "test-label",
+            "https://github.com/test/project");
 
         var mappings = new List<StoryPointMapping>
         {

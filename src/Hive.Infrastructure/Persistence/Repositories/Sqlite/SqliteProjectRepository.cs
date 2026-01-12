@@ -25,22 +25,6 @@ public class SqliteProjectRepository : IProjectRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Project>> GetByStatusAsync(ProjectStatus status, CancellationToken cancellationToken = default)
-    {
-        return await _context.Projects
-            .Where(x => x.Status == status)
-            .OrderBy(x => x.Name)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<Project>> GetActiveAsync(CancellationToken cancellationToken = default)
-    {
-        return await _context.Projects
-            .Where(x => x.Status == ProjectStatus.Planning || x.Status == ProjectStatus.Active)
-            .OrderBy(x => x.Name)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<Project> AddAsync(Project project, CancellationToken cancellationToken = default)
     {
         _context.Projects.Add(project);

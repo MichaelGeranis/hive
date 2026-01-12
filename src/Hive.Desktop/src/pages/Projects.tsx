@@ -1,37 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Plus, FolderKanban, Calendar, CheckCircle, XCircle, Play, MoreVertical, Edit, Trash2, RotateCcw, Search, Tag, Layers, X, Filter } from 'lucide-react'
+import { Plus, FolderKanban, ExternalLink, MoreVertical, Edit, Trash2, Search, Tag, Layers, X } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
-import { ProjectStatus } from '../types'
 import type { Project } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
-const statusColors: Record<ProjectStatus, string> = {
-  [ProjectStatus.Planning]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
-  [ProjectStatus.Active]: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-  [ProjectStatus.OnHold]: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-  [ProjectStatus.Completed]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  [ProjectStatus.Cancelled]: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
-}
-
 export default function Projects() {
-  const [searchParams] = useSearchParams()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Initialize filter from URL params if present
-  const initialFilter = useMemo(() => {
-    const filterParam = searchParams.get('filter')
-    if (filterParam === 'active') return 'active' as const
-    const statusValues = Object.values(ProjectStatus) as string[]
-    if (filterParam && statusValues.includes(filterParam)) {
-      return filterParam as unknown as ProjectStatus
-    }
-    return 'all' as const
-  }, [searchParams])
-
-  const [filter, setFilter] = useState<'all' | 'active' | ProjectStatus>(initialFilter)
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -39,12 +15,11 @@ export default function Projects() {
     name: '',
     description: '',
     labels: '',
-    startDate: '',
-    targetEndDate: ''
+    url: ''
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', labels: '', startDate: '', targetEndDate: '' })
+    setFormData({ name: '', description: '', labels: '', url: '' })
   }
 
   const closeModal = useCallback(() => {
@@ -87,23 +62,9 @@ export default function Projects() {
     return Array.from(labelSet).sort()
   }, [projects])
 
-  // Calculate status counts
-  const statusCounts = useMemo(() => {
-    const activeCount = projects.filter(p => p.status === ProjectStatus.Planning || p.status === ProjectStatus.Active).length
-    return {
-      all: projects.length,
-      active: activeCount,
-      [ProjectStatus.Planning]: projects.filter(p => p.status === ProjectStatus.Planning).length,
-      [ProjectStatus.OnHold]: projects.filter(p => p.status === ProjectStatus.OnHold).length,
-      [ProjectStatus.Completed]: projects.filter(p => p.status === ProjectStatus.Completed).length,
-      [ProjectStatus.Cancelled]: projects.filter(p => p.status === ProjectStatus.Cancelled).length,
-    }
-  }, [projects])
-
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedLabel(null)
-    setFilter('all')
   }
 
   const filteredProjects = () => {
@@ -126,59 +87,17 @@ export default function Projects() {
       )
     }
 
-    // Apply status filter
-    if (filter === 'active') {
-      result = result.filter(p => p.status === ProjectStatus.Planning || p.status === ProjectStatus.Active)
-    } else if (filter !== 'all') {
-      result = result.filter(p => p.status === filter)
-    }
-
     return result
-  }
-
-  const handleAction = async (id: string, action: 'activate' | 'complete' | 'cancel' | 'hold' | 'reopen') => {
-    try {
-      if (action === 'activate') await projectsApi.activate(id)
-      else if (action === 'complete') await projectsApi.complete(id)
-      else if (action === 'cancel') await projectsApi.cancel(id)
-      else if (action === 'hold') await projectsApi.hold(id)
-      else if (action === 'reopen') await projectsApi.reopen(id)
-      loadProjects()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
-    try {
-      // Map status to appropriate API action
-      if (newStatus === ProjectStatus.Active) {
-        await projectsApi.activate(projectId)
-      } else if (newStatus === ProjectStatus.Planning) {
-        await projectsApi.reopen(projectId)
-      } else if (newStatus === ProjectStatus.OnHold) {
-        await projectsApi.hold(projectId)
-      } else if (newStatus === ProjectStatus.Completed) {
-        await projectsApi.complete(projectId)
-      } else if (newStatus === ProjectStatus.Cancelled) {
-        await projectsApi.cancel(projectId)
-      }
-      loadProjects()
-    } catch (err) {
-      console.error(err)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // Convert empty strings to null for optional date fields
       const payload = {
         name: formData.name,
         description: formData.description,
         labels: formData.labels,
-        startDate: formData.startDate || null,
-        targetEndDate: formData.targetEndDate || null
+        url: formData.url
       }
       if (editingId) {
         await projectsApi.update(editingId, payload)
@@ -199,8 +118,7 @@ export default function Projects() {
       name: project.name,
       description: project.description || '',
       labels: project.labels || '',
-      startDate: project.startDate ? project.startDate.split('T')[0] : '',
-      targetEndDate: project.targetEndDate ? project.targetEndDate.split('T')[0] : ''
+      url: project.url || ''
     })
     setEditingId(project.id)
     setShowForm(true)
@@ -215,11 +133,6 @@ export default function Projects() {
         console.error(err)
       }
     }
-  }
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'Not set'
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   if (loading) {
@@ -273,25 +186,15 @@ export default function Projects() {
                     rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
-                    <input
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Target End Date</label>
-                    <input
-                      type="date"
-                      value={formData.targetEndDate}
-                      onChange={(e) => setFormData({ ...formData, targetEndDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL</label>
+                  <input
+                    type="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
+                    placeholder="https://github.com/org/project"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Labels</label>
@@ -365,35 +268,6 @@ export default function Projects() {
             ))}
           </div>
         )}
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
-              { value: 'active', label: `Active (${statusCounts.active})`, count: statusCounts.active },
-              { value: ProjectStatus.Planning, label: `Planning (${statusCounts[ProjectStatus.Planning]})`, count: statusCounts[ProjectStatus.Planning] },
-              { value: ProjectStatus.OnHold, label: `On Hold (${statusCounts[ProjectStatus.OnHold]})`, count: statusCounts[ProjectStatus.OnHold] },
-              { value: ProjectStatus.Completed, label: `Completed (${statusCounts[ProjectStatus.Completed]})`, count: statusCounts[ProjectStatus.Completed] },
-              { value: ProjectStatus.Cancelled, label: `Cancelled (${statusCounts[ProjectStatus.Cancelled]})`, count: statusCounts[ProjectStatus.Cancelled] },
-            ]
-              .filter((f) => f.value === 'all' || f.count > 0)
-              .map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filter === f.value
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Projects Grid */}
@@ -414,18 +288,7 @@ export default function Projects() {
                       <FolderKanban className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{project.name}</h3>
-                      <select
-                        value={project.status}
-                        onChange={(e) => handleStatusChange(project.id, Number(e.target.value) as ProjectStatus)}
-                        className={`px-2 py-1 rounded-md text-xs font-medium border-none cursor-pointer focus:ring-2 focus:ring-amber-500 ${statusColors[project.status]}`}
-                      >
-                        <option value={ProjectStatus.Planning}>Planning</option>
-                        <option value={ProjectStatus.Active}>Active</option>
-                        <option value={ProjectStatus.OnHold}>On Hold</option>
-                        <option value={ProjectStatus.Completed}>Completed</option>
-                        <option value={ProjectStatus.Cancelled}>Cancelled</option>
-                      </select>
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{project.name}</h3>
                     </div>
                   </div>
                   <div className="relative group">
@@ -472,10 +335,19 @@ export default function Projects() {
                 )}
 
                 <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>{formatDate(project.startDate)} - {formatDate(project.targetEndDate)}</span>
-                  </div>
+                  {project.url && (
+                    <div className="flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4 text-slate-400" />
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-600 dark:text-amber-400 hover:underline truncate"
+                      >
+                        {project.url.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
                   {project.parentCount > 0 && (
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-indigo-500" />
@@ -500,46 +372,6 @@ export default function Projects() {
                       }}
                     />
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 mt-4 pt-4 border-t dark:border-slate-700">
-                  {project.status === ProjectStatus.Planning && (
-                    <button
-                      onClick={() => handleAction(project.id, 'activate')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
-                    >
-                      <Play className="w-4 h-4" />
-                      Start
-                    </button>
-                  )}
-                  {project.status === ProjectStatus.Active && (
-                    <>
-                      <button
-                        onClick={() => handleAction(project.id, 'complete')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Complete
-                      </button>
-                      <button
-                        onClick={() => handleAction(project.id, 'cancel')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Cancel
-                      </button>
-                    </>
-                  )}
-                  {(project.status === ProjectStatus.Completed || project.status === ProjectStatus.Cancelled) && (
-                    <button
-                      onClick={() => handleAction(project.id, 'reopen')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Reopen
-                    </button>
-                  )}
                 </div>
               </CardContent>
             </Card>

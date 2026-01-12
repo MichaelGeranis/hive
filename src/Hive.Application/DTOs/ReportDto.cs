@@ -140,12 +140,6 @@ public record TasksOverviewDto
 public record ProjectsSummaryDto
 {
     public int TotalProjects { get; init; }
-    public int PlanningProjects { get; init; }
-    public int ActiveProjects { get; init; }
-    public int OnHoldProjects { get; init; }
-    public int CompletedProjects { get; init; }
-    public int CancelledProjects { get; init; }
-    public double CompletionRate { get; init; }
 }
 
 /// <summary>

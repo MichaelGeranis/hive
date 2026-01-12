@@ -351,16 +351,11 @@ public class HiveDbContext : DbContext
         // Create projects
         var projects = new[]
         {
-            new Project("API Modernization", "Upgrade legacy APIs to .NET 8", DateTime.UtcNow.AddMonths(-2), DateTime.UtcNow.AddMonths(2)),
-            new Project("Mobile App", "New mobile application", DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow.AddMonths(4)),
-            new Project("Infrastructure Migration", "Move to Kubernetes", null, DateTime.UtcNow.AddMonths(6)),
-            new Project("Documentation", "Update all technical docs", DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow.AddMonths(-1))
+            new Project("API Modernization", "Upgrade legacy APIs to .NET 8", "backend,api", "https://github.com/example/api-modernization"),
+            new Project("Mobile App", "New mobile application", "mobile,frontend", "https://github.com/example/mobile-app"),
+            new Project("Infrastructure Migration", "Move to Kubernetes", "infrastructure,devops"),
+            new Project("Documentation", "Update all technical docs", "docs")
         };
-
-        projects[0].Activate();
-        projects[1].Activate();
-        projects[3].Activate();
-        projects[3].Complete();
 
         Projects.AddRange(projects);
         SaveChanges();

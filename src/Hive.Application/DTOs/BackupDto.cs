@@ -43,10 +43,7 @@ public record ProjectBackup
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
-    public int Status { get; init; }
-    public DateTime? StartDate { get; init; }
-    public DateTime? TargetEndDate { get; init; }
-    public DateTime? ActualEndDate { get; init; }
+    public string Url { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

@@ -260,7 +260,7 @@ public class ReportsControllerTests
     {
         return new TasksOverviewDto
         {
-            Projects = new ProjectsSummaryDto { TotalProjects = 5, ActiveProjects = 3 },
+            Projects = new ProjectsSummaryDto { TotalProjects = 5 },
             Tasks = new TasksSummaryDto { TotalTasks = 50, DoneTasks = 30 },
             TasksByAssignee = new List<TasksByAssigneeDto>(),
             TasksByType = new List<TasksByTypeDto>(),

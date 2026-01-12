@@ -310,33 +310,27 @@ public class InMemoryDbContext
         var apiRedesign = new Project(
             "API Redesign",
             "Redesign the REST API to follow clean architecture patterns",
-            DateTime.UtcNow.AddDays(-30),
-            DateTime.UtcNow.AddDays(60));
-        apiRedesign.Activate();
+            "backend,api",
+            "https://github.com/example/api-redesign");
         Projects.TryAdd(apiRedesign.Id, apiRedesign);
 
         var mobileApp = new Project(
             "Mobile App MVP",
             "Build minimum viable product for mobile application",
-            DateTime.UtcNow.AddDays(-14),
-            DateTime.UtcNow.AddDays(90));
-        mobileApp.Activate();
+            "mobile,frontend",
+            "https://github.com/example/mobile-app");
         Projects.TryAdd(mobileApp.Id, mobileApp);
 
         var documentation = new Project(
             "Documentation Overhaul",
             "Update and improve all technical documentation",
-            DateTime.UtcNow.AddDays(7),
-            DateTime.UtcNow.AddDays(45));
+            "docs");
         Projects.TryAdd(documentation.Id, documentation);
 
         var techDebt = new Project(
             "Tech Debt Sprint",
             "Address accumulated technical debt",
-            DateTime.UtcNow.AddDays(-60),
-            DateTime.UtcNow.AddDays(-15));
-        techDebt.Activate();
-        techDebt.Complete();
+            "backend,tech-debt");
         Projects.TryAdd(techDebt.Id, techDebt);
 
         // Create sample tasks for API Redesign project

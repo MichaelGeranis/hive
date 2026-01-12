@@ -333,33 +333,47 @@ export default function Skills() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-slate-500 dark:text-slate-400">Loading skills data...</div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Skills</h1>
+            <p className="text-slate-500 dark:text-slate-400">Manage direct reports' skills, track proficiency, and identify development opportunities</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-slate-500 dark:text-slate-400">Loading skills data...</div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-red-500">{error}</div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Skills</h1>
+            <p className="text-slate-500 dark:text-slate-400">Manage direct reports' skills, track proficiency, and identify development opportunities</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500">{error}</div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Skills</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Manage direct reports' skills, track proficiency, and identify development opportunities
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Skills</h1>
+          <p className="text-slate-500 dark:text-slate-400">Manage direct reports' skills, track proficiency, and identify development opportunities</p>
         </div>
         <button
           onClick={() => openSkillModal()}
-          className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Add Skill
@@ -367,7 +381,7 @@ export default function Skills() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700">
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
         {[
           { key: 'overview', label: 'Overview', icon: Award },
           { key: 'matrix', label: 'Skills Matrix', icon: Users },
@@ -393,7 +407,7 @@ export default function Skills() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input

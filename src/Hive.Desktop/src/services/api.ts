@@ -230,14 +230,8 @@ export const meetingNotesApi = {
 export const projectsApi = {
   getAll: () => api.get<Project[]>('/projects').then(r => r.data),
   getById: (id: string) => api.get<Project>(`/projects/${id}`).then(r => r.data),
-  getActive: () => api.get<Project[]>('/projects/active').then(r => r.data),
   create: (data: any) => api.post<Project>('/projects', data).then(r => r.data),
   update: (id: string, data: any) => api.put<Project>(`/projects/${id}`, data).then(r => r.data),
-  activate: (id: string) => api.post<Project>(`/projects/${id}/activate`).then(r => r.data),
-  hold: (id: string) => api.post<Project>(`/projects/${id}/hold`).then(r => r.data),
-  complete: (id: string) => api.post<Project>(`/projects/${id}/complete`).then(r => r.data),
-  reopen: (id: string) => api.post<Project>(`/projects/${id}/reopen`).then(r => r.data),
-  cancel: (id: string) => api.post<Project>(`/projects/${id}/cancel`).then(r => r.data),
   delete: (id: string) => api.delete(`/projects/${id}`)
 }
 

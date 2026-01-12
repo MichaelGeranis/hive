@@ -29,24 +29,6 @@ public class ProjectRepository : IProjectRepository
         return Task.FromResult<IReadOnlyList<Project>>(entities);
     }
 
-    public Task<IReadOnlyList<Project>> GetByStatusAsync(ProjectStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = _context.Projects.Values
-            .Where(x => x.Status == status)
-            .OrderBy(x => x.Name)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<Project>>(entities);
-    }
-
-    public Task<IReadOnlyList<Project>> GetActiveAsync(CancellationToken cancellationToken = default)
-    {
-        var entities = _context.Projects.Values
-            .Where(x => x.Status == ProjectStatus.Planning || x.Status == ProjectStatus.Active)
-            .OrderBy(x => x.Name)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<Project>>(entities);
-    }
-
     public Task<Project> AddAsync(Project project, CancellationToken cancellationToken = default)
     {
         if (!_context.Projects.TryAdd(project.Id, project))

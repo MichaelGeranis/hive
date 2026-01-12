@@ -62,8 +62,10 @@ public class ProjectServiceTests
         var project = new Project("Test Project", "Description");
         _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
+        _taskRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
+        _parentRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetByIdAsync(project.Id);
@@ -132,50 +134,16 @@ public class ProjectServiceTests
         };
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(projects);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _taskRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
+        _parentRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.GetAllAsync();
 
         // Assert
         result.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public async Task GetByStatusAsync_ReturnsMatchingProjects()
-    {
-        // Arrange
-        var project = new Project("Active Project");
-        project.Activate();
-        _projectRepositoryMock.Setup(r => r.GetByStatusAsync(ProjectStatus.Active, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Project> { project });
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.GetByStatusAsync(ProjectStatus.Active);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result[0].Status.Should().Be(ProjectStatus.Active);
-    }
-
-    [Fact]
-    public async Task GetActiveAsync_ReturnsActiveAndPlanningProjects()
-    {
-        // Arrange
-        var projects = new List<Project> { new Project("Project") };
-        _projectRepositoryMock.Setup(r => r.GetActiveAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projects);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.GetActiveAsync();
-
-        // Assert
-        result.Should().HaveCount(1);
     }
 
     [Fact]
@@ -186,16 +154,18 @@ public class ProjectServiceTests
         {
             Name = "New Project",
             Description = "Description",
-            StartDate = DateTime.UtcNow,
-            TargetEndDate = DateTime.UtcNow.AddDays(90)
+            Labels = "backend",
+            Url = "https://github.com/org/repo"
         };
 
         _projectRepositoryMock.Setup(r => r.NameExistsAsync(dto.Name, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _projectRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Project p, CancellationToken _) => p);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _taskRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
+        _parentRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.CreateAsync(dto);
@@ -203,7 +173,7 @@ public class ProjectServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Name.Should().Be(dto.Name);
-        result.Status.Should().Be(ProjectStatus.Planning);
+        result.Url.Should().Be(dto.Url);
         _projectRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -234,8 +204,10 @@ public class ProjectServiceTests
             .ReturnsAsync(project);
         _projectRepositoryMock.Setup(r => r.NameExistsAsync(dto.Name, project.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
+        _taskRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
+        _parentRepositoryMock.Setup(r => r.GetByMatchingLabelsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Parent>());
 
         // Act
         var result = await _service.UpdateAsync(project.Id, dto);
@@ -257,76 +229,6 @@ public class ProjectServiceTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
-    }
-
-    [Fact]
-    public async Task ActivateAsync_UpdatesStatusToActive()
-    {
-        // Arrange
-        var project = new Project("Project");
-        _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.ActivateAsync(project.Id);
-
-        // Assert
-        result.Status.Should().Be(ProjectStatus.Active);
-        _projectRepositoryMock.Verify(r => r.UpdateAsync(project, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task PutOnHoldAsync_UpdatesStatusToOnHold()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-        _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.PutOnHoldAsync(project.Id);
-
-        // Assert
-        result.Status.Should().Be(ProjectStatus.OnHold);
-    }
-
-    [Fact]
-    public async Task CompleteAsync_UpdatesStatusToCompleted()
-    {
-        // Arrange
-        var project = new Project("Project");
-        _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.CompleteAsync(project.Id);
-
-        // Assert
-        result.Status.Should().Be(ProjectStatus.Completed);
-    }
-
-    [Fact]
-    public async Task CancelAsync_UpdatesStatusToCancelled()
-    {
-        // Arrange
-        var project = new Project("Project");
-        _projectRepositoryMock.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(project);
-        _taskRepositoryMock.Setup(r => r.GetByProjectIdAsync(project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TeamTask>());
-
-        // Act
-        var result = await _service.CancelAsync(project.Id);
-
-        // Assert
-        result.Status.Should().Be(ProjectStatus.Cancelled);
     }
 
     [Fact]

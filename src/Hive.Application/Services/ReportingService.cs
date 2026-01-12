@@ -269,15 +269,7 @@ public class ReportingService : IReportingService
 
         var projectsSummary = new ProjectsSummaryDto
         {
-            TotalProjects = projects.Count,
-            PlanningProjects = projects.Count(p => p.Status == ProjectStatus.Planning),
-            ActiveProjects = projects.Count(p => p.Status == ProjectStatus.Active),
-            OnHoldProjects = projects.Count(p => p.Status == ProjectStatus.OnHold),
-            CompletedProjects = projects.Count(p => p.Status == ProjectStatus.Completed),
-            CancelledProjects = projects.Count(p => p.Status == ProjectStatus.Cancelled),
-            CompletionRate = projects.Count > 0
-                ? Math.Round((double)projects.Count(p => p.Status == ProjectStatus.Completed) / projects.Count * 100, 1)
-                : 0
+            TotalProjects = projects.Count
         };
 
         var doneTasks = tasks.Count(t => t.Status == TaskStatus.Done);

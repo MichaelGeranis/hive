@@ -1,7 +1,6 @@
 using Hive.Api.Controllers;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
-using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -65,37 +64,6 @@ public class ProjectsControllerTests
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task GetByStatus_ReturnsOkWithMatchingProjects()
-    {
-        // Arrange
-        var projects = new List<ProjectDto> { CreateDto() };
-        _serviceMock.Setup(s => s.GetByStatusAsync(ProjectStatus.Active, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projects);
-
-        // Act
-        var result = await _controller.GetByStatus(ProjectStatus.Active, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<ProjectDto>>();
-    }
-
-    [Fact]
-    public async Task GetActive_ReturnsOkWithActiveProjects()
-    {
-        // Arrange
-        var projects = new List<ProjectDto> { CreateDto() };
-        _serviceMock.Setup(s => s.GetActiveAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projects);
-
-        // Act
-        var result = await _controller.GetActive(CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
@@ -164,87 +132,6 @@ public class ProjectsControllerTests
     }
 
     [Fact]
-    public async Task Activate_WhenExists_ReturnsOkWithActivatedProject()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto() with { Status = ProjectStatus.Active };
-        _serviceMock.Setup(s => s.ActivateAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Activate(id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var dto = okResult.Value.Should().BeOfType<ProjectDto>().Subject;
-        dto.Status.Should().Be(ProjectStatus.Active);
-    }
-
-    [Fact]
-    public async Task Activate_WhenInvalidState_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.ActivateAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Cannot activate"));
-
-        // Act
-        var result = await _controller.Activate(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
-    public async Task PutOnHold_ReturnsOkWithUpdatedProject()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto() with { Status = ProjectStatus.OnHold };
-        _serviceMock.Setup(s => s.PutOnHoldAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.PutOnHold(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task Complete_ReturnsOkWithCompletedProject()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto() with { Status = ProjectStatus.Completed };
-        _serviceMock.Setup(s => s.CompleteAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Complete(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task Cancel_ReturnsOkWithCancelledProject()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto() with { Status = ProjectStatus.Cancelled };
-        _serviceMock.Setup(s => s.CancelAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Cancel(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
     public async Task Delete_WhenExists_ReturnsNoContent()
     {
         // Arrange
@@ -281,8 +168,8 @@ public class ProjectsControllerTests
             Id = Guid.NewGuid(),
             Name = name,
             Description = "Description",
-            Status = ProjectStatus.Planning,
-            StatusName = "Planning",
+            Labels = "",
+            Url = "",
             CreatedAt = DateTime.UtcNow
         };
     }

@@ -1,6 +1,5 @@
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
-using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,35 +57,6 @@ public class ProjectsController : ControllerBase
         }
 
         return Ok(project);
-    }
-
-    /// <summary>
-    /// Gets projects by status.
-    /// </summary>
-    /// <param name="status">The project status.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of projects with the specified status.</returns>
-    [HttpGet("status/{status}")]
-    [ProducesResponseType(typeof(IEnumerable<ProjectDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ProjectDto>>> GetByStatus(ProjectStatus status, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting projects with status: {Status}", status);
-        var projects = await _service.GetByStatusAsync(status, cancellationToken);
-        return Ok(projects);
-    }
-
-    /// <summary>
-    /// Gets all active projects (Planning or Active status).
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of active projects.</returns>
-    [HttpGet("active")]
-    [ProducesResponseType(typeof(IEnumerable<ProjectDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ProjectDto>>> GetActive(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting active projects");
-        var projects = await _service.GetActiveAsync(cancellationToken);
-        return Ok(projects);
     }
 
     /// <summary>
@@ -148,151 +118,6 @@ public class ProjectsController : ControllerBase
             return Conflict(new { message = ex.Message });
         }
         catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Activates a project.
-    /// </summary>
-    /// <param name="id">The project ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated project.</returns>
-    [HttpPost("{id:guid}/activate")]
-    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProjectDto>> Activate(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Activating project with ID: {Id}", id);
-
-        try
-        {
-            var updated = await _service.ActivateAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Puts a project on hold.
-    /// </summary>
-    /// <param name="id">The project ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated project.</returns>
-    [HttpPost("{id:guid}/hold")]
-    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProjectDto>> PutOnHold(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Putting project on hold with ID: {Id}", id);
-
-        try
-        {
-            var updated = await _service.PutOnHoldAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Completes a project.
-    /// </summary>
-    /// <param name="id">The project ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated project.</returns>
-    [HttpPost("{id:guid}/complete")]
-    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProjectDto>> Complete(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Completing project with ID: {Id}", id);
-
-        try
-        {
-            var updated = await _service.CompleteAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Reopens a completed or cancelled project.
-    /// </summary>
-    /// <param name="id">The project ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated project.</returns>
-    [HttpPost("{id:guid}/reopen")]
-    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProjectDto>> Reopen(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Reopening project with ID: {Id}", id);
-
-        try
-        {
-            var updated = await _service.ReopenAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Cancels a project.
-    /// </summary>
-    /// <param name="id">The project ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The updated project.</returns>
-    [HttpPost("{id:guid}/cancel")]
-    [ProducesResponseType(typeof(ProjectDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProjectDto>> Cancel(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Cancelling project with ID: {Id}", id);
-
-        try
-        {
-            var updated = await _service.CancelAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }

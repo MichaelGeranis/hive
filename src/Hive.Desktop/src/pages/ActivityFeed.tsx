@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { FileText, CheckSquare, Palmtree } from 'lucide-react'
 import { activityFeedApi } from '../services/api'
 import { Activity } from '../types'
-import { Card, CardContent, CardHeader } from '../components/Card'
+import { Card, CardContent } from '../components/Card'
 
 const ActivityFeed = () => {
   const [activities, setActivities] = useState<Activity[]>([])
@@ -75,8 +75,13 @@ const ActivityFeed = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Activity Feed</h1>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
+            <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+          </div>
+        </div>
         <div className="flex justify-center items-center h-64">
           <div className="text-slate-500">Loading activities...</div>
         </div>
@@ -86,8 +91,13 @@ const ActivityFeed = () => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Activity Feed</h1>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
+            <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+          </div>
+        </div>
         <div className="flex justify-center items-center h-64">
           <div className="text-red-500">{error}</div>
         </div>
@@ -96,11 +106,14 @@ const ActivityFeed = () => {
   }
 
   return (
-    <div className="p-6">
-      <CardHeader
-        title="Activity Feed"
-        subtitle="Recent changes across the system from the past week"
-      />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
+          <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+        </div>
+      </div>
 
       {activities.length === 0 ? (
         <Card>

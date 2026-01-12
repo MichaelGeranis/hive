@@ -40,18 +40,6 @@ public class ProjectService : IProjectService
         return await MapToDtosAsync(entities, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ProjectDto>> GetByStatusAsync(ProjectStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = await _projectRepository.GetByStatusAsync(status, cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<ProjectDto>> GetActiveAsync(CancellationToken cancellationToken = default)
-    {
-        var entities = await _projectRepository.GetActiveAsync(cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
     public async Task<ProjectDto> CreateAsync(CreateProjectDto dto, CancellationToken cancellationToken = default)
     {
         if (await _projectRepository.NameExistsAsync(dto.Name, cancellationToken: cancellationToken))
@@ -59,7 +47,7 @@ public class ProjectService : IProjectService
             throw new ConflictException($"A project with name '{dto.Name}' already exists.");
         }
 
-        var entity = new Project(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate, dto.Labels);
+        var entity = new Project(dto.Name, dto.Description, dto.Labels, dto.Url);
         var created = await _projectRepository.AddAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(created, cancellationToken);
@@ -74,57 +62,7 @@ public class ProjectService : IProjectService
             throw new ConflictException($"A project with name '{dto.Name}' already exists.");
         }
 
-        entity.Update(dto.Name, dto.Description, dto.StartDate, dto.TargetEndDate, dto.Labels);
-        await _projectRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<ProjectDto> ActivateAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Activate();
-        await _projectRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<ProjectDto> PutOnHoldAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.PutOnHold();
-        await _projectRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<ProjectDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Complete();
-        await _projectRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<ProjectDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.ResetToPlanning();
-        await _projectRepository.UpdateAsync(entity, cancellationToken);
-
-        return await MapToDtoAsync(entity, cancellationToken);
-    }
-
-    public async Task<ProjectDto> CancelAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Cancel();
+        entity.Update(dto.Name, dto.Description, dto.Labels, dto.Url);
         await _projectRepository.UpdateAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
@@ -175,11 +113,7 @@ public class ProjectService : IProjectService
             Name = entity.Name,
             Description = entity.Description,
             Labels = entity.Labels,
-            Status = entity.Status,
-            StatusName = GetStatusName(entity.Status),
-            StartDate = entity.StartDate,
-            TargetEndDate = entity.TargetEndDate,
-            ActualEndDate = entity.ActualEndDate,
+            Url = entity.Url,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             TotalTasks = tasks.Count,
@@ -198,14 +132,4 @@ public class ProjectService : IProjectService
         }
         return result;
     }
-
-    private static string GetStatusName(ProjectStatus status) => status switch
-    {
-        ProjectStatus.Planning => "Planning",
-        ProjectStatus.Active => "Active",
-        ProjectStatus.OnHold => "On Hold",
-        ProjectStatus.Completed => "Completed",
-        ProjectStatus.Cancelled => "Cancelled",
-        _ => "Unknown"
-    };
 }

@@ -10,20 +10,18 @@ public class ProjectTests
         // Arrange
         var name = "API Redesign";
         var description = "Redesign the REST API";
-        var startDate = DateTime.UtcNow;
-        var targetEndDate = DateTime.UtcNow.AddDays(90);
+        var labels = "backend,api";
+        var url = "https://github.com/org/api-redesign";
 
         // Act
-        var project = new Project(name, description, startDate, targetEndDate);
+        var project = new Project(name, description, labels, url);
 
         // Assert
         project.Id.Should().NotBeEmpty();
         project.Name.Should().Be(name);
         project.Description.Should().Be(description);
-        project.Status.Should().Be(ProjectStatus.Planning);
-        project.StartDate.Should().Be(startDate);
-        project.TargetEndDate.Should().Be(targetEndDate);
-        project.ActualEndDate.Should().BeNull();
+        project.Labels.Should().Be(labels);
+        project.Url.Should().Be(url);
         project.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         project.UpdatedAt.Should().BeNull();
     }
@@ -36,8 +34,8 @@ public class ProjectTests
 
         // Assert
         project.Description.Should().BeEmpty();
-        project.StartDate.Should().BeNull();
-        project.TargetEndDate.Should().BeNull();
+        project.Labels.Should().BeEmpty();
+        project.Url.Should().BeEmpty();
     }
 
     [Fact]
@@ -84,17 +82,15 @@ public class ProjectTests
     {
         // Arrange
         var project = new Project("Original", "Original desc");
-        var newStartDate = DateTime.UtcNow.AddDays(1);
-        var newTargetEndDate = DateTime.UtcNow.AddDays(100);
 
         // Act
-        project.Update("Updated", "Updated desc", newStartDate, newTargetEndDate);
+        project.Update("Updated", "Updated desc", "new-label", "https://github.com/new");
 
         // Assert
         project.Name.Should().Be("Updated");
         project.Description.Should().Be("Updated desc");
-        project.StartDate.Should().Be(newStartDate);
-        project.TargetEndDate.Should().Be(newTargetEndDate);
+        project.Labels.Should().Be("new-label");
+        project.Url.Should().Be("https://github.com/new");
         project.UpdatedAt.Should().NotBeNull();
     }
 
@@ -113,194 +109,31 @@ public class ProjectTests
     }
 
     [Fact]
-    public void Activate_FromPlanning_ChangesStatusToActive()
+    public void Update_WithNullDescription_SetsEmptyDescription()
     {
         // Arrange
-        var project = new Project("Project");
+        var project = new Project("Test", "Original desc");
 
         // Act
-        project.Activate();
+        project.Update("Test", null);
 
         // Assert
-        project.Status.Should().Be(ProjectStatus.Active);
-        project.StartDate.Should().NotBeNull();
-        project.StartDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        project.UpdatedAt.Should().NotBeNull();
+        project.Description.Should().BeEmpty();
     }
 
     [Fact]
-    public void Activate_PreservesExistingStartDate()
+    public void Update_TrimsValues()
     {
         // Arrange
-        var originalStartDate = DateTime.UtcNow.AddDays(-10);
-        var project = new Project("Project", null, originalStartDate, null);
+        var project = new Project("Test");
 
         // Act
-        project.Activate();
+        project.Update("  Updated  ", "  Desc  ", "  label  ", "  https://test.com  ");
 
         // Assert
-        project.StartDate.Should().Be(originalStartDate);
-    }
-
-    [Fact]
-    public void Activate_FromOnHold_ChangesStatusToActive()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-        project.PutOnHold();
-
-        // Act
-        project.Activate();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Active);
-    }
-
-    [Fact]
-    public void PutOnHold_FromActive_ChangesStatusToOnHold()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-
-        // Act
-        project.PutOnHold();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.OnHold);
-        project.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void PutOnHold_WhenNotActive_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var project = new Project("Project");
-
-        // Act
-        var act = () => project.PutOnHold();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*active*");
-    }
-
-    [Fact]
-    public void Complete_FromActive_ChangesStatusToCompleted()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-
-        // Act
-        project.Complete();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Completed);
-        project.ActualEndDate.Should().NotBeNull();
-        project.ActualEndDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        project.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Complete_FromPlanning_ChangesStatusToCompleted()
-    {
-        // Arrange
-        var project = new Project("Project");
-
-        // Act
-        project.Complete();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Completed);
-    }
-
-    [Fact]
-    public void Complete_FromOnHold_ChangesStatusToCompleted()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-        project.PutOnHold();
-
-        // Act
-        project.Complete();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Completed);
-    }
-
-    [Fact]
-    public void Complete_WhenCancelled_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Cancel();
-
-        // Act
-        var act = () => project.Complete();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*cancelled*");
-    }
-
-    [Fact]
-    public void Cancel_FromPlanning_ChangesStatusToCancelled()
-    {
-        // Arrange
-        var project = new Project("Project");
-
-        // Act
-        project.Cancel();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Cancelled);
-        project.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Cancel_FromActive_ChangesStatusToCancelled()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-
-        // Act
-        project.Cancel();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Cancelled);
-    }
-
-    [Fact]
-    public void Cancel_FromOnHold_ChangesStatusToCancelled()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Activate();
-        project.PutOnHold();
-
-        // Act
-        project.Cancel();
-
-        // Assert
-        project.Status.Should().Be(ProjectStatus.Cancelled);
-    }
-
-    [Fact]
-    public void Cancel_WhenCompleted_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var project = new Project("Project");
-        project.Complete();
-
-        // Act
-        var act = () => project.Cancel();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*completed*");
+        project.Name.Should().Be("Updated");
+        project.Description.Should().Be("Desc");
+        project.Labels.Should().Be("label");
+        project.Url.Should().Be("https://test.com");
     }
 }

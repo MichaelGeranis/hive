@@ -1,7 +1,7 @@
 namespace Hive.Core.Entities;
 
 /// <summary>
-/// Represents a project that groups related tasks.
+/// Represents a project that groups related tasks (e.g., a GitHub project).
 /// </summary>
 public class Project
 {
@@ -9,16 +9,13 @@ public class Project
     public string Name { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public string Labels { get; private set; } = string.Empty;
-    public ProjectStatus Status { get; private set; }
-    public DateTime? StartDate { get; private set; }
-    public DateTime? TargetEndDate { get; private set; }
-    public DateTime? ActualEndDate { get; private set; }
+    public string Url { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
     private Project() { }
 
-    public Project(string name, string? description = null, DateTime? startDate = null, DateTime? targetEndDate = null, string? labels = null)
+    public Project(string name, string? description = null, string? labels = null, string? url = null)
     {
         ValidateName(name);
 
@@ -26,68 +23,18 @@ public class Project
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
         Labels = labels?.Trim() ?? string.Empty;
-        Status = ProjectStatus.Planning;
-        StartDate = startDate;
-        TargetEndDate = targetEndDate;
+        Url = url?.Trim() ?? string.Empty;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string name, string? description, DateTime? startDate, DateTime? targetEndDate, string? labels = null)
+    public void Update(string name, string? description, string? labels = null, string? url = null)
     {
         ValidateName(name);
 
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
         Labels = labels?.Trim() ?? string.Empty;
-        StartDate = startDate;
-        TargetEndDate = targetEndDate;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Activate()
-    {
-        Status = ProjectStatus.Active;
-        StartDate ??= DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void ResetToPlanning()
-    {
-        Status = ProjectStatus.Planning;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void PutOnHold()
-    {
-        if (Status != ProjectStatus.Active)
-        {
-            throw new InvalidOperationException("Only active projects can be put on hold.");
-        }
-
-        Status = ProjectStatus.OnHold;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Complete()
-    {
-        if (Status == ProjectStatus.Cancelled)
-        {
-            throw new InvalidOperationException("Cannot complete a cancelled project.");
-        }
-
-        Status = ProjectStatus.Completed;
-        ActualEndDate = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void Cancel()
-    {
-        if (Status == ProjectStatus.Completed)
-        {
-            throw new InvalidOperationException("Cannot cancel a completed project.");
-        }
-
-        Status = ProjectStatus.Cancelled;
+        Url = url?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
     }
 

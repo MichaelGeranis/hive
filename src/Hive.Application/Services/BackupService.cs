@@ -159,7 +159,7 @@ public class BackupService : IBackupService
                     var existing = await _projectRepository.GetByIdAsync(p.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new Project(p.Name, p.Description, p.StartDate, p.TargetEndDate, p.Labels);
+                        var entity = new Project(p.Name, p.Description, p.Labels, p.Url);
                         SetEntityId(entity, p.Id);
                         await _projectRepository.AddAsync(entity, cancellationToken);
                         projectsRestored++;
@@ -547,10 +547,7 @@ public class BackupService : IBackupService
         Name = p.Name,
         Description = p.Description,
         Labels = p.Labels,
-        Status = (int)p.Status,
-        StartDate = p.StartDate,
-        TargetEndDate = p.TargetEndDate,
-        ActualEndDate = p.ActualEndDate,
+        Url = p.Url,
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt
     };

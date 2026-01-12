@@ -80,44 +80,6 @@ public class ProjectRepositoryTests
     }
 
     [Fact]
-    public async Task GetByStatusAsync_ReturnsMatchingProjects()
-    {
-        // Arrange
-        var planningProject = CreateAndAddProject("Planning");
-        var activeProject = CreateAndAddProject("Active");
-        activeProject.Activate();
-        _context.Projects[activeProject.Id] = activeProject;
-
-        // Act
-        var result = await _repository.GetByStatusAsync(ProjectStatus.Active);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result[0].Status.Should().Be(ProjectStatus.Active);
-    }
-
-    [Fact]
-    public async Task GetActiveAsync_ReturnsActiveAndPlanningProjects()
-    {
-        // Arrange
-        var planningProject = CreateAndAddProject("Planning");
-        var activeProject = CreateAndAddProject("Active");
-        activeProject.Activate();
-        _context.Projects[activeProject.Id] = activeProject;
-        var completedProject = CreateAndAddProject("Completed");
-        completedProject.Complete();
-        _context.Projects[completedProject.Id] = completedProject;
-
-        // Act
-        var result = await _repository.GetActiveAsync();
-
-        // Assert
-        result.Should().HaveCount(2);
-        result.Should().Contain(p => p.Status == ProjectStatus.Planning);
-        result.Should().Contain(p => p.Status == ProjectStatus.Active);
-    }
-
-    [Fact]
     public async Task AddAsync_AddsProjectToContext()
     {
         // Arrange
