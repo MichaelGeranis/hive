@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Users, MessageCircle, FolderKanban, CheckSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Users, MessageCircle, CheckSquare } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { leavesApi, meetingsApi, projectsApi, tasksApi } from '../services/api'
-import type { Leave, OneOnOneMeeting, Project, TeamTask } from '../types'
+import { leavesApi, meetingsApi, tasksApi } from '../services/api'
+import type { Leave, OneOnOneMeeting, TeamTask } from '../types'
 
 type CalendarEvent = {
   id: string
   title: string
   date: Date
   endDate?: Date
-  type: 'leave' | 'meeting' | 'project-deadline' | 'task-deadline'
+  type: 'leave' | 'meeting' | 'task-deadline'
   color: string
   details?: string
 }
@@ -22,14 +22,12 @@ const monthNames = [
 const EVENT_COLORS = {
   leave: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-l-4 border-blue-500',
   meeting: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
-  'project-deadline': 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-l-4 border-amber-500',
   'task-deadline': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-l-4 border-green-500',
 }
 
 const EVENT_ICONS = {
   leave: Users,
   meeting: MessageCircle,
-  'project-deadline': FolderKanban,
   'task-deadline': CheckSquare,
 }
 
@@ -46,10 +44,9 @@ export default function Calendar() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const [leaves, meetings, projects, tasks] = await Promise.all([
+      const [leaves, meetings, tasks] = await Promise.all([
         leavesApi.getAll(),
         meetingsApi.getAll(),
-        projectsApi.getAll(),
         tasksApi.getAll(),
       ])
 
@@ -78,20 +75,6 @@ export default function Calendar() {
           color: EVENT_COLORS.meeting,
           details: meeting.location || undefined,
         })
-      })
-
-      // Add project deadlines as events
-      projects.forEach((project: Project) => {
-        if (project.targetEndDate) {
-          calendarEvents.push({
-            id: `project-${project.id}`,
-            title: `${project.name} Deadline`,
-            date: new Date(project.targetEndDate),
-            type: 'project-deadline',
-            color: EVENT_COLORS['project-deadline'],
-            details: project.description || undefined,
-          })
-        }
       })
 
       // Add task deadlines as events

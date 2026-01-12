@@ -470,7 +470,6 @@ export default function Notes() {
                       ))}
                     </div>
                   )}
-
                   <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                     {note.dueDate && (
                       <span className={`flex items-center gap-1 ${note.isOverdue && !note.isCompleted ? 'text-red-500 font-medium' : ''}`}>
@@ -478,11 +477,15 @@ export default function Notes() {
                         {formatRelativeDate(note.dueDate)}
                       </span>
                     )}
-                    <span>Created {formatDate(note.createdAt)}</span>
-                    {note.completedAt && (
-                      <span className="text-green-600 dark:text-green-400">
-                        Completed {formatDate(note.completedAt)}
-                      </span>
+                    {note.isCompleted && (
+                      <>
+                        <span>Created {formatDate(note.createdAt)}</span>
+                        {note.completedAt && (
+                          <span className="text-green-600 dark:text-green-400">
+                            Completed {formatDate(note.completedAt)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

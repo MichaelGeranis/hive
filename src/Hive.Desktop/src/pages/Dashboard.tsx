@@ -243,6 +243,16 @@ export default function Dashboard() {
     }
   }
 
+  const handleCompletePriorityNote = async (noteId: string) => {
+    try {
+      await notesApi.toggle(noteId)
+      // Remove the completed item from the list
+      setPriorityNotes(prev => prev.filter(item => item.id !== noteId))
+    } catch (err) {
+      console.error('Failed to complete priority note:', err)
+    }
+  }
+
   // Find projects that share at least one label with the task
   const getMatchedProjects = (taskLabels?: string): Project[] => {
     if (!taskLabels) return []
@@ -1096,14 +1106,16 @@ export default function Dashboard() {
                   {priorityNotes.map(note => (
                     <div
                       key={note.id}
-                      onClick={() => {
-                        closePriorityNotesModal()
-                        navigate(`/notes?search=${encodeURIComponent(note.title)}`)
-                      }}
-                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600/50 transition-colors ${note.priority === 3 ? 'border-l-4 border-red-500' : 'border-l-4 border-amber-500'}`}
+                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg ${note.priority === 3 ? 'border-l-4 border-red-500' : 'border-l-4 border-amber-500'}`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
+                        <div
+                          className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            closePriorityNotesModal()
+                            navigate(`/notes?search=${encodeURIComponent(note.title)}`)
+                          }}
+                        >
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{note.title}</p>
                             <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
@@ -1141,6 +1153,13 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
+                        <button
+                          onClick={() => handleCompletePriorityNote(note.id)}
+                          className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
+                          title="Mark as completed"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
