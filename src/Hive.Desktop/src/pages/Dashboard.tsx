@@ -16,8 +16,8 @@ import {
   Check
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, projectKnowledgeApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, ProjectKnowledgeMatrix } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -33,7 +33,12 @@ import {
   LineChart,
   Line,
   Legend,
-  ReferenceLine
+  ReferenceLine,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis
 } from 'recharts'
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
@@ -45,6 +50,7 @@ interface WidgetVisibility {
   projectsDistribution: boolean
   membersByProject: boolean
   tasksDistribution: boolean
+  knowledgeRadar: boolean
   capacityAnalysis: boolean
   estimationAccuracy: boolean
   teamVelocity: boolean
@@ -56,6 +62,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   projectsDistribution: true,
   membersByProject: true,
   tasksDistribution: true,
+  knowledgeRadar: true,
   capacityAnalysis: true,
   estimationAccuracy: true,
   teamVelocity: true,
@@ -67,6 +74,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   projectsDistribution: 'Projects Distribution',
   membersByProject: 'Members by Project',
   tasksDistribution: 'Tasks Distribution',
+  knowledgeRadar: 'Knowledge Radar',
   capacityAnalysis: 'Capacity Analysis',
   estimationAccuracy: 'Estimation Accuracy',
   teamVelocity: 'Team Velocity',
@@ -86,6 +94,7 @@ export default function Dashboard() {
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
   const [showPriorityNotesModal, setShowPriorityNotesModal] = useState(false)
+  const [knowledgeMatrix, setKnowledgeMatrix] = useState<ProjectKnowledgeMatrix | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -164,18 +173,20 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, knowledgeData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         leavesApi.getOverview(),
         meetingNotesApi.getOpenActionItems(),
-        notesApi.getPending()
+        notesApi.getPending(),
+        projectKnowledgeApi.getMatrix()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
       setProjects(projectsData)
       setLeaveOverview(leaveData)
+      setKnowledgeMatrix(knowledgeData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
         if (!a.actionDueDate && !b.actionDueDate) return 0
@@ -463,7 +474,7 @@ export default function Dashboard() {
           onClick={() => setShowActionItemsModal(true)}
         />
         <StatCard
-          title="Priority TODOs"
+          title="TODOs"
           value={priorityNotes.length}
           subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
           icon={<StickyNote className="w-6 h-6" />}
@@ -603,6 +614,146 @@ export default function Dashboard() {
         </Card>
         )}
       </div>
+
+      {/* Knowledge Radar */}
+      {widgets.knowledgeRadar && knowledgeMatrix && knowledgeMatrix.projects.length > 0 && (() => {
+        // Calculate average knowledge level per project
+        const radarData = knowledgeMatrix.projects.map(project => {
+          const projectScores = knowledgeMatrix.scores.filter(s => s.projectId === project.id)
+          const avgLevel = projectScores.length > 0
+            ? Math.round((projectScores.reduce((sum, s) => sum + s.knowledgeLevel, 0) / projectScores.length) * 10) / 10
+            : 0
+          const maxLevel = projectScores.length > 0
+            ? Math.max(...projectScores.map(s => s.knowledgeLevel))
+            : 0
+          const minLevel = projectScores.length > 0
+            ? Math.min(...projectScores.map(s => s.knowledgeLevel))
+            : 0
+          const coverage = Math.round((projectScores.length / knowledgeMatrix.directReports.length) * 100)
+          return {
+            project: project.name.length > 12 ? project.name.substring(0, 12) + '...' : project.name,
+            fullName: project.name,
+            avgLevel,
+            maxLevel,
+            minLevel,
+            coverage,
+            assessments: projectScores.length,
+            teamSize: knowledgeMatrix.directReports.length
+          }
+        }).filter(d => d.assessments > 0) // Only show projects with at least one assessment
+
+        // Calculate overall team knowledge score
+        const overallAvg = radarData.length > 0
+          ? Math.round((radarData.reduce((sum, d) => sum + d.avgLevel, 0) / radarData.length) * 10) / 10
+          : 0
+
+        // Count projects with low average knowledge (< 3)
+        const lowKnowledgeProjects = radarData.filter(d => d.avgLevel < 3).length
+
+        return (
+          <Card>
+            <CardHeader
+              title="Knowledge Radar"
+              subtitle={`Average knowledge levels across ${radarData.length} projects`}
+            />
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                      <PolarGrid strokeDasharray="3 3" />
+                      <PolarAngleAxis
+                        dataKey="project"
+                        tick={{ fontSize: 11, fill: 'currentColor' }}
+                        className="text-slate-600 dark:text-slate-400"
+                      />
+                      <PolarRadiusAxis
+                        angle={90}
+                        domain={[0, 5]}
+                        tick={{ fontSize: 10 }}
+                        tickCount={6}
+                      />
+                      <Radar
+                        name="Avg Level"
+                        dataKey="avgLevel"
+                        stroke="#f59e0b"
+                        fill="#f59e0b"
+                        fillOpacity={0.5}
+                        strokeWidth={2}
+                      />
+                      <Radar
+                        name="Max Level"
+                        dataKey="maxLevel"
+                        stroke="#10b981"
+                        fill="transparent"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [value, name]}
+                        labelFormatter={(label) => {
+                          const item = radarData.find(d => d.project === label)
+                          return item?.fullName || label
+                        }}
+                      />
+                      <Legend />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-amber-500">{overallAvg}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Avg Knowledge</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-blue-500">{radarData.length}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Projects Tracked</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {radarData.sort((a, b) => a.avgLevel - b.avgLevel).slice(0, 5).map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between p-2 rounded-lg ${
+                          item.avgLevel < 3 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-50 dark:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate" title={item.fullName}>
+                            {item.fullName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {item.assessments}/{item.teamSize} assessed ({item.coverage}%)
+                          </p>
+                        </div>
+                        <div className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                          item.avgLevel >= 4 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                          item.avgLevel >= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                          'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                        }`}>
+                          {item.avgLevel}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {lowKnowledgeProjects > 0 && (
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Knowledge gaps detected</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                      {lowKnowledgeProjects} project{lowKnowledgeProjects !== 1 ? 's have' : ' has'} an average knowledge level below 3.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Capacity Analysis */}
       {widgets.capacityAnalysis && (
@@ -1088,7 +1239,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-2xl mx-4">
             <CardHeader
-              title="Priority TODOs"
+              title="Priorities"
               subtitle={`${priorityNotes.length} high priority item${priorityNotes.length !== 1 ? 's' : ''}${priorityNotes.filter(n => n.priority === 3).length > 0 ? ` (${priorityNotes.filter(n => n.priority === 3).length} urgent)` : ''}`}
               action={
                 <button
