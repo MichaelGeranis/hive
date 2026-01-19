@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
-import { X, BookOpen, Info } from 'lucide-react'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { X, BookOpen, Info, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectKnowledgeApi } from '../services/api'
 import type {
@@ -8,6 +8,9 @@ import type {
   CreateOrUpdateProjectKnowledgeDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+
+type SortBy = 'name' | 'avgKnowledge'
+type SortOrder = 'asc' | 'desc'
 
 const KNOWLEDGE_LEVELS = [
   { level: 0, label: '-', color: 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500' },
@@ -34,6 +37,16 @@ export default function ProjectKnowledgePage() {
     directReportId: string
   } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Filter state
+  const [projectSearch, setProjectSearch] = useState('')
+  const [teamMemberFilter, setTeamMemberFilter] = useState<string[]>([])
+
+  // Sort state
+  const [projectSortBy, setProjectSortBy] = useState<SortBy>('name')
+  const [projectSortOrder, setProjectSortOrder] = useState<SortOrder>('asc')
+  const [memberSortBy, setMemberSortBy] = useState<SortBy>('name')
+  const [memberSortOrder, setMemberSortOrder] = useState<SortOrder>('asc')
 
   useEscapeKey(() => {
     setShowLegend(false)
@@ -108,6 +121,87 @@ export default function ProjectKnowledgePage() {
     )
   }
 
+  // Calculate average knowledge for a project (across all direct reports)
+  const getProjectAvgKnowledge = (projectId: string): number => {
+    if (!matrix) return 0
+    const scores = matrix.scores.filter(s => s.projectId === projectId && s.knowledgeLevel > 0)
+    if (scores.length === 0) return 0
+    return scores.reduce((sum, s) => sum + s.knowledgeLevel, 0) / scores.length
+  }
+
+  // Calculate average knowledge for a direct report (across all projects)
+  const getMemberAvgKnowledge = (directReportId: string): number => {
+    if (!matrix) return 0
+    const scores = matrix.scores.filter(s => s.directReportId === directReportId && s.knowledgeLevel > 0)
+    if (scores.length === 0) return 0
+    return scores.reduce((sum, s) => sum + s.knowledgeLevel, 0) / scores.length
+  }
+
+  // Filtered and sorted projects
+  const filteredProjects = useMemo(() => {
+    if (!matrix) return []
+
+    let projects = [...matrix.projects]
+
+    // Filter by search
+    if (projectSearch.trim()) {
+      const query = projectSearch.toLowerCase().trim()
+      projects = projects.filter(p => p.name.toLowerCase().includes(query))
+    }
+
+    // Sort projects
+    projects.sort((a, b) => {
+      let comparison = 0
+      if (projectSortBy === 'name') {
+        comparison = a.name.localeCompare(b.name)
+      } else {
+        comparison = getProjectAvgKnowledge(b.id) - getProjectAvgKnowledge(a.id)
+      }
+      return projectSortOrder === 'desc' ? -comparison : comparison
+    })
+
+    return projects
+  }, [matrix, projectSearch, projectSortBy, projectSortOrder])
+
+  // Filtered and sorted direct reports
+  const filteredDirectReports = useMemo(() => {
+    if (!matrix) return []
+
+    let reports = [...matrix.directReports]
+
+    // Filter by selection
+    if (teamMemberFilter.length > 0) {
+      reports = reports.filter(dr => teamMemberFilter.includes(dr.id))
+    }
+
+    // Sort direct reports
+    reports.sort((a, b) => {
+      let comparison = 0
+      if (memberSortBy === 'name') {
+        comparison = a.name.localeCompare(b.name)
+      } else {
+        comparison = getMemberAvgKnowledge(b.id) - getMemberAvgKnowledge(a.id)
+      }
+      return memberSortOrder === 'desc' ? -comparison : comparison
+    })
+
+    return reports
+  }, [matrix, teamMemberFilter, memberSortBy, memberSortOrder])
+
+  // Check if any filters are active
+  const hasActiveFilters = projectSearch.trim() !== '' || teamMemberFilter.length > 0 ||
+    projectSortBy !== 'name' || projectSortOrder !== 'asc' ||
+    memberSortBy !== 'name' || memberSortOrder !== 'asc'
+
+  const clearAllFilters = () => {
+    setProjectSearch('')
+    setTeamMemberFilter([])
+    setProjectSortBy('name')
+    setProjectSortOrder('asc')
+    setMemberSortBy('name')
+    setMemberSortOrder('asc')
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -138,6 +232,7 @@ export default function ProjectKnowledgePage() {
 
   const hasProjects = matrix && matrix.projects.length > 0
   const hasDirectReports = matrix && matrix.directReports.length > 0
+  const hasFilteredResults = filteredProjects.length > 0 && filteredDirectReports.length > 0
 
   return (
     <div className="space-y-6">
@@ -155,6 +250,143 @@ export default function ProjectKnowledgePage() {
           Legend
         </button>
       </div>
+
+      {/* Filter and Sort Controls */}
+      {hasProjects && hasDirectReports && (
+        <Card>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              {/* Project Search */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Search Projects
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by project name..."
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Team Member Filter */}
+              <div className="min-w-[200px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Team Members
+                </label>
+                <select
+                  multiple
+                  value={teamMemberFilter}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => option.value)
+                    setTeamMemberFilter(selected)
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[70px]"
+                >
+                  {matrix?.directReports.map(dr => (
+                    <option key={dr.id} value={dr.id}>{dr.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Ctrl/Cmd + click to multi-select</p>
+              </div>
+
+              {/* Project Sort */}
+              <div className="min-w-[160px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Sort Projects
+                </label>
+                <div className="flex gap-1">
+                  <select
+                    value={projectSortBy}
+                    onChange={(e) => setProjectSortBy(e.target.value as SortBy)}
+                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="name">Name</option>
+                    <option value="avgKnowledge">Avg. Knowledge</option>
+                  </select>
+                  <button
+                    onClick={() => setProjectSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    title={projectSortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {projectSortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Member Sort */}
+              <div className="min-w-[160px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Sort Members
+                </label>
+                <div className="flex gap-1">
+                  <select
+                    value={memberSortBy}
+                    onChange={(e) => setMemberSortBy(e.target.value as SortBy)}
+                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="name">Name</option>
+                    <option value="avgKnowledge">Avg. Knowledge</option>
+                  </select>
+                  <button
+                    onClick={() => setMemberSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    title={memberSortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {memberSortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <div className="flex items-end">
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Clear All
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Active filters summary */}
+            {hasActiveFilters && (
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 text-sm">
+                {projectSearch && (
+                  <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded">
+                    Search: "{projectSearch}"
+                  </span>
+                )}
+                {teamMemberFilter.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                    {teamMemberFilter.length} member{teamMemberFilter.length > 1 ? 's' : ''} selected
+                  </span>
+                )}
+                {(projectSortBy !== 'name' || projectSortOrder !== 'asc') && (
+                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
+                    Projects: {projectSortBy === 'avgKnowledge' ? 'Avg. Knowledge' : 'Name'} ({projectSortOrder})
+                  </span>
+                )}
+                {(memberSortBy !== 'name' || memberSortOrder !== 'asc') && (
+                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded">
+                    Members: {memberSortBy === 'avgKnowledge' ? 'Avg. Knowledge' : 'Name'} ({memberSortOrder})
+                  </span>
+                )}
+                <span className="text-slate-500 dark:text-slate-400">
+                  Showing {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} × {filteredDirectReports.length} member{filteredDirectReports.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Matrix Table */}
       <Card>
@@ -174,6 +406,17 @@ export default function ProjectKnowledgePage() {
                   : 'No direct reports found. Add some team members first.'}
               </p>
             </div>
+          ) : !hasFilteredResults ? (
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+              <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No results found with current filters.</p>
+              <button
+                onClick={clearAllFilters}
+                className="mt-4 px-4 py-2 text-amber-500 hover:text-amber-600 transition-colors"
+              >
+                Clear filters
+              </button>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -182,23 +425,33 @@ export default function ProjectKnowledgePage() {
                     <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 min-w-[200px]">
                       Project
                     </th>
-                    {matrix.directReports.map(dr => (
+                    {filteredDirectReports.map(dr => (
                       <th
                         key={dr.id}
                         className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 min-w-[100px]"
                       >
-                        {dr.name}
+                        <div>{dr.name}</div>
+                        {memberSortBy === 'avgKnowledge' && (
+                          <div className="text-[10px] font-normal text-slate-400">
+                            avg: {getMemberAvgKnowledge(dr.id).toFixed(1)}
+                          </div>
+                        )}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {matrix.projects.map(project => (
+                  {filteredProjects.map(project => (
                     <tr key={project.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-slate-700">
-                        {project.name}
+                        <div>{project.name}</div>
+                        {projectSortBy === 'avgKnowledge' && (
+                          <div className="text-xs font-normal text-slate-400">
+                            avg: {getProjectAvgKnowledge(project.id).toFixed(1)}
+                          </div>
+                        )}
                       </td>
-                      {matrix.directReports.map(dr => {
+                      {filteredDirectReports.map(dr => {
                         const score = getScoreForCell(project.id, dr.id)
                         const isActive = activeDropdown?.projectId === project.id && activeDropdown?.directReportId === dr.id
                         return (
