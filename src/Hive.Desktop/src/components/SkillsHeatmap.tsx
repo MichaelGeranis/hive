@@ -1,10 +1,17 @@
 import { useMemo } from 'react'
 import type { SkillMatrix, Skill, ProficiencyLevel, SkillCategory } from '../types'
 
+export type MatrixSortBy = 'name' | 'avgProficiency' | 'gaps'
+export type MatrixSortOrder = 'asc' | 'desc'
+
 interface SkillsHeatmapProps {
   matrix: SkillMatrix
   onCellClick?: (directReportId: string, skillId: string, currentLevel?: ProficiencyLevel) => void
   categoryFilter?: SkillCategory | null
+  searchQuery?: string
+  teamMemberFilter?: string[]
+  sortBy?: MatrixSortBy
+  sortOrder?: MatrixSortOrder
 }
 
 const CATEGORY_NAMES: Record<SkillCategory, string> = {
@@ -36,14 +43,33 @@ const getProficiencyColor = (level: ProficiencyLevel): string => {
   return colors[level]
 }
 
-export function SkillsHeatmap({ matrix, onCellClick, categoryFilter }: SkillsHeatmapProps) {
-  // Filter skills by category if specified
+export function SkillsHeatmap({
+  matrix,
+  onCellClick,
+  categoryFilter,
+  searchQuery = '',
+  teamMemberFilter = [],
+  sortBy = 'name',
+  sortOrder = 'asc'
+}: SkillsHeatmapProps) {
+  // Filter skills by category and search query
   const filteredSkills = useMemo(() => {
-    if (categoryFilter === null || categoryFilter === undefined) {
-      return matrix.skills.filter(s => s.isActive)
+    let skills = matrix.skills.filter(s => s.isActive)
+
+    if (categoryFilter !== null && categoryFilter !== undefined) {
+      skills = skills.filter(s => s.category === categoryFilter)
     }
-    return matrix.skills.filter(s => s.isActive && s.category === categoryFilter)
-  }, [matrix.skills, categoryFilter])
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      skills = skills.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        s.description.toLowerCase().includes(query)
+      )
+    }
+
+    return skills
+  }, [matrix.skills, categoryFilter, searchQuery])
 
   // Group skills by category for headers
   const groupedSkills = useMemo(() => {
@@ -57,12 +83,51 @@ export function SkillsHeatmap({ matrix, onCellClick, categoryFilter }: SkillsHea
     return Array.from(groups.entries()).sort(([a], [b]) => a - b)
   }, [filteredSkills])
 
-  // Sort team members alphabetically
+  // Filter and sort team members
   const sortedDirectReports = useMemo(() => {
-    return [...matrix.directReports].sort((a, b) =>
-      a.directReportName.localeCompare(b.directReportName)
-    )
-  }, [matrix.directReports])
+    // First filter by team member selection
+    let reports = [...matrix.directReports]
+    if (teamMemberFilter.length > 0) {
+      reports = reports.filter(dr => teamMemberFilter.includes(dr.directReportId))
+    }
+
+    // Calculate metrics for sorting
+    const reportsWithMetrics = reports.map(dr => {
+      const assessments = dr.assessments.filter(a =>
+        filteredSkills.some(s => s.id === a.skillId)
+      )
+      const totalLevels = assessments.reduce((sum, a) => sum + a.level, 0)
+      const avgProficiency = assessments.length > 0 ? totalLevels / assessments.length : 0
+      const gapsCount = assessments.filter(a =>
+        a.targetLevel !== undefined && a.level < a.targetLevel
+      ).length
+
+      return {
+        ...dr,
+        avgProficiency,
+        gapsCount
+      }
+    })
+
+    // Sort based on selected option
+    reportsWithMetrics.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'name':
+          comparison = a.directReportName.localeCompare(b.directReportName)
+          break
+        case 'avgProficiency':
+          comparison = b.avgProficiency - a.avgProficiency // Higher proficiency first
+          break
+        case 'gaps':
+          comparison = b.gapsCount - a.gapsCount // More gaps first
+          break
+      }
+      return sortOrder === 'desc' ? -comparison : comparison
+    })
+
+    return reportsWithMetrics
+  }, [matrix.directReports, teamMemberFilter, sortBy, sortOrder, filteredSkills])
 
   if (filteredSkills.length === 0) {
     return (

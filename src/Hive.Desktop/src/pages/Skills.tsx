@@ -8,10 +8,12 @@ import {
   Trash2,
   TrendingUp,
   Users,
-  Target
+  Target,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { SkillsHeatmap } from '../components/SkillsHeatmap'
+import { SkillsHeatmap, type MatrixSortBy, type MatrixSortOrder } from '../components/SkillsHeatmap'
 import { SkillRadarChart } from '../components/SkillRadarChart'
 import { skillsApi, skillAssessmentsApi, directReportsApi } from '../services/api'
 import type {
@@ -73,6 +75,11 @@ export default function Skills() {
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<SkillCategory | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Matrix-specific filters
+  const [matrixTeamFilter, setMatrixTeamFilter] = useState<string[]>([])
+  const [matrixSortBy, setMatrixSortBy] = useState<MatrixSortBy>('name')
+  const [matrixSortOrder, setMatrixSortOrder] = useState<MatrixSortOrder>('asc')
 
   // Modals
   const [showSkillModal, setShowSkillModal] = useState(false)
@@ -541,10 +548,105 @@ export default function Skills() {
             subtitle="View and edit direct reports' proficiency levels across all skills"
           />
           <CardContent>
+            {/* Matrix-specific filters */}
+            <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+              {/* Team member filter */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Team Members
+                </label>
+                <select
+                  multiple
+                  value={matrixTeamFilter}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => option.value)
+                    setMatrixTeamFilter(selected)
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[80px]"
+                >
+                  {directReports.map(dr => (
+                    <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple</p>
+              </div>
+
+              {/* Sort controls */}
+              <div className="min-w-[180px]">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Sort By
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={matrixSortBy}
+                    onChange={(e) => setMatrixSortBy(e.target.value as MatrixSortBy)}
+                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="name">Name</option>
+                    <option value="avgProficiency">Avg. Proficiency</option>
+                    <option value="gaps">Skill Gaps</option>
+                  </select>
+                  <button
+                    onClick={() => setMatrixSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    title={matrixSortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {matrixSortOrder === 'asc' ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Clear matrix filters */}
+              {(matrixTeamFilter.length > 0 || matrixSortBy !== 'name' || matrixSortOrder !== 'asc') && (
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setMatrixTeamFilter([])
+                      setMatrixSortBy('name')
+                      setMatrixSortOrder('asc')
+                    }}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Clear Matrix Filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Active filters summary */}
+            {(matrixTeamFilter.length > 0 || categoryFilter !== null || searchQuery) && (
+              <div className="mb-4 flex flex-wrap gap-2 text-sm">
+                {matrixTeamFilter.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                    {matrixTeamFilter.length} team member{matrixTeamFilter.length > 1 ? 's' : ''} selected
+                  </span>
+                )}
+                {categoryFilter !== null && (
+                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
+                    Category: {CATEGORY_NAMES[categoryFilter]}
+                  </span>
+                )}
+                {searchQuery && (
+                  <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded">
+                    Search: "{searchQuery}"
+                  </span>
+                )}
+              </div>
+            )}
+
             <SkillsHeatmap
               matrix={matrix}
               onCellClick={handleCellClick}
               categoryFilter={categoryFilter}
+              searchQuery={searchQuery}
+              teamMemberFilter={matrixTeamFilter}
+              sortBy={matrixSortBy}
+              sortOrder={matrixSortOrder}
             />
           </CardContent>
         </Card>
