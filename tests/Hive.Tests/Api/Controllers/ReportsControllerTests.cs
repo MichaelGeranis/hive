@@ -229,11 +229,6 @@ public class ReportsControllerTests
         return new ReviewsOverviewDto
         {
             TotalReviews = 10,
-            DraftReviews = 2,
-            SubmittedReviews = 3,
-            AcknowledgedReviews = 2,
-            CompletedReviews = 3,
-            CompletionRate = 30,
             RatingDistribution = new List<RatingDistributionDto>(),
             ReviewsByPeriod = new List<ReviewByPeriodDto>()
         };

@@ -66,13 +66,6 @@ export enum PerformanceRating {
   Outstanding = 4
 }
 
-export enum ReviewStatus {
-  Draft = 0,
-  Submitted = 1,
-  Acknowledged = 2,
-  Completed = 3
-}
-
 export interface PerformanceReview {
   id: string
   directReportId: string
@@ -81,13 +74,11 @@ export interface PerformanceReview {
   reviewDate: string
   rating: PerformanceRating
   ratingDescription: string
-  status: ReviewStatus
-  statusDescription: string
   strengths: string
   areasForImprovement: string
-  goalsForNextPeriod: string
   managerNotes: string
-  employeeSelfAssessment: string
+  createdAt: string
+  updatedAt?: string
 }
 
 // One-on-One Meetings

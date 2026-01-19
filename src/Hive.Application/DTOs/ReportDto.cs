@@ -43,11 +43,6 @@ public record DirectReportSummaryDto
 public record ReviewsOverviewDto
 {
     public int TotalReviews { get; init; }
-    public int DraftReviews { get; init; }
-    public int SubmittedReviews { get; init; }
-    public int AcknowledgedReviews { get; init; }
-    public int CompletedReviews { get; init; }
-    public double CompletionRate { get; init; }
     public IReadOnlyList<RatingDistributionDto> RatingDistribution { get; init; } = [];
     public IReadOnlyList<ReviewByPeriodDto> ReviewsByPeriod { get; init; } = [];
 }
@@ -70,7 +65,6 @@ public record ReviewByPeriodDto
 {
     public string Period { get; init; } = string.Empty;
     public int TotalReviews { get; init; }
-    public int CompletedReviews { get; init; }
     public double AverageRating { get; init; }
 }
 
@@ -246,8 +240,6 @@ public record ReviewHistoryDto
     public PerformanceRating Rating { get; init; }
     public string RatingName { get; init; } = string.Empty;
     public DateTime ReviewDate { get; init; }
-    public ReviewStatus Status { get; init; }
-    public string StatusName { get; init; } = string.Empty;
 }
 
 /// <summary>

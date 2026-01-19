@@ -246,7 +246,7 @@ public class BackupService : IBackupService
                     {
                         var entity = new PerformanceReview(r.DirectReportId, r.ReviewPeriod, r.ReviewDate);
                         SetEntityId(entity, r.Id);
-                        entity.UpdateContent(r.Strengths, r.AreasForImprovement, r.GoalsForNextPeriod, r.ManagerNotes, (PerformanceRating)r.Rating);
+                        entity.UpdateContent(r.Strengths, r.AreasForImprovement, r.ManagerNotes, (PerformanceRating)r.Rating);
                         await _reviewRepository.AddAsync(entity, cancellationToken);
                         reviewsRestored++;
                     }
@@ -580,16 +580,11 @@ public class BackupService : IBackupService
         ReviewPeriod = r.ReviewPeriod,
         ReviewDate = r.ReviewDate,
         Rating = (int)r.Rating,
-        Status = (int)r.Status,
         Strengths = r.Strengths,
         AreasForImprovement = r.AreasForImprovement,
-        GoalsForNextPeriod = r.GoalsForNextPeriod,
         ManagerNotes = r.ManagerNotes,
-        EmployeeSelfAssessment = r.EmployeeSelfAssessment,
         CreatedAt = r.CreatedAt,
-        UpdatedAt = r.UpdatedAt,
-        SubmittedAt = r.SubmittedAt,
-        AcknowledgedAt = r.AcknowledgedAt
+        UpdatedAt = r.UpdatedAt
     };
 
     private static OneOnOneMeetingBackup MapMeeting(OneOnOneMeeting m) => new()

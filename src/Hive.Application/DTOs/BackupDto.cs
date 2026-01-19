@@ -78,17 +78,11 @@ public record PerformanceReviewBackup
     public string ReviewPeriod { get; init; } = string.Empty;
     public DateTime ReviewDate { get; init; }
     public int Rating { get; init; }
-    public int Status { get; init; }
     public string Strengths { get; init; } = string.Empty;
     public string AreasForImprovement { get; init; } = string.Empty;
-    public string GoalsForNextPeriod { get; init; } = string.Empty;
     public string ManagerNotes { get; init; } = string.Empty;
-    public string EmployeeSelfAssessment { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
-    public DateTime? SubmittedAt { get; init; }
-    public DateTime? AcknowledgedAt { get; init; }
-    public DateTime? CompletedAt { get; init; }
 }
 
 public record OneOnOneMeetingBackup

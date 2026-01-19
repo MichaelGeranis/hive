@@ -639,8 +639,7 @@ public class BackupServiceTests
                     DirectReportId = directReportId,
                     ReviewPeriod = "2024-Q1",
                     ReviewDate = DateTime.UtcNow,
-                    Rating = (int)PerformanceRating.MeetsExpectations,
-                    Status = (int)ReviewStatus.Draft
+                    Rating = (int)PerformanceRating.MeetsExpectations
                 }
             },
             Meetings = new List<OneOnOneMeetingBackup>

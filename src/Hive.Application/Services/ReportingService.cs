@@ -145,13 +145,7 @@ public class ReportingService : IReportingService
         var directReportIds = directReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
         var reviews = allReviews.Where(r => directReportIds.Contains(r.DirectReportId)).ToList();
 
-        var draftCount = reviews.Count(r => r.Status == ReviewStatus.Draft);
-        var submittedCount = reviews.Count(r => r.Status == ReviewStatus.Submitted);
-        var acknowledgedCount = reviews.Count(r => r.Status == ReviewStatus.Acknowledged);
-        var completedCount = reviews.Count(r => r.Status == ReviewStatus.Completed);
-
-        var completedReviews = reviews.Where(r => r.Status == ReviewStatus.Completed).ToList();
-        var ratedReviews = completedReviews.Where(r => r.Rating != PerformanceRating.NotRated).ToList();
+        var ratedReviews = reviews.Where(r => r.Rating != PerformanceRating.NotRated).ToList();
 
         var ratingDistribution = Enum.GetValues<PerformanceRating>()
             .Where(r => r != PerformanceRating.NotRated)
@@ -173,7 +167,6 @@ public class ReportingService : IReportingService
             {
                 Period = g.Key,
                 TotalReviews = g.Count(),
-                CompletedReviews = g.Count(r => r.Status == ReviewStatus.Completed),
                 AverageRating = g.Where(r => r.Rating != PerformanceRating.NotRated)
                     .Select(r => (int)r.Rating)
                     .DefaultIfEmpty(0)
@@ -185,11 +178,6 @@ public class ReportingService : IReportingService
         return new ReviewsOverviewDto
         {
             TotalReviews = reviews.Count,
-            DraftReviews = draftCount,
-            SubmittedReviews = submittedCount,
-            AcknowledgedReviews = acknowledgedCount,
-            CompletedReviews = completedCount,
-            CompletionRate = reviews.Count > 0 ? Math.Round((double)completedCount / reviews.Count * 100, 1) : 0,
             RatingDistribution = ratingDistribution,
             ReviewsByPeriod = reviewsByPeriod
         };
@@ -390,15 +378,14 @@ public class ReportingService : IReportingService
         var tasks = ExcludeParentTasks(allTasks, parents);
 
         // Reviews analytics
-        var completedReviews = reviews.Where(r => r.Status == ReviewStatus.Completed).ToList();
-        var latestReview = completedReviews.OrderByDescending(r => r.ReviewDate).FirstOrDefault();
-        var ratedReviews = completedReviews.Where(r => r.Rating != PerformanceRating.NotRated).ToList();
+        var ratedReviews = reviews.Where(r => r.Rating != PerformanceRating.NotRated).ToList();
+        var latestReview = reviews.OrderByDescending(r => r.ReviewDate).FirstOrDefault();
         var avgRating = ratedReviews.Count > 0 ? Math.Round(ratedReviews.Average(r => (int)r.Rating), 1) : 0;
 
         var reviewsAnalytics = new ReviewsAnalyticsDto
         {
             TotalReviews = reviews.Count,
-            CompletedReviews = completedReviews.Count,
+            CompletedReviews = reviews.Count,
             LatestRating = latestReview?.Rating,
             LatestRatingName = latestReview?.Rating.ToString(),
             AverageRating = avgRating,
@@ -407,9 +394,7 @@ public class ReportingService : IReportingService
                 Period = r.ReviewPeriod,
                 Rating = r.Rating,
                 RatingName = r.Rating.ToString(),
-                ReviewDate = r.ReviewDate,
-                Status = r.Status,
-                StatusName = r.Status.ToString()
+                ReviewDate = r.ReviewDate
             }).ToList()
         };
 

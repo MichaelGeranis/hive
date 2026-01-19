@@ -1,23 +1,24 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Star, CheckCircle, Send, MoreVertical, Edit, Trash2, Search, X, Filter, Users } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { Plus, Star, MoreVertical, Edit, Trash2, Search, X, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
-import { ReviewStatus } from '../types'
 import type { PerformanceReview, DirectReport } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
-const statusColors: Record<ReviewStatus, string> = {
-  [ReviewStatus.Draft]: 'bg-slate-100 text-slate-700',
-  [ReviewStatus.Submitted]: 'bg-blue-100 text-blue-700',
-  [ReviewStatus.Acknowledged]: 'bg-purple-100 text-purple-700',
-  [ReviewStatus.Completed]: 'bg-green-100 text-green-700',
+// Map rating enum values to star counts:
+// NotRated (0) → 0 stars, NeedsImprovement (1) → 2 stars, MeetsExpectations (2) → 3 stars,
+// ExceedsExpectations (3) → 4 stars, Outstanding (4) → 5 stars
+const getRatingStarCount = (rating: number): number => {
+  if (rating === 0) return 0
+  return rating + 1
 }
 
 const ratingStars = (rating: number) => {
+  const starCount = getRatingStarCount(rating)
   return Array.from({ length: 5 }, (_, i) => (
     <Star
       key={i}
-      className={`w-4 h-4 ${i < rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`}
+      className={`w-4 h-4 ${i < starCount ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`}
     />
   ))
 }
@@ -26,7 +27,6 @@ export default function Reviews() {
   const [reviews, setReviews] = useState<PerformanceReview[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | ReviewStatus>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +36,6 @@ export default function Reviews() {
     rating: '0',
     strengths: '',
     areasForImprovement: '',
-    goalsForNextPeriod: '',
     managerNotes: ''
   })
 
@@ -47,7 +46,6 @@ export default function Reviews() {
       rating: '0',
       strengths: '',
       areasForImprovement: '',
-      goalsForNextPeriod: '',
       managerNotes: ''
     })
   }
@@ -96,17 +94,7 @@ export default function Reviews() {
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedDirectReportId(null)
-    setFilter('all')
   }
-
-  // Calculate status counts
-  const statusCounts = useMemo(() => ({
-    all: reviews.length,
-    [ReviewStatus.Draft]: reviews.filter(r => r.status === ReviewStatus.Draft).length,
-    [ReviewStatus.Submitted]: reviews.filter(r => r.status === ReviewStatus.Submitted).length,
-    [ReviewStatus.Acknowledged]: reviews.filter(r => r.status === ReviewStatus.Acknowledged).length,
-    [ReviewStatus.Completed]: reviews.filter(r => r.status === ReviewStatus.Completed).length,
-  }), [reviews])
 
   const filteredReviews = (() => {
     let result = reviews
@@ -127,24 +115,8 @@ export default function Reviews() {
       result = result.filter(r => r.directReportId === selectedDirectReportId)
     }
 
-    // Apply status filter
-    if (filter !== 'all') {
-      result = result.filter(r => r.status === filter)
-    }
-
     return result
   })()
-
-  const handleAction = async (id: string, action: 'submit' | 'acknowledge' | 'complete') => {
-    try {
-      if (action === 'submit') await reviewsApi.submit(id)
-      else if (action === 'acknowledge') await reviewsApi.acknowledge(id)
-      else if (action === 'complete') await reviewsApi.complete(id)
-      loadReviews()
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -155,7 +127,6 @@ export default function Reviews() {
         const updateData = {
           strengths: formData.strengths,
           areasForImprovement: formData.areasForImprovement,
-          goalsForNextPeriod: formData.goalsForNextPeriod,
           managerNotes: formData.managerNotes,
           rating: parseInt(formData.rating)
         }
@@ -164,7 +135,11 @@ export default function Reviews() {
         const reviewData = {
           directReportId: formData.directReportId,
           reviewPeriod: formData.reviewPeriod,
-          reviewDate: new Date().toISOString()
+          reviewDate: new Date().toISOString(),
+          rating: parseInt(formData.rating),
+          strengths: formData.strengths,
+          areasForImprovement: formData.areasForImprovement,
+          managerNotes: formData.managerNotes
         }
         await reviewsApi.create(reviewData)
       }
@@ -186,7 +161,6 @@ export default function Reviews() {
       rating: review.rating.toString(),
       strengths: review.strengths || '',
       areasForImprovement: review.areasForImprovement || '',
-      goalsForNextPeriod: review.goalsForNextPeriod || '',
       managerNotes: review.managerNotes || ''
     })
     setEditingId(review.id)
@@ -302,16 +276,6 @@ export default function Reviews() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Goals for Next Period</label>
-                  <textarea
-                    value={formData.goalsForNextPeriod}
-                    onChange={(e) => setFormData({ ...formData, goalsForNextPeriod: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-                    rows={2}
-                    placeholder="Goals for next period..."
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Manager Notes</label>
                   <textarea
                     value={formData.managerNotes}
@@ -359,7 +323,7 @@ export default function Reviews() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedDirectReportId || filter !== 'all') && (
+          {(searchQuery || selectedDirectReportId) && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -388,34 +352,6 @@ export default function Reviews() {
             ))}
           </div>
         )}
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
-              { value: ReviewStatus.Draft, label: `Draft (${statusCounts[ReviewStatus.Draft]})`, count: statusCounts[ReviewStatus.Draft] },
-              { value: ReviewStatus.Submitted, label: `Submitted (${statusCounts[ReviewStatus.Submitted]})`, count: statusCounts[ReviewStatus.Submitted] },
-              { value: ReviewStatus.Acknowledged, label: `Acknowledged (${statusCounts[ReviewStatus.Acknowledged]})`, count: statusCounts[ReviewStatus.Acknowledged] },
-              { value: ReviewStatus.Completed, label: `Completed (${statusCounts[ReviewStatus.Completed]})`, count: statusCounts[ReviewStatus.Completed] },
-            ]
-              .filter((f) => f.value === 'all' || f.count > 0)
-              .map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filter === f.value
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Reviews List */}
@@ -445,50 +381,18 @@ export default function Reviews() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[review.status]}`}>
-                      {review.statusDescription}
-                    </span>
-                    {review.status === ReviewStatus.Draft && (
-                      <button
-                        onClick={() => handleAction(review.id, 'submit')}
-                        className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                      >
-                        <Send className="w-4 h-4" />
-                        Submit
-                      </button>
-                    )}
-                    {review.status === ReviewStatus.Submitted && (
-                      <button
-                        onClick={() => handleAction(review.id, 'acknowledge')}
-                        className="flex items-center gap-1 px-3 py-1 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Acknowledge
-                      </button>
-                    )}
-                    {review.status === ReviewStatus.Acknowledged && (
-                      <button
-                        onClick={() => handleAction(review.id, 'complete')}
-                        className="flex items-center gap-1 px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Complete
-                      </button>
-                    )}
                     <div className="relative group">
                       <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
                       <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                        {review.status === ReviewStatus.Draft && (
-                          <button
-                            onClick={() => handleEdit(review)}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleEdit(review)}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
                         <button
                           onClick={() => handleDelete(review.id)}
                           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"

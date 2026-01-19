@@ -11,14 +11,3 @@ public enum PerformanceRating
     ExceedsExpectations = 3,
     Outstanding = 4
 }
-
-/// <summary>
-/// Represents the status of a performance review.
-/// </summary>
-public enum ReviewStatus
-{
-    Draft = 0,
-    Submitted = 1,
-    Acknowledged = 2,
-    Completed = 3
-}

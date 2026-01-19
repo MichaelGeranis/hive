@@ -34,14 +34,6 @@ public class SqlitePerformanceReviewRepository : IPerformanceReviewRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PerformanceReview>> GetByStatusAsync(ReviewStatus status, CancellationToken cancellationToken = default)
-    {
-        return await _context.PerformanceReviews
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.ReviewDate)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<PerformanceReview> AddAsync(PerformanceReview review, CancellationToken cancellationToken = default)
     {
         _context.PerformanceReviews.Add(review);

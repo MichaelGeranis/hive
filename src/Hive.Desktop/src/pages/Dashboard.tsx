@@ -195,10 +195,23 @@ export default function Dashboard() {
         return new Date(a.actionDueDate).getTime() - new Date(b.actionDueDate).getTime()
       })
       setActionItems(sortedActionItems)
-      // Filter for urgent (3) and high (2) priority notes, sort by priority descending
+      // Filter for urgent (3) and high (2) priority notes
+      // Sort by due date (closest first), then by priority (urgent first)
       const highPriorityNotes = notesData
         .filter((note: ManagerNote) => note.priority >= 2)
-        .sort((a: ManagerNote, b: ManagerNote) => b.priority - a.priority)
+        .sort((a: ManagerNote, b: ManagerNote) => {
+          // First sort by due date (closest to today first, null dates last)
+          if (a.dueDate && b.dueDate) {
+            const dateCompare = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+            if (dateCompare !== 0) return dateCompare
+          } else if (a.dueDate && !b.dueDate) {
+            return -1 // a has date, b doesn't - a comes first
+          } else if (!a.dueDate && b.dueDate) {
+            return 1 // b has date, a doesn't - b comes first
+          }
+          // Then sort by priority (higher priority first: 3=urgent before 2=high)
+          return b.priority - a.priority
+        })
       setPriorityNotes(highPriorityNotes)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')

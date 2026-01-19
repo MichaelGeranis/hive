@@ -39,15 +39,6 @@ public class PerformanceReviewRepository : IPerformanceReviewRepository
         return Task.FromResult<IReadOnlyList<PerformanceReview>>(entities);
     }
 
-    public Task<IReadOnlyList<PerformanceReview>> GetByStatusAsync(ReviewStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = _context.PerformanceReviews.Values
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.ReviewDate)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<PerformanceReview>>(entities);
-    }
-
     public Task<PerformanceReview> AddAsync(PerformanceReview review, CancellationToken cancellationToken = default)
     {
         if (!_context.PerformanceReviews.TryAdd(review.Id, review))

@@ -58,9 +58,7 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.ReviewPeriod).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Strengths).HasMaxLength(4000);
             entity.Property(e => e.AreasForImprovement).HasMaxLength(4000);
-            entity.Property(e => e.GoalsForNextPeriod).HasMaxLength(4000);
             entity.Property(e => e.ManagerNotes).HasMaxLength(4000);
-            entity.Property(e => e.EmployeeSelfAssessment).HasMaxLength(4000);
             entity.HasIndex(e => e.DirectReportId);
             entity.HasIndex(e => new { e.DirectReportId, e.ReviewPeriod }).IsUnique();
         });
@@ -320,18 +318,9 @@ public class HiveDbContext : DbContext
             new PerformanceReview(carol.Id, "2024 H1", DateTime.UtcNow.AddMonths(-6))
         };
 
-        reviews[0].UpdateContent("Excellent technical skills", "Could improve documentation", "Lead a major feature", "Great team player", PerformanceRating.ExceedsExpectations);
-        reviews[0].Submit();
-        reviews[0].Acknowledge();
-        reviews[0].Complete();
-
-        reviews[1].UpdateContent("Good progress", "Need more ownership", "Complete certification", "Improving steadily", PerformanceRating.MeetsExpectations);
-        reviews[1].Submit();
-
-        reviews[2].UpdateContent("Outstanding leadership", "Delegate more", "Mentor 2 engineers", "Role model for the team", PerformanceRating.Outstanding);
-        reviews[2].Submit();
-        reviews[2].Acknowledge();
-        reviews[2].Complete();
+        reviews[0].UpdateContent("Excellent technical skills", "Could improve documentation", "Great team player", PerformanceRating.ExceedsExpectations);
+        reviews[1].UpdateContent("Good progress", "Need more ownership", "Improving steadily", PerformanceRating.MeetsExpectations);
+        reviews[2].UpdateContent("Outstanding leadership", "Delegate more", "Role model for the team", PerformanceRating.Outstanding);
 
         PerformanceReviews.AddRange(reviews);
         SaveChanges();

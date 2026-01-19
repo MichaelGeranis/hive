@@ -46,12 +46,6 @@ public class PerformanceReviewService : IPerformanceReviewService
         return await MapToDtosAsync(entities, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PerformanceReviewDto>> GetByStatusAsync(ReviewStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = await _reviewRepository.GetByStatusAsync(status, cancellationToken);
-        return await MapToDtosAsync(entities, cancellationToken);
-    }
-
     public async Task<PerformanceReviewDto> CreateAsync(CreatePerformanceReviewDto dto, CancellationToken cancellationToken = default)
     {
         // Validate direct report exists
@@ -68,6 +62,17 @@ public class PerformanceReviewService : IPerformanceReviewService
         }
 
         var entity = new PerformanceReview(dto.DirectReportId, dto.ReviewPeriod, dto.ReviewDate);
+
+        // If optional content fields are provided, set them on creation
+        if (dto.Strengths != null || dto.AreasForImprovement != null || dto.ManagerNotes != null || dto.Rating.HasValue)
+        {
+            entity.UpdateContent(
+                dto.Strengths ?? string.Empty,
+                dto.AreasForImprovement ?? string.Empty,
+                dto.ManagerNotes ?? string.Empty,
+                dto.Rating ?? PerformanceRating.NotRated);
+        }
+
         var created = await _reviewRepository.AddAsync(entity, cancellationToken);
 
         // Log activity
@@ -89,83 +94,9 @@ public class PerformanceReviewService : IPerformanceReviewService
         entity.UpdateContent(
             dto.Strengths,
             dto.AreasForImprovement,
-            dto.GoalsForNextPeriod,
             dto.ManagerNotes,
             dto.Rating);
 
-        await _reviewRepository.UpdateAsync(entity, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
-        return MapToDto(entity, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<PerformanceReviewDto> UpdateSelfAssessmentAsync(Guid id, UpdateSelfAssessmentDto dto, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.UpdateSelfAssessment(dto.SelfAssessment);
-        await _reviewRepository.UpdateAsync(entity, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
-        return MapToDto(entity, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<PerformanceReviewDto> SubmitAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Submit();
-        await _reviewRepository.UpdateAsync(entity, cancellationToken);
-
-        // Log activity
-        await _activityService.LogActivityAsync(
-            ActivityType.StatusChanged,
-            EntityType.Review,
-            entity.Id,
-            $"Performance Review - {entity.ReviewPeriod}",
-            "Performance review submitted",
-            cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
-        return MapToDto(entity, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<PerformanceReviewDto> AcknowledgeAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Acknowledge();
-        await _reviewRepository.UpdateAsync(entity, cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
-        return MapToDto(entity, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<PerformanceReviewDto> CompleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Complete();
-        await _reviewRepository.UpdateAsync(entity, cancellationToken);
-
-        // Log activity
-        await _activityService.LogActivityAsync(
-            ActivityType.Completed,
-            EntityType.Review,
-            entity.Id,
-            $"Performance Review - {entity.ReviewPeriod}",
-            "Performance review completed",
-            cancellationToken);
-
-        var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
-        return MapToDto(entity, directReport?.FullName ?? "Unknown");
-    }
-
-    public async Task<PerformanceReviewDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
-
-        entity.Reopen();
         await _reviewRepository.UpdateAsync(entity, cancellationToken);
 
         var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
@@ -220,17 +151,11 @@ public class PerformanceReviewService : IPerformanceReviewService
         ReviewDate = entity.ReviewDate,
         Rating = entity.Rating,
         RatingDescription = GetRatingDescription(entity.Rating),
-        Status = entity.Status,
-        StatusDescription = GetStatusDescription(entity.Status),
         Strengths = entity.Strengths,
         AreasForImprovement = entity.AreasForImprovement,
-        GoalsForNextPeriod = entity.GoalsForNextPeriod,
         ManagerNotes = entity.ManagerNotes,
-        EmployeeSelfAssessment = entity.EmployeeSelfAssessment,
         CreatedAt = entity.CreatedAt,
-        UpdatedAt = entity.UpdatedAt,
-        SubmittedAt = entity.SubmittedAt,
-        AcknowledgedAt = entity.AcknowledgedAt
+        UpdatedAt = entity.UpdatedAt
     };
 
     private static string GetRatingDescription(PerformanceRating rating) => rating switch
@@ -240,15 +165,6 @@ public class PerformanceReviewService : IPerformanceReviewService
         PerformanceRating.MeetsExpectations => "Meets Expectations",
         PerformanceRating.ExceedsExpectations => "Exceeds Expectations",
         PerformanceRating.Outstanding => "Outstanding",
-        _ => "Unknown"
-    };
-
-    private static string GetStatusDescription(ReviewStatus status) => status switch
-    {
-        ReviewStatus.Draft => "Draft",
-        ReviewStatus.Submitted => "Submitted",
-        ReviewStatus.Acknowledged => "Acknowledged",
-        ReviewStatus.Completed => "Completed",
         _ => "Unknown"
     };
 }

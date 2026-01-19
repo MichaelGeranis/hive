@@ -110,28 +110,6 @@ public class PerformanceReviewsControllerTests
 
     #endregion
 
-    #region GetByStatus Tests
-
-    [Fact]
-    public async Task GetByStatus_ReturnsOkWithReviews()
-    {
-        // Arrange
-        var status = ReviewStatus.Draft;
-        var reviews = new List<PerformanceReviewDto> { CreateDto(status) };
-
-        _serviceMock.Setup(s => s.GetByStatusAsync(status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(reviews);
-
-        // Act
-        var result = await _controller.GetByStatus(status, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<PerformanceReviewDto>>();
-    }
-
-    #endregion
-
     #region Create Tests
 
     [Fact]
@@ -213,7 +191,6 @@ public class PerformanceReviewsControllerTests
             ManagerNotes = "Updated notes",
             Strengths = "Great communication",
             AreasForImprovement = "Time management",
-            GoalsForNextPeriod = "Lead a project",
             Rating = PerformanceRating.MeetsExpectations
         };
         var resultDto = CreateDto();
@@ -240,235 +217,6 @@ public class PerformanceReviewsControllerTests
 
         // Act
         var result = await _controller.UpdateContent(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task UpdateContent_WhenReviewCompleted_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdatePerformanceReviewContentDto();
-
-        _serviceMock.Setup(s => s.UpdateContentAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Cannot update completed review"));
-
-        // Act
-        var result = await _controller.UpdateContent(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
-    #region UpdateSelfAssessment Tests
-
-    [Fact]
-    public async Task UpdateSelfAssessment_WhenExists_ReturnsOkWithUpdatedReview()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdateSelfAssessmentDto
-        {
-            SelfAssessment = "Updated self assessment"
-        };
-        var resultDto = CreateDto();
-
-        _serviceMock.Setup(s => s.UpdateSelfAssessmentAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.UpdateSelfAssessment(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task UpdateSelfAssessment_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdateSelfAssessmentDto();
-
-        _serviceMock.Setup(s => s.UpdateSelfAssessmentAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("PerformanceReview", id));
-
-        // Act
-        var result = await _controller.UpdateSelfAssessment(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    #endregion
-
-    #region Submit Tests
-
-    [Fact]
-    public async Task Submit_WhenExists_ReturnsOkWithSubmittedReview()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto(ReviewStatus.Submitted);
-
-        _serviceMock.Setup(s => s.SubmitAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Submit(id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var review = okResult.Value as PerformanceReviewDto;
-        review!.Status.Should().Be(ReviewStatus.Submitted);
-    }
-
-    [Fact]
-    public async Task Submit_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.SubmitAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("PerformanceReview", id));
-
-        // Act
-        var result = await _controller.Submit(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task Submit_WhenAlreadySubmitted_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.SubmitAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Review already submitted"));
-
-        // Act
-        var result = await _controller.Submit(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    #endregion
-
-    #region Acknowledge Tests
-
-    [Fact]
-    public async Task Acknowledge_WhenExists_ReturnsOkWithAcknowledgedReview()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto(ReviewStatus.Acknowledged);
-
-        _serviceMock.Setup(s => s.AcknowledgeAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Acknowledge(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task Acknowledge_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.AcknowledgeAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("PerformanceReview", id));
-
-        // Act
-        var result = await _controller.Acknowledge(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    #endregion
-
-    #region Complete Tests
-
-    [Fact]
-    public async Task Complete_WhenExists_ReturnsOkWithCompletedReview()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto(ReviewStatus.Completed);
-
-        _serviceMock.Setup(s => s.CompleteAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Complete(id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var review = okResult.Value as PerformanceReviewDto;
-        review!.Status.Should().Be(ReviewStatus.Completed);
-    }
-
-    [Fact]
-    public async Task Complete_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.CompleteAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("PerformanceReview", id));
-
-        // Act
-        var result = await _controller.Complete(id, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    #endregion
-
-    #region Reopen Tests
-
-    [Fact]
-    public async Task Reopen_WhenExists_ReturnsOkWithReopenedReview()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var resultDto = CreateDto(ReviewStatus.Draft);
-
-        _serviceMock.Setup(s => s.ReopenAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Reopen(id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var review = okResult.Value as PerformanceReviewDto;
-        review!.Status.Should().Be(ReviewStatus.Draft);
-    }
-
-    [Fact]
-    public async Task Reopen_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.ReopenAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("PerformanceReview", id));
-
-        // Act
-        var result = await _controller.Reopen(id, CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
@@ -514,7 +262,7 @@ public class PerformanceReviewsControllerTests
 
     #region Helper Methods
 
-    private static PerformanceReviewDto CreateDto(ReviewStatus status = ReviewStatus.Draft)
+    private static PerformanceReviewDto CreateDto()
     {
         return new PerformanceReviewDto
         {
@@ -523,19 +271,13 @@ public class PerformanceReviewsControllerTests
             DirectReportName = "John Doe",
             ReviewPeriod = "2024 Annual Review",
             ReviewDate = new DateTime(2024, 12, 31),
-            Status = status,
-            StatusDescription = status.ToString(),
             Rating = PerformanceRating.MeetsExpectations,
             RatingDescription = "Meets Expectations",
             Strengths = "Good performance",
             AreasForImprovement = "Time management",
-            GoalsForNextPeriod = "Lead a project",
             ManagerNotes = "Manager notes",
-            EmployeeSelfAssessment = "Self assessment",
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = null,
-            SubmittedAt = null,
-            AcknowledgedAt = null
+            UpdatedAt = null
         };
     }
 

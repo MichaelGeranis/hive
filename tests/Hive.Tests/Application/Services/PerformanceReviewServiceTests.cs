@@ -122,26 +122,6 @@ public class PerformanceReviewServiceTests
     }
 
     [Fact]
-    public async Task GetByStatusAsync_ReturnsMatchingReviews()
-    {
-        // Arrange
-        var reviews = new List<PerformanceReview>
-        {
-            new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow)
-        };
-        _reviewRepositoryMock.Setup(r => r.GetByStatusAsync(ReviewStatus.Draft, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(reviews);
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
-
-        // Act
-        var result = await _service.GetByStatusAsync(ReviewStatus.Draft);
-
-        // Assert
-        result.Should().HaveCount(1);
-    }
-
-    [Fact]
     public async Task CreateAsync_WithValidDto_CreatesReview()
     {
         // Arrange
@@ -165,7 +145,7 @@ public class PerformanceReviewServiceTests
         // Assert
         result.Should().NotBeNull();
         result.ReviewPeriod.Should().Be(dto.ReviewPeriod);
-        result.Status.Should().Be(ReviewStatus.Draft);
+        result.Rating.Should().Be(PerformanceRating.NotRated);
         _reviewRepositoryMock.Verify(r => r.AddAsync(It.IsAny<PerformanceReview>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -215,11 +195,17 @@ public class PerformanceReviewServiceTests
     }
 
     [Fact]
-    public async Task SubmitAsync_UpdatesStatusToSubmitted()
+    public async Task UpdateContentAsync_WhenExists_UpdatesReview()
     {
         // Arrange
         var review = new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow);
-        review.UpdateContent("Strong", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
+        var dto = new UpdatePerformanceReviewContentDto
+        {
+            Strengths = "Great communication",
+            AreasForImprovement = "Time management",
+            ManagerNotes = "Good progress",
+            Rating = PerformanceRating.MeetsExpectations
+        };
 
         _reviewRepositoryMock.Setup(r => r.GetByIdAsync(review.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(review);
@@ -227,72 +213,13 @@ public class PerformanceReviewServiceTests
             .ReturnsAsync(_testDirectReport);
 
         // Act
-        var result = await _service.SubmitAsync(review.Id);
+        var result = await _service.UpdateContentAsync(review.Id, dto);
 
         // Assert
-        result.Status.Should().Be(ReviewStatus.Submitted);
+        result.Strengths.Should().Be(dto.Strengths);
+        result.AreasForImprovement.Should().Be(dto.AreasForImprovement);
+        result.Rating.Should().Be(dto.Rating);
         _reviewRepositoryMock.Verify(r => r.UpdateAsync(review, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task AcknowledgeAsync_UpdatesStatusToAcknowledged()
-    {
-        // Arrange
-        var review = new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow);
-        review.UpdateContent("Strong", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
-        review.Submit();
-
-        _reviewRepositoryMock.Setup(r => r.GetByIdAsync(review.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(review);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReport.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.AcknowledgeAsync(review.Id);
-
-        // Assert
-        result.Status.Should().Be(ReviewStatus.Acknowledged);
-    }
-
-    [Fact]
-    public async Task CompleteAsync_UpdatesStatusToCompleted()
-    {
-        // Arrange
-        var review = new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow);
-        review.UpdateContent("Strong", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
-        review.Submit();
-        review.Acknowledge();
-
-        _reviewRepositoryMock.Setup(r => r.GetByIdAsync(review.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(review);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReport.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.CompleteAsync(review.Id);
-
-        // Assert
-        result.Status.Should().Be(ReviewStatus.Completed);
-    }
-
-    [Fact]
-    public async Task ReopenAsync_UpdatesStatusToDraft()
-    {
-        // Arrange
-        var review = new PerformanceReview(_testDirectReport.Id, "2024 Annual", DateTime.UtcNow);
-        review.UpdateContent("Strong", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
-        review.Submit();
-
-        _reviewRepositoryMock.Setup(r => r.GetByIdAsync(review.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(review);
-        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReport.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testDirectReport);
-
-        // Act
-        var result = await _service.ReopenAsync(review.Id);
-
-        // Assert
-        result.Status.Should().Be(ReviewStatus.Draft);
     }
 
     [Fact]

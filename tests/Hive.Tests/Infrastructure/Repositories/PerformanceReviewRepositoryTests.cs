@@ -120,27 +120,6 @@ public class PerformanceReviewRepositoryTests
     }
 
     [Fact]
-    public async Task GetByStatusAsync_ReturnsMatchingReviews()
-    {
-        // Arrange
-        var draftReview = CreateAndAddReview();
-
-        var submittedReview = CreateAndAddReview();
-        submittedReview.UpdateContent("Strengths", "Areas", "Goals", "Notes", PerformanceRating.MeetsExpectations);
-        submittedReview.Submit();
-        _context.PerformanceReviews[submittedReview.Id] = submittedReview;
-
-        var anotherDraft = CreateAndAddReview();
-
-        // Act
-        var result = await _repository.GetByStatusAsync(ReviewStatus.Draft);
-
-        // Assert
-        result.Should().HaveCount(2);
-        result.Should().AllSatisfy(r => r.Status.Should().Be(ReviewStatus.Draft));
-    }
-
-    [Fact]
     public async Task AddAsync_AddsReviewToContext()
     {
         // Arrange
@@ -173,7 +152,7 @@ public class PerformanceReviewRepositoryTests
     {
         // Arrange
         var review = CreateAndAddReview();
-        review.UpdateContent("Updated strengths", "Updated areas", "Updated goals", "Updated notes", PerformanceRating.ExceedsExpectations);
+        review.UpdateContent("Updated strengths", "Updated areas", "Updated notes", PerformanceRating.ExceedsExpectations);
 
         // Act
         await _repository.UpdateAsync(review);

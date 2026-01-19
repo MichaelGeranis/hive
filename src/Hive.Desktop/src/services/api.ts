@@ -195,9 +195,6 @@ export const reviewsApi = {
     api.get<PerformanceReview[]>(`/performancereviews/direct-report/${directReportId}`).then(r => r.data),
   create: (data: any) => api.post<PerformanceReview>('/performancereviews', data).then(r => r.data),
   update: (id: string, data: any) => api.put<PerformanceReview>(`/performancereviews/${id}/content`, data).then(r => r.data),
-  submit: (id: string) => api.post<PerformanceReview>(`/performancereviews/${id}/submit`).then(r => r.data),
-  acknowledge: (id: string) => api.post<PerformanceReview>(`/performancereviews/${id}/acknowledge`).then(r => r.data),
-  complete: (id: string) => api.post<PerformanceReview>(`/performancereviews/${id}/complete`).then(r => r.data),
   delete: (id: string) => api.delete(`/performancereviews/${id}`)
 }
 

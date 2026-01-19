@@ -14,7 +14,6 @@ import type {
   TaskStatus,
   TaskType,
   PerformanceRating,
-  ReviewStatus,
   NoteCategory,
   ActionItemStatus,
 } from '../types'
@@ -164,13 +163,10 @@ export function createPerformanceReview(overrides?: Partial<PerformanceReview>):
     reviewDate: new Date().toISOString(),
     rating: 2 as PerformanceRating,
     ratingDescription: 'Meets Expectations',
-    status: 0 as ReviewStatus,
-    statusDescription: 'Draft',
     strengths: 'Great teamwork',
     areasForImprovement: 'Communication',
-    goalsForNextPeriod: 'Lead a project',
     managerNotes: '',
-    employeeSelfAssessment: '',
+    createdAt: new Date().toISOString(),
     ...overrides,
   }
 }

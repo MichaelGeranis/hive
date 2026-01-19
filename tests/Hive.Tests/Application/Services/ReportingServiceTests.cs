@@ -118,9 +118,6 @@ public class ReportingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.TotalReviews.Should().Be(0);
-        result.DraftReviews.Should().Be(0);
-        result.CompletedReviews.Should().Be(0);
-        result.CompletionRate.Should().Be(0);
         result.RatingDistribution.Should().HaveCount(4); // All rating values with 0 counts
         result.RatingDistribution.Should().OnlyContain(r => r.Count == 0);
     }
@@ -131,9 +128,9 @@ public class ReportingServiceTests
         // Arrange
         var reviews = new List<PerformanceReview>
         {
-            CreateReview(_testDirectReportId, ReviewStatus.Draft, PerformanceRating.NotRated),
-            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.MeetsExpectations),
-            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.ExceedsExpectations)
+            CreateReview(_testDirectReportId, PerformanceRating.NotRated),
+            CreateReview(_testDirectReportId, PerformanceRating.MeetsExpectations),
+            CreateReview(_testDirectReportId, PerformanceRating.ExceedsExpectations)
         };
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -146,9 +143,6 @@ public class ReportingServiceTests
 
         // Assert
         result.TotalReviews.Should().Be(3);
-        result.DraftReviews.Should().Be(1);
-        result.CompletedReviews.Should().Be(2);
-        result.CompletionRate.Should().Be(66.7);
         result.RatingDistribution.Should().HaveCount(4); // All rating values
         result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.MeetsExpectations && r.Count == 1);
         result.RatingDistribution.Should().Contain(r => r.Rating == PerformanceRating.ExceedsExpectations && r.Count == 1);
@@ -178,8 +172,8 @@ public class ReportingServiceTests
 
         var reviews = new List<PerformanceReview>
         {
-            CreateReview(_testDirectReportId, ReviewStatus.Completed, PerformanceRating.MeetsExpectations),
-            CreateReview(indirectReportId, ReviewStatus.Completed, PerformanceRating.ExceedsExpectations)
+            CreateReview(_testDirectReportId, PerformanceRating.MeetsExpectations),
+            CreateReview(indirectReportId, PerformanceRating.ExceedsExpectations)
         };
 
         _reviewRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -583,28 +577,14 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<Parent>());
     }
 
-    private PerformanceReview CreateReview(Guid directReportId, ReviewStatus status, PerformanceRating rating)
+    private PerformanceReview CreateReview(Guid directReportId, PerformanceRating rating)
     {
         var review = new PerformanceReview(
             directReportId,
             "2024",
             DateTime.UtcNow);
 
-        if (status == ReviewStatus.Submitted || status == ReviewStatus.Acknowledged || status == ReviewStatus.Completed)
-        {
-            review.UpdateContent("Strengths", "Areas", "Goals", "Manager notes", rating);
-            review.Submit();
-        }
-
-        if (status == ReviewStatus.Acknowledged || status == ReviewStatus.Completed)
-        {
-            review.Acknowledge();
-        }
-
-        if (status == ReviewStatus.Completed)
-        {
-            review.Complete();
-        }
+        review.UpdateContent("Strengths", "Areas", "Manager notes", rating);
 
         return review;
     }
