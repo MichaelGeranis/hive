@@ -50,6 +50,22 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update sentiment analysis settings if provided
+        if (dto.ClaudeApiKey is not null)
+        {
+            entity.UpdateClaudeApiKey(dto.ClaudeApiKey);
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
+        if (dto.SentimentAnalysisDays.HasValue || dto.SentimentAnalysisEnabled.HasValue)
+        {
+            entity.UpdateSentimentSettings(
+                dto.SentimentAnalysisDays ?? entity.SentimentAnalysisDays,
+                dto.SentimentAnalysisEnabled ?? entity.SentimentAnalysisEnabled
+            );
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         return MapToDto(entity);
     }
 
@@ -62,7 +78,10 @@ public class AppSettingsService : IAppSettingsService
             Id = entity.Id,
             StoryPointMappings = mappings,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            HasClaudeApiKey = entity.HasClaudeApiKey,
+            SentimentAnalysisDays = entity.SentimentAnalysisDays,
+            SentimentAnalysisEnabled = entity.SentimentAnalysisEnabled
         };
     }
 

@@ -9,6 +9,11 @@ public record AppSettingsDto
     public List<StoryPointMapping> StoryPointMappings { get; init; } = new();
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
+
+    // Sentiment Analysis settings (note: API key is not exposed, only a flag)
+    public bool HasClaudeApiKey { get; init; }
+    public int SentimentAnalysisDays { get; init; }
+    public bool SentimentAnalysisEnabled { get; init; }
 }
 
 public record StoryPointMapping
@@ -24,4 +29,9 @@ public record StoryPointMapping
 public record UpdateAppSettingsDto
 {
     public List<StoryPointMapping> StoryPointMappings { get; init; } = new();
+
+    // Sentiment Analysis settings
+    public string? ClaudeApiKey { get; init; }
+    public int? SentimentAnalysisDays { get; init; }
+    public bool? SentimentAnalysisEnabled { get; init; }
 }

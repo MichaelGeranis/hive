@@ -512,12 +512,18 @@ export interface StoryPointMapping {
 export interface AppSettings {
   id: string
   storyPointMappings: StoryPointMapping[]
+  hasClaudeApiKey: boolean
+  sentimentAnalysisDays: number
+  sentimentAnalysisEnabled: boolean
   createdAt: string
   updatedAt?: string
 }
 
 export interface UpdateAppSettings {
-  storyPointMappings: StoryPointMapping[]
+  storyPointMappings?: StoryPointMapping[]
+  claudeApiKey?: string
+  sentimentAnalysisDays?: number
+  sentimentAnalysisEnabled?: boolean
 }
 
 // Jira Import
@@ -1114,4 +1120,64 @@ export interface KnowledgeMatrixProject {
 export interface KnowledgeMatrixMember {
   id: string
   name: string
+}
+
+// Sentiment Analysis
+export interface SentimentStatus {
+  isEnabled: boolean
+  isConfigured: boolean
+  analysisDays: number
+}
+
+export interface SentimentScore {
+  positive: number
+  neutral: number
+  negative: number
+  overallSentiment: string
+}
+
+export interface SentimentTrend {
+  year: number
+  month: number
+  monthName: string
+  positiveScore: number
+  neutralScore: number
+  negativeScore: number
+  notesCount: number
+}
+
+export interface SentimentAnalysis {
+  directReportId: string
+  directReportName: string
+  score: SentimentScore
+  keyThemes: string[]
+  trend: SentimentTrend[]
+  analyzedAt: string
+  notesAnalyzed: number
+  daysAnalyzed: number
+}
+
+export interface DirectReportSentimentSummary {
+  directReportId: string
+  directReportName: string
+  overallSentiment: string
+  positiveScore: number
+  notesCount: number
+  trendDirection: string
+}
+
+export interface TeamSentimentOverview {
+  averagePositive: number
+  averageNeutral: number
+  averageNegative: number
+  overallTeamSentiment: string
+  byDirectReport: DirectReportSentimentSummary[]
+  commonThemes: string[]
+  totalNotesAnalyzed: number
+  directReportsAnalyzed: number
+}
+
+export interface ApiKeyValidationResult {
+  valid: boolean
+  error?: string
 }

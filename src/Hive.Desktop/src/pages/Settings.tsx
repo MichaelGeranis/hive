@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { settingsApi, backupApi } from '../services/api'
+import { settingsApi, backupApi, sentimentApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
 import type { StoryPointMapping, RestoreResultDto } from '../types'
 
@@ -29,6 +29,18 @@ export default function Settings() {
   const [restoreResult, setRestoreResult] = useState<RestoreResultDto | null>(null)
   const [backupError, setBackupError] = useState<string | null>(null)
 
+  // Sentiment Analysis state
+  const [sentimentEnabled, setSentimentEnabled] = useState(false)
+  const [sentimentDays, setSentimentDays] = useState(90)
+  const [hasApiKey, setHasApiKey] = useState(false)
+  const [apiKey, setApiKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [validatingKey, setValidatingKey] = useState(false)
+  const [keyValidationResult, setKeyValidationResult] = useState<{ valid: boolean; error?: string } | null>(null)
+  const [savingSentiment, setSavingSentiment] = useState(false)
+  const [sentimentSaved, setSentimentSaved] = useState(false)
+  const [sentimentError, setSentimentError] = useState<string | null>(null)
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -39,6 +51,10 @@ export default function Settings() {
       setError(null)
       const settings = await settingsApi.get()
       setMappings(settings.storyPointMappings)
+      // Load sentiment analysis settings
+      setSentimentEnabled(settings.sentimentAnalysisEnabled)
+      setSentimentDays(settings.sentimentAnalysisDays)
+      setHasApiKey(settings.hasClaudeApiKey)
     } catch (err) {
       console.error('Failed to load settings', err)
       setError('Failed to load settings. Using default values.')
@@ -92,12 +108,94 @@ export default function Settings() {
   const getDaysLabel = (hours: number): string => {
     if (hours === 0) return '0 hours'
     if (hours < 8) return `${hours} hour${hours !== 1 ? 's' : ''}`
-    
+
     const days = hours / 8
     if (days === 1) return '1 day'
     if (days < 1) return `${hours} hours`
     if (Number.isInteger(days)) return `${days} days`
     return `${days.toFixed(1)} days`
+  }
+
+  // Sentiment Analysis handlers
+  const handleValidateApiKey = async () => {
+    if (!apiKey.trim()) {
+      setKeyValidationResult({ valid: false, error: 'Please enter an API key' })
+      return
+    }
+
+    try {
+      setValidatingKey(true)
+      setKeyValidationResult(null)
+      const result = await sentimentApi.validateApiKey(apiKey)
+      setKeyValidationResult(result)
+    } catch (err: any) {
+      console.error('Failed to validate API key', err)
+      setKeyValidationResult({ valid: false, error: err.response?.data?.message || 'Failed to validate API key' })
+    } finally {
+      setValidatingKey(false)
+    }
+  }
+
+  const handleSaveSentimentSettings = async () => {
+    try {
+      setSavingSentiment(true)
+      setSentimentError(null)
+
+      const updateData: any = {
+        sentimentAnalysisEnabled: sentimentEnabled,
+        sentimentAnalysisDays: sentimentDays
+      }
+
+      // Only include API key if it was entered
+      if (apiKey.trim()) {
+        updateData.claudeApiKey = apiKey
+      }
+
+      await settingsApi.update(updateData)
+
+      // Reload settings to get updated hasApiKey state
+      const settings = await settingsApi.get()
+      setHasApiKey(settings.hasClaudeApiKey)
+      setApiKey('') // Clear the API key field after saving
+      setKeyValidationResult(null)
+
+      setSentimentSaved(true)
+      setTimeout(() => setSentimentSaved(false), 3000)
+    } catch (err: any) {
+      console.error('Failed to save sentiment settings', err)
+      setSentimentError(err.response?.data?.message || 'Failed to save sentiment settings')
+    } finally {
+      setSavingSentiment(false)
+    }
+  }
+
+  const handleClearApiKey = async () => {
+    if (!confirm('Are you sure you want to remove the API key? Sentiment analysis will be disabled.')) {
+      return
+    }
+
+    try {
+      setSavingSentiment(true)
+      setSentimentError(null)
+
+      await settingsApi.update({
+        claudeApiKey: '',
+        sentimentAnalysisEnabled: false
+      })
+
+      setHasApiKey(false)
+      setSentimentEnabled(false)
+      setApiKey('')
+      setKeyValidationResult(null)
+
+      setSentimentSaved(true)
+      setTimeout(() => setSentimentSaved(false), 3000)
+    } catch (err: any) {
+      console.error('Failed to clear API key', err)
+      setSentimentError(err.response?.data?.message || 'Failed to clear API key')
+    } finally {
+      setSavingSentiment(false)
+    }
   }
 
   // Backup & Restore handlers
@@ -284,10 +382,198 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* AI Sentiment Analysis */}
+      <Card>
+        <CardHeader
+          title="AI Sentiment Analysis"
+          subtitle="Analyze meeting notes for team morale indicators using Claude AI"
+          action={<Brain className="w-5 h-5 text-purple-500" />}
+        />
+        <CardContent>
+          <div className="space-y-6">
+            {/* Status Indicator */}
+            <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${hasApiKey && sentimentEnabled ? 'bg-green-500' : hasApiKey ? 'bg-yellow-500' : 'bg-slate-400'}`}></div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {hasApiKey && sentimentEnabled ? 'Enabled' : hasApiKey ? 'Configured but disabled' : 'Not configured'}
+                </span>
+              </div>
+              {hasApiKey && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Analyzing last {sentimentDays} days
+                </span>
+              )}
+            </div>
+
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Enable Sentiment Analysis
+                </label>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Analyze meeting notes to detect team sentiment trends
+                </p>
+              </div>
+              <button
+                onClick={() => setSentimentEnabled(!sentimentEnabled)}
+                disabled={!hasApiKey && !apiKey.trim()}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  sentimentEnabled ? 'bg-purple-500' : 'bg-slate-300 dark:bg-slate-600'
+                } ${!hasApiKey && !apiKey.trim() ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    sentimentEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* API Key Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <div className="flex items-center gap-2">
+                  <Key className="w-4 h-4" />
+                  Claude API Key
+                </div>
+              </label>
+              {hasApiKey ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 text-sm">
+                    API key configured
+                  </div>
+                  <button
+                    onClick={handleClearApiKey}
+                    disabled={savingSentiment}
+                    className="px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type={showApiKey ? 'text' : 'password'}
+                        value={apiKey}
+                        onChange={(e) => {
+                          setApiKey(e.target.value)
+                          setKeyValidationResult(null)
+                        }}
+                        placeholder="sk-ant-api03-..."
+                        className="w-full px-3 py-2 pr-10 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      >
+                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleValidateApiKey}
+                      disabled={validatingKey || !apiKey.trim()}
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {validatingKey ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Validate'
+                      )}
+                    </button>
+                  </div>
+                  {keyValidationResult && (
+                    <div className={`flex items-center gap-2 text-sm ${keyValidationResult.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {keyValidationResult.valid ? (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          API key is valid
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4" />
+                          {keyValidationResult.error || 'Invalid API key'}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Get your API key from{' '}
+                    <a
+                      href="https://console.anthropic.com/settings/keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-500 hover:underline"
+                    >
+                      console.anthropic.com
+                    </a>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Analysis Period */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Analysis Period
+              </label>
+              <select
+                value={sentimentDays}
+                onChange={(e) => setSentimentDays(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value={30}>Last 30 days</option>
+                <option value={60}>Last 60 days</option>
+                <option value={90}>Last 90 days (recommended)</option>
+                <option value={180}>Last 180 days</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Meeting notes from this period will be analyzed for sentiment
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {sentimentError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
+                <XCircle className="w-4 h-4 flex-shrink-0" />
+                {sentimentError}
+              </div>
+            )}
+
+            {/* Save Button */}
+            <div className="pt-4 border-t dark:border-slate-700">
+              <button
+                onClick={handleSaveSentimentSettings}
+                disabled={savingSentiment}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingSentiment ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
+                {savingSentiment ? 'Saving...' : sentimentSaved ? 'Saved!' : 'Save Settings'}
+              </button>
+            </div>
+
+            {sentimentSaved && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Sentiment analysis settings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Story Points Mapping */}
       <Card>
-        <CardHeader 
-          title="Story Points to Hours Mapping" 
+        <CardHeader
+          title="Story Points to Hours Mapping"
           subtitle="Configure how story points translate to estimated hours"
         />
         <CardContent>

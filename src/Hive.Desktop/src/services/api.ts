@@ -78,7 +78,11 @@ import type {
   PagedResult,
   ProjectKnowledge,
   ProjectKnowledgeMatrix,
-  CreateOrUpdateProjectKnowledgeDto
+  CreateOrUpdateProjectKnowledgeDto,
+  SentimentStatus,
+  SentimentAnalysis,
+  TeamSentimentOverview,
+  ApiKeyValidationResult
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -527,6 +531,20 @@ export const checklistInstancesApi = {
     api.put<ChecklistInstanceItem>(`/checklistinstances/items/${itemId}`, data).then(r => r.data),
   getOverdueItems: () =>
     api.get<ChecklistInstanceItem[]>('/checklistinstances/items/overdue').then(r => r.data)
+}
+
+// Sentiment Analysis
+export const sentimentApi = {
+  getStatus: () =>
+    api.get<SentimentStatus>('/sentimentanalysis/status').then(r => r.data),
+  getForDirectReport: (directReportId: string) =>
+    api.get<SentimentAnalysis>(`/sentimentanalysis/direct-report/${directReportId}`).then(r => r.data),
+  getTeamOverview: () =>
+    api.get<TeamSentimentOverview>('/sentimentanalysis/team').then(r => r.data),
+  refreshForDirectReport: (directReportId: string) =>
+    api.post<SentimentAnalysis>(`/sentimentanalysis/direct-report/${directReportId}/refresh`).then(r => r.data),
+  validateApiKey: (apiKey: string) =>
+    api.post<ApiKeyValidationResult>('/sentimentanalysis/validate-api-key', { apiKey }).then(r => r.data)
 }
 
 export default api

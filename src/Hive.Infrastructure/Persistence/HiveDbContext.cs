@@ -33,6 +33,7 @@ public class HiveDbContext : DbContext
     public DbSet<ChecklistInstance> ChecklistInstances => Set<ChecklistInstance>();
     public DbSet<ChecklistInstanceItem> ChecklistInstanceItems => Set<ChecklistInstanceItem>();
     public DbSet<ProjectKnowledge> ProjectKnowledge => Set<ProjectKnowledge>();
+    public DbSet<SentimentAnalysisCache> SentimentAnalysisCache => Set<SentimentAnalysisCache>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -147,6 +148,10 @@ public class HiveDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.StoryPointMappings).HasMaxLength(4000).IsRequired();
+            entity.Property(e => e.ClaudeApiKey).HasMaxLength(500);
+            entity.Property(e => e.SentimentAnalysisDays).HasDefaultValue(90);
+            entity.Property(e => e.SentimentAnalysisEnabled).HasDefaultValue(false);
+            entity.Ignore(e => e.HasClaudeApiKey); // Computed property
         });
 
         // ManagerNote configuration
@@ -265,6 +270,17 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.DirectReportId);
             entity.HasIndex(e => e.ProjectId);
             entity.HasIndex(e => new { e.DirectReportId, e.ProjectId }).IsUnique();
+        });
+
+        // SentimentAnalysisCache configuration
+        modelBuilder.Entity<SentimentAnalysisCache>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OverallSentiment).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.KeyThemesJson).HasMaxLength(4000).IsRequired();
+            entity.Property(e => e.TrendDataJson).HasMaxLength(8000).IsRequired();
+            entity.HasIndex(e => e.DirectReportId).IsUnique();
+            entity.HasIndex(e => e.AnalyzedAt);
         });
     }
     /// Seeds initial data into the database.

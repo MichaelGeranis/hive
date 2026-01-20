@@ -29,6 +29,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, ChecklistInstance> ChecklistInstances { get; } = new();
     public ConcurrentDictionary<Guid, ChecklistInstanceItem> ChecklistInstanceItems { get; } = new();
     public ConcurrentDictionary<Guid, ProjectKnowledge> ProjectKnowledge { get; } = new();
+    public ConcurrentDictionary<Guid, SentimentAnalysisCache> SentimentAnalysisCache { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>

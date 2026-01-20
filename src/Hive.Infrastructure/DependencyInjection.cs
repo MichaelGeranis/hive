@@ -1,7 +1,9 @@
+using Hive.Application.Interfaces;
 using Hive.Core.Interfaces;
 using Hive.Infrastructure.Persistence;
 using Hive.Infrastructure.Persistence.Repositories;
 using Hive.Infrastructure.Persistence.Repositories.Sqlite;
+using Hive.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -51,6 +53,10 @@ public static class DependencyInjection
         services.AddScoped<IChecklistInstanceRepository, ChecklistInstanceRepository>();
         services.AddScoped<IChecklistInstanceItemRepository, ChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, ProjectKnowledgeRepository>();
+        services.AddScoped<ISentimentAnalysisCacheRepository, SentimentAnalysisCacheRepository>();
+
+        // Register Claude API service with HttpClient
+        services.AddHttpClient<IClaudeApiService, ClaudeApiService>();
 
         return services;
     }
@@ -89,6 +95,10 @@ public static class DependencyInjection
         services.AddScoped<IChecklistInstanceRepository, SqliteChecklistInstanceRepository>();
         services.AddScoped<IChecklistInstanceItemRepository, SqliteChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, SqliteProjectKnowledgeRepository>();
+        services.AddScoped<ISentimentAnalysisCacheRepository, SqliteSentimentAnalysisCacheRepository>();
+
+        // Register Claude API service with HttpClient
+        services.AddHttpClient<IClaudeApiService, ClaudeApiService>();
 
         // Register database backup service
         services.AddSingleton<DatabaseBackupService>();

@@ -16,6 +16,7 @@ import {
   Check
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
+import { SentimentInsights } from '../components/SentimentInsights'
 import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, projectKnowledgeApi } from '../services/api'
 import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, ProjectKnowledgeMatrix } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
@@ -51,6 +52,7 @@ interface WidgetVisibility {
   membersByProject: boolean
   tasksDistribution: boolean
   knowledgeRadar: boolean
+  teamSentiment: boolean
   capacityAnalysis: boolean
   estimationAccuracy: boolean
   teamVelocity: boolean
@@ -63,6 +65,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   membersByProject: true,
   tasksDistribution: true,
   knowledgeRadar: true,
+  teamSentiment: true,
   capacityAnalysis: true,
   estimationAccuracy: true,
   teamVelocity: true,
@@ -75,6 +78,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   membersByProject: 'Members by Project',
   tasksDistribution: 'Tasks Distribution',
   knowledgeRadar: 'Knowledge Radar',
+  teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
   estimationAccuracy: 'Estimation Accuracy',
   teamVelocity: 'Team Velocity',
@@ -767,6 +771,11 @@ export default function Dashboard() {
           </Card>
         )
       })()}
+
+      {/* Team Sentiment */}
+      {widgets.teamSentiment && (
+        <SentimentInsights showTeamOverview={true} />
+      )}
 
       {/* Capacity Analysis */}
       {widgets.capacityAnalysis && (

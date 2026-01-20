@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IChecklistService, ChecklistService>();
         services.AddScoped<IProjectKnowledgeService, ProjectKnowledgeService>();
+        services.AddScoped<ISentimentAnalysisService, SentimentAnalysisService>();
         return services;
     }
 }
