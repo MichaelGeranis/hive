@@ -45,11 +45,11 @@ public class ManagerNotesControllerTests
             PageSize = 20
         };
 
-        _serviceMock.Setup(s => s.GetAllPagedAsync(It.IsAny<PaginationParams>(), It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetFilteredPagedAsync(It.IsAny<NotePaginationParams>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         // Act
-        var result = await _controller.GetAll(1, 20, CancellationToken.None);
+        var result = await _controller.GetAll(1, 20, null, null, null, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;

@@ -41,6 +41,55 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
         return (items, totalCount);
     }
 
+    public async Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes.AsQueryable();
+
+        // Apply status filter
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var now = DateTime.UtcNow;
+            query = filter.ToLowerInvariant() switch
+            {
+                "pending" => query.Where(n => !n.IsCompleted),
+                "completed" => query.Where(n => n.IsCompleted),
+                "overdue" => query.Where(n => !n.IsCompleted && n.DueDate.HasValue && n.DueDate.Value < now),
+                _ => query
+            };
+        }
+
+        // Apply tag filter
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var tagLower = tag.ToLowerInvariant();
+            query = query.Where(n => n.Tags.ToLower().Contains(tagLower));
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLower();
+            query = query.Where(n =>
+                n.Title.ToLower().Contains(term) ||
+                n.Content.ToLower().Contains(term) ||
+                n.Tags.ToLower().Contains(term));
+        }
+
+        // Get total count after filtering
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply ordering and pagination
+        var items = await query
+            .OrderByDescending(n => n.Priority)
+            .ThenBy(n => n.DueDate)
+            .ThenByDescending(n => n.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         return await _context.ManagerNotes

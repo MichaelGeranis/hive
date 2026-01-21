@@ -42,6 +42,51 @@ public class ManagerNoteRepository : IManagerNoteRepository
         return Task.FromResult<(IReadOnlyList<ManagerNote>, int)>((items, totalCount));
     }
 
+    public Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    {
+        var query = _context.ManagerNotes.Values.AsEnumerable();
+
+        // Apply status filter
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            query = filter.ToLowerInvariant() switch
+            {
+                "pending" => query.Where(n => !n.IsCompleted),
+                "completed" => query.Where(n => n.IsCompleted),
+                "overdue" => query.Where(n => n.IsOverdue()),
+                _ => query
+            };
+        }
+
+        // Apply tag filter
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            query = query.Where(n => n.HasTag(tag));
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLowerInvariant();
+            query = query.Where(n =>
+                n.Title.ToLowerInvariant().Contains(term) ||
+                n.Content.ToLowerInvariant().Contains(term) ||
+                n.Tags.ToLowerInvariant().Contains(term));
+        }
+
+        // Apply ordering
+        var orderedQuery = query
+            .OrderByDescending(n => n.Priority)
+            .ThenBy(n => n.DueDate)
+            .ThenByDescending(n => n.CreatedAt);
+
+        var filteredList = orderedQuery.ToList();
+        var totalCount = filteredList.Count;
+        var items = filteredList.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<ManagerNote>, int)>((items, totalCount));
+    }
+
     public Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         var notes = _context.ManagerNotes.Values

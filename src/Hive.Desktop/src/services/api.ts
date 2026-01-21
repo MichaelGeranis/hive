@@ -345,8 +345,15 @@ export const jiraImportApi = {
 
 // Manager Notes (TODOs)
 export const notesApi = {
-  getAll: (pageNumber = 1, pageSize = 20) =>
-    api.get<PagedResult<ManagerNote>>(`/managernotes?pageNumber=${pageNumber}&pageSize=${pageSize}`).then(r => r.data),
+  getAll: (pageNumber = 1, pageSize = 20, filter?: string, search?: string, tag?: string) => {
+    const params = new URLSearchParams()
+    params.append('pageNumber', pageNumber.toString())
+    params.append('pageSize', pageSize.toString())
+    if (filter && filter !== 'all') params.append('filter', filter)
+    if (search) params.append('search', search)
+    if (tag) params.append('tag', tag)
+    return api.get<PagedResult<ManagerNote>>(`/managernotes?${params.toString()}`).then(r => r.data)
+  },
   getPending: () => api.get<ManagerNote[]>('/managernotes/pending').then(r => r.data),
   getCompleted: () => api.get<ManagerNote[]>('/managernotes/completed').then(r => r.data),
   getOverdue: () => api.get<ManagerNote[]>('/managernotes/overdue').then(r => r.data),

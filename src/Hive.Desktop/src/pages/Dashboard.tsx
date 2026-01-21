@@ -46,6 +46,8 @@ interface WidgetVisibility {
   projectsDistribution: boolean
   membersByProject: boolean
   tasksDistribution: boolean
+  tasksDistributionSP: boolean
+  tasksDistributionHours: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
   estimationAccuracy: boolean
@@ -58,6 +60,8 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   projectsDistribution: true,
   membersByProject: true,
   tasksDistribution: true,
+  tasksDistributionSP: true,
+  tasksDistributionHours: true,
   teamSentiment: true,
   capacityAnalysis: true,
   estimationAccuracy: true,
@@ -70,6 +74,8 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   projectsDistribution: 'Projects Distribution',
   membersByProject: 'Members by Project',
   tasksDistribution: 'Tasks Distribution',
+  tasksDistributionSP: 'Tasks Distribution (SP)',
+  tasksDistributionHours: 'Tasks Distribution (Hours)',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
   estimationAccuracy: 'Estimation Accuracy',
@@ -387,6 +393,40 @@ export default function Dashboard() {
     completed: type.completedTasks
   })).filter(d => d.value > 0)
 
+  // Calculate story points distribution by task type
+  const taskTypeSPData = tasks.reduce((acc, task) => {
+    const typeName = task.typeName || 'Unknown'
+    if (!acc[typeName]) {
+      acc[typeName] = { name: typeName, value: 0, tasks: 0 }
+    }
+    acc[typeName].value += task.storyPoints || 0
+    acc[typeName].tasks += 1
+    return acc
+  }, {} as Record<string, { name: string; value: number; tasks: number }>)
+
+  const taskTypeSPChartData = Object.values(taskTypeSPData)
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+
+  const totalSP = taskTypeSPChartData.reduce((sum, d) => sum + d.value, 0)
+
+  // Calculate hours distribution by task type
+  const taskTypeHoursData = tasks.reduce((acc, task) => {
+    const typeName = task.typeName || 'Unknown'
+    if (!acc[typeName]) {
+      acc[typeName] = { name: typeName, value: 0, tasks: 0 }
+    }
+    acc[typeName].value += Math.round((task.timeSpentMinutes || 0) / 60 * 10) / 10
+    acc[typeName].tasks += 1
+    return acc
+  }, {} as Record<string, { name: string; value: number; tasks: number }>)
+
+  const taskTypeHoursChartData = Object.values(taskTypeHoursData)
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+
+  const totalHours = Math.round(taskTypeHoursChartData.reduce((sum, d) => sum + d.value, 0) * 10) / 10
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -491,8 +531,8 @@ export default function Dashboard() {
       </div>
       )}
 
-      {/* Distribution Charts Row - 3 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Distribution Charts Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Projects Distribution by Member */}
         {widgets.projectsDistribution && (
         <Card>
@@ -589,7 +629,7 @@ export default function Dashboard() {
         {/* Task Type Distribution */}
         {widgets.tasksDistribution && (
         <Card>
-          <CardHeader title="Tasks Distribution" subtitle="By type" />
+          <CardHeader title="Tasks Distribution" subtitle="By type (count)" />
           <CardContent className="h-64">
             {taskTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -614,6 +654,78 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
                 No tasks found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Task Type Distribution by Story Points */}
+        {widgets.tasksDistributionSP && (
+        <Card>
+          <CardHeader title="Tasks Distribution" subtitle={`By type (${totalSP} SP)`} />
+          <CardContent className="h-64">
+            {taskTypeSPChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskTypeSPChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value} SP (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {taskTypeSPChartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value} SP`, 'Story Points']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                No story points assigned
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Task Type Distribution by Hours */}
+        {widgets.tasksDistributionHours && (
+        <Card>
+          <CardHeader title="Tasks Distribution" subtitle={`By type (${totalHours}h logged)`} />
+          <CardContent className="h-64">
+            {taskTypeHoursChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskTypeHoursChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value}h (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {taskTypeHoursChartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value}h`, 'Hours Logged']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                No hours logged
               </div>
             )}
           </CardContent>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   StickyNote,
@@ -92,11 +92,6 @@ export default function Notes() {
 
   useEscapeKey(closeModal, showForm)
 
-  useEffect(() => {
-    loadData()
-    loadTags()
-  }, [])
-
   const loadTags = async () => {
     try {
       const tags = await notesApi.getTags()
@@ -106,10 +101,22 @@ export default function Notes() {
     }
   }
 
-  const loadData = async (page = pageNumber) => {
+  const loadData = async (
+    page = pageNumber,
+    size = pageSize,
+    currentFilter = filter,
+    currentSearch = searchTerm,
+    currentTag = selectedTag
+  ) => {
     try {
       setLoading(true)
-      const result = await notesApi.getAll(page, pageSize)
+      const result = await notesApi.getAll(
+        page,
+        size,
+        currentFilter,
+        currentSearch || undefined,
+        currentTag || undefined
+      )
       setAllNotes(result.items)
       setTotalCount(result.totalCount)
       setTotalPages(result.totalPages)
@@ -121,72 +128,39 @@ export default function Notes() {
     }
   }
 
+  // Load data when component mounts
+  useEffect(() => {
+    loadData(1, pageSize, filter, searchTerm, selectedTag)
+    loadTags()
+  }, [])
+
+  // Reload data when filter, search, or tag changes
+  useEffect(() => {
+    loadData(1, pageSize, filter, searchTerm, selectedTag)
+  }, [filter, selectedTag])
+
+  // Debounced search - reload after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadData(1, pageSize, filter, searchTerm, selectedTag)
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadData(newPage)
+      loadData(newPage, pageSize, filter, searchTerm, selectedTag)
     }
   }
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
     setPageNumber(1)
-    // Reload with new page size
-    notesApi.getAll(1, newSize).then(result => {
-      setAllNotes(result.items)
-      setTotalCount(result.totalCount)
-      setTotalPages(result.totalPages)
-      setPageNumber(result.pageNumber)
-    })
+    loadData(1, newSize, filter, searchTerm, selectedTag)
   }
 
-  // Calculate status counts
-  const statusCounts = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return {
-      all: allNotes.length,
-      pending: allNotes.filter(n => !n.isCompleted).length,
-      completed: allNotes.filter(n => n.isCompleted).length,
-      overdue: allNotes.filter(n => !n.isCompleted && n.dueDate && new Date(n.dueDate) < today).length,
-    }
-  }, [allNotes])
-
-  // Filter notes based on current filter, search term, and selected tag
-  const notes = useMemo(() => {
-    let result = allNotes
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Apply status filter
-    switch (filter) {
-      case 'pending':
-        result = result.filter(n => !n.isCompleted)
-        break
-      case 'completed':
-        result = result.filter(n => n.isCompleted)
-        break
-      case 'overdue':
-        result = result.filter(n => !n.isCompleted && n.dueDate && new Date(n.dueDate) < today)
-        break
-    }
-
-    // Apply tag filter
-    if (selectedTag) {
-      result = result.filter(n => n.tags?.toLowerCase().includes(selectedTag.toLowerCase()))
-    }
-
-    // Apply search filter
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase()
-      result = result.filter(n =>
-        n.title.toLowerCase().includes(query) ||
-        n.content?.toLowerCase().includes(query) ||
-        n.tags?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [allNotes, filter, selectedTag, searchTerm])
+  // Notes are now already filtered by the server
+  const notes = allNotes
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -363,13 +337,11 @@ export default function Notes() {
           <Filter className="w-4 h-4 text-slate-400" />
           <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
-              { value: 'pending', label: `Pending (${statusCounts.pending})`, count: statusCounts.pending },
-              { value: 'completed', label: `Completed (${statusCounts.completed})`, count: statusCounts.completed },
-              { value: 'overdue', label: `Overdue (${statusCounts.overdue})`, count: statusCounts.overdue },
-            ]
-              .filter((f) => f.value === 'all' || f.count > 0)
-              .map((f) => (
+              { value: 'all', label: 'All' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'overdue', label: 'Overdue' },
+            ].map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value as FilterType)}
@@ -379,7 +351,7 @@ export default function Notes() {
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
-                {f.label}
+                {f.label}{filter === f.value && totalCount > 0 ? ` (${totalCount})` : ''}
               </button>
             ))}
           </div>

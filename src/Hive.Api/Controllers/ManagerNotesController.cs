@@ -25,10 +25,13 @@ public class ManagerNotesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all notes with pagination.
+    /// Gets all notes with pagination and optional filtering.
     /// </summary>
     /// <param name="pageNumber">Page number (1-based, default: 1).</param>
     /// <param name="pageSize">Items per page (default: 20, max: 100).</param>
+    /// <param name="filter">Status filter: all, pending, completed, overdue (default: all).</param>
+    /// <param name="search">Search term to filter by title, content, or tags.</param>
+    /// <param name="tag">Tag to filter by.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paginated list of notes ordered by Priority desc, DueDate asc.</returns>
     [HttpGet]
@@ -36,11 +39,33 @@ public class ManagerNotesController : ControllerBase
     public async Task<ActionResult<PagedResult<ManagerNoteDto>>> GetAll(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? filter = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string? tag = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting notes page {PageNumber} with size {PageSize}", pageNumber, pageSize);
-        var pagination = new PaginationParams { PageNumber = pageNumber, PageSize = pageSize };
-        var notes = await _service.GetAllPagedAsync(pagination, cancellationToken);
+        _logger.LogInformation("Getting notes page {PageNumber} with size {PageSize}, filter: {Filter}, search: {Search}, tag: {Tag}",
+            pageNumber, pageSize, filter, search, tag);
+
+        // Parse filter string to enum
+        var noteFilter = filter?.ToLowerInvariant() switch
+        {
+            "pending" => NoteFilter.Pending,
+            "completed" => NoteFilter.Completed,
+            "overdue" => NoteFilter.Overdue,
+            _ => NoteFilter.All
+        };
+
+        var pagination = new NotePaginationParams
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            Filter = noteFilter,
+            SearchTerm = search,
+            Tag = tag
+        };
+
+        var notes = await _service.GetFilteredPagedAsync(pagination, cancellationToken);
         return Ok(notes);
     }
 

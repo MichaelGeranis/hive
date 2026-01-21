@@ -21,6 +21,27 @@ public record PaginationParams
 }
 
 /// <summary>
+/// Filter options for notes.
+/// </summary>
+public enum NoteFilter
+{
+    All,
+    Pending,
+    Completed,
+    Overdue
+}
+
+/// <summary>
+/// Parameters for paginated and filtered note queries.
+/// </summary>
+public record NotePaginationParams : PaginationParams
+{
+    public NoteFilter Filter { get; init; } = NoteFilter.All;
+    public string? SearchTerm { get; init; }
+    public string? Tag { get; init; }
+}
+
+/// <summary>
 /// Wrapper for paginated results.
 /// </summary>
 /// <typeparam name="T">The type of items in the result.</typeparam>
