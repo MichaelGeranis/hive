@@ -34,6 +34,11 @@ public class HiveDbContext : DbContext
     public DbSet<ChecklistInstanceItem> ChecklistInstanceItems => Set<ChecklistInstanceItem>();
     public DbSet<ProjectKnowledge> ProjectKnowledge => Set<ProjectKnowledge>();
     public DbSet<SentimentAnalysisCache> SentimentAnalysisCache => Set<SentimentAnalysisCache>();
+    public DbSet<Quarter> Quarters => Set<Quarter>();
+    public DbSet<Initiative> Initiatives => Set<Initiative>();
+    public DbSet<Allocation> Allocations => Set<Allocation>();
+    public DbSet<SprintGoal> SprintGoals => Set<SprintGoal>();
+    public DbSet<InitiativeDependency> InitiativeDependencies => Set<InitiativeDependency>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -281,6 +286,61 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.TrendDataJson).HasMaxLength(8000).IsRequired();
             entity.HasIndex(e => e.DirectReportId).IsUnique();
             entity.HasIndex(e => e.AnalyzedAt);
+        });
+
+        // Quarter configuration
+        modelBuilder.Entity<Quarter>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.OkrReference).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.Year, e.QuarterNumber }).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        // Initiative configuration
+        modelBuilder.Entity<Initiative>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(4000);
+            entity.Property(e => e.OkrObjective).HasMaxLength(500);
+            entity.Property(e => e.Color).HasMaxLength(20);
+            entity.HasIndex(e => e.QuarterId);
+            entity.HasIndex(e => e.ProjectId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.Priority);
+        });
+
+        // Allocation configuration
+        modelBuilder.Entity<Allocation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.InitiativeId);
+            entity.HasIndex(e => e.DirectReportId);
+            entity.HasIndex(e => e.SprintId);
+            entity.HasIndex(e => new { e.InitiativeId, e.DirectReportId, e.SprintId }).IsUnique();
+        });
+
+        // SprintGoal configuration
+        modelBuilder.Entity<SprintGoal>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Goal).HasMaxLength(4000);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.HasIndex(e => e.QuarterId);
+            entity.HasIndex(e => e.SprintId);
+            entity.HasIndex(e => new { e.QuarterId, e.SprintId }).IsUnique();
+        });
+
+        // InitiativeDependency configuration
+        modelBuilder.Entity<InitiativeDependency>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => e.DependentInitiativeId);
+            entity.HasIndex(e => e.DependencyInitiativeId);
+            entity.HasIndex(e => new { e.DependentInitiativeId, e.DependencyInitiativeId }).IsUnique();
         });
     }
     /// Seeds initial data into the database.

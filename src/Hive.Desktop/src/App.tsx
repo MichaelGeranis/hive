@@ -20,6 +20,7 @@ import Documents from './pages/Documents'
 import ActivityFeed from './pages/ActivityFeed'
 import Logs from './pages/Logs'
 import Checklists from './pages/Checklists'
+import QuarterlyPlanning from './pages/QuarterlyPlanning'
 import Settings from './pages/Settings'
 
 // Initialize log capture immediately on app load
@@ -135,6 +136,7 @@ function App() {
         <Route path="notes" element={<Notes />} />
         <Route path="documents" element={<Documents />} />
         <Route path="logs" element={<Logs />} />
+        <Route path="quarterly-planning" element={<QuarterlyPlanning />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

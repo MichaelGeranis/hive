@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IChecklistService, ChecklistService>();
         services.AddScoped<IProjectKnowledgeService, ProjectKnowledgeService>();
         services.AddScoped<ISentimentAnalysisService, SentimentAnalysisService>();
+        services.AddScoped<IQuarterlyPlanningService, QuarterlyPlanningService>();
+        services.AddScoped<IQuarterlyPlanningInsightsService, QuarterlyPlanningInsightsService>();
         return services;
     }
 }

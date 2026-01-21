@@ -18,7 +18,8 @@ import {
   Award,
   Activity,
   ClipboardList,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react'
 
 const navigationGroups = [
@@ -45,6 +46,7 @@ const navigationGroups = [
   ],
   // Planning
   [
+    { name: 'Quarterly Planning', to: '/quarterly-planning', icon: Target },
     { name: 'TODOs', to: '/notes', icon: StickyNote },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
   ],

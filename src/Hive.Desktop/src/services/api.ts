@@ -547,4 +547,89 @@ export const sentimentApi = {
     api.post<ApiKeyValidationResult>('/sentimentanalysis/validate-api-key', { apiKey }).then(r => r.data)
 }
 
+// Quarterly Planning
+import type {
+  Quarter,
+  CreateQuarterDto,
+  UpdateQuarterDto,
+  Initiative,
+  CreateInitiativeDto,
+  UpdateInitiativeDto,
+  UpdateInitiativeStatusDto,
+  Allocation,
+  CreateAllocationDto,
+  SprintGoal,
+  UpsertSprintGoalDto,
+  InitiativeDependency,
+  CreateInitiativeDependencyDto,
+  PlanningBoard,
+  PlanningInsights
+} from '../types/quarterlyPlanning'
+
+export const quarterlyPlanningApi = {
+  // Quarters
+  getAllQuarters: () =>
+    api.get<Quarter[]>('/quarterly-planning/quarters').then(r => r.data),
+  getActiveQuarter: () =>
+    api.get<Quarter>('/quarterly-planning/quarters/active').then(r => r.data),
+  getQuarterById: (id: string) =>
+    api.get<Quarter>(`/quarterly-planning/quarters/${id}`).then(r => r.data),
+  getQuarterByYearQuarter: (year: number, quarterNumber: number) =>
+    api.get<Quarter>(`/quarterly-planning/quarters/${year}/${quarterNumber}`).then(r => r.data),
+  createQuarter: (data: CreateQuarterDto) =>
+    api.post<Quarter>('/quarterly-planning/quarters', data).then(r => r.data),
+  updateQuarter: (id: string, data: UpdateQuarterDto) =>
+    api.put<Quarter>(`/quarterly-planning/quarters/${id}`, data).then(r => r.data),
+  activateQuarter: (id: string) =>
+    api.post<Quarter>(`/quarterly-planning/quarters/${id}/activate`).then(r => r.data),
+  completeQuarter: (id: string) =>
+    api.post<Quarter>(`/quarterly-planning/quarters/${id}/complete`).then(r => r.data),
+  deleteQuarter: (id: string) =>
+    api.delete(`/quarterly-planning/quarters/${id}`),
+
+  // Initiatives
+  getInitiativesByQuarter: (quarterId: string) =>
+    api.get<Initiative[]>(`/quarterly-planning/quarters/${quarterId}/initiatives`).then(r => r.data),
+  getInitiativeById: (id: string) =>
+    api.get<Initiative>(`/quarterly-planning/initiatives/${id}`).then(r => r.data),
+  createInitiative: (data: CreateInitiativeDto) =>
+    api.post<Initiative>('/quarterly-planning/initiatives', data).then(r => r.data),
+  updateInitiative: (id: string, data: UpdateInitiativeDto) =>
+    api.put<Initiative>(`/quarterly-planning/initiatives/${id}`, data).then(r => r.data),
+  updateInitiativeStatus: (id: string, data: UpdateInitiativeStatusDto) =>
+    api.post<Initiative>(`/quarterly-planning/initiatives/${id}/status`, data).then(r => r.data),
+  deleteInitiative: (id: string) =>
+    api.delete(`/quarterly-planning/initiatives/${id}`),
+
+  // Allocations
+  getAllocationsByQuarter: (quarterId: string) =>
+    api.get<Allocation[]>(`/quarterly-planning/quarters/${quarterId}/allocations`).then(r => r.data),
+  getAllocationById: (id: string) =>
+    api.get<Allocation>(`/quarterly-planning/allocations/${id}`).then(r => r.data),
+  createAllocation: (data: CreateAllocationDto) =>
+    api.post<Allocation>('/quarterly-planning/allocations', data).then(r => r.data),
+  deleteAllocation: (id: string) =>
+    api.delete(`/quarterly-planning/allocations/${id}`),
+
+  // Sprint Goals
+  getSprintGoalsByQuarter: (quarterId: string) =>
+    api.get<SprintGoal[]>(`/quarterly-planning/quarters/${quarterId}/sprint-goals`).then(r => r.data),
+  upsertSprintGoal: (data: UpsertSprintGoalDto) =>
+    api.put<SprintGoal>('/quarterly-planning/sprint-goals', data).then(r => r.data),
+
+  // Dependencies
+  getDependenciesByQuarter: (quarterId: string) =>
+    api.get<InitiativeDependency[]>(`/quarterly-planning/quarters/${quarterId}/dependencies`).then(r => r.data),
+  createDependency: (data: CreateInitiativeDependencyDto) =>
+    api.post<InitiativeDependency>('/quarterly-planning/dependencies', data).then(r => r.data),
+  deleteDependency: (id: string) =>
+    api.delete(`/quarterly-planning/dependencies/${id}`),
+
+  // Board & Insights
+  getPlanningBoard: (quarterId: string) =>
+    api.get<PlanningBoard>(`/quarterly-planning/quarters/${quarterId}/board`).then(r => r.data),
+  getInsights: (quarterId: string) =>
+    api.get<PlanningInsights>(`/quarterly-planning/quarters/${quarterId}/insights`).then(r => r.data)
+}
+
 export default api

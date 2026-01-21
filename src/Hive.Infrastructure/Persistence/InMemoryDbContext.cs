@@ -30,6 +30,11 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, ChecklistInstanceItem> ChecklistInstanceItems { get; } = new();
     public ConcurrentDictionary<Guid, ProjectKnowledge> ProjectKnowledge { get; } = new();
     public ConcurrentDictionary<Guid, SentimentAnalysisCache> SentimentAnalysisCache { get; } = new();
+    public ConcurrentDictionary<Guid, Quarter> Quarters { get; } = new();
+    public ConcurrentDictionary<Guid, Initiative> Initiatives { get; } = new();
+    public ConcurrentDictionary<Guid, Allocation> Allocations { get; } = new();
+    public ConcurrentDictionary<Guid, SprintGoal> SprintGoals { get; } = new();
+    public ConcurrentDictionary<Guid, InitiativeDependency> InitiativeDependencies { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 
     /// <summary>

@@ -1181,3 +1181,6 @@ export interface ApiKeyValidationResult {
   valid: boolean
   error?: string
 }
+
+// Re-export quarterly planning types
+export * from './quarterlyPlanning'

@@ -134,5 +134,20 @@ public enum EntityType
     /// <summary>
     /// Project knowledge assessment entity.
     /// </summary>
-    ProjectKnowledge = 16
+    ProjectKnowledge = 16,
+
+    /// <summary>
+    /// Planning quarter entity.
+    /// </summary>
+    Quarter = 17,
+
+    /// <summary>
+    /// Initiative entity for quarterly planning.
+    /// </summary>
+    Initiative = 18,
+
+    /// <summary>
+    /// Allocation entity for quarterly planning.
+    /// </summary>
+    Allocation = 19
 }

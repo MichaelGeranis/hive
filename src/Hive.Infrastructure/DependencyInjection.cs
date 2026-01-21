@@ -54,6 +54,11 @@ public static class DependencyInjection
         services.AddScoped<IChecklistInstanceItemRepository, ChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, ProjectKnowledgeRepository>();
         services.AddScoped<ISentimentAnalysisCacheRepository, SentimentAnalysisCacheRepository>();
+        services.AddScoped<IQuarterRepository, QuarterRepository>();
+        services.AddScoped<IInitiativeRepository, InitiativeRepository>();
+        services.AddScoped<IAllocationRepository, AllocationRepository>();
+        services.AddScoped<ISprintGoalRepository, SprintGoalRepository>();
+        services.AddScoped<IInitiativeDependencyRepository, InitiativeDependencyRepository>();
 
         // Register Claude API service with HttpClient
         services.AddHttpClient<IClaudeApiService, ClaudeApiService>();
@@ -96,6 +101,11 @@ public static class DependencyInjection
         services.AddScoped<IChecklistInstanceItemRepository, SqliteChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, SqliteProjectKnowledgeRepository>();
         services.AddScoped<ISentimentAnalysisCacheRepository, SqliteSentimentAnalysisCacheRepository>();
+        services.AddScoped<IQuarterRepository, SqliteQuarterRepository>();
+        services.AddScoped<IInitiativeRepository, SqliteInitiativeRepository>();
+        services.AddScoped<IAllocationRepository, SqliteAllocationRepository>();
+        services.AddScoped<ISprintGoalRepository, SqliteSprintGoalRepository>();
+        services.AddScoped<IInitiativeDependencyRepository, SqliteInitiativeDependencyRepository>();
 
         // Register Claude API service with HttpClient
         services.AddHttpClient<IClaudeApiService, ClaudeApiService>();

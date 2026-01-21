@@ -13,20 +13,28 @@ export function Card({ children, className = '' }: CardProps) {
   )
 }
 
-interface CardHeaderProps {
-  title: string
+export interface CardHeaderProps {
+  title?: string
   subtitle?: string
   action?: ReactNode
+  children?: ReactNode
+  className?: string
 }
 
-export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
+export function CardHeader({ title, subtitle, action, children, className = '' }: CardHeaderProps) {
   return (
-    <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-      <div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
-        {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
-      </div>
-      {action && <div>{action}</div>}
+    <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-700 ${className}`}>
+      {children ? (
+        children
+      ) : (
+        <div className="flex items-center justify-between">
+          <div>
+            {title && <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>}
+            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          </div>
+          {action && <div>{action}</div>}
+        </div>
+      )}
     </div>
   )
 }
