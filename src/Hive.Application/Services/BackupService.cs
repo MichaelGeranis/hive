@@ -393,7 +393,7 @@ public class BackupService : IBackupService
                     var existing = await _skillRepository.GetByIdAsync(s.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new Skill(s.Name, s.Description, (SkillCategory)s.Category);
+                        var entity = new Skill(s.Name, s.Description, s.SkillCategoryId);
                         SetEntityId(entity, s.Id);
                         if (!s.IsActive)
                         {
@@ -693,7 +693,7 @@ public class BackupService : IBackupService
         Id = s.Id,
         Name = s.Name,
         Description = s.Description,
-        Category = (int)s.Category,
+        SkillCategoryId = s.SkillCategoryId,
         IsActive = s.IsActive,
         CreatedAt = s.CreatedAt,
         UpdatedAt = s.UpdatedAt

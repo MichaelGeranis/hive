@@ -12,21 +12,28 @@ namespace Hive.Tests.Application.Services;
 public class SkillServiceTests
 {
     private readonly Mock<ISkillRepository> _repositoryMock;
+    private readonly Mock<ISkillCategoryRepository> _categoryRepositoryMock;
     private readonly Mock<IActivityService> _activityServiceMock;
     private readonly SkillService _service;
+    private readonly Guid _testCategoryId = Guid.NewGuid();
 
     public SkillServiceTests()
     {
         _repositoryMock = new Mock<ISkillRepository>();
+        _categoryRepositoryMock = new Mock<ISkillCategoryRepository>();
         _activityServiceMock = new Mock<IActivityService>();
-        _service = new SkillService(_repositoryMock.Object, _activityServiceMock.Object);
+        _service = new SkillService(_repositoryMock.Object, _categoryRepositoryMock.Object, _activityServiceMock.Object);
+
+        // Setup default category lookup
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => SkillCategoryEntity.CreateWithId(id, "Technical", "Technical skills", 0));
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SkillService(null!, _activityServiceMock.Object);
+        var act = () => new SkillService(null!, _categoryRepositoryMock.Object, _activityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -34,10 +41,21 @@ public class SkillServiceTests
     }
 
     [Fact]
+    public void Constructor_WithNullCategoryRepository_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new SkillService(_repositoryMock.Object, null!, _activityServiceMock.Object);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("categoryRepository");
+    }
+
+    [Fact]
     public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SkillService(_repositoryMock.Object, null!);
+        var act = () => new SkillService(_repositoryMock.Object, _categoryRepositoryMock.Object, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -48,7 +66,7 @@ public class SkillServiceTests
     public async Task GetByIdAsync_WhenExists_ReturnsDto()
     {
         // Arrange
-        var entity = new Skill("C#", "Programming language", SkillCategory.Technical);
+        var entity = new Skill("C#", "Programming language", _testCategoryId);
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
 
@@ -60,7 +78,7 @@ public class SkillServiceTests
         result!.Id.Should().Be(entity.Id);
         result.Name.Should().Be("C#");
         result.Description.Should().Be("Programming language");
-        result.Category.Should().Be(SkillCategory.Technical);
+        result.CategoryId.Should().Be(_testCategoryId);
         result.CategoryName.Should().Be("Technical");
     }
 
@@ -84,11 +102,16 @@ public class SkillServiceTests
         // Arrange
         var entities = new List<Skill>
         {
-            new Skill("C#", "Programming language", SkillCategory.Technical),
-            new Skill("Python", "Programming language", SkillCategory.Technical)
+            new Skill("C#", "Programming language", _testCategoryId),
+            new Skill("Python", "Programming language", _testCategoryId)
         };
         _repositoryMock.Setup(r => r.GetAllAsync(false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entities);
+        _categoryRepositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SkillCategoryEntity>
+            {
+                SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0)
+            });
 
         // Act
         var result = await _service.GetAllAsync(false);
@@ -104,12 +127,17 @@ public class SkillServiceTests
         // Arrange
         var entities = new List<Skill>
         {
-            new Skill("C#", "Programming language", SkillCategory.Technical),
-            new Skill("Java", "Programming language", SkillCategory.Technical)
+            new Skill("C#", "Programming language", _testCategoryId),
+            new Skill("Java", "Programming language", _testCategoryId)
         };
         entities[1].Deactivate();
         _repositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entities);
+        _categoryRepositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SkillCategoryEntity>
+            {
+                SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0)
+            });
 
         // Act
         var result = await _service.GetAllAsync(true);
@@ -119,23 +147,26 @@ public class SkillServiceTests
     }
 
     [Fact]
-    public async Task GetByCategoryAsync_ReturnsCategorySkills()
+    public async Task GetByCategoryIdAsync_ReturnsCategorySkills()
     {
         // Arrange
+        var softSkillsCategoryId = Guid.NewGuid();
         var entities = new List<Skill>
         {
-            new Skill("Communication", "Effective communication", SkillCategory.SoftSkills),
-            new Skill("Teamwork", "Team collaboration", SkillCategory.SoftSkills)
+            new Skill("Communication", "Effective communication", softSkillsCategoryId),
+            new Skill("Teamwork", "Team collaboration", softSkillsCategoryId)
         };
-        _repositoryMock.Setup(r => r.GetByCategoryAsync(SkillCategory.SoftSkills, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetByCategoryIdAsync(softSkillsCategoryId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entities);
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(softSkillsCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SkillCategoryEntity.CreateWithId(softSkillsCategoryId, "Soft Skills", "Soft skills", 1));
 
         // Act
-        var result = await _service.GetByCategoryAsync(SkillCategory.SoftSkills);
+        var result = await _service.GetByCategoryIdAsync(softSkillsCategoryId);
 
         // Assert
         result.Should().HaveCount(2);
-        result.All(s => s.Category == SkillCategory.SoftSkills).Should().BeTrue();
+        result.All(s => s.CategoryId == softSkillsCategoryId).Should().BeTrue();
     }
 
     [Fact]
@@ -146,12 +177,14 @@ public class SkillServiceTests
         {
             Name = "TypeScript",
             Description = "Typed JavaScript",
-            Category = SkillCategory.Technical
+            CategoryId = _testCategoryId
         };
         _repositoryMock.Setup(r => r.NameExistsAsync(dto.Name, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _repositoryMock.Setup(r => r.AddAsync(It.IsAny<Skill>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Skill skill, CancellationToken _) => skill);
+        _categoryRepositoryMock.Setup(r => r.ExistsAsync(_testCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act
         var result = await _service.CreateAsync(dto);
@@ -160,7 +193,7 @@ public class SkillServiceTests
         result.Should().NotBeNull();
         result.Name.Should().Be("TypeScript");
         result.Description.Should().Be("Typed JavaScript");
-        result.Category.Should().Be(SkillCategory.Technical);
+        result.CategoryId.Should().Be(_testCategoryId);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<Skill>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -172,7 +205,7 @@ public class SkillServiceTests
         {
             Name = "C#",
             Description = "Programming language",
-            Category = SkillCategory.Technical
+            CategoryId = _testCategoryId
         };
         _repositoryMock.Setup(r => r.NameExistsAsync(dto.Name, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -189,17 +222,22 @@ public class SkillServiceTests
     public async Task UpdateAsync_WhenSkillExists_UpdatesSkill()
     {
         // Arrange
-        var entity = new Skill("Old Name", "Old description", SkillCategory.Technical);
+        var toolsCategoryId = Guid.NewGuid();
+        var entity = new Skill("Old Name", "Old description", _testCategoryId);
         var dto = new UpdateSkillDto
         {
             Name = "New Name",
             Description = "New description",
-            Category = SkillCategory.Tools
+            CategoryId = toolsCategoryId
         };
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
         _repositoryMock.Setup(r => r.NameExistsAsync(dto.Name, entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(toolsCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SkillCategoryEntity.CreateWithId(toolsCategoryId, "Tools", "Tool skills", 4));
+        _categoryRepositoryMock.Setup(r => r.ExistsAsync(toolsCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act
         var result = await _service.UpdateAsync(entity.Id, dto);
@@ -208,7 +246,7 @@ public class SkillServiceTests
         result.Should().NotBeNull();
         result.Name.Should().Be("New Name");
         result.Description.Should().Be("New description");
-        result.Category.Should().Be(SkillCategory.Tools);
+        result.CategoryId.Should().Be(toolsCategoryId);
         _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Skill>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -231,12 +269,12 @@ public class SkillServiceTests
     public async Task UpdateAsync_WhenNameExistsForOtherSkill_ThrowsConflictException()
     {
         // Arrange
-        var entity = new Skill("Old Name", "Description", SkillCategory.Technical);
+        var entity = new Skill("Old Name", "Description", _testCategoryId);
         var dto = new UpdateSkillDto
         {
             Name = "Existing Name",
             Description = "Description",
-            Category = SkillCategory.Technical
+            CategoryId = _testCategoryId
         };
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
@@ -255,7 +293,7 @@ public class SkillServiceTests
     public async Task ActivateAsync_WhenSkillExists_ActivatesSkill()
     {
         // Arrange
-        var entity = new Skill("Test Skill", "Description", SkillCategory.Technical);
+        var entity = new Skill("Test Skill", "Description", _testCategoryId);
         entity.Deactivate();
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
@@ -287,7 +325,7 @@ public class SkillServiceTests
     public async Task DeactivateAsync_WhenSkillExists_DeactivatesSkill()
     {
         // Arrange
-        var entity = new Skill("Test Skill", "Description", SkillCategory.Technical);
+        var entity = new Skill("Test Skill", "Description", _testCategoryId);
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
 
@@ -318,7 +356,7 @@ public class SkillServiceTests
     public async Task DeleteAsync_WhenSkillExists_DeletesSkill()
     {
         // Arrange
-        var entity = new Skill("Test Skill", "Description", SkillCategory.Technical);
+        var entity = new Skill("Test Skill", "Description", _testCategoryId);
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
 

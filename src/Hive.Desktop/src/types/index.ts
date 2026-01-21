@@ -805,6 +805,32 @@ export interface RestoreResultDto {
 }
 
 // Skills & Assessments
+
+// Skill Category Entity (database-backed)
+export interface SkillCategoryEntity {
+  id: string
+  name: string
+  description: string
+  sortOrder: number
+  isActive: boolean
+  skillCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateSkillCategoryDto {
+  name: string
+  description: string
+  sortOrder: number
+}
+
+export interface UpdateSkillCategoryDto {
+  name: string
+  description: string
+  sortOrder: number
+}
+
+// Legacy enum kept for backward compatibility with assessments
 export enum SkillCategory {
   Technical = 0,
   SoftSkills = 1,
@@ -826,7 +852,7 @@ export interface Skill {
   id: string
   name: string
   description: string
-  category: SkillCategory
+  categoryId: string
   categoryName: string
   isActive: boolean
   createdAt: string
@@ -839,7 +865,8 @@ export interface SkillAssessment {
   directReportName: string
   skillId: string
   skillName: string
-  skillCategory: SkillCategory
+  skillCategoryId: string
+  skillCategoryName: string
   level: ProficiencyLevel
   levelName: string
   targetLevel?: ProficiencyLevel
@@ -864,13 +891,13 @@ export interface SkillMatrix {
 export interface CreateSkillDto {
   name: string
   description: string
-  category: SkillCategory
+  categoryId: string
 }
 
 export interface UpdateSkillDto {
   name: string
   description: string
-  category: SkillCategory
+  categoryId: string
 }
 
 export interface CreateSkillAssessmentDto {

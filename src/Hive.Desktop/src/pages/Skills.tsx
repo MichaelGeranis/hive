@@ -15,12 +15,12 @@ import {
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SkillsHeatmap, type MatrixSortBy, type MatrixSortOrder } from '../components/SkillsHeatmap'
 import { SkillRadarChart } from '../components/SkillRadarChart'
-import { skillsApi, skillAssessmentsApi, directReportsApi } from '../services/api'
+import { skillsApi, skillCategoriesApi, skillAssessmentsApi, directReportsApi } from '../services/api'
 import type {
   Skill,
+  SkillCategoryEntity,
   SkillAssessment,
   SkillMatrix,
-  SkillCategory,
   ProficiencyLevel,
   CreateSkillDto,
   CreateSkillAssessmentDto,
@@ -44,14 +44,6 @@ import {
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444']
 
-const CATEGORY_NAMES: Record<SkillCategory, string> = {
-  0: 'Technical',
-  1: 'Soft Skills',
-  2: 'Leadership',
-  3: 'Domain Knowledge',
-  4: 'Tools'
-}
-
 const LEVEL_NAMES: Record<ProficiencyLevel, string> = {
   0: 'None',
   1: 'Novice',
@@ -66,6 +58,7 @@ type TabType = 'overview' | 'matrix' | 'profiles' | 'gaps' | 'manage'
 export default function Skills() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [skills, setSkills] = useState<Skill[]>([])
+  const [skillCategories, setSkillCategories] = useState<SkillCategoryEntity[]>([])
   const [matrix, setMatrix] = useState<SkillMatrix | null>(null)
   const [gaps, setGaps] = useState<SkillAssessment[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
@@ -73,7 +66,7 @@ export default function Skills() {
   const [error, setError] = useState<string | null>(null)
 
   // Filters
-  const [categoryFilter, setCategoryFilter] = useState<SkillCategory | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Matrix-specific filters
@@ -91,7 +84,7 @@ export default function Skills() {
   const [skillForm, setSkillForm] = useState<CreateSkillDto>({
     name: '',
     description: '',
-    category: 0
+    categoryId: ''
   })
   const [assessmentForm, setAssessmentForm] = useState<{
     directReportId: string
@@ -120,13 +113,15 @@ export default function Skills() {
     try {
       setLoading(true)
       setError(null)
-      const [skillsData, matrixData, gapsData, reportsData] = await Promise.all([
+      const [skillsData, categoriesData, matrixData, gapsData, reportsData] = await Promise.all([
         skillsApi.getAll(false),
+        skillCategoriesApi.getAll(false),
         skillAssessmentsApi.getMatrix(),
         skillAssessmentsApi.getGaps(),
         directReportsApi.getAll()
       ])
       setSkills(skillsData)
+      setSkillCategories(categoriesData)
 
       // Filter matrix to show only direct reports
       const directReportIds = new Set(
@@ -164,14 +159,18 @@ export default function Skills() {
   }, [matrix])
 
   const skillsByCategoryData = useMemo(() => {
-    const categories: Record<SkillCategory, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
+    const categoryCounts: Record<string, { name: string; count: number }> = {}
     activeSkills.forEach(skill => {
-      categories[skill.category]++
+      const categoryId = skill.categoryId
+      if (!categoryCounts[categoryId]) {
+        categoryCounts[categoryId] = { name: skill.categoryName, count: 0 }
+      }
+      categoryCounts[categoryId].count++
     })
-    return Object.entries(categories)
-      .filter(([_, count]) => count > 0)
-      .map(([category, count]) => ({
-        name: CATEGORY_NAMES[Number(category) as SkillCategory],
+    return Object.values(categoryCounts)
+      .filter(({ count }) => count > 0)
+      .map(({ name, count }) => ({
+        name,
         value: count
       }))
   }, [activeSkills])
@@ -300,7 +299,8 @@ export default function Skills() {
   }
 
   const resetSkillForm = () => {
-    setSkillForm({ name: '', description: '', category: 0 })
+    const defaultCategoryId = skillCategories.length > 0 ? skillCategories[0].id : ''
+    setSkillForm({ name: '', description: '', categoryId: defaultCategoryId })
   }
 
   const resetAssessmentForm = () => {
@@ -319,7 +319,7 @@ export default function Skills() {
       setSkillForm({
         name: skill.name,
         description: skill.description,
-        category: skill.category
+        categoryId: skill.categoryId
       })
     } else {
       resetSkillForm()
@@ -330,13 +330,19 @@ export default function Skills() {
 
   const filteredSkills = useMemo(() => {
     return skills.filter(skill => {
-      const matchesCategory = categoryFilter === null || skill.category === categoryFilter
+      const matchesCategory = categoryFilter === null || skill.categoryId === categoryFilter
       const matchesSearch = searchQuery === '' ||
         skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         skill.description.toLowerCase().includes(searchQuery.toLowerCase())
       return matchesCategory && matchesSearch
     })
   }, [skills, categoryFilter, searchQuery])
+
+  // Helper to get category name by ID
+  const getCategoryNameById = (categoryId: string): string => {
+    const category = skillCategories.find(c => c.id === categoryId)
+    return category?.name || 'Unknown'
+  }
 
   if (loading) {
     return (
@@ -427,12 +433,12 @@ export default function Skills() {
         </div>
         <select
           value={categoryFilter === null ? '' : categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value === '' ? null : Number(e.target.value) as SkillCategory)}
+          onChange={(e) => setCategoryFilter(e.target.value === '' ? null : e.target.value)}
           className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         >
           <option value="">All Categories</option>
-          {Object.entries(CATEGORY_NAMES).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
+          {skillCategories.map((category) => (
+            <option key={category.id} value={category.id}>{category.name}</option>
           ))}
         </select>
         {(categoryFilter !== null || searchQuery !== '') && (
@@ -628,7 +634,7 @@ export default function Skills() {
                 )}
                 {categoryFilter !== null && (
                   <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
-                    Category: {CATEGORY_NAMES[categoryFilter]}
+                    Category: {getCategoryNameById(categoryFilter)}
                   </span>
                 )}
                 {searchQuery && (
@@ -711,7 +717,7 @@ export default function Skills() {
                             {gap.skillName}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                            {CATEGORY_NAMES[gap.skillCategory]}
+                            {gap.skillCategoryName}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                             {gap.levelName} ({gap.level})
@@ -855,12 +861,12 @@ export default function Skills() {
                   Category
                 </label>
                 <select
-                  value={skillForm.category}
-                  onChange={(e) => setSkillForm({ ...skillForm, category: Number(e.target.value) as SkillCategory })}
+                  value={skillForm.categoryId}
+                  onChange={(e) => setSkillForm({ ...skillForm, categoryId: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 >
-                  {Object.entries(CATEGORY_NAMES).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  {skillCategories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
                 </select>
               </div>

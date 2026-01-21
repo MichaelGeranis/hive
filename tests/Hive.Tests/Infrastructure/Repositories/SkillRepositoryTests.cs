@@ -8,6 +8,9 @@ public class SkillRepositoryTests
 {
     private readonly InMemoryDbContext _context;
     private readonly SkillRepository _repository;
+    private readonly Guid _technicalCategoryId = Guid.NewGuid();
+    private readonly Guid _softSkillsCategoryId = Guid.NewGuid();
+    private readonly Guid _leadershipCategoryId = Guid.NewGuid();
 
     public SkillRepositoryTests()
     {
@@ -123,56 +126,55 @@ public class SkillRepositoryTests
     }
 
     [Fact]
-    public async Task GetAllAsync_OrdersByCategoryThenName()
+    public async Task GetAllAsync_OrdersByName()
     {
         // Arrange
-        CreateAndAddSkill("Zebra", category: SkillCategory.Technical);
-        CreateAndAddSkill("Alpha", category: SkillCategory.Technical);
-        CreateAndAddSkill("Beta", category: SkillCategory.Leadership);
+        CreateAndAddSkill("Zebra", categoryId: _technicalCategoryId);
+        CreateAndAddSkill("Alpha", categoryId: _technicalCategoryId);
+        CreateAndAddSkill("Beta", categoryId: _leadershipCategoryId);
 
         // Act
         var result = await _repository.GetAllAsync();
 
-        // Assert - Skills ordered by Category (ascending) then Name (ascending)
-        // Technical (0) comes before Leadership (2)
-        result[0].Name.Should().Be("Alpha"); // Technical (category 0), alphabetically first
-        result[1].Name.Should().Be("Zebra"); // Technical (category 0), alphabetically second
-        result[2].Name.Should().Be("Beta"); // Leadership (category 2)
+        // Assert - Skills ordered by Name (ascending)
+        result[0].Name.Should().Be("Alpha");
+        result[1].Name.Should().Be("Beta");
+        result[2].Name.Should().Be("Zebra");
     }
 
     [Fact]
-    public async Task GetByCategoryAsync_ReturnsMatchingActiveSkills()
+    public async Task GetByCategoryIdAsync_ReturnsMatchingActiveSkills()
     {
         // Arrange
-        CreateAndAddSkill("C#", category: SkillCategory.Technical);
-        CreateAndAddSkill("Python", category: SkillCategory.Technical);
-        CreateAndAddSkill("Communication", category: SkillCategory.SoftSkills);
+        CreateAndAddSkill("C#", categoryId: _technicalCategoryId);
+        CreateAndAddSkill("Python", categoryId: _technicalCategoryId);
+        CreateAndAddSkill("Communication", categoryId: _softSkillsCategoryId);
 
-        var inactiveTechnical = CreateAndAddSkill("Inactive Tech", category: SkillCategory.Technical);
+        var inactiveTechnical = CreateAndAddSkill("Inactive Tech", categoryId: _technicalCategoryId);
         inactiveTechnical.Deactivate();
         _context.Skills[inactiveTechnical.Id] = inactiveTechnical;
 
         // Act
-        var result = await _repository.GetByCategoryAsync(SkillCategory.Technical);
+        var result = await _repository.GetByCategoryIdAsync(_technicalCategoryId);
 
         // Assert
         result.Should().HaveCount(2);
         result.Should().AllSatisfy(s =>
         {
-            s.Category.Should().Be(SkillCategory.Technical);
+            s.SkillCategoryId.Should().Be(_technicalCategoryId);
             s.IsActive.Should().BeTrue();
         });
     }
 
     [Fact]
-    public async Task GetByCategoryAsync_OrdersByName()
+    public async Task GetByCategoryIdAsync_OrdersByName()
     {
         // Arrange
-        CreateAndAddSkill("Zebra", category: SkillCategory.Technical);
-        CreateAndAddSkill("Alpha", category: SkillCategory.Technical);
+        CreateAndAddSkill("Zebra", categoryId: _technicalCategoryId);
+        CreateAndAddSkill("Alpha", categoryId: _technicalCategoryId);
 
         // Act
-        var result = await _repository.GetByCategoryAsync(SkillCategory.Technical);
+        var result = await _repository.GetByCategoryIdAsync(_technicalCategoryId);
 
         // Assert
         result[0].Name.Should().Be("Alpha");
@@ -183,7 +185,7 @@ public class SkillRepositoryTests
     public async Task AddAsync_AddsSkillToContext()
     {
         // Arrange
-        var skill = new Skill("TypeScript", "Programming language", SkillCategory.Technical);
+        var skill = new Skill("TypeScript", "Programming language", _technicalCategoryId);
 
         // Act
         var result = await _repository.AddAsync(skill);
@@ -212,7 +214,7 @@ public class SkillRepositoryTests
     {
         // Arrange
         var skill = CreateAndAddSkill("Original");
-        skill.Update("Updated", "New description", SkillCategory.Leadership);
+        skill.Update("Updated", "New description", _leadershipCategoryId);
 
         // Act
         await _repository.UpdateAsync(skill);
@@ -221,14 +223,14 @@ public class SkillRepositoryTests
         var stored = _context.Skills[skill.Id];
         stored.Name.Should().Be("Updated");
         stored.Description.Should().Be("New description");
-        stored.Category.Should().Be(SkillCategory.Leadership);
+        stored.SkillCategoryId.Should().Be(_leadershipCategoryId);
     }
 
     [Fact]
     public async Task UpdateAsync_WithNonExistentSkill_ThrowsInvalidOperationException()
     {
         // Arrange
-        var skill = new Skill("Test", "Test description", SkillCategory.Technical);
+        var skill = new Skill("Test", "Test description", _technicalCategoryId);
 
         // Act
         var act = () => _repository.UpdateAsync(skill);
@@ -349,9 +351,9 @@ public class SkillRepositoryTests
 
     private Skill CreateAndAddSkill(
         string name = "Test Skill",
-        SkillCategory category = SkillCategory.Technical)
+        Guid? categoryId = null)
     {
-        var skill = new Skill(name, "Test description", category);
+        var skill = new Skill(name, "Test description", categoryId ?? _technicalCategoryId);
         _context.Skills.TryAdd(skill.Id, skill);
         return skill;
     }

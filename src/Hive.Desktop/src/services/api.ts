@@ -50,7 +50,9 @@ import type {
   CreateParentDto,
   UpdateParentDto,
   Skill,
-  SkillCategory,
+  SkillCategoryEntity,
+  CreateSkillCategoryDto,
+  UpdateSkillCategoryDto,
   SkillAssessment,
   SkillMatrix,
   CreateSkillDto,
@@ -398,14 +400,32 @@ export const backupApi = {
   import: (data: BackupDto) => api.post<RestoreResultDto>('/backup/import', data).then(r => r.data)
 }
 
+// Skill Categories
+export const skillCategoriesApi = {
+  getAll: (includeInactive: boolean = false) =>
+    api.get<SkillCategoryEntity[]>(`/skillcategories?includeInactive=${includeInactive}`).then(r => r.data),
+  getById: (id: string) =>
+    api.get<SkillCategoryEntity>(`/skillcategories/${id}`).then(r => r.data),
+  create: (data: CreateSkillCategoryDto) =>
+    api.post<SkillCategoryEntity>('/skillcategories', data).then(r => r.data),
+  update: (id: string, data: UpdateSkillCategoryDto) =>
+    api.put<SkillCategoryEntity>(`/skillcategories/${id}`, data).then(r => r.data),
+  activate: (id: string) =>
+    api.post<SkillCategoryEntity>(`/skillcategories/${id}/activate`).then(r => r.data),
+  deactivate: (id: string) =>
+    api.post<SkillCategoryEntity>(`/skillcategories/${id}/deactivate`).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/skillcategories/${id}`)
+}
+
 // Skills
 export const skillsApi = {
   getAll: (includeInactive: boolean = false) =>
     api.get<Skill[]>(`/skills?includeInactive=${includeInactive}`).then(r => r.data),
   getById: (id: string) =>
     api.get<Skill>(`/skills/${id}`).then(r => r.data),
-  getByCategory: (category: SkillCategory) =>
-    api.get<Skill[]>(`/skills/by-category/${category}`).then(r => r.data),
+  getByCategoryId: (categoryId: string) =>
+    api.get<Skill[]>(`/skills/by-category/${categoryId}`).then(r => r.data),
   create: (data: CreateSkillDto) =>
     api.post<Skill>('/skills', data).then(r => r.data),
   update: (id: string, data: UpdateSkillDto) =>

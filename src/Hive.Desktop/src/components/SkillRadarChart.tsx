@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   RadarChart,
   Radar,
@@ -8,7 +9,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts'
-import type { SkillAssessment, SkillCategory } from '../types'
+import type { SkillAssessment } from '../types'
 
 interface RadarData {
   category: string
@@ -22,39 +23,43 @@ interface SkillRadarChartProps {
   showTarget?: boolean
 }
 
-const CATEGORY_NAMES: Record<SkillCategory, string> = {
-  0: 'Technical',
-  1: 'Soft Skills',
-  2: 'Leadership',
-  3: 'Domain Knowledge',
-  4: 'Tools'
-}
-
 export function SkillRadarChart({ assessments, teamMemberName, showTarget = true }: SkillRadarChartProps) {
   // Calculate average proficiency per category
-  const calculateRadarData = (): RadarData[] => {
-    const categories: SkillCategory[] = [0, 1, 2, 3, 4]
+  const data = useMemo((): RadarData[] => {
+    // Group assessments by category
+    const categoryMap = new Map<string, { name: string; assessments: SkillAssessment[] }>()
 
-    return categories.map(category => {
-      const categoryAssessments = assessments.filter(a => a.skillCategory === category)
-
-      const currentAvg = categoryAssessments.length > 0
-        ? categoryAssessments.reduce((sum, a) => sum + a.level, 0) / categoryAssessments.length
-        : 0
-
-      const targetAvg = categoryAssessments.length > 0
-        ? categoryAssessments.reduce((sum, a) => sum + (a.targetLevel || 0), 0) / categoryAssessments.length
-        : 0
-
-      return {
-        category: CATEGORY_NAMES[category],
-        current: Math.round(currentAvg * 10) / 10,
-        target: Math.round(targetAvg * 10) / 10
+    assessments.forEach(assessment => {
+      const categoryId = assessment.skillCategoryId
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          name: assessment.skillCategoryName,
+          assessments: []
+        })
       }
+      categoryMap.get(categoryId)!.assessments.push(assessment)
     })
-  }
 
-  const data = calculateRadarData()
+    // Convert to radar data, sorted by category name
+    return Array.from(categoryMap.entries())
+      .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+      .map(([, { name, assessments: categoryAssessments }]) => {
+        const currentAvg = categoryAssessments.length > 0
+          ? categoryAssessments.reduce((sum, a) => sum + a.level, 0) / categoryAssessments.length
+          : 0
+
+        const targetAvg = categoryAssessments.length > 0
+          ? categoryAssessments.reduce((sum, a) => sum + (a.targetLevel || 0), 0) / categoryAssessments.length
+          : 0
+
+        return {
+          category: name,
+          current: Math.round(currentAvg * 10) / 10,
+          target: Math.round(targetAvg * 10) / 10
+        }
+      })
+  }, [assessments])
+
   const hasData = data.some(d => d.current > 0 || d.target > 0)
 
   if (!hasData) {

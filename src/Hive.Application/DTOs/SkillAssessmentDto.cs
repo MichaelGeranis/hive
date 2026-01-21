@@ -12,7 +12,8 @@ public record SkillAssessmentDto
     public string DirectReportName { get; init; } = string.Empty;
     public Guid SkillId { get; init; }
     public string SkillName { get; init; } = string.Empty;
-    public SkillCategory SkillCategory { get; init; }
+    public Guid SkillCategoryId { get; init; }
+    public string SkillCategoryName { get; init; } = string.Empty;
     public ProficiencyLevel Level { get; init; }
     public string LevelName { get; init; } = string.Empty;
     public ProficiencyLevel? TargetLevel { get; init; }

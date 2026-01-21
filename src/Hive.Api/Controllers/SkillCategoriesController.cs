@@ -7,94 +7,75 @@ using Microsoft.AspNetCore.Mvc;
 namespace Hive.Api.Controllers;
 
 /// <summary>
-/// API Controller for managing skills in the competency matrix.
+/// API Controller for managing skill categories.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 [Produces("application/json")]
-public class SkillsController : ControllerBase
+public class SkillCategoriesController : ControllerBase
 {
-    private readonly ISkillService _service;
-    private readonly ILogger<SkillsController> _logger;
+    private readonly ISkillCategoryService _service;
+    private readonly ILogger<SkillCategoriesController> _logger;
 
-    public SkillsController(ISkillService service, ILogger<SkillsController> logger)
+    public SkillCategoriesController(ISkillCategoryService service, ILogger<SkillCategoriesController> logger)
     {
         _service = service;
         _logger = logger;
     }
 
     /// <summary>
-    /// Gets all skills.
+    /// Gets all skill categories.
     /// </summary>
-    /// <param name="includeInactive">Include inactive skills in the result.</param>
+    /// <param name="includeInactive">Include inactive categories in the result.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<SkillDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<SkillDto>>> GetAll(
+    [ProducesResponseType(typeof(IEnumerable<SkillCategoryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<SkillCategoryDto>>> GetAll(
         [FromQuery] bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting all skills (includeInactive: {IncludeInactive})", includeInactive);
-        var skills = await _service.GetAllAsync(includeInactive, cancellationToken);
-        return Ok(skills);
+        _logger.LogInformation("Getting all skill categories (includeInactive: {IncludeInactive})", includeInactive);
+        var categories = await _service.GetAllAsync(includeInactive, cancellationToken);
+        return Ok(categories);
     }
 
     /// <summary>
-    /// Gets a skill by ID.
+    /// Gets a skill category by ID.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(SkillDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SkillCategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<SkillDto>> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<SkillCategoryDto>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Getting skill with ID: {Id}", id);
-        var skill = await _service.GetByIdAsync(id, cancellationToken);
+        _logger.LogInformation("Getting skill category with ID: {Id}", id);
+        var category = await _service.GetByIdAsync(id, cancellationToken);
 
-        if (skill is null)
+        if (category is null)
         {
-            return NotFound(new { message = $"Skill with ID '{id}' not found." });
+            return NotFound(new { message = $"Skill category with ID '{id}' not found." });
         }
 
-        return Ok(skill);
+        return Ok(category);
     }
 
     /// <summary>
-    /// Gets skills by category ID.
-    /// </summary>
-    [HttpGet("by-category/{categoryId:guid}")]
-    [ProducesResponseType(typeof(IEnumerable<SkillDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<SkillDto>>> GetByCategoryId(
-        Guid categoryId,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting skills by category ID: {CategoryId}", categoryId);
-        var skills = await _service.GetByCategoryIdAsync(categoryId, cancellationToken);
-        return Ok(skills);
-    }
-
-    /// <summary>
-    /// Creates a new skill.
+    /// Creates a new skill category.
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(SkillDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(SkillCategoryDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<SkillDto>> Create(
-        [FromBody] CreateSkillDto dto,
+    public async Task<ActionResult<SkillCategoryDto>> Create(
+        [FromBody] CreateSkillCategoryDto dto,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating new skill: {Name}", dto.Name);
+        _logger.LogInformation("Creating new skill category: {Name}", dto.Name);
 
         try
         {
             var created = await _service.CreateAsync(dto, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
         }
         catch (ConflictException ex)
         {
@@ -107,19 +88,19 @@ public class SkillsController : ControllerBase
     }
 
     /// <summary>
-    /// Updates an existing skill.
+    /// Updates an existing skill category.
     /// </summary>
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(SkillDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SkillCategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<SkillDto>> Update(
+    public async Task<ActionResult<SkillCategoryDto>> Update(
         Guid id,
-        [FromBody] UpdateSkillDto dto,
+        [FromBody] UpdateSkillCategoryDto dto,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Updating skill with ID: {Id}", id);
+        _logger.LogInformation("Updating skill category with ID: {Id}", id);
 
         try
         {
@@ -141,14 +122,14 @@ public class SkillsController : ControllerBase
     }
 
     /// <summary>
-    /// Activates a skill.
+    /// Activates a skill category.
     /// </summary>
     [HttpPost("{id:guid}/activate")]
-    [ProducesResponseType(typeof(SkillDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SkillCategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<SkillDto>> Activate(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<SkillCategoryDto>> Activate(Guid id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Activating skill with ID: {Id}", id);
+        _logger.LogInformation("Activating skill category with ID: {Id}", id);
 
         try
         {
@@ -162,14 +143,14 @@ public class SkillsController : ControllerBase
     }
 
     /// <summary>
-    /// Deactivates a skill.
+    /// Deactivates a skill category.
     /// </summary>
     [HttpPost("{id:guid}/deactivate")]
-    [ProducesResponseType(typeof(SkillDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SkillCategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<SkillDto>> Deactivate(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<SkillCategoryDto>> Deactivate(Guid id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deactivating skill with ID: {Id}", id);
+        _logger.LogInformation("Deactivating skill category with ID: {Id}", id);
 
         try
         {
@@ -183,14 +164,15 @@ public class SkillsController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a skill.
+    /// Deletes a skill category.
     /// </summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deleting skill with ID: {Id}", id);
+        _logger.LogInformation("Deleting skill category with ID: {Id}", id);
 
         try
         {
@@ -200,6 +182,10 @@ public class SkillsController : ControllerBase
         catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 }

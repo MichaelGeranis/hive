@@ -38,18 +38,22 @@ public class SkillRepository : ISkillRepository
             query = query.Where(x => x.IsActive);
         }
 
+        // Get category sort orders for ordering
+        var categorySortOrders = _context.SkillCategories.Values
+            .ToDictionary(c => c.Id, c => c.SortOrder);
+
         var entities = query
-            .OrderBy(x => x.Category)
+            .OrderBy(x => categorySortOrders.GetValueOrDefault(x.SkillCategoryId, int.MaxValue))
             .ThenBy(x => x.Name)
             .ToList();
 
         return Task.FromResult<IReadOnlyList<Skill>>(entities);
     }
 
-    public Task<IReadOnlyList<Skill>> GetByCategoryAsync(SkillCategory category, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<Skill>> GetByCategoryIdAsync(Guid categoryId, CancellationToken cancellationToken = default)
     {
         var entities = _context.Skills.Values
-            .Where(x => x.Category == category && x.IsActive)
+            .Where(x => x.SkillCategoryId == categoryId && x.IsActive)
             .OrderBy(x => x.Name)
             .ToList();
 

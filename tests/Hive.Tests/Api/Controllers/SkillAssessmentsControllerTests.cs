@@ -74,7 +74,7 @@ public class SkillAssessmentsControllerTests
         {
             Skills = new List<SkillDto>
             {
-                new SkillDto { Id = Guid.NewGuid(), Name = "C#", Category = SkillCategory.Technical }
+                new SkillDto { Id = Guid.NewGuid(), Name = "C#", CategoryId = Guid.NewGuid(), CategoryName = "Technical" }
             },
             DirectReports = new List<DirectReportSkillsDto>
             {
@@ -577,7 +577,8 @@ public class SkillAssessmentsControllerTests
             DirectReportName = "John Doe",
             SkillId = skillId ?? Guid.NewGuid(),
             SkillName = "C#",
-            SkillCategory = SkillCategory.Technical,
+            SkillCategoryId = Guid.NewGuid(),
+            SkillCategoryName = "Technical",
             Level = level,
             LevelName = level.ToString(),
             TargetLevel = targetLevel,

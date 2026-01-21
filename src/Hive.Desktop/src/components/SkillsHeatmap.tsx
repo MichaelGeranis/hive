@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { SkillMatrix, Skill, ProficiencyLevel, SkillCategory } from '../types'
+import type { SkillMatrix, Skill, ProficiencyLevel } from '../types'
 
 export type MatrixSortBy = 'name' | 'avgProficiency' | 'gaps'
 export type MatrixSortOrder = 'asc' | 'desc'
@@ -7,19 +7,11 @@ export type MatrixSortOrder = 'asc' | 'desc'
 interface SkillsHeatmapProps {
   matrix: SkillMatrix
   onCellClick?: (directReportId: string, skillId: string, currentLevel?: ProficiencyLevel) => void
-  categoryFilter?: SkillCategory | null
+  categoryFilter?: string | null
   searchQuery?: string
   teamMemberFilter?: string[]
   sortBy?: MatrixSortBy
   sortOrder?: MatrixSortOrder
-}
-
-const CATEGORY_NAMES: Record<SkillCategory, string> = {
-  0: 'Technical',
-  1: 'Soft Skills',
-  2: 'Leadership',
-  3: 'Domain Knowledge',
-  4: 'Tools'
 }
 
 const LEVEL_NAMES: Record<ProficiencyLevel, string> = {
@@ -56,8 +48,8 @@ export function SkillsHeatmap({
   const filteredSkills = useMemo(() => {
     let skills = matrix.skills.filter(s => s.isActive)
 
-    if (categoryFilter !== null && categoryFilter !== undefined) {
-      skills = skills.filter(s => s.category === categoryFilter)
+    if (categoryFilter !== null && categoryFilter !== undefined && categoryFilter !== '') {
+      skills = skills.filter(s => s.categoryId === categoryFilter)
     }
 
     if (searchQuery.trim()) {
@@ -73,14 +65,15 @@ export function SkillsHeatmap({
 
   // Group skills by category for headers
   const groupedSkills = useMemo(() => {
-    const groups: Map<SkillCategory, Skill[]> = new Map()
+    const groups: Map<string, { categoryName: string; skills: Skill[] }> = new Map()
     filteredSkills.forEach(skill => {
-      if (!groups.has(skill.category)) {
-        groups.set(skill.category, [])
+      if (!groups.has(skill.categoryId)) {
+        groups.set(skill.categoryId, { categoryName: skill.categoryName, skills: [] })
       }
-      groups.get(skill.category)!.push(skill)
+      groups.get(skill.categoryId)!.skills.push(skill)
     })
-    return Array.from(groups.entries()).sort(([a], [b]) => a - b)
+    // Sort by category name alphabetically
+    return Array.from(groups.entries()).sort(([, a], [, b]) => a.categoryName.localeCompare(b.categoryName))
   }, [filteredSkills])
 
   // Filter and sort team members
@@ -155,20 +148,20 @@ export function SkillsHeatmap({
             <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">
               Direct Report
             </th>
-            {groupedSkills.map(([category, skills]) => (
+            {groupedSkills.map(([categoryId, { categoryName, skills }]) => (
               <th
-                key={category}
+                key={categoryId}
                 colSpan={skills.length}
                 className="border border-slate-300 dark:border-slate-600 px-4 py-2 text-center text-sm font-semibold text-slate-900 dark:text-slate-100"
               >
-                {CATEGORY_NAMES[category]}
+                {categoryName}
               </th>
             ))}
           </tr>
           {/* Skill names */}
           <tr className="bg-slate-100 dark:bg-slate-700">
             <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 px-4 py-2"></th>
-            {groupedSkills.map(([_, skills]) =>
+            {groupedSkills.map(([, { skills }]) =>
               skills.map(skill => (
                 <th
                   key={skill.id}
@@ -193,7 +186,7 @@ export function SkillsHeatmap({
                 <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
                   {directReport.directReportName}
                 </td>
-                {groupedSkills.map(([_, skills]) =>
+                {groupedSkills.map(([, { skills }]) =>
                   skills.map(skill => {
                     const assessment = assessmentMap.get(skill.id)
                     const level = assessment?.level ?? 0

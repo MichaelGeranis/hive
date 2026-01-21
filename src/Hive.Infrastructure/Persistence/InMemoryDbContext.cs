@@ -11,6 +11,7 @@ public class InMemoryDbContext
 {
     public ConcurrentDictionary<Guid, DirectReport> DirectReports { get; } = new();
     public ConcurrentDictionary<Guid, PerformanceReview> PerformanceReviews { get; } = new();
+    public ConcurrentDictionary<Guid, SkillCategoryEntity> SkillCategories { get; } = new();
     public ConcurrentDictionary<Guid, Skill> Skills { get; } = new();
     public ConcurrentDictionary<Guid, SkillAssessment> SkillAssessments { get; } = new();
     public ConcurrentDictionary<Guid, OneOnOneMeeting> OneOnOneMeetings { get; } = new();
@@ -160,23 +161,46 @@ public class InMemoryDbContext
 
     private void SeedSkills()
     {
+        // Create skill categories first
+        var technicalCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000001"),
+            "Technical", "Technical skills and programming knowledge", 0);
+        var softSkillsCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000002"),
+            "Soft Skills", "Communication and interpersonal skills", 1);
+        var leadershipCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000003"),
+            "Leadership", "Leadership and management skills", 2);
+        var domainCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000004"),
+            "Domain Knowledge", "Industry and domain expertise", 3);
+        var toolsCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000005"),
+            "Tools", "Development tools and platforms", 4);
+
+        SkillCategories.TryAdd(technicalCategory.Id, technicalCategory);
+        SkillCategories.TryAdd(softSkillsCategory.Id, softSkillsCategory);
+        SkillCategories.TryAdd(leadershipCategory.Id, leadershipCategory);
+        SkillCategories.TryAdd(domainCategory.Id, domainCategory);
+        SkillCategories.TryAdd(toolsCategory.Id, toolsCategory);
+
         // Technical skills
-        var csharp = new Skill("C#", "Proficiency in C# programming language", SkillCategory.Technical);
-        var dotnet = new Skill(".NET Core", "Experience with .NET Core framework", SkillCategory.Technical);
-        var sql = new Skill("SQL", "Database querying and design skills", SkillCategory.Technical);
-        var systemDesign = new Skill("System Design", "Ability to design scalable systems", SkillCategory.Technical);
+        var csharp = new Skill("C#", "Proficiency in C# programming language", technicalCategory.Id);
+        var dotnet = new Skill(".NET Core", "Experience with .NET Core framework", technicalCategory.Id);
+        var sql = new Skill("SQL", "Database querying and design skills", technicalCategory.Id);
+        var systemDesign = new Skill("System Design", "Ability to design scalable systems", technicalCategory.Id);
 
         // Soft skills
-        var communication = new Skill("Communication", "Written and verbal communication skills", SkillCategory.SoftSkills);
-        var teamwork = new Skill("Teamwork", "Ability to collaborate effectively", SkillCategory.SoftSkills);
+        var communication = new Skill("Communication", "Written and verbal communication skills", softSkillsCategory.Id);
+        var teamwork = new Skill("Teamwork", "Ability to collaborate effectively", softSkillsCategory.Id);
 
         // Leadership
-        var mentoring = new Skill("Mentoring", "Ability to guide and develop others", SkillCategory.Leadership);
-        var decisionMaking = new Skill("Decision Making", "Making timely and effective decisions", SkillCategory.Leadership);
+        var mentoring = new Skill("Mentoring", "Ability to guide and develop others", leadershipCategory.Id);
+        var decisionMaking = new Skill("Decision Making", "Making timely and effective decisions", leadershipCategory.Id);
 
         // Tools
-        var git = new Skill("Git", "Version control with Git", SkillCategory.Tools);
-        var docker = new Skill("Docker", "Containerization with Docker", SkillCategory.Tools);
+        var git = new Skill("Git", "Version control with Git", toolsCategory.Id);
+        var docker = new Skill("Docker", "Containerization with Docker", toolsCategory.Id);
 
         var skills = new[] { csharp, dotnet, sql, systemDesign, communication, teamwork, mentoring, decisionMaking, git, docker };
         foreach (var skill in skills)

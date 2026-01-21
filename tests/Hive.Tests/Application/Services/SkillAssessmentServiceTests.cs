@@ -13,12 +13,14 @@ public class SkillAssessmentServiceTests
 {
     private readonly Mock<ISkillAssessmentRepository> _assessmentRepositoryMock;
     private readonly Mock<ISkillRepository> _skillRepositoryMock;
+    private readonly Mock<ISkillCategoryRepository> _categoryRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
     private readonly Mock<IActivityService> _activityServiceMock;
     private readonly SkillAssessmentService _service;
 
     private readonly Guid _testDirectReportId = Guid.NewGuid();
     private readonly Guid _testSkillId = Guid.NewGuid();
+    private readonly Guid _testCategoryId = Guid.NewGuid();
     private readonly DirectReport _testDirectReport;
     private readonly Skill _testSkill;
 
@@ -26,16 +28,25 @@ public class SkillAssessmentServiceTests
     {
         _assessmentRepositoryMock = new Mock<ISkillAssessmentRepository>();
         _skillRepositoryMock = new Mock<ISkillRepository>();
+        _categoryRepositoryMock = new Mock<ISkillCategoryRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
         _activityServiceMock = new Mock<IActivityService>();
         _service = new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             _skillRepositoryMock.Object,
+            _categoryRepositoryMock.Object,
             _directReportRepositoryMock.Object,
             _activityServiceMock.Object);
 
         _testDirectReport = CreateDirectReport();
         _testSkill = CreateSkill();
+
+        // Setup default category lookup
+        _categoryRepositoryMock.Setup(r => r.GetAllAsync(true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SkillCategoryEntity>
+            {
+                SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0)
+            });
     }
 
     #region Constructor Tests
@@ -47,6 +58,7 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             null!,
             _skillRepositoryMock.Object,
+            _categoryRepositoryMock.Object,
             _directReportRepositoryMock.Object,
             _activityServiceMock.Object);
 
@@ -62,6 +74,7 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             null!,
+            _categoryRepositoryMock.Object,
             _directReportRepositoryMock.Object,
             _activityServiceMock.Object);
 
@@ -71,12 +84,29 @@ public class SkillAssessmentServiceTests
     }
 
     [Fact]
+    public void Constructor_WithNullCategoryRepository_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new SkillAssessmentService(
+            _assessmentRepositoryMock.Object,
+            _skillRepositoryMock.Object,
+            null!,
+            _directReportRepositoryMock.Object,
+            _activityServiceMock.Object);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("categoryRepository");
+    }
+
+    [Fact]
     public void Constructor_WithNullDirectReportRepository_ThrowsArgumentNullException()
     {
         // Act
         var act = () => new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             _skillRepositoryMock.Object,
+            _categoryRepositoryMock.Object,
             null!,
             _activityServiceMock.Object);
 
@@ -92,6 +122,7 @@ public class SkillAssessmentServiceTests
         var act = () => new SkillAssessmentService(
             _assessmentRepositoryMock.Object,
             _skillRepositoryMock.Object,
+            _categoryRepositoryMock.Object,
             _directReportRepositoryMock.Object,
             null!);
 
@@ -115,6 +146,8 @@ public class SkillAssessmentServiceTests
             .ReturnsAsync(_testDirectReport);
         _skillRepositoryMock.Setup(r => r.GetByIdAsync(_testSkillId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testSkill);
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(_testCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0));
 
         // Act
         var result = await _service.GetByIdAsync(assessment.Id);
@@ -264,6 +297,8 @@ public class SkillAssessmentServiceTests
             .ReturnsAsync(_testDirectReport);
         _skillRepositoryMock.Setup(r => r.GetByIdAsync(_testSkillId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testSkill);
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(_testCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0));
         _assessmentRepositoryMock.Setup(r => r.AssessmentExistsAsync(_testDirectReportId, _testSkillId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _assessmentRepositoryMock.Setup(r => r.AddAsync(It.IsAny<SkillAssessment>(), It.IsAny<CancellationToken>()))
@@ -403,6 +438,8 @@ public class SkillAssessmentServiceTests
             .ReturnsAsync(_testDirectReport);
         _skillRepositoryMock.Setup(r => r.GetByIdAsync(_testSkillId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testSkill);
+        _categoryRepositoryMock.Setup(r => r.GetByIdAsync(_testCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SkillCategoryEntity.CreateWithId(_testCategoryId, "Technical", "Technical skills", 0));
 
         // Act
         var result = await _service.UpdateAsync(assessment.Id, dto);
@@ -445,7 +482,7 @@ public class SkillAssessmentServiceTests
     {
         // Arrange
         var skill2Id = Guid.NewGuid();
-        var skill2 = new Skill("TypeScript", "Programming language", SkillCategory.Technical);
+        var skill2 = new Skill("TypeScript", "Programming language", _testCategoryId);
         SetPropertyValue(skill2, "Id", skill2Id);
 
         var dto = new BulkSkillAssessmentDto
@@ -705,7 +742,7 @@ public class SkillAssessmentServiceTests
 
     private Skill CreateSkill()
     {
-        var skill = new Skill("C#", "Programming language", SkillCategory.Technical);
+        var skill = new Skill("C#", "Programming language", _testCategoryId);
         SetPropertyValue(skill, "Id", _testSkillId);
         return skill;
     }

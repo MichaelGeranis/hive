@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IDirectReportRepository, DirectReportRepository>();
         services.AddScoped<IPerformanceReviewRepository, PerformanceReviewRepository>();
         services.AddScoped<ISkillRepository, SkillRepository>();
+        services.AddScoped<ISkillCategoryRepository, SkillCategoryRepository>();
         services.AddScoped<ISkillAssessmentRepository, SkillAssessmentRepository>();
         services.AddScoped<IOneOnOneMeetingRepository, OneOnOneMeetingRepository>();
         services.AddScoped<IMeetingNoteRepository, MeetingNoteRepository>();
@@ -82,6 +83,7 @@ public static class DependencyInjection
         services.AddScoped<IDirectReportRepository, SqliteDirectReportRepository>();
         services.AddScoped<IPerformanceReviewRepository, SqlitePerformanceReviewRepository>();
         services.AddScoped<ISkillRepository, SqliteSkillRepository>();
+        services.AddScoped<ISkillCategoryRepository, SqliteSkillCategoryRepository>();
         services.AddScoped<ISkillAssessmentRepository, SqliteSkillAssessmentRepository>();
         services.AddScoped<IOneOnOneMeetingRepository, SqliteOneOnOneMeetingRepository>();
         services.AddScoped<IMeetingNoteRepository, SqliteMeetingNoteRepository>();

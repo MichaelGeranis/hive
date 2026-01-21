@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IDirectReportService, DirectReportService>();
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
         services.AddScoped<ISkillService, SkillService>();
+        services.AddScoped<ISkillCategoryService, SkillCategoryService>();
         services.AddScoped<ISkillAssessmentService, SkillAssessmentService>();
         services.AddScoped<IOneOnOneMeetingService, OneOnOneMeetingService>();
         services.AddScoped<IMeetingNoteService, MeetingNoteService>();

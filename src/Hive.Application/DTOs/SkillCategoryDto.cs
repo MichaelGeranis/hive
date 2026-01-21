@@ -1,36 +1,36 @@
 namespace Hive.Application.DTOs;
 
 /// <summary>
-/// Data Transfer Object for Skill.
+/// Data Transfer Object for SkillCategory.
 /// </summary>
-public record SkillDto
+public record SkillCategoryDto
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
-    public Guid CategoryId { get; init; }
-    public string CategoryName { get; init; } = string.Empty;
+    public int SortOrder { get; init; }
     public bool IsActive { get; init; }
+    public int SkillCount { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
 
 /// <summary>
-/// DTO for creating a new Skill.
+/// DTO for creating a new SkillCategory.
 /// </summary>
-public record CreateSkillDto
+public record CreateSkillCategoryDto
 {
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
-    public Guid CategoryId { get; init; }
+    public int SortOrder { get; init; }
 }
 
 /// <summary>
-/// DTO for updating a Skill.
+/// DTO for updating a SkillCategory.
 /// </summary>
-public record UpdateSkillDto
+public record UpdateSkillCategoryDto
 {
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
-    public Guid CategoryId { get; init; }
+    public int SortOrder { get; init; }
 }

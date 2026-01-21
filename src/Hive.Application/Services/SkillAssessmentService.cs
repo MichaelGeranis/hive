@@ -13,17 +13,20 @@ public class SkillAssessmentService : ISkillAssessmentService
 {
     private readonly ISkillAssessmentRepository _assessmentRepository;
     private readonly ISkillRepository _skillRepository;
+    private readonly ISkillCategoryRepository _categoryRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
 
     public SkillAssessmentService(
         ISkillAssessmentRepository assessmentRepository,
         ISkillRepository skillRepository,
+        ISkillCategoryRepository categoryRepository,
         IDirectReportRepository directReportRepository,
         IActivityService activityService)
     {
         _assessmentRepository = assessmentRepository ?? throw new ArgumentNullException(nameof(assessmentRepository));
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
+        _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
@@ -167,16 +170,19 @@ public class SkillAssessmentService : ISkillAssessmentService
     public async Task<SkillMatrixDto> GetSkillMatrixAsync(CancellationToken cancellationToken = default)
     {
         var skills = await _skillRepository.GetAllAsync(false, cancellationToken);
+        var categories = await _categoryRepository.GetAllAsync(true, cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var allAssessments = await _assessmentRepository.GetAllAsync(cancellationToken);
+
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
 
         var skillDtos = skills.Select(s => new SkillDto
         {
             Id = s.Id,
             Name = s.Name,
             Description = s.Description,
-            Category = s.Category,
-            CategoryName = GetCategoryName(s.Category),
+            CategoryId = s.SkillCategoryId,
+            CategoryName = categoryLookup.GetValueOrDefault(s.SkillCategoryId, "Unknown"),
             IsActive = s.IsActive,
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt
@@ -191,6 +197,7 @@ public class SkillAssessmentService : ISkillAssessmentService
                 .Select(a =>
                 {
                     var skill = skills.FirstOrDefault(s => s.Id == a.SkillId);
+                    var categoryId = skill?.SkillCategoryId ?? Guid.Empty;
                     return new SkillAssessmentDto
                     {
                         Id = a.Id,
@@ -198,7 +205,8 @@ public class SkillAssessmentService : ISkillAssessmentService
                         DirectReportName = dr.FullName,
                         SkillId = a.SkillId,
                         SkillName = skill?.Name ?? "Unknown",
-                        SkillCategory = skill?.Category ?? SkillCategory.Technical,
+                        SkillCategoryId = categoryId,
+                        SkillCategoryName = categoryLookup.GetValueOrDefault(categoryId, "Unknown"),
                         Level = a.Level,
                         LevelName = GetLevelName(a.Level),
                         TargetLevel = a.TargetLevel,
@@ -257,6 +265,10 @@ public class SkillAssessmentService : ISkillAssessmentService
     {
         var directReport = await _directReportRepository.GetByIdAsync(entity.DirectReportId, cancellationToken);
         var skill = await _skillRepository.GetByIdAsync(entity.SkillId, cancellationToken);
+        var categoryId = skill?.SkillCategoryId ?? Guid.Empty;
+        var category = categoryId != Guid.Empty
+            ? await _categoryRepository.GetByIdAsync(categoryId, cancellationToken)
+            : null;
 
         return new SkillAssessmentDto
         {
@@ -265,7 +277,8 @@ public class SkillAssessmentService : ISkillAssessmentService
             DirectReportName = directReport?.FullName ?? "Unknown",
             SkillId = entity.SkillId,
             SkillName = skill?.Name ?? "Unknown",
-            SkillCategory = skill?.Category ?? SkillCategory.Technical,
+            SkillCategoryId = categoryId,
+            SkillCategoryName = category?.Name ?? "Unknown",
             Level = entity.Level,
             LevelName = GetLevelName(entity.Level),
             TargetLevel = entity.TargetLevel,
@@ -281,13 +294,15 @@ public class SkillAssessmentService : ISkillAssessmentService
     {
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var skills = await _skillRepository.GetAllAsync(true, cancellationToken);
+        var categories = await _categoryRepository.GetAllAsync(true, cancellationToken);
 
         var drLookup = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
-        var skillLookup = skills.ToDictionary(s => s.Id, s => (s.Name, s.Category));
+        var skillLookup = skills.ToDictionary(s => s.Id, s => (s.Name, s.SkillCategoryId));
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
 
         return entities.Select(e =>
         {
-            var (skillName, skillCategory) = skillLookup.GetValueOrDefault(e.SkillId, ("Unknown", SkillCategory.Technical));
+            var (skillName, categoryId) = skillLookup.GetValueOrDefault(e.SkillId, ("Unknown", Guid.Empty));
             return new SkillAssessmentDto
             {
                 Id = e.Id,
@@ -295,7 +310,8 @@ public class SkillAssessmentService : ISkillAssessmentService
                 DirectReportName = drLookup.GetValueOrDefault(e.DirectReportId, "Unknown"),
                 SkillId = e.SkillId,
                 SkillName = skillName,
-                SkillCategory = skillCategory,
+                SkillCategoryId = categoryId,
+                SkillCategoryName = categoryLookup.GetValueOrDefault(categoryId, "Unknown"),
                 Level = e.Level,
                 LevelName = GetLevelName(e.Level),
                 TargetLevel = e.TargetLevel,
@@ -316,16 +332,6 @@ public class SkillAssessmentService : ISkillAssessmentService
         ProficiencyLevel.Intermediate => "Intermediate",
         ProficiencyLevel.Advanced => "Advanced",
         ProficiencyLevel.Expert => "Expert",
-        _ => "Unknown"
-    };
-
-    private static string GetCategoryName(SkillCategory category) => category switch
-    {
-        SkillCategory.Technical => "Technical",
-        SkillCategory.SoftSkills => "Soft Skills",
-        SkillCategory.Leadership => "Leadership",
-        SkillCategory.DomainKnowledge => "Domain Knowledge",
-        SkillCategory.Tools => "Tools",
         _ => "Unknown"
     };
 }

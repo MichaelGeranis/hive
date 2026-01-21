@@ -34,16 +34,22 @@ public class SqliteSkillRepository : ISkillRepository
             query = query.Where(x => x.IsActive);
         }
 
+        // Join with categories to order by category sort order
         return await query
-            .OrderBy(x => x.Category)
-            .ThenBy(x => x.Name)
+            .Join(_context.SkillCategories,
+                skill => skill.SkillCategoryId,
+                category => category.Id,
+                (skill, category) => new { Skill = skill, Category = category })
+            .OrderBy(x => x.Category.SortOrder)
+            .ThenBy(x => x.Skill.Name)
+            .Select(x => x.Skill)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Skill>> GetByCategoryAsync(SkillCategory category, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Skill>> GetByCategoryIdAsync(Guid categoryId, CancellationToken cancellationToken = default)
     {
         return await _context.Skills
-            .Where(x => x.Category == category && x.IsActive)
+            .Where(x => x.SkillCategoryId == categoryId && x.IsActive)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }

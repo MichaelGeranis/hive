@@ -15,6 +15,7 @@ public class HiveDbContext : DbContext
     public DbSet<DirectReport> DirectReports => Set<DirectReport>();
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
     public DbSet<Skill> Skills => Set<Skill>();
+    public DbSet<SkillCategoryEntity> SkillCategories => Set<SkillCategoryEntity>();
     public DbSet<SkillAssessment> SkillAssessments => Set<SkillAssessment>();
     public DbSet<OneOnOneMeeting> OneOnOneMeetings => Set<OneOnOneMeeting>();
     public DbSet<MeetingNote> MeetingNotes => Set<MeetingNote>();
@@ -69,6 +70,15 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => new { e.DirectReportId, e.ReviewPeriod }).IsUnique();
         });
 
+        // SkillCategory configuration
+        modelBuilder.Entity<SkillCategoryEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
         // Skill configuration
         modelBuilder.Entity<Skill>(entity =>
         {
@@ -76,6 +86,7 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => e.SkillCategoryId);
         });
 
         // SkillAssessment configuration
@@ -357,19 +368,39 @@ public class HiveDbContext : DbContext
         DirectReports.AddRange(alice, bob, carol);
         SaveChanges();
 
+        // Create skill categories
+        var technicalCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000001"),
+            "Technical", "Technical skills and programming knowledge", 0);
+        var softSkillsCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000002"),
+            "Soft Skills", "Communication and interpersonal skills", 1);
+        var leadershipCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000003"),
+            "Leadership", "Leadership and management skills", 2);
+        var domainCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000004"),
+            "Domain Knowledge", "Industry and domain expertise", 3);
+        var toolsCategory = SkillCategoryEntity.CreateWithId(
+            new Guid("10000000-0000-0000-0000-000000000005"),
+            "Tools", "Development tools and platforms", 4);
+
+        SkillCategories.AddRange(technicalCategory, softSkillsCategory, leadershipCategory, domainCategory, toolsCategory);
+        SaveChanges();
+
         // Create skills
         var skills = new[]
         {
-            new Skill("C#", "C# programming language", SkillCategory.Technical),
-            new Skill("TypeScript", "TypeScript programming", SkillCategory.Technical),
-            new Skill("React", "React frontend framework", SkillCategory.Technical),
-            new Skill("SQL", "SQL databases", SkillCategory.Technical),
-            new Skill("Communication", "Verbal and written communication", SkillCategory.SoftSkills),
-            new Skill("Problem Solving", "Analytical problem solving", SkillCategory.SoftSkills),
-            new Skill("Leadership", "Team leadership", SkillCategory.Leadership),
-            new Skill("Mentoring", "Mentoring junior developers", SkillCategory.Leadership),
-            new Skill("Git", "Git version control", SkillCategory.Tools),
-            new Skill("Docker", "Docker containerization", SkillCategory.Tools)
+            new Skill("C#", "C# programming language", technicalCategory.Id),
+            new Skill("TypeScript", "TypeScript programming", technicalCategory.Id),
+            new Skill("React", "React frontend framework", technicalCategory.Id),
+            new Skill("SQL", "SQL databases", technicalCategory.Id),
+            new Skill("Communication", "Verbal and written communication", softSkillsCategory.Id),
+            new Skill("Problem Solving", "Analytical problem solving", softSkillsCategory.Id),
+            new Skill("Leadership", "Team leadership", leadershipCategory.Id),
+            new Skill("Mentoring", "Mentoring junior developers", leadershipCategory.Id),
+            new Skill("Git", "Git version control", toolsCategory.Id),
+            new Skill("Docker", "Docker containerization", toolsCategory.Id)
         };
 
         Skills.AddRange(skills);
