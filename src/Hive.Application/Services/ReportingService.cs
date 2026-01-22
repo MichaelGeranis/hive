@@ -965,10 +965,30 @@ public class ReportingService : IReportingService
             .GroupBy(x => x.LatestSprint)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
-        // Determine current sprint based on highest sort order from all sprints
+        // Determine current sprint based on today's date (sprint that contains today)
+        var today = DateTime.UtcNow.Date;
         var currentSprintEntity = sprints
+            .Where(s => s.ContainsDate(today))
             .OrderByDescending(s => s.GetSortOrder())
             .FirstOrDefault();
+
+        // If no sprint contains today, find the nearest upcoming sprint
+        if (currentSprintEntity == null)
+        {
+            currentSprintEntity = sprints
+                .Where(s => s.GetEstimatedStartDate().Date >= today)
+                .OrderBy(s => s.GetEstimatedStartDate())
+                .FirstOrDefault();
+        }
+
+        // If still no sprint found, fall back to the most recent past sprint
+        if (currentSprintEntity == null)
+        {
+            currentSprintEntity = sprints
+                .Where(s => s.GetEstimatedEndDate().Date < today)
+                .OrderByDescending(s => s.GetSortOrder())
+                .FirstOrDefault();
+        }
 
         var currentSortOrder = currentSprintEntity?.GetSortOrder() ?? 0;
 
@@ -978,7 +998,7 @@ public class ReportingService : IReportingService
         {
             // Get current and past sprints only (exclude future)
             var currentAndPastSprints = sprints
-                .Where(s => s.GetSortOrder() <= currentSortOrder)
+                .Where(s => !s.IsFuture(today))
                 .OrderByDescending(s => s.GetSortOrder())
                 .Take(sprintCount.Value)
                 .ToList();
@@ -1009,7 +1029,7 @@ public class ReportingService : IReportingService
             {
                 status = "Current";
             }
-            else if (sprint.GetSortOrder() < currentSortOrder)
+            else if (sprint.IsPast(today))
             {
                 status = "Past";
             }

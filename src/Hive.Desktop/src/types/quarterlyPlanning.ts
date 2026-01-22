@@ -187,6 +187,33 @@ export interface PlanningInsights {
   criticalCount: number
   insights: PlanningInsight[]
   teamMemberSummaries: TeamMemberSummary[]
+  sprintWorkloads: SprintWorkloadSummary[]
+}
+
+// Workload types
+export interface SprintWorkloadSummary {
+  sprintId: string
+  sprintName: string
+  totalSprintEffort: number
+  initiativeCount: number
+  teamMemberCount: number
+  teamMemberWorkloads: TeamMemberWorkload[]
+}
+
+export interface TeamMemberWorkload {
+  directReportId: string
+  directReportName: string
+  sprintEffort: number
+  initiativeCount: number
+  initiatives: InitiativeWorkload[]
+}
+
+export interface InitiativeWorkload {
+  initiativeId: string
+  initiativeName: string
+  tshirtSize: string
+  sprintEffort: number
+  color: string
 }
 
 // Helper functions

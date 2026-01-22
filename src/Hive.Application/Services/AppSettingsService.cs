@@ -137,11 +137,10 @@ public class AppSettingsService : IAppSettingsService
     {
         return new List<TshirtSizeMapping>
         {
-            new() { Size = "XS", Sprints = 1, Label = "XS = 1 sprint" },
-            new() { Size = "S", Sprints = 2, Label = "S = 2 sprints" },
-            new() { Size = "M", Sprints = 3, Label = "M = 3 sprints" },
-            new() { Size = "L", Sprints = 5, Label = "L = 5 sprints" },
-            new() { Size = "XL", Sprints = 8, Label = "XL = 8 sprints" }
+            new() { Size = "S", Sprints = 0.5m, Label = "S = 1/2 sprint" },
+            new() { Size = "M", Sprints = 1, Label = "M = 1 sprint" },
+            new() { Size = "L", Sprints = 2, Label = "L = 2 sprints" },
+            new() { Size = "XL", Sprints = 4, Label = "XL = 4+ sprints" }
         };
     }
 

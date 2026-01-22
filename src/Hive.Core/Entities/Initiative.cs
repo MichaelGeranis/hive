@@ -15,7 +15,7 @@ public class Initiative
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
-    private static readonly string[] ValidTshirtSizes = { "XS", "S", "M", "L", "XL" };
+    private static readonly string[] ValidTshirtSizes = { "S", "M", "L", "XL" };
 
     // Available colors for initiatives - used by service to assign unique colors
     public static readonly string[] AvailableColors =

@@ -13,8 +13,7 @@ import {
   ListTodo,
   Calendar,
   StickyNote,
-  Check,
-  TrendingUp
+  Check
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
@@ -307,6 +306,56 @@ export default function Dashboard() {
     }
   }
 
+  // Helper function to calculate working days between two dates (excluding weekends)
+  const getWorkingDays = (start: Date, end: Date): number => {
+    let count = 0
+    const current = new Date(start)
+    while (current <= end) {
+      const dayOfWeek = current.getDay()
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++
+      }
+      current.setDate(current.getDate() + 1)
+    }
+    return count
+  }
+
+  // Month name to number mapping
+  const monthMap: Record<string, number> = {
+    'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+    'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+  }
+
+  // Helper to get sprint start date from dates, name parsing, or year/quarter/sprintNumber
+  const getSprintStartDate = (sprint: Sprint): Date => {
+    // 1. Use actual startDate if available
+    if (sprint.startDate) {
+      return new Date(sprint.startDate)
+    }
+
+    // 2. Try to parse from name format like "MAR_1Q26_S1" or "MAR_Q1_26_S1"
+    const nameMatch = sprint.name.match(/^([A-Z]{3})_(\d)?Q(\d{2})_S(\d+)$/i)
+    if (nameMatch) {
+      const monthStr = nameMatch[1].toUpperCase()
+      const year = 2000 + parseInt(nameMatch[3], 10)
+      const sprintNum = parseInt(nameMatch[4], 10)
+      const month = monthMap[monthStr]
+
+      if (month !== undefined) {
+        // Estimate day based on sprint number within the month (each sprint ~2 weeks)
+        const day = 1 + ((sprintNum - 1) % 2) * 14
+        return new Date(year, month, day)
+      }
+    }
+
+    // 3. Fallback: calculate from year, quarter, sprintNumber
+    // Quarter start month: Q1=Jan(0), Q2=Apr(3), Q3=Jul(6), Q4=Oct(9)
+    const quarterStartMonth = (sprint.quarter - 1) * 3
+    // Each sprint is ~2 weeks, so sprint 1 starts day 1, sprint 2 starts day 15, etc.
+    const dayOfQuarter = 1 + (sprint.sprintNumber - 1) * 14
+    return new Date(sprint.year, quarterStartMonth, dayOfQuarter)
+  }
+
   // Sprint capacity suggestions calculation
   const calculateSprintSuggestions = (): SprintCapacitySuggestion[] => {
     if (!dashboard) return []
@@ -319,20 +368,45 @@ export default function Dashboard() {
       directReports.filter(dr => dr.isDirect).map(dr => dr.id)
     )
 
-    const upcomingSprints = sprints.filter(sprint => {
-      const sprintDate = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
-      return sprintDate >= today && sprintDate <= threeMonthsLater
-    })
+    // Filter upcoming sprints, sort chronologically (earliest first), then apply limit
+    let upcomingSprints = sprints
+      .filter(sprint => {
+        const sprintDate = getSprintStartDate(sprint)
+        return sprintDate >= today && sprintDate <= threeMonthsLater
+      })
+      .sort((a, b) => {
+        // Sort by actual date (earliest first)
+        return getSprintStartDate(a).getTime() - getSprintStartDate(b).getTime()
+      })
+
+    // Apply sprint filter limit if set (now correctly gets the nearest N sprints)
+    if (sprintFilter !== undefined) {
+      upcomingSprints = upcomingSprints.slice(0, sprintFilter)
+    }
 
     return upcomingSprints.map(sprint => {
-      const sprintStart = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
-      const sprintEnd = new Date(sprintStart)
-      sprintEnd.setDate(sprintEnd.getDate() + 14)
+      // Determine sprint start and end dates
+      let sprintStart: Date
+      let sprintEnd: Date
+      let workingDaysInSprint: number
+
+      if (sprint.startDate && sprint.endDate) {
+        // Use actual sprint dates
+        sprintStart = new Date(sprint.startDate)
+        sprintEnd = new Date(sprint.endDate)
+        workingDaysInSprint = getWorkingDays(sprintStart, sprintEnd)
+      } else {
+        // Use the same logic as getSprintStartDate for consistency
+        sprintStart = getSprintStartDate(sprint)
+        sprintEnd = new Date(sprintStart)
+        sprintEnd.setDate(sprintEnd.getDate() + 13) // 2 weeks minus 1 day
+        workingDaysInSprint = 9
+      }
 
       const affectedMembers = new Set<string>()
       let totalLeaveDays = 0
 
-      // Only count leaves from direct reports
+      // Only count leaves from direct reports, counting only working days
       leaves.filter(leave => directReportIds.has(leave.directReportId)).forEach(leave => {
         const leaveStart = new Date(leave.startDate)
         const leaveEnd = new Date(leave.endDate)
@@ -340,28 +414,34 @@ export default function Dashboard() {
         if (leaveStart <= sprintEnd && leaveEnd >= sprintStart) {
           affectedMembers.add(leave.directReportId)
 
+          // Calculate overlap period
           const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
           const overlapEnd = leaveEnd < sprintEnd ? leaveEnd : sprintEnd
-          const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24))
-          totalLeaveDays += overlapDays
+
+          // Count only working days in the overlap
+          const workingLeaveDays = getWorkingDays(overlapStart, overlapEnd)
+          totalLeaveDays += workingLeaveDays
         }
       })
 
       const currentCapacity = sprintCapacities.find(c => c.sprintId === sprint.id) || null
       const totalTeamSize = dashboard.team.totalDirectReports
-      const peopleOnLeave = affectedMembers.size
-      const suggestedAvailableMembers = Math.max(0, totalTeamSize - peopleOnLeave)
+
+      // Calculate lost capacity based on proportion of leave days
+      // Example: 2 leave days in a 9-day sprint = 2/9 = 0.22 people lost
+      const lostCapacity = workingDaysInSprint > 0 ? totalLeaveDays / workingDaysInSprint : 0
+      const suggestedAvailableMembers = Math.max(0, Math.floor(totalTeamSize - lostCapacity))
 
       return {
         sprint,
         currentCapacity,
-        peopleOnLeave,
+        peopleOnLeave: affectedMembers.size,
         totalTeamSize,
         suggestedAvailableMembers,
         leaveDaysInSprint: totalLeaveDays,
         affectedMembers
       }
-    })
+    }).filter(suggestion => suggestion.leaveDaysInSprint > 0) // Only show sprints with leave impact
   }
 
   const sprintSuggestions = calculateSprintSuggestions()
@@ -939,27 +1019,42 @@ export default function Dashboard() {
       })() : null
       )}
 
-      {/* Sprint Capacity Suggestions */}
-      {widgets.sprintCapacitySuggestions && sprintSuggestions.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Sprint Capacity Suggestions"
-            subtitle="Based on upcoming leaves, here are suggested capacity adjustments for your sprints"
-          />
-          <CardContent>
-            <div className="space-y-3">
-              {sprintSuggestions.map(suggestion => {
-                const needsAdjustment = suggestion.currentCapacity &&
-                  suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
+      {/* Sprint Capacity Suggestions - Shows warnings when they exist */}
+      {widgets.sprintCapacitySuggestions && (() => {
+        const suggestionsNeedingAdjustment = sprintSuggestions.filter(suggestion =>
+          suggestion.currentCapacity &&
+          suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
+        )
 
-                return (
+        if (suggestionsNeedingAdjustment.length === 0) {
+          return (
+            <Card>
+              <CardHeader
+                title="Sprint Capacity Suggestions"
+                subtitle="Based on upcoming leaves and sprint capacity settings"
+              />
+              <CardContent>
+                <div className="flex items-center justify-center py-6 text-slate-500 dark:text-slate-400">
+                  <Check className="w-5 h-5 mr-2 text-green-500" />
+                  <span>No capacity adjustments needed</span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
+
+        return (
+          <Card>
+            <CardHeader
+              title="Sprint Capacity Suggestions"
+              subtitle="Based on upcoming leaves, these sprints need capacity adjustments"
+            />
+            <CardContent>
+              <div className="space-y-3">
+                {suggestionsNeedingAdjustment.map(suggestion => (
                   <div
                     key={suggestion.sprint.id}
-                    className={`p-4 rounded-lg border ${
-                      needsAdjustment
-                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
-                        : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
-                    }`}
+                    className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -967,12 +1062,10 @@ export default function Dashboard() {
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                             {suggestion.sprint.name}
                           </h3>
-                          {needsAdjustment && (
-                            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span className="text-xs font-medium">Needs Adjustment</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span className="text-xs font-medium">Needs Adjustment</span>
+                          </div>
                         </div>
                         <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
                           <div>
@@ -1010,12 +1103,12 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Team Velocity */}
       {widgets.teamVelocity && (

@@ -11,7 +11,7 @@ interface InitiativesPanelProps {
   onDragStart?: (initiative: Initiative) => void
 }
 
-const TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL']
+const TSHIRT_SIZES = ['S', 'M', 'L', 'XL']
 
 export default function InitiativesPanel({
   initiatives,

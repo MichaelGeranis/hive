@@ -18,8 +18,18 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
     private readonly ISprintRepository _sprintRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly ILeaveRepository _leaveRepository;
+    private readonly IAppSettingsService _appSettingsService;
 
     private const int BottleneckInitiativeThreshold = 3; // 3+ initiatives in one sprint
+
+    // Default T-shirt size mappings (used if settings not available)
+    private static readonly Dictionary<string, decimal> DefaultTshirtMappings = new()
+    {
+        { "S", 0.5m },
+        { "M", 1m },
+        { "L", 2m },
+        { "XL", 4m }
+    };
 
     public QuarterlyPlanningInsightsService(
         IQuarterRepository quarterRepository,
@@ -28,7 +38,8 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         IInitiativeDependencyRepository dependencyRepository,
         ISprintRepository sprintRepository,
         IDirectReportRepository directReportRepository,
-        ILeaveRepository leaveRepository)
+        ILeaveRepository leaveRepository,
+        IAppSettingsService appSettingsService)
     {
         _quarterRepository = quarterRepository ?? throw new ArgumentNullException(nameof(quarterRepository));
         _initiativeRepository = initiativeRepository ?? throw new ArgumentNullException(nameof(initiativeRepository));
@@ -37,6 +48,7 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _leaveRepository = leaveRepository ?? throw new ArgumentNullException(nameof(leaveRepository));
+        _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
     }
 
     public async Task<PlanningInsightsDto> GenerateInsightsAsync(Guid quarterId, CancellationToken cancellationToken = default)
@@ -52,6 +64,9 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         var allMembers = await _directReportRepository.GetAllAsync(cancellationToken);
         var directReports = allMembers.Where(d => d.IsDirect).ToList();
         var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
+
+        // Get T-shirt size mappings
+        var tshirtMappings = await GetTshirtMappingsAsync(cancellationToken);
 
         // Calculate summary metrics
         var allocatedInitiativeIds = allocations.Select(a => a.InitiativeId).Distinct().ToHashSet();
@@ -75,6 +90,9 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         // Generate team member summaries
         var teamMemberSummaries = GenerateTeamMemberSummaries(allocations, directReports, sprints, leaves);
 
+        // Generate sprint workload summaries
+        var sprintWorkloads = GenerateSprintWorkloads(allocations, initiatives, sprints, directReports, tshirtMappings);
+
         return new PlanningInsightsDto
         {
             TotalInitiatives = initiatives.Count,
@@ -83,8 +101,116 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
             WarningCount = insights.Count(i => i.Severity == InsightSeverity.Warning),
             CriticalCount = insights.Count(i => i.Severity == InsightSeverity.Critical),
             Insights = insights,
-            TeamMemberSummaries = teamMemberSummaries
+            TeamMemberSummaries = teamMemberSummaries,
+            SprintWorkloads = sprintWorkloads
         };
+    }
+
+    private async Task<Dictionary<string, decimal>> GetTshirtMappingsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settings = await _appSettingsService.GetAsync(cancellationToken);
+            if (settings.TshirtSizeMappings.Count > 0)
+            {
+                return settings.TshirtSizeMappings.ToDictionary(
+                    m => m.Size.ToUpperInvariant(),
+                    m => m.Sprints);
+            }
+        }
+        catch
+        {
+            // Fall back to defaults if settings not available
+        }
+        return DefaultTshirtMappings;
+    }
+
+    private static IReadOnlyList<SprintWorkloadSummaryDto> GenerateSprintWorkloads(
+        IReadOnlyList<Allocation> allocations,
+        IReadOnlyList<Initiative> initiatives,
+        IReadOnlyList<Sprint> sprints,
+        IReadOnlyList<DirectReport> directReports,
+        Dictionary<string, decimal> tshirtMappings)
+    {
+        var initiativeDict = initiatives.ToDictionary(i => i.Id);
+        var directReportDict = directReports.ToDictionary(d => d.Id);
+
+        var workloads = new List<SprintWorkloadSummaryDto>();
+
+        foreach (var sprint in sprints.OrderBy(s => s.GetSortOrder()))
+        {
+            var sprintAllocations = allocations.Where(a => a.SprintId == sprint.Id).ToList();
+
+            // Group allocations by team member for this sprint
+            var teamMemberWorkloads = sprintAllocations
+                .GroupBy(a => a.DirectReportId)
+                .Select(memberGroup =>
+                {
+                    directReportDict.TryGetValue(memberGroup.Key, out var member);
+
+                    // Get unique initiatives for this member in this sprint
+                    var memberInitiatives = memberGroup
+                        .Select(a => a.InitiativeId)
+                        .Distinct()
+                        .Select(initId =>
+                        {
+                            initiativeDict.TryGetValue(initId, out var initiative);
+                            if (initiative == null) return null;
+
+                            var effort = GetTshirtEffort(initiative.TshirtSize, tshirtMappings);
+                            return new InitiativeWorkloadDto
+                            {
+                                InitiativeId = initiative.Id,
+                                InitiativeName = initiative.Name,
+                                TshirtSize = initiative.TshirtSize,
+                                SprintEffort = effort,
+                                Color = initiative.Color
+                            };
+                        })
+                        .Where(i => i != null)
+                        .Cast<InitiativeWorkloadDto>()
+                        .ToList();
+
+                    return new TeamMemberWorkloadDto
+                    {
+                        DirectReportId = memberGroup.Key,
+                        DirectReportName = member?.FullName ?? "Unknown",
+                        SprintEffort = memberInitiatives.Sum(i => i.SprintEffort),
+                        InitiativeCount = memberInitiatives.Count,
+                        Initiatives = memberInitiatives
+                    };
+                })
+                .OrderByDescending(w => w.SprintEffort)
+                .ToList();
+
+            // Calculate total sprint effort (unique initiatives only)
+            var uniqueInitiativeIds = sprintAllocations.Select(a => a.InitiativeId).Distinct();
+            var totalSprintEffort = uniqueInitiativeIds
+                .Sum(initId =>
+                {
+                    initiativeDict.TryGetValue(initId, out var initiative);
+                    return initiative != null ? GetTshirtEffort(initiative.TshirtSize, tshirtMappings) : 0;
+                });
+
+            workloads.Add(new SprintWorkloadSummaryDto
+            {
+                SprintId = sprint.Id,
+                SprintName = sprint.Name,
+                TotalSprintEffort = totalSprintEffort,
+                InitiativeCount = uniqueInitiativeIds.Count(),
+                TeamMemberCount = teamMemberWorkloads.Count,
+                TeamMemberWorkloads = teamMemberWorkloads
+            });
+        }
+
+        return workloads;
+    }
+
+    private static decimal GetTshirtEffort(string tshirtSize, Dictionary<string, decimal> mappings)
+    {
+        if (string.IsNullOrWhiteSpace(tshirtSize)) return 1m; // Default to M
+        var key = tshirtSize.ToUpperInvariant();
+        return mappings.TryGetValue(key, out var effort) ? effort : 1m;
     }
 
     private static IEnumerable<PlanningInsightDto> DetectLeaveConflicts(

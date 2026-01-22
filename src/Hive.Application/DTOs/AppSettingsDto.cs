@@ -30,7 +30,7 @@ public record StoryPointMapping
 public record TshirtSizeMapping
 {
     public string Size { get; init; } = string.Empty;
-    public int Sprints { get; init; }
+    public decimal Sprints { get; init; }
     public string Label { get; init; } = string.Empty;
 }
 

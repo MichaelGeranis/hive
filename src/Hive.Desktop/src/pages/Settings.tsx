@@ -16,11 +16,10 @@ const DEFAULT_MAPPINGS: StoryPointMapping[] = [
 ]
 
 const DEFAULT_TSHIRT_MAPPINGS: TshirtSizeMapping[] = [
-  { size: 'XS', sprints: 1, label: 'XS = 1 sprint' },
-  { size: 'S', sprints: 2, label: 'S = 2 sprints' },
-  { size: 'M', sprints: 3, label: 'M = 3 sprints' },
-  { size: 'L', sprints: 5, label: 'L = 5 sprints' },
-  { size: 'XL', sprints: 8, label: 'XL = 8 sprints' }
+  { size: 'S', sprints: 0.5, label: 'S = 1/2 sprint' },
+  { size: 'M', sprints: 1, label: 'M = 1 sprint' },
+  { size: 'L', sprints: 2, label: 'L = 2 sprints' },
+  { size: 'XL', sprints: 4, label: 'XL = 4+ sprints' }
 ]
 
 export default function Settings() {
@@ -134,8 +133,8 @@ export default function Settings() {
 
   // T-shirt size mapping handlers
   const handleTshirtSprintsChange = (index: number, value: string) => {
-    const sprints = parseInt(value)
-    if (isNaN(sprints) || sprints < 1) return
+    const sprints = parseFloat(value)
+    if (isNaN(sprints) || sprints < 0.5) return
 
     const newMappings = [...tshirtMappings]
     newMappings[index] = { ...newMappings[index], sprints }
@@ -725,8 +724,8 @@ export default function Settings() {
                       value={mapping.sprints}
                       onChange={(e) => handleTshirtSprintsChange(index, e.target.value)}
                       className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      min="1"
-                      step="1"
+                      min="0.5"
+                      step="0.5"
                       disabled={savingTshirt}
                     />
                     <span className="text-slate-700 dark:text-slate-300">sprint{mapping.sprints !== 1 ? 's' : ''}</span>

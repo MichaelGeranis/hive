@@ -48,4 +48,42 @@ public record PlanningInsightsDto
     public int CriticalCount { get; init; }
     public IReadOnlyList<PlanningInsightDto> Insights { get; init; } = new List<PlanningInsightDto>();
     public IReadOnlyList<TeamMemberSummaryDto> TeamMemberSummaries { get; init; } = new List<TeamMemberSummaryDto>();
+    public IReadOnlyList<SprintWorkloadSummaryDto> SprintWorkloads { get; init; } = new List<SprintWorkloadSummaryDto>();
+}
+
+/// <summary>
+/// Workload summary for a sprint based on T-shirt size estimations.
+/// </summary>
+public record SprintWorkloadSummaryDto
+{
+    public Guid SprintId { get; init; }
+    public string SprintName { get; init; } = string.Empty;
+    public decimal TotalSprintEffort { get; init; }
+    public int InitiativeCount { get; init; }
+    public int TeamMemberCount { get; init; }
+    public IReadOnlyList<TeamMemberWorkloadDto> TeamMemberWorkloads { get; init; } = new List<TeamMemberWorkloadDto>();
+}
+
+/// <summary>
+/// Workload for a team member in a specific sprint.
+/// </summary>
+public record TeamMemberWorkloadDto
+{
+    public Guid DirectReportId { get; init; }
+    public string DirectReportName { get; init; } = string.Empty;
+    public decimal SprintEffort { get; init; }
+    public int InitiativeCount { get; init; }
+    public IReadOnlyList<InitiativeWorkloadDto> Initiatives { get; init; } = new List<InitiativeWorkloadDto>();
+}
+
+/// <summary>
+/// Workload contribution from a single initiative.
+/// </summary>
+public record InitiativeWorkloadDto
+{
+    public Guid InitiativeId { get; init; }
+    public string InitiativeName { get; init; } = string.Empty;
+    public string TshirtSize { get; init; } = string.Empty;
+    public decimal SprintEffort { get; init; }
+    public string Color { get; init; } = string.Empty;
 }

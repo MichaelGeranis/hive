@@ -9,7 +9,8 @@ import {
   Users,
   ChevronDown,
   ChevronRight,
-  Target
+  Target,
+  BarChart3
 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from './Card'
 import type {
@@ -210,12 +211,88 @@ export default function InsightsSidebar({ insights }: InsightsSidebarProps) {
           </div>
         )}
 
+        {/* Sprint Workload Summary */}
+        {insights.sprintWorkloads && insights.sprintWorkloads.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Sprint Workload
+            </h4>
+            <div className="space-y-3">
+              {insights.sprintWorkloads.map(sprint => (
+                <div
+                  key={sprint.sprintId}
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden"
+                >
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {sprint.sprintName}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded font-medium">
+                          {sprint.totalSprintEffort} sprint{sprint.totalSprintEffort !== 1 ? 's' : ''} effort
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      <span>{sprint.initiativeCount} initiative{sprint.initiativeCount !== 1 ? 's' : ''}</span>
+                      <span>•</span>
+                      <span>{sprint.teamMemberCount} team member{sprint.teamMemberCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+
+                  {sprint.teamMemberWorkloads.length > 0 && (
+                    <div className="p-2 space-y-2">
+                      {sprint.teamMemberWorkloads.map(member => (
+                        <div
+                          key={member.directReportId}
+                          className="p-2 bg-slate-50 dark:bg-slate-800/30 rounded"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              {member.directReportName}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {member.sprintEffort} sprint{member.sprintEffort !== 1 ? 's' : ''} effort
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {member.initiatives.map(initiative => (
+                              <div
+                                key={initiative.initiativeId}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs"
+                                style={{
+                                  backgroundColor: `${initiative.color}20`,
+                                  borderLeft: `3px solid ${initiative.color}`
+                                }}
+                                title={`${initiative.initiativeName} (${initiative.tshirtSize})`}
+                              >
+                                <span className="truncate max-w-[100px] text-slate-700 dark:text-slate-300">
+                                  {initiative.initiativeName}
+                                </span>
+                                <span className="text-slate-500 dark:text-slate-400 font-medium">
+                                  {initiative.tshirtSize}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Team Member Summaries */}
         {insights.teamMemberSummaries && insights.teamMemberSummaries.length > 0 && (
           <div className="mt-6">
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Team Workload
+              Team Overview
             </h4>
             <div className="space-y-2">
               {insights.teamMemberSummaries.map(member => (

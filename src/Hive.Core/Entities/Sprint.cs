@@ -105,6 +105,62 @@ public class Sprint
         return GetSortOrder() > other.GetSortOrder();
     }
 
+    /// <summary>
+    /// Gets the estimated start date for this sprint.
+    /// Uses actual StartDate if available, otherwise calculates from year, quarter, and sprint number.
+    /// </summary>
+    public DateTime GetEstimatedStartDate()
+    {
+        if (StartDate.HasValue)
+            return StartDate.Value;
+
+        // Calculate based on year, quarter, and sprint number
+        // Quarter start month: Q1=Jan(0), Q2=Apr(3), Q3=Jul(6), Q4=Oct(9)
+        var quarterStartMonth = (Quarter - 1) * 3;
+        // Each sprint is ~2 weeks, so sprint 1 starts day 1, sprint 2 starts day 15, etc.
+        var dayOfQuarter = 1 + (SprintNumber - 1) * 14;
+
+        return new DateTime(Year, quarterStartMonth + 1, 1).AddDays(dayOfQuarter - 1);
+    }
+
+    /// <summary>
+    /// Gets the estimated end date for this sprint.
+    /// Uses actual EndDate if available, otherwise calculates as 13 days after start (2-week sprint).
+    /// </summary>
+    public DateTime GetEstimatedEndDate()
+    {
+        if (EndDate.HasValue)
+            return EndDate.Value;
+
+        return GetEstimatedStartDate().AddDays(13);
+    }
+
+    /// <summary>
+    /// Determines if the given date falls within this sprint's date range.
+    /// </summary>
+    public bool ContainsDate(DateTime date)
+    {
+        var start = GetEstimatedStartDate().Date;
+        var end = GetEstimatedEndDate().Date;
+        return date.Date >= start && date.Date <= end;
+    }
+
+    /// <summary>
+    /// Determines if this sprint is in the past relative to the given date.
+    /// </summary>
+    public bool IsPast(DateTime referenceDate)
+    {
+        return GetEstimatedEndDate().Date < referenceDate.Date;
+    }
+
+    /// <summary>
+    /// Determines if this sprint is in the future relative to the given date.
+    /// </summary>
+    public bool IsFuture(DateTime referenceDate)
+    {
+        return GetEstimatedStartDate().Date > referenceDate.Date;
+    }
+
     private static void ValidateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
