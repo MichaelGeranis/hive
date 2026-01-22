@@ -178,6 +178,8 @@ public class JiraImportService : IJiraImportService
 
                 // Filter and validate sprints before mapping
                 // Only process sprints that match the pattern: TeamName_QuarterQYear_SSprintNumber
+                // If SprintTeamFilter is set in settings, additionally filter by team name
+                var sprintTeamFilter = appSettings?.SprintTeamFilter;
                 var sprintValue = GetValue(rowData, SprintColumns);
                 if (!string.IsNullOrWhiteSpace(sprintValue))
                 {
@@ -186,20 +188,30 @@ public class JiraImportService : IJiraImportService
 
                     foreach (var sprintName in sprintNames)
                     {
-                        if (IsValidSprintPattern(sprintName))
-                        {
-                            validSprints.Add(sprintName);
-                        }
-                        else
+                        if (!IsValidSprintPattern(sprintName))
                         {
                             warnings.Add($"Row {i + 1}: Sprint '{sprintName}' doesn't match required pattern (TeamName_QuarterQYear_SSprintNumber), ignoring");
+                            continue;
                         }
+
+                        // If team filter is set, check if sprint's team name matches
+                        if (!string.IsNullOrWhiteSpace(sprintTeamFilter))
+                        {
+                            var sprintTeamName = ExtractTeamNameFromSprint(sprintName);
+                            if (!string.Equals(sprintTeamName, sprintTeamFilter, StringComparison.OrdinalIgnoreCase))
+                            {
+                                warnings.Add($"Row {i + 1}: Sprint '{sprintName}' team '{sprintTeamName}' doesn't match configured team filter '{sprintTeamFilter}', ignoring");
+                                continue;
+                            }
+                        }
+
+                        validSprints.Add(sprintName);
                     }
 
                     // If task had sprints but none were valid, skip this task
                     if (sprintNames.Length > 0 && validSprints.Count == 0)
                     {
-                        warnings.Add($"Row {i + 1}: Task '{summary}' has no valid sprints matching the required pattern, skipping");
+                        warnings.Add($"Row {i + 1}: Task '{summary}' has no valid sprints matching the required pattern/team filter, skipping");
                         skippedCount++;
                         continue;
                     }
@@ -501,6 +513,15 @@ public class JiraImportService : IJiraImportService
             return false;
 
         return SprintPatternRegex.IsMatch(sprintName);
+    }
+
+    private static string? ExtractTeamNameFromSprint(string sprintName)
+    {
+        if (string.IsNullOrWhiteSpace(sprintName))
+            return null;
+
+        var match = SprintPatternRegex.Match(sprintName);
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     private static TeamTask? FindExistingTask(IReadOnlyList<TeamTask> existingTasks, string? issueKey, string? summary, string matchField)

@@ -15,6 +15,11 @@ public class AppSettings
     public int SentimentAnalysisDays { get; private set; } = 90;
     public bool SentimentAnalysisEnabled { get; private set; }
 
+    // Sprint Import settings
+    // If set, only sprints matching this team name will be imported
+    // If null, all sprints matching the pattern will be imported
+    public string? SprintTeamFilter { get; private set; }
+
     // Private constructor for EF Core / serialization
     private AppSettings() { }
 
@@ -45,4 +50,10 @@ public class AppSettings
     }
 
     public bool HasClaudeApiKey => !string.IsNullOrWhiteSpace(ClaudeApiKey);
+
+    public void UpdateSprintTeamFilter(string? teamFilter)
+    {
+        SprintTeamFilter = string.IsNullOrWhiteSpace(teamFilter) ? null : teamFilter.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

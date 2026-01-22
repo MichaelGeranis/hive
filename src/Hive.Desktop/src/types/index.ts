@@ -515,6 +515,7 @@ export interface AppSettings {
   hasClaudeApiKey: boolean
   sentimentAnalysisDays: number
   sentimentAnalysisEnabled: boolean
+  sprintTeamFilter?: string | null
   createdAt: string
   updatedAt?: string
 }
@@ -524,6 +525,8 @@ export interface UpdateAppSettings {
   claudeApiKey?: string
   sentimentAnalysisDays?: number
   sentimentAnalysisEnabled?: boolean
+  sprintTeamFilter?: string | null
+  clearSprintTeamFilter?: boolean
 }
 
 // Jira Import

@@ -25,7 +25,9 @@ import type {
   CreateSkillDto,
   CreateSkillAssessmentDto,
   UpdateSkillAssessmentDto,
-  DirectReport
+  DirectReport,
+  CreateSkillCategoryDto,
+  UpdateSkillCategoryDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
@@ -77,8 +79,10 @@ export default function Skills() {
   // Modals
   const [showSkillModal, setShowSkillModal] = useState(false)
   const [showAssessmentModal, setShowAssessmentModal] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null)
   const [editingAssessment, setEditingAssessment] = useState<SkillAssessment | null>(null)
+  const [editingCategory, setEditingCategory] = useState<SkillCategoryEntity | null>(null)
 
   // Form state
   const [skillForm, setSkillForm] = useState<CreateSkillDto>({
@@ -99,10 +103,16 @@ export default function Skills() {
     targetLevel: undefined,
     notes: ''
   })
+  const [categoryForm, setCategoryForm] = useState<CreateSkillCategoryDto>({
+    name: '',
+    description: '',
+    sortOrder: 0
+  })
 
   useEscapeKey(() => {
     setShowSkillModal(false)
     setShowAssessmentModal(false)
+    setShowCategoryModal(false)
   })
 
   useEffect(() => {
@@ -269,6 +279,58 @@ export default function Skills() {
     }
   }
 
+  const handleCreateCategory = async () => {
+    try {
+      await skillCategoriesApi.create(categoryForm)
+      await loadData()
+      setShowCategoryModal(false)
+      resetCategoryForm()
+    } catch (err) {
+      console.error('Failed to create category:', err)
+    }
+  }
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory) return
+    try {
+      const updateDto: UpdateSkillCategoryDto = {
+        name: categoryForm.name,
+        description: categoryForm.description,
+        sortOrder: categoryForm.sortOrder
+      }
+      await skillCategoriesApi.update(editingCategory.id, updateDto)
+      await loadData()
+      setShowCategoryModal(false)
+      resetCategoryForm()
+      setEditingCategory(null)
+    } catch (err) {
+      console.error('Failed to update category:', err)
+    }
+  }
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this category? Skills assigned to this category will need to be reassigned.')) return
+    try {
+      await skillCategoriesApi.delete(id)
+      await loadData()
+    } catch (err) {
+      console.error('Failed to delete category:', err)
+    }
+  }
+
+  const handleToggleCategoryActive = async (category: SkillCategoryEntity) => {
+    try {
+      if (category.isActive) {
+        await skillCategoriesApi.deactivate(category.id)
+      } else {
+        await skillCategoriesApi.activate(category.id)
+      }
+      await loadData()
+    } catch (err) {
+      console.error('Failed to toggle category status:', err)
+    }
+  }
+
   const handleCellClick = (directReportId: string, skillId: string, _currentLevel?: ProficiencyLevel) => {
     // Find existing assessment or create new one
     const assessment = allAssessments.find(
@@ -311,6 +373,28 @@ export default function Skills() {
       targetLevel: undefined,
       notes: ''
     })
+  }
+
+  const resetCategoryForm = () => {
+    const nextSortOrder = skillCategories.length > 0
+      ? Math.max(...skillCategories.map(c => c.sortOrder)) + 1
+      : 0
+    setCategoryForm({ name: '', description: '', sortOrder: nextSortOrder })
+  }
+
+  const openCategoryModal = (category?: SkillCategoryEntity) => {
+    if (category) {
+      setEditingCategory(category)
+      setCategoryForm({
+        name: category.name,
+        description: category.description,
+        sortOrder: category.sortOrder
+      })
+    } else {
+      resetCategoryForm()
+      setEditingCategory(null)
+    }
+    setShowCategoryModal(true)
   }
 
   const openSkillModal = (skill?: Skill) => {
@@ -747,6 +831,103 @@ export default function Skills() {
 
       {activeTab === 'manage' && (
         <div className="space-y-6">
+          {/* Categories Section */}
+          <Card>
+            <CardHeader
+              title="Skill Categories"
+              subtitle="Manage categories to organize skills"
+              action={
+                <button
+                  onClick={() => openCategoryModal()}
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Category
+                </button>
+              }
+            />
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                  <thead className="bg-slate-50 dark:bg-slate-800">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Order
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Skills
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-700">
+                    {skillCategories
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .map(category => {
+                        const skillCount = skills.filter(s => s.categoryId === category.id).length
+                        return (
+                          <tr key={category.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                              {category.sortOrder}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">
+                              {category.name}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 max-w-md truncate">
+                              {category.description}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                              {skillCount}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <button
+                                onClick={() => handleToggleCategoryActive(category)}
+                                className={`px-2 py-1 rounded cursor-pointer transition-colors ${
+                                  category.isActive
+                                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                }`}
+                              >
+                                {category.isActive ? 'Active' : 'Inactive'}
+                              </button>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => openCategoryModal(category)}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                              >
+                                <Edit2 className="w-4 h-4 inline" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCategory(category.id)}
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                title={skillCount > 0 ? 'Cannot delete: has skills assigned' : 'Delete category'}
+                                disabled={skillCount > 0}
+                              >
+                                <Trash2 className={`w-4 h-4 inline ${skillCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`} />
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Skills Library Section */}
           <Card>
             <CardHeader
               title="Skills Library"
@@ -1024,6 +1205,89 @@ export default function Skills() {
                 disabled={!assessmentForm.directReportId || !assessmentForm.skillId}
               >
                 {editingAssessment ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                {editingCategory ? 'Edit Category' : 'Add New Category'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false)
+                  resetCategoryForm()
+                  setEditingCategory(null)
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Category Name
+                </label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g., Technical, Soft Skills, Leadership"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={categoryForm.description}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Describe this category..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  value={categoryForm.sortOrder}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, sortOrder: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  min={0}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Lower numbers appear first in the list
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false)
+                  resetCategoryForm()
+                  setEditingCategory(null)
+                }}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}
+                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+                disabled={!categoryForm.name.trim()}
+              >
+                {editingCategory ? 'Update' : 'Create'}
               </button>
             </div>
           </div>

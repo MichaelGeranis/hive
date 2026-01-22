@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Calendar, Plus, TrendingUp, Users, Edit2, Trash2, Save } from 'lucide-react'
+import { Calendar, Plus, TrendingUp, Users, Edit2, Trash2, Save, Filter, X } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { sprintsApi, sprintCapacityApi } from '../services/api'
-import type { Sprint, SprintCapacity } from '../types'
+import { sprintsApi, sprintCapacityApi, settingsApi } from '../services/api'
+import type { Sprint, SprintCapacity, AppSettings } from '../types'
 
 export default function Sprints() {
   const [sprints, setSprints] = useState<Sprint[]>([])
@@ -28,6 +28,11 @@ export default function Sprints() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [sprintNumber, setSprintNumber] = useState(1)
 
+  // Sprint team filter settings
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [teamFilterInput, setTeamFilterInput] = useState('')
+  const [savingFilter, setSavingFilter] = useState(false)
+
   // Generate sprint name from components
   const generateSprintName = () => {
     if (!teamName.trim()) return ''
@@ -43,9 +48,10 @@ export default function Sprints() {
     try {
       setLoading(true)
       setError(null)
-      const [sprintsData, capacitiesData] = await Promise.all([
+      const [sprintsData, capacitiesData, settingsData] = await Promise.all([
         sprintsApi.getAll(),
-        sprintCapacityApi.getAll()
+        sprintCapacityApi.getAll(),
+        settingsApi.get()
       ])
       // Sort sprints by year, quarter, sprint number (most recent first)
       const sortedSprints = sprintsData.sort((a, b) => {
@@ -55,6 +61,8 @@ export default function Sprints() {
       })
       setSprints(sortedSprints)
       setSprintCapacities(capacitiesData)
+      setSettings(settingsData)
+      setTeamFilterInput(settingsData.sprintTeamFilter || '')
     } catch (err) {
       console.error('Failed to load sprints', err)
       setError('Failed to load sprints. Please try again.')
@@ -147,6 +155,45 @@ export default function Sprints() {
     } catch (err: any) {
       console.error('Failed to delete sprint', err)
       setError(err.response?.data || 'Failed to delete sprint. Please try again.')
+    }
+  }
+
+  const handleSaveTeamFilter = async () => {
+    try {
+      setSavingFilter(true)
+      setError(null)
+      const trimmedFilter = teamFilterInput.trim()
+      await settingsApi.update({
+        sprintTeamFilter: trimmedFilter || null,
+        clearSprintTeamFilter: !trimmedFilter
+      })
+      const updatedSettings = await settingsApi.get()
+      setSettings(updatedSettings)
+      setTeamFilterInput(updatedSettings.sprintTeamFilter || '')
+    } catch (err: any) {
+      console.error('Failed to save team filter', err)
+      setError(err.response?.data?.message || 'Failed to save team filter. Please try again.')
+    } finally {
+      setSavingFilter(false)
+    }
+  }
+
+  const handleClearTeamFilter = async () => {
+    try {
+      setSavingFilter(true)
+      setError(null)
+      await settingsApi.update({
+        sprintTeamFilter: null,
+        clearSprintTeamFilter: true
+      })
+      const updatedSettings = await settingsApi.get()
+      setSettings(updatedSettings)
+      setTeamFilterInput('')
+    } catch (err: any) {
+      console.error('Failed to clear team filter', err)
+      setError(err.response?.data?.message || 'Failed to clear team filter. Please try again.')
+    } finally {
+      setSavingFilter(false)
     }
   }
 
@@ -297,6 +344,55 @@ export default function Sprints() {
         />
         <CardContent>
           <div className="space-y-4">
+            {/* Team Filter Setting */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Filter className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">Sprint Import Team Filter</h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      When set, only sprints from this team will be imported. Leave empty to import all teams.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={teamFilterInput}
+                      onChange={(e) => setTeamFilterInput(e.target.value)}
+                      placeholder="e.g., LP"
+                      className="flex-1 max-w-xs px-3 py-2 text-sm border border-blue-300 dark:border-blue-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleSaveTeamFilter}
+                      disabled={savingFilter || teamFilterInput === (settings?.sprintTeamFilter || '')}
+                      className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {savingFilter ? 'Saving...' : 'Save'}
+                    </button>
+                    {settings?.sprintTeamFilter && (
+                      <button
+                        onClick={handleClearTeamFilter}
+                        disabled={savingFilter}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                        title="Clear filter"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {settings?.sprintTeamFilter && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-blue-700 dark:text-blue-300">Active filter:</span>
+                      <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded font-mono">
+                        {settings.sprintTeamFilter}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {sprints.length === 0 ? (
               <div className="p-8 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
                 <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-3" />

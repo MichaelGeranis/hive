@@ -14,6 +14,9 @@ public record AppSettingsDto
     public bool HasClaudeApiKey { get; init; }
     public int SentimentAnalysisDays { get; init; }
     public bool SentimentAnalysisEnabled { get; init; }
+
+    // Sprint Import settings
+    public string? SprintTeamFilter { get; init; }
 }
 
 public record StoryPointMapping
@@ -34,4 +37,10 @@ public record UpdateAppSettingsDto
     public string? ClaudeApiKey { get; init; }
     public int? SentimentAnalysisDays { get; init; }
     public bool? SentimentAnalysisEnabled { get; init; }
+
+    // Sprint Import settings
+    // Set to a team name to filter imports, or null/empty to disable filtering
+    public string? SprintTeamFilter { get; init; }
+    // Explicit flag to clear the team filter (set to true with null SprintTeamFilter to clear)
+    public bool ClearSprintTeamFilter { get; init; }
 }

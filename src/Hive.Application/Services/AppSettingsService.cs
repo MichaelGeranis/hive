@@ -66,6 +66,13 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update sprint team filter if provided or explicitly cleared
+        if (dto.ClearSprintTeamFilter || dto.SprintTeamFilter is not null)
+        {
+            entity.UpdateSprintTeamFilter(dto.ClearSprintTeamFilter ? null : dto.SprintTeamFilter);
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         return MapToDto(entity);
     }
 
@@ -81,7 +88,8 @@ public class AppSettingsService : IAppSettingsService
             UpdatedAt = entity.UpdatedAt,
             HasClaudeApiKey = entity.HasClaudeApiKey,
             SentimentAnalysisDays = entity.SentimentAnalysisDays,
-            SentimentAnalysisEnabled = entity.SentimentAnalysisEnabled
+            SentimentAnalysisEnabled = entity.SentimentAnalysisEnabled,
+            SprintTeamFilter = entity.SprintTeamFilter
         };
     }
 
