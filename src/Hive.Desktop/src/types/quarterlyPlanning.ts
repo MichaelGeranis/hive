@@ -7,21 +7,6 @@ export enum QuarterStatus {
   Completed = 2
 }
 
-export enum InitiativeStatus {
-  Planned = 0,
-  InProgress = 1,
-  OnHold = 2,
-  Completed = 3,
-  Cancelled = 4
-}
-
-export enum InitiativePriority {
-  Low = 0,
-  Medium = 1,
-  High = 2,
-  Critical = 3
-}
-
 export enum DependencyType {
   FinishToStart = 0,
   StartToStart = 1,
@@ -69,12 +54,10 @@ export interface Initiative {
   quarterId: string
   name: string
   description: string
-  status: InitiativeStatus
-  priority: InitiativePriority
-  okrObjective: string
   color: string
   projectId?: string
   projectName?: string
+  tshirtSize: string
   allocationCount: number
   createdAt: string
   updatedAt?: string
@@ -84,23 +67,16 @@ export interface CreateInitiativeDto {
   quarterId: string
   name: string
   description?: string
-  priority?: InitiativePriority
-  okrObjective?: string
-  color?: string
   projectId?: string
+  tshirtSize?: string
 }
 
 export interface UpdateInitiativeDto {
   name: string
   description?: string
-  priority: InitiativePriority
-  okrObjective?: string
   color?: string
   projectId?: string
-}
-
-export interface UpdateInitiativeStatusDto {
-  status: InitiativeStatus
+  tshirtSize?: string
 }
 
 // Allocation types
@@ -219,27 +195,6 @@ export function getQuarterStatusLabel(status: QuarterStatus): string {
     case QuarterStatus.Planning: return 'Planning'
     case QuarterStatus.Active: return 'Active'
     case QuarterStatus.Completed: return 'Completed'
-    default: return 'Unknown'
-  }
-}
-
-export function getInitiativeStatusLabel(status: InitiativeStatus): string {
-  switch (status) {
-    case InitiativeStatus.Planned: return 'Planned'
-    case InitiativeStatus.InProgress: return 'In Progress'
-    case InitiativeStatus.OnHold: return 'On Hold'
-    case InitiativeStatus.Completed: return 'Completed'
-    case InitiativeStatus.Cancelled: return 'Cancelled'
-    default: return 'Unknown'
-  }
-}
-
-export function getInitiativePriorityLabel(priority: InitiativePriority): string {
-  switch (priority) {
-    case InitiativePriority.Low: return 'Low'
-    case InitiativePriority.Medium: return 'Medium'
-    case InitiativePriority.High: return 'High'
-    case InitiativePriority.Critical: return 'Critical'
     default: return 'Unknown'
   }
 }

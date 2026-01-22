@@ -293,26 +293,6 @@ public class QuarterlyPlanningController : ControllerBase
     }
 
     /// <summary>
-    /// Updates an initiative's status.
-    /// </summary>
-    [HttpPost("initiatives/{id:guid}/status")]
-    [ProducesResponseType(typeof(InitiativeDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<InitiativeDto>> UpdateInitiativeStatus(Guid id, [FromBody] UpdateInitiativeStatusDto dto, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Updating status for initiative with ID: {Id}", id);
-        try
-        {
-            var updated = await _planningService.UpdateInitiativeStatusAsync(id, dto, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
     /// Deletes an initiative.
     /// </summary>
     [HttpDelete("initiatives/{id:guid}")]

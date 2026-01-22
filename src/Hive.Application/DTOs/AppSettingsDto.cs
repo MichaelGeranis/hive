@@ -7,6 +7,7 @@ public record AppSettingsDto
 {
     public Guid Id { get; init; }
     public List<StoryPointMapping> StoryPointMappings { get; init; } = new();
+    public List<TshirtSizeMapping> TshirtSizeMappings { get; init; } = new();
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
@@ -26,12 +27,20 @@ public record StoryPointMapping
     public string Label { get; init; } = string.Empty;
 }
 
+public record TshirtSizeMapping
+{
+    public string Size { get; init; } = string.Empty;
+    public int Sprints { get; init; }
+    public string Label { get; init; } = string.Empty;
+}
+
 /// <summary>
 /// DTO for updating AppSettings.
 /// </summary>
 public record UpdateAppSettingsDto
 {
     public List<StoryPointMapping> StoryPointMappings { get; init; } = new();
+    public List<TshirtSizeMapping> TshirtSizeMappings { get; init; } = new();
 
     // Sentiment Analysis settings
     public string? ClaudeApiKey { get; init; }

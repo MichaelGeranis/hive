@@ -44,12 +44,10 @@ public record InitiativeDto
     public Guid QuarterId { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
-    public InitiativeStatus Status { get; init; }
-    public InitiativePriority Priority { get; init; }
-    public string OkrObjective { get; init; } = string.Empty;
     public string Color { get; init; } = string.Empty;
     public Guid? ProjectId { get; init; }
     public string? ProjectName { get; init; }
+    public string TshirtSize { get; init; } = "M";
     public int AllocationCount { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -63,10 +61,8 @@ public record CreateInitiativeDto
     public Guid QuarterId { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
-    public InitiativePriority Priority { get; init; } = InitiativePriority.Medium;
-    public string? OkrObjective { get; init; }
-    public string? Color { get; init; }
     public Guid? ProjectId { get; init; }
+    public string? TshirtSize { get; init; }
 }
 
 /// <summary>
@@ -76,18 +72,9 @@ public record UpdateInitiativeDto
 {
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
-    public InitiativePriority Priority { get; init; }
-    public string? OkrObjective { get; init; }
     public string? Color { get; init; }
     public Guid? ProjectId { get; init; }
-}
-
-/// <summary>
-/// Data transfer object for updating Initiative status.
-/// </summary>
-public record UpdateInitiativeStatusDto
-{
-    public InitiativeStatus Status { get; init; }
+    public string? TshirtSize { get; init; }
 }
 
 /// <summary>

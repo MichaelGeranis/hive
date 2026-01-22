@@ -13,12 +13,13 @@ import {
   ListTodo,
   Calendar,
   StickyNote,
-  Check
+  Check,
+  TrendingUp
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -41,6 +42,16 @@ const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 
 const DASHBOARD_WIDGETS_KEY = 'hive-dashboard-widgets'
 
+interface SprintCapacitySuggestion {
+  sprint: Sprint
+  currentCapacity: SprintCapacity | null
+  peopleOnLeave: number
+  totalTeamSize: number
+  suggestedAvailableMembers: number
+  leaveDaysInSprint: number
+  affectedMembers: Set<string>
+}
+
 interface WidgetVisibility {
   topStats: boolean
   projectsDistribution: boolean
@@ -50,6 +61,7 @@ interface WidgetVisibility {
   tasksDistributionHours: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
+  sprintCapacitySuggestions: boolean
   estimationAccuracy: boolean
   teamVelocity: boolean
   membersWorkload: boolean
@@ -64,6 +76,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   tasksDistributionHours: true,
   teamSentiment: true,
   capacityAnalysis: true,
+  sprintCapacitySuggestions: true,
   estimationAccuracy: true,
   teamVelocity: true,
   membersWorkload: true
@@ -78,6 +91,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   tasksDistributionHours: 'Tasks Distribution (Hours)',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
+  sprintCapacitySuggestions: 'Sprint Capacity Suggestions',
   estimationAccuracy: 'Estimation Accuracy',
   teamVelocity: 'Team Velocity',
   membersWorkload: 'Members Workload'
@@ -92,6 +106,10 @@ export default function Dashboard() {
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
   const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
+  const [sprints, setSprints] = useState<Sprint[]>([])
+  const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
+  const [leaves, setLeaves] = useState<{ id: string; directReportId: string; startDate: string; endDate: string }[]>([])
+  const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [actionItems, setActionItems] = useState<MeetingNote[]>([])
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
@@ -174,18 +192,31 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         leavesApi.getOverview(),
         meetingNotesApi.getOpenActionItems(),
-        notesApi.getPending()
+        notesApi.getPending(),
+        sprintsApi.getAll(),
+        sprintCapacityApi.getAll(),
+        leavesApi.getAll(),
+        directReportsApi.getAll()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
       setProjects(projectsData)
       setLeaveOverview(leaveData)
+      const sortedSprints = sprintsData.sort((a: Sprint, b: Sprint) => {
+        const aSort = a.year * 1000 + a.quarter * 100 + a.sprintNumber
+        const bSort = b.year * 1000 + b.quarter * 100 + b.sprintNumber
+        return bSort - aSort
+      })
+      setSprints(sortedSprints)
+      setSprintCapacities(capacitiesData)
+      setLeaves(leavesData)
+      setDirectReports(directReportsData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
         if (!a.actionDueDate && !b.actionDueDate) return 0
@@ -275,6 +306,65 @@ export default function Dashboard() {
       console.error('Failed to complete priority note:', err)
     }
   }
+
+  // Sprint capacity suggestions calculation
+  const calculateSprintSuggestions = (): SprintCapacitySuggestion[] => {
+    if (!dashboard) return []
+
+    const today = new Date()
+    const threeMonthsLater = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
+
+    // Only consider direct reports (not indirect reports)
+    const directReportIds = new Set(
+      directReports.filter(dr => dr.isDirect).map(dr => dr.id)
+    )
+
+    const upcomingSprints = sprints.filter(sprint => {
+      const sprintDate = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
+      return sprintDate >= today && sprintDate <= threeMonthsLater
+    })
+
+    return upcomingSprints.map(sprint => {
+      const sprintStart = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
+      const sprintEnd = new Date(sprintStart)
+      sprintEnd.setDate(sprintEnd.getDate() + 14)
+
+      const affectedMembers = new Set<string>()
+      let totalLeaveDays = 0
+
+      // Only count leaves from direct reports
+      leaves.filter(leave => directReportIds.has(leave.directReportId)).forEach(leave => {
+        const leaveStart = new Date(leave.startDate)
+        const leaveEnd = new Date(leave.endDate)
+
+        if (leaveStart <= sprintEnd && leaveEnd >= sprintStart) {
+          affectedMembers.add(leave.directReportId)
+
+          const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
+          const overlapEnd = leaveEnd < sprintEnd ? leaveEnd : sprintEnd
+          const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24))
+          totalLeaveDays += overlapDays
+        }
+      })
+
+      const currentCapacity = sprintCapacities.find(c => c.sprintId === sprint.id) || null
+      const totalTeamSize = dashboard.team.totalDirectReports
+      const peopleOnLeave = affectedMembers.size
+      const suggestedAvailableMembers = Math.max(0, totalTeamSize - peopleOnLeave)
+
+      return {
+        sprint,
+        currentCapacity,
+        peopleOnLeave,
+        totalTeamSize,
+        suggestedAvailableMembers,
+        leaveDaysInSprint: totalLeaveDays,
+        affectedMembers
+      }
+    })
+  }
+
+  const sprintSuggestions = calculateSprintSuggestions()
 
   // Find projects that share at least one label with the task
   const getMatchedProjects = (taskLabels?: string): Project[] => {
@@ -847,6 +937,84 @@ export default function Dashboard() {
           </Card>
         );
       })() : null
+      )}
+
+      {/* Sprint Capacity Suggestions */}
+      {widgets.sprintCapacitySuggestions && sprintSuggestions.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Sprint Capacity Suggestions"
+            subtitle="Based on upcoming leaves, here are suggested capacity adjustments for your sprints"
+          />
+          <CardContent>
+            <div className="space-y-3">
+              {sprintSuggestions.map(suggestion => {
+                const needsAdjustment = suggestion.currentCapacity &&
+                  suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
+
+                return (
+                  <div
+                    key={suggestion.sprint.id}
+                    className={`p-4 rounded-lg border ${
+                      needsAdjustment
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+                        : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                            {suggestion.sprint.name}
+                          </h3>
+                          {needsAdjustment && (
+                            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span className="text-xs font-medium">Needs Adjustment</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400">Team Size:</span>
+                            <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">{suggestion.totalTeamSize}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400">On Leave:</span>
+                            <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">{suggestion.peopleOnLeave}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400">Current Capacity:</span>
+                            <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">
+                              {suggestion.currentCapacity?.availableMembers || 'Not set'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400">Suggested:</span>
+                            <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                              {suggestion.suggestedAvailableMembers} people
+                            </span>
+                          </div>
+                        </div>
+                        {suggestion.leaveDaysInSprint > 0 && (
+                          <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                            Total leave days in sprint: {suggestion.leaveDaysInSprint} days
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => navigate('/sprints')}
+                        className="ml-4 px-3 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                      >
+                        Update in Sprints
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Team Velocity */}

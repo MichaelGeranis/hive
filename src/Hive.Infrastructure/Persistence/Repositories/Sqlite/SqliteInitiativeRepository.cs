@@ -21,8 +21,7 @@ public class SqliteInitiativeRepository : IInitiativeRepository
     public async Task<IReadOnlyList<Initiative>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Initiatives
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }
 
@@ -30,8 +29,7 @@ public class SqliteInitiativeRepository : IInitiativeRepository
     {
         return await _context.Initiatives
             .Where(x => x.QuarterId == quarterId)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }
 
@@ -39,17 +37,7 @@ public class SqliteInitiativeRepository : IInitiativeRepository
     {
         return await _context.Initiatives
             .Where(x => x.ProjectId == projectId)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<Initiative>> GetByStatusAsync(InitiativeStatus status, CancellationToken cancellationToken = default)
-    {
-        return await _context.Initiatives
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }
 

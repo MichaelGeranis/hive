@@ -509,9 +509,16 @@ export interface StoryPointMapping {
   label: string
 }
 
+export interface TshirtSizeMapping {
+  size: string
+  sprints: number
+  label: string
+}
+
 export interface AppSettings {
   id: string
   storyPointMappings: StoryPointMapping[]
+  tshirtSizeMappings: TshirtSizeMapping[]
   hasClaudeApiKey: boolean
   sentimentAnalysisDays: number
   sentimentAnalysisEnabled: boolean
@@ -522,6 +529,7 @@ export interface AppSettings {
 
 export interface UpdateAppSettings {
   storyPointMappings?: StoryPointMapping[]
+  tshirtSizeMappings?: TshirtSizeMapping[]
   claudeApiKey?: string
   sentimentAnalysisDays?: number
   sentimentAnalysisEnabled?: boolean

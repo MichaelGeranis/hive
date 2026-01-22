@@ -236,14 +236,18 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             projectName = project.Name;
         }
 
+        // Get existing initiatives to determine unique color
+        var existingInitiatives = await _initiativeRepository.GetByQuarterAsync(dto.QuarterId, cancellationToken);
+        var usedColors = existingInitiatives.Select(i => i.Color).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var color = GetNextAvailableColor(usedColors);
+
         var entity = new Initiative(
             dto.QuarterId,
             dto.Name,
+            color,
             dto.Description,
-            dto.Priority,
-            dto.OkrObjective,
-            dto.Color,
-            dto.ProjectId);
+            dto.ProjectId,
+            dto.TshirtSize);
 
         var created = await _initiativeRepository.AddAsync(entity, cancellationToken);
 
@@ -256,6 +260,22 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             cancellationToken);
 
         return MapInitiativeToDto(created, 0, projectName);
+    }
+
+    private static string GetNextAvailableColor(HashSet<string> usedColors)
+    {
+        // Find the first available color that's not in use
+        foreach (var color in Initiative.AvailableColors)
+        {
+            if (!usedColors.Contains(color))
+            {
+                return color;
+            }
+        }
+
+        // If all colors are used, cycle back (append index to make it slightly different)
+        var index = usedColors.Count % Initiative.AvailableColors.Length;
+        return Initiative.AvailableColors[index];
     }
 
     public async Task<InitiativeDto> UpdateInitiativeAsync(Guid id, UpdateInitiativeDto dto, CancellationToken cancellationToken = default)
@@ -275,10 +295,9 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         entity.Update(
             dto.Name,
             dto.Description,
-            dto.Priority,
-            dto.OkrObjective,
             dto.Color,
-            dto.ProjectId);
+            dto.ProjectId,
+            dto.TshirtSize);
 
         await _initiativeRepository.UpdateAsync(entity, cancellationToken);
 
@@ -293,30 +312,6 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             cancellationToken);
 
         return MapInitiativeToDto(entity, allocations.Count, projectName);
-    }
-
-    public async Task<InitiativeDto> UpdateInitiativeStatusAsync(Guid id, UpdateInitiativeStatusDto dto, CancellationToken cancellationToken = default)
-    {
-        var entity = await _initiativeRepository.GetByIdAsync(id, cancellationToken)
-            ?? throw new NotFoundException(nameof(Initiative), id);
-
-        entity.UpdateStatus(dto.Status);
-        await _initiativeRepository.UpdateAsync(entity, cancellationToken);
-
-        var allocations = await _allocationRepository.GetByInitiativeAsync(id, cancellationToken);
-        var project = entity.ProjectId.HasValue
-            ? await _projectRepository.GetByIdAsync(entity.ProjectId.Value, cancellationToken)
-            : null;
-
-        await _activityService.LogActivityAsync(
-            ActivityType.Updated,
-            EntityType.Initiative,
-            entity.Id,
-            entity.Name,
-            $"Initiative '{entity.Name}' status changed to {dto.Status}",
-            cancellationToken);
-
-        return MapInitiativeToDto(entity, allocations.Count, project?.Name);
     }
 
     public async Task DeleteInitiativeAsync(Guid id, CancellationToken cancellationToken = default)
@@ -626,12 +621,10 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         QuarterId = entity.QuarterId,
         Name = entity.Name,
         Description = entity.Description,
-        Status = entity.Status,
-        Priority = entity.Priority,
-        OkrObjective = entity.OkrObjective,
         Color = entity.Color,
         ProjectId = entity.ProjectId,
         ProjectName = projectName,
+        TshirtSize = entity.TshirtSize,
         AllocationCount = allocationCount,
         CreatedAt = entity.CreatedAt,
         UpdatedAt = entity.UpdatedAt

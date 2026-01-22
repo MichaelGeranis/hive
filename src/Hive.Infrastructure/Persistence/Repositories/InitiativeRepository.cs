@@ -24,8 +24,7 @@ public class InitiativeRepository : IInitiativeRepository
     public Task<IReadOnlyList<Initiative>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = _context.Initiatives.Values
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToList();
         return Task.FromResult<IReadOnlyList<Initiative>>(entities);
     }
@@ -34,8 +33,7 @@ public class InitiativeRepository : IInitiativeRepository
     {
         var entities = _context.Initiatives.Values
             .Where(x => x.QuarterId == quarterId)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToList();
         return Task.FromResult<IReadOnlyList<Initiative>>(entities);
     }
@@ -44,18 +42,7 @@ public class InitiativeRepository : IInitiativeRepository
     {
         var entities = _context.Initiatives.Values
             .Where(x => x.ProjectId == projectId)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
-            .ToList();
-        return Task.FromResult<IReadOnlyList<Initiative>>(entities);
-    }
-
-    public Task<IReadOnlyList<Initiative>> GetByStatusAsync(InitiativeStatus status, CancellationToken cancellationToken = default)
-    {
-        var entities = _context.Initiatives.Values
-            .Where(x => x.Status == status)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToList();
         return Task.FromResult<IReadOnlyList<Initiative>>(entities);
     }

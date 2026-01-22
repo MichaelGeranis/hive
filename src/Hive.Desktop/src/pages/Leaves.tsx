@@ -7,13 +7,11 @@ import {
   Thermometer,
   Briefcase,
   Users,
-  TrendingUp,
   ChevronLeft,
-  ChevronRight,
-  AlertTriangle
+  ChevronRight
 } from 'lucide-react'
-import { leavesApi, directReportsApi, sprintsApi, sprintCapacityApi } from '../services/api'
-import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, Sprint, SprintCapacity } from '../types'
+import { leavesApi, directReportsApi } from '../services/api'
+import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -37,16 +35,6 @@ const typeColors: Record<string, string> = {
   Other: 'bg-blue-500'
 }
 
-interface SprintCapacitySuggestion {
-  sprint: Sprint
-  currentCapacity: SprintCapacity | null
-  peopleOnLeave: number
-  totalTeamSize: number
-  suggestedAvailableMembers: number
-  leaveDaysInSprint: number
-  affectedMembers: Set<string>
-}
-
 interface DayHoverState {
   date: Date | null
   timeoutId: number | null
@@ -56,8 +44,6 @@ export default function Leaves() {
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [overview, setOverview] = useState<TeamLeaveOverview | null>(null)
-  const [sprints, setSprints] = useState<Sprint[]>([])
-  const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingLeave, setEditingLeave] = useState<Leave | null>(null)
@@ -97,23 +83,14 @@ export default function Leaves() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [leavesData, drData, overviewData, sprintsData, capacitiesData] = await Promise.all([
+      const [leavesData, drData, overviewData] = await Promise.all([
         leavesApi.getAll(),
         directReportsApi.getAll(),
-        leavesApi.getOverview(),
-        sprintsApi.getAll(),
-        sprintCapacityApi.getAll()
+        leavesApi.getOverview()
       ])
       setLeaves(leavesData)
       setDirectReports(drData)
       setOverview(overviewData)
-      const sortedSprints = sprintsData.sort((a, b) => {
-        const aSort = a.year * 1000 + a.quarter * 100 + a.sprintNumber
-        const bSort = b.year * 1000 + b.quarter * 100 + b.sprintNumber
-        return bSort - aSort
-      })
-      setSprints(sortedSprints)
-      setSprintCapacities(capacitiesData)
     } catch (error) {
       console.error('Failed to load leaves:', error)
     } finally {
@@ -254,56 +231,6 @@ export default function Leaves() {
     return data
   }
 
-  // Sprint capacity suggestions
-  const calculateSprintSuggestions = (): SprintCapacitySuggestion[] => {
-    const today = new Date()
-    const threeMonthsLater = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
-
-    const upcomingSprints = sprints.filter(sprint => {
-      const sprintDate = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
-      return sprintDate >= today && sprintDate <= threeMonthsLater
-    })
-
-    return upcomingSprints.map(sprint => {
-      const sprintStart = new Date(sprint.year, (sprint.quarter - 1) * 3, sprint.sprintNumber * 14)
-      const sprintEnd = new Date(sprintStart)
-      sprintEnd.setDate(sprintEnd.getDate() + 14)
-
-      const affectedMembers = new Set<string>()
-      let totalLeaveDays = 0
-
-      leaves.forEach(leave => {
-        const leaveStart = new Date(leave.startDate)
-        const leaveEnd = new Date(leave.endDate)
-
-        if (leaveStart <= sprintEnd && leaveEnd >= sprintStart) {
-          affectedMembers.add(leave.directReportId)
-
-          const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
-          const overlapEnd = leaveEnd < sprintEnd ? leaveEnd : sprintEnd
-          const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24))
-          totalLeaveDays += overlapDays
-        }
-      })
-
-      const currentCapacity = sprintCapacities.find(c => c.sprintId === sprint.id) || null
-      const totalTeamSize = directReports.length
-      const peopleOnLeave = affectedMembers.size
-      const suggestedAvailableMembers = Math.max(0, totalTeamSize - peopleOnLeave)
-
-      return {
-        sprint,
-        currentCapacity,
-        peopleOnLeave,
-        totalTeamSize,
-        suggestedAvailableMembers,
-        leaveDaysInSprint: totalLeaveDays,
-        affectedMembers
-      }
-    })
-  }
-
-  const sprintSuggestions = calculateSprintSuggestions()
   const chartData = generateChartData()
 
   // Render calendar for current month
@@ -490,87 +417,6 @@ export default function Leaves() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Sprint Capacity Suggestions */}
-      {sprintSuggestions.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Sprint Capacity Suggestions
-            </h2>
-          </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Based on upcoming leaves, here are suggested capacity adjustments for your sprints:
-          </p>
-          <div className="space-y-3">
-            {sprintSuggestions.map(suggestion => {
-              const needsAdjustment = suggestion.currentCapacity &&
-                suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
-
-              return (
-                <div
-                  key={suggestion.sprint.id}
-                  className={`p-4 rounded-lg border ${
-                    needsAdjustment
-                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
-                      : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                          {suggestion.sprint.name}
-                        </h3>
-                        {needsAdjustment && (
-                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-xs font-medium">Needs Adjustment</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">Team Size:</span>
-                          <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">{suggestion.totalTeamSize}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">On Leave:</span>
-                          <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">{suggestion.peopleOnLeave}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">Current Capacity:</span>
-                          <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">
-                            {suggestion.currentCapacity?.availableMembers || 'Not set'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">Suggested:</span>
-                          <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                            {suggestion.suggestedAvailableMembers} people
-                          </span>
-                        </div>
-                      </div>
-                      {suggestion.leaveDaysInSprint > 0 && (
-                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-                          Total leave days in sprint: {suggestion.leaveDaysInSprint} days
-                        </div>
-                      )}
-                    </div>
-                    <a
-                      href="/sprints"
-                      className="ml-4 px-3 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
-                    >
-                      Update in Sprints
-                    </a>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">

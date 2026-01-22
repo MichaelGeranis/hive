@@ -50,6 +50,13 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update T-shirt size mappings if provided
+        if (dto.TshirtSizeMappings.Count > 0)
+        {
+            entity.UpdateTshirtSizeMappings(SerializeTshirtSizeMappings(dto.TshirtSizeMappings));
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         // Update sentiment analysis settings if provided
         if (dto.ClaudeApiKey is not null)
         {
@@ -79,11 +86,13 @@ public class AppSettingsService : IAppSettingsService
     private AppSettingsDto MapToDto(AppSettings entity)
     {
         var mappings = DeserializeMappings(entity.StoryPointMappings);
+        var tshirtMappings = DeserializeTshirtSizeMappings(entity.TshirtSizeMappings);
 
         return new AppSettingsDto
         {
             Id = entity.Id,
             StoryPointMappings = mappings,
+            TshirtSizeMappings = tshirtMappings,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             HasClaudeApiKey = entity.HasClaudeApiKey,
@@ -121,6 +130,40 @@ public class AppSettingsService : IAppSettingsService
         catch
         {
             return GetDefaultMappings();
+        }
+    }
+
+    private static List<TshirtSizeMapping> GetDefaultTshirtSizeMappings()
+    {
+        return new List<TshirtSizeMapping>
+        {
+            new() { Size = "XS", Sprints = 1, Label = "XS = 1 sprint" },
+            new() { Size = "S", Sprints = 2, Label = "S = 2 sprints" },
+            new() { Size = "M", Sprints = 3, Label = "M = 3 sprints" },
+            new() { Size = "L", Sprints = 5, Label = "L = 5 sprints" },
+            new() { Size = "XL", Sprints = 8, Label = "XL = 8 sprints" }
+        };
+    }
+
+    private static string SerializeTshirtSizeMappings(List<TshirtSizeMapping> mappings)
+    {
+        return JsonSerializer.Serialize(mappings);
+    }
+
+    private static List<TshirtSizeMapping> DeserializeTshirtSizeMappings(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return GetDefaultTshirtSizeMappings();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<TshirtSizeMapping>>(json) ?? GetDefaultTshirtSizeMappings();
+        }
+        catch
+        {
+            return GetDefaultTshirtSizeMappings();
         }
     }
 }

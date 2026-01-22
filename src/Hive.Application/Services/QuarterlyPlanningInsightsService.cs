@@ -211,10 +211,7 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
     {
         var allocatedInitiativeIds = allocations.Select(a => a.InitiativeId).Distinct().ToHashSet();
 
-        foreach (var initiative in initiatives.Where(i =>
-            i.Status != InitiativeStatus.Cancelled &&
-            i.Status != InitiativeStatus.Completed &&
-            !allocatedInitiativeIds.Contains(i.Id)))
+        foreach (var initiative in initiatives.Where(i => !allocatedInitiativeIds.Contains(i.Id)))
         {
             yield return new PlanningInsightDto
             {

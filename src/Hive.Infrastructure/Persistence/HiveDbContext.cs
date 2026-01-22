@@ -315,12 +315,10 @@ public class HiveDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(4000);
-            entity.Property(e => e.OkrObjective).HasMaxLength(500);
             entity.Property(e => e.Color).HasMaxLength(20);
+            entity.Property(e => e.TshirtSize).HasMaxLength(5);
             entity.HasIndex(e => e.QuarterId);
             entity.HasIndex(e => e.ProjectId);
-            entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.Priority);
         });
 
         // Allocation configuration

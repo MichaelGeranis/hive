@@ -582,7 +582,6 @@ import type {
   Initiative,
   CreateInitiativeDto,
   UpdateInitiativeDto,
-  UpdateInitiativeStatusDto,
   Allocation,
   CreateAllocationDto,
   SprintGoal,
@@ -623,8 +622,6 @@ export const quarterlyPlanningApi = {
     api.post<Initiative>('/quarterly-planning/initiatives', data).then(r => r.data),
   updateInitiative: (id: string, data: UpdateInitiativeDto) =>
     api.put<Initiative>(`/quarterly-planning/initiatives/${id}`, data).then(r => r.data),
-  updateInitiativeStatus: (id: string, data: UpdateInitiativeStatusDto) =>
-    api.post<Initiative>(`/quarterly-planning/initiatives/${id}/status`, data).then(r => r.data),
   deleteInitiative: (id: string) =>
     api.delete(`/quarterly-planning/initiatives/${id}`),
 

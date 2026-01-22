@@ -7,6 +7,7 @@ public class AppSettings
 {
     public Guid Id { get; private set; }
     public string StoryPointMappings { get; private set; } = string.Empty;
+    public string TshirtSizeMappings { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -33,6 +34,12 @@ public class AppSettings
     public void UpdateStoryPointMappings(string storyPointMappings)
     {
         StoryPointMappings = storyPointMappings ?? "[]";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateTshirtSizeMappings(string tshirtSizeMappings)
+    {
+        TshirtSizeMappings = tshirtSizeMappings ?? "[]";
         UpdatedAt = DateTime.UtcNow;
     }
 

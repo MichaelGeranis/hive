@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi, backupApi, sentimentApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
-import type { StoryPointMapping, RestoreResultDto } from '../types'
+import type { StoryPointMapping, TshirtSizeMapping, RestoreResultDto } from '../types'
 
 const DEFAULT_MAPPINGS: StoryPointMapping[] = [
   { points: 1, hours: 2, label: '1 SP = 2 hours' },
@@ -15,13 +15,27 @@ const DEFAULT_MAPPINGS: StoryPointMapping[] = [
   { points: 21, hours: 240, label: '21 SP = 240 hours (1 month)' }
 ]
 
+const DEFAULT_TSHIRT_MAPPINGS: TshirtSizeMapping[] = [
+  { size: 'XS', sprints: 1, label: 'XS = 1 sprint' },
+  { size: 'S', sprints: 2, label: 'S = 2 sprints' },
+  { size: 'M', sprints: 3, label: 'M = 3 sprints' },
+  { size: 'L', sprints: 5, label: 'L = 5 sprints' },
+  { size: 'XL', sprints: 8, label: 'XL = 8 sprints' }
+]
+
 export default function Settings() {
   const { theme, setTheme, schedule, setSchedule } = useTheme()
   const [mappings, setMappings] = useState<StoryPointMapping[]>(DEFAULT_MAPPINGS)
+  const [tshirtMappings, setTshirtMappings] = useState<TshirtSizeMapping[]>(DEFAULT_TSHIRT_MAPPINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // T-shirt size mapping state
+  const [savingTshirt, setSavingTshirt] = useState(false)
+  const [tshirtSaved, setTshirtSaved] = useState(false)
+  const [tshirtError, setTshirtError] = useState<string | null>(null)
 
   // Backup & Restore state
   const [backupLoading, setBackupLoading] = useState(false)
@@ -51,6 +65,7 @@ export default function Settings() {
       setError(null)
       const settings = await settingsApi.get()
       setMappings(settings.storyPointMappings)
+      setTshirtMappings(settings.tshirtSizeMappings || DEFAULT_TSHIRT_MAPPINGS)
       // Load sentiment analysis settings
       setSentimentEnabled(settings.sentimentAnalysisEnabled)
       setSentimentDays(settings.sentimentAnalysisDays)
@@ -59,6 +74,7 @@ export default function Settings() {
       console.error('Failed to load settings', err)
       setError('Failed to load settings. Using default values.')
       setMappings(DEFAULT_MAPPINGS)
+      setTshirtMappings(DEFAULT_TSHIRT_MAPPINGS)
     } finally {
       setLoading(false)
     }
@@ -114,6 +130,48 @@ export default function Settings() {
     if (days < 1) return `${hours} hours`
     if (Number.isInteger(days)) return `${days} days`
     return `${days.toFixed(1)} days`
+  }
+
+  // T-shirt size mapping handlers
+  const handleTshirtSprintsChange = (index: number, value: string) => {
+    const sprints = parseInt(value)
+    if (isNaN(sprints) || sprints < 1) return
+
+    const newMappings = [...tshirtMappings]
+    newMappings[index] = { ...newMappings[index], sprints }
+    setTshirtMappings(newMappings)
+    setTshirtSaved(false)
+  }
+
+  const handleSaveTshirtMappings = async () => {
+    try {
+      setSavingTshirt(true)
+      setTshirtError(null)
+      await settingsApi.update({ tshirtSizeMappings: tshirtMappings })
+      setTshirtSaved(true)
+      setTimeout(() => setTshirtSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to save T-shirt size mappings', err)
+      setTshirtError('Failed to save T-shirt size mappings. Please try again.')
+    } finally {
+      setSavingTshirt(false)
+    }
+  }
+
+  const handleResetTshirtMappings = async () => {
+    try {
+      setSavingTshirt(true)
+      setTshirtError(null)
+      await settingsApi.update({ tshirtSizeMappings: DEFAULT_TSHIRT_MAPPINGS })
+      setTshirtMappings(DEFAULT_TSHIRT_MAPPINGS)
+      setTshirtSaved(true)
+      setTimeout(() => setTshirtSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to reset T-shirt size mappings', err)
+      setTshirtError('Failed to reset T-shirt size mappings. Please try again.')
+    } finally {
+      setSavingTshirt(false)
+    }
   }
 
   // Sentiment Analysis handlers
@@ -635,6 +693,75 @@ export default function Settings() {
             {saved && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 Settings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* T-Shirt Size to Sprints Mapping */}
+      <Card>
+        <CardHeader
+          title="T-Shirt Size to Sprints Mapping"
+          subtitle="Configure how T-shirt sizes translate to number of sprints for initiative estimation"
+          action={<Shirt className="w-5 h-5 text-blue-500" />}
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Use this to estimate initiative duration based on T-shirt size complexity.
+            </p>
+
+            <div className="space-y-3">
+              {tshirtMappings.map((mapping, index) => (
+                <div key={mapping.size} className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <div className="flex-shrink-0 w-16">
+                    <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{mapping.size}</span>
+                  </div>
+                  <span className="text-slate-500 dark:text-slate-400">=</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={mapping.sprints}
+                      onChange={(e) => handleTshirtSprintsChange(index, e.target.value)}
+                      className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="1"
+                      step="1"
+                      disabled={savingTshirt}
+                    />
+                    <span className="text-slate-700 dark:text-slate-300">sprint{mapping.sprints !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {tshirtError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {tshirtError}
+              </div>
+            )}
+
+            <div className="pt-4 border-t dark:border-slate-700 flex gap-3">
+              <button
+                onClick={handleSaveTshirtMappings}
+                disabled={savingTshirt}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-5 h-5" />
+                {savingTshirt ? 'Saving...' : tshirtSaved ? 'Saved!' : 'Save Changes'}
+              </button>
+              <button
+                onClick={handleResetTshirtMappings}
+                disabled={savingTshirt}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reset to Defaults
+              </button>
+            </div>
+
+            {tshirtSaved && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
+                T-shirt size mappings saved successfully!
               </div>
             )}
           </div>

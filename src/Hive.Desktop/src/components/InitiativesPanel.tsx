@@ -1,12 +1,8 @@
 import { useState } from 'react'
-import { Plus, Trash2, Loader2, X, Check, Target, Filter } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, Check, Target } from 'lucide-react'
 import { Card, CardHeader, CardContent } from './Card'
 import { quarterlyPlanningApi } from '../services/api'
-import type {
-  Initiative,
-  InitiativeStatus,
-  InitiativePriority
-} from '../types/quarterlyPlanning'
+import type { Initiative } from '../types/quarterlyPlanning'
 
 interface InitiativesPanelProps {
   initiatives: Initiative[]
@@ -15,37 +11,7 @@ interface InitiativesPanelProps {
   onDragStart?: (initiative: Initiative) => void
 }
 
-const INITIATIVE_COLORS = [
-  '#6366f1', // Indigo
-  '#8b5cf6', // Violet
-  '#d946ef', // Fuchsia
-  '#ec4899', // Pink
-  '#f43f5e', // Rose
-  '#ef4444', // Red
-  '#f97316', // Orange
-  '#f59e0b', // Amber
-  '#84cc16', // Lime
-  '#22c55e', // Green
-  '#14b8a6', // Teal
-  '#06b6d4', // Cyan
-  '#0ea5e9', // Sky
-  '#3b82f6', // Blue
-]
-
-const STATUS_OPTIONS: { value: InitiativeStatus; label: string }[] = [
-  { value: 0, label: 'Planned' },
-  { value: 1, label: 'In Progress' },
-  { value: 2, label: 'On Hold' },
-  { value: 3, label: 'Completed' },
-  { value: 4, label: 'Cancelled' },
-]
-
-const PRIORITY_OPTIONS: { value: InitiativePriority; label: string }[] = [
-  { value: 0, label: 'Low' },
-  { value: 1, label: 'Medium' },
-  { value: 2, label: 'High' },
-  { value: 3, label: 'Critical' },
-]
+const TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL']
 
 export default function InitiativesPanel({
   initiatives,
@@ -62,21 +28,12 @@ export default function InitiativesPanel({
   // Form state
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<InitiativePriority>(1)
-  const [okrObjective, setOkrObjective] = useState('')
-  const [color, setColor] = useState(INITIATIVE_COLORS[0])
-
-  // Filter state
-  const [filterStatus, setFilterStatus] = useState<InitiativeStatus | 'all'>('all')
-  const [filterPriority, setFilterPriority] = useState<InitiativePriority | 'all'>('all')
-  const [showFilters, setShowFilters] = useState(false)
+  const [tshirtSize, setTshirtSize] = useState('M')
 
   const resetForm = () => {
     setName('')
     setDescription('')
-    setPriority(1)
-    setOkrObjective('')
-    setColor(INITIATIVE_COLORS[Math.floor(Math.random() * INITIATIVE_COLORS.length)])
+    setTshirtSize('M')
     setEditingInitiative(null)
   }
 
@@ -89,9 +46,7 @@ export default function InitiativesPanel({
     setEditingInitiative(initiative)
     setName(initiative.name)
     setDescription(initiative.description || '')
-    setPriority(initiative.priority)
-    setOkrObjective(initiative.okrObjective || '')
-    setColor(initiative.color || INITIATIVE_COLORS[0])
+    setTshirtSize(initiative.tshirtSize || 'M')
     setShowModal(true)
   }
 
@@ -105,18 +60,14 @@ export default function InitiativesPanel({
         await quarterlyPlanningApi.updateInitiative(editingInitiative.id, {
           name,
           description,
-          priority,
-          okrObjective,
-          color
+          tshirtSize
         })
       } else {
         await quarterlyPlanningApi.createInitiative({
           quarterId,
           name,
           description,
-          priority,
-          okrObjective,
-          color
+          tshirtSize
         })
       }
 
@@ -146,51 +97,6 @@ export default function InitiativesPanel({
     }
   }
 
-  const handleStatusChange = async (initiative: Initiative, status: InitiativeStatus) => {
-    try {
-      await quarterlyPlanningApi.updateInitiativeStatus(initiative.id, { status })
-      onInitiativeCreated()
-    } catch (err) {
-      console.error('Failed to update status', err)
-    }
-  }
-
-  // Filter initiatives
-  const filteredInitiatives = initiatives.filter(i => {
-    if (filterStatus !== 'all' && i.status !== filterStatus) return false
-    if (filterPriority !== 'all' && i.priority !== filterPriority) return false
-    return true
-  })
-
-  const getStatusLabel = (status: InitiativeStatus) => {
-    return STATUS_OPTIONS.find(s => s.value === status)?.label || 'Unknown'
-  }
-
-  const getPriorityLabel = (priority: InitiativePriority) => {
-    return PRIORITY_OPTIONS.find(p => p.value === priority)?.label || 'Unknown'
-  }
-
-  const getStatusColor = (status: InitiativeStatus) => {
-    switch (status) {
-      case 0: return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-      case 1: return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-      case 2: return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-      case 3: return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-      case 4: return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-      default: return 'bg-slate-100 text-slate-700'
-    }
-  }
-
-  const getPriorityColor = (priority: InitiativePriority) => {
-    switch (priority) {
-      case 0: return 'text-slate-500'
-      case 1: return 'text-blue-500'
-      case 2: return 'text-amber-500'
-      case 3: return 'text-red-500'
-      default: return 'text-slate-500'
-    }
-  }
-
   // Count allocated initiatives
   const allocatedCount = initiatives.filter(i => i.allocationCount > 0).length
 
@@ -202,64 +108,23 @@ export default function InitiativesPanel({
             <Target className="w-4 h-4" />
             Initiatives
           </h3>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 ${showFilters ? 'bg-slate-200 dark:bg-slate-700' : ''}`}
-              title="Filter"
-            >
-              <Filter className="w-4 h-4" />
-            </button>
-            <button
-              onClick={openCreate}
-              className="p-1.5 rounded bg-amber-500 text-white hover:bg-amber-600"
-              title="Add Initiative"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={openCreate}
+            className="p-1.5 rounded bg-amber-500 text-white hover:bg-amber-600"
+            title="Add Initiative"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Summary */}
         <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           {initiatives.length} initiatives | {allocatedCount} with allocations
         </div>
-
-        {/* Filters */}
-        {showFilters && (
-          <div className="mt-3 space-y-2">
-            <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value === 'all' ? 'all' : parseInt(e.target.value) as InitiativeStatus)}
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-              >
-                <option value="all">All Statuses</option>
-                {STATUS_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Priority</label>
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value === 'all' ? 'all' : parseInt(e.target.value) as InitiativePriority)}
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-              >
-                <option value="all">All Priorities</option>
-                {PRIORITY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="flex-1 overflow-auto">
-        {filteredInitiatives.length === 0 ? (
+        {initiatives.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-slate-500 dark:text-slate-400">
             <Target className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-sm">No initiatives yet</p>
@@ -272,7 +137,7 @@ export default function InitiativesPanel({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredInitiatives.map(initiative => (
+            {initiatives.map(initiative => (
               <div
                 key={initiative.id}
                 draggable
@@ -286,21 +151,18 @@ export default function InitiativesPanel({
                     <h4 className="font-medium text-slate-800 dark:text-white text-sm truncate">
                       {initiative.name}
                     </h4>
-                    {initiative.okrObjective && (
+                    {initiative.description && (
                       <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                        {initiative.okrObjective}
+                        {initiative.description}
                       </p>
                     )}
                   </div>
-                  <span className={`text-xs font-medium ${getPriorityColor(initiative.priority)}`}>
-                    {getPriorityLabel(initiative.priority)}
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    {initiative.tshirtSize}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between mt-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(initiative.status)}`}>
-                    {getStatusLabel(initiative.status)}
-                  </span>
                   <div className="text-xs text-slate-500 dark:text-slate-400">
                     {initiative.allocationCount} allocation{initiative.allocationCount !== 1 ? 's' : ''}
                   </div>
@@ -356,45 +218,22 @@ export default function InitiativesPanel({
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Priority
+                  T-Shirt Size
                 </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(parseInt(e.target.value) as InitiativePriority)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                >
-                  {PRIORITY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  OKR Objective
-                </label>
-                <input
-                  type="text"
-                  value={okrObjective}
-                  onChange={(e) => setOkrObjective(e.target.value)}
-                  placeholder="Which OKR does this support?"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Color
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {INITIATIVE_COLORS.map(c => (
+                <div className="flex gap-2">
+                  {TSHIRT_SIZES.map(size => (
                     <button
-                      key={c}
+                      key={size}
                       type="button"
-                      onClick={() => setColor(c)}
-                      className={`w-7 h-7 rounded-full transition-transform ${color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
-                      style={{ backgroundColor: c }}
-                    />
+                      onClick={() => setTshirtSize(size)}
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                        tshirtSize === size
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-amber-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -402,17 +241,15 @@ export default function InitiativesPanel({
               {editingInitiative && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Status
+                    Color
                   </label>
-                  <select
-                    value={editingInitiative.status}
-                    onChange={(e) => handleStatusChange(editingInitiative, parseInt(e.target.value) as InitiativeStatus)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                  >
-                    {STATUS_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  <div
+                    className="w-full h-8 rounded-lg"
+                    style={{ backgroundColor: editingInitiative.color }}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Colors are automatically assigned to ensure uniqueness
+                  </p>
                 </div>
               )}
             </div>

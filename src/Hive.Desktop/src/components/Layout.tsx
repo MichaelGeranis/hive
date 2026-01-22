@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -19,7 +20,9 @@ import {
   Activity,
   ClipboardList,
   BookOpen,
-  Target
+  Target,
+  PanelLeftClose,
+  PanelLeft
 } from 'lucide-react'
 
 const navigationGroups = [
@@ -30,6 +33,7 @@ const navigationGroups = [
   ],
   // Delivery
   [
+    { name: 'Quarterly Planning', to: '/quarterly-planning', icon: Target },
     { name: 'Sprints', to: '/sprints', icon: Zap },
     { name: 'Parents', to: '/parents', icon: Layers },
     { name: 'Tasks', to: '/tasks', icon: CheckSquare },
@@ -46,7 +50,6 @@ const navigationGroups = [
   ],
   // Planning
   [
-    { name: 'Quarterly Planning', to: '/quarterly-planning', icon: Target },
     { name: 'TODOs', to: '/notes', icon: StickyNote },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
   ],
@@ -60,16 +63,17 @@ const navigationGroups = [
 export default function Layout() {
   // Check if running on macOS
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+  const [isMenuCollapsed, setIsMenuCollapsed] = useState(false)
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 dark:bg-slate-950 text-white flex flex-col">
+      <aside className={`${isMenuCollapsed ? 'w-16' : 'w-64'} bg-slate-900 dark:bg-slate-950 text-white flex flex-col transition-all duration-300`}>
         {/* Logo / Title bar area - extra padding on macOS for traffic lights */}
         <div className={`flex items-center px-4 titlebar-drag border-b border-slate-700 dark:border-slate-800 ${isMac ? 'h-16 pt-6' : 'h-14'}`}>
           <div className={`flex items-center gap-2 titlebar-no-drag ${isMac ? 'ml-16' : ''}`}>
             <Hexagon className="w-8 h-8 text-amber-400" />
-            <span className="text-xl font-bold">Hive</span>
+            {!isMenuCollapsed && <span className="text-xl font-bold">Hive</span>}
           </div>
         </div>
 
@@ -82,16 +86,17 @@ export default function Layout() {
                   <NavLink
                     key={item.name}
                     to={item.to}
+                    title={isMenuCollapsed ? item.name : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
                           ? 'bg-amber-500 text-white'
                           : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                       }`
                     }
                   >
-                    <item.icon className="w-5 h-5" />
-                    {item.name}
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {!isMenuCollapsed && item.name}
                   </NavLink>
                 ))}
               </div>
@@ -107,30 +112,47 @@ export default function Layout() {
         <div className="px-3 py-4 border-t border-slate-700 dark:border-slate-800 space-y-1">
           <NavLink
             to="/logs"
+            title={isMenuCollapsed ? 'Logs' : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-amber-500 text-white'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`
             }
           >
-            <ScrollText className="w-5 h-5" />
-            Logs
+            <ScrollText className="w-5 h-5 flex-shrink-0" />
+            {!isMenuCollapsed && 'Logs'}
           </NavLink>
           <NavLink
             to="/settings"
+            title={isMenuCollapsed ? 'Settings' : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-amber-500 text-white'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`
             }
           >
-            <Settings className="w-5 h-5" />
-            Settings
+            <Settings className="w-5 h-5 flex-shrink-0" />
+            {!isMenuCollapsed && 'Settings'}
           </NavLink>
+          {/* Toggle button */}
+          <button
+            onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+            className={`flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors text-slate-300 hover:bg-slate-800 hover:text-white`}
+            title={isMenuCollapsed ? 'Expand menu' : 'Collapse menu'}
+          >
+            {isMenuCollapsed ? (
+              <PanelLeft className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="w-5 h-5 flex-shrink-0" />
+                Collapse
+              </>
+            )}
+          </button>
         </div>
       </aside>
 

@@ -3,6 +3,7 @@ using System;
 using Hive.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hive.Infrastructure.Migrations
 {
     [DbContext(typeof(HiveDbContext))]
-    partial class HiveDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260122153422_AddTshirtSizeEstimation")]
+    partial class AddTshirtSizeEstimation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -466,15 +469,25 @@ namespace Hive.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OkrObjective")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("QuarterId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TshirtSize")
                         .IsRequired()
-                        .HasMaxLength(5)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -482,9 +495,13 @@ namespace Hive.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Priority");
+
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("QuarterId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Initiatives");
                 });

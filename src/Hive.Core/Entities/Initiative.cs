@@ -1,7 +1,7 @@
 namespace Hive.Core.Entities;
 
 /// <summary>
-/// Represents a work initiative/option for a quarter, derived from OKRs.
+/// Represents a work initiative/option for a quarter.
 /// </summary>
 public class Initiative
 {
@@ -9,63 +9,71 @@ public class Initiative
     public Guid QuarterId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
-    public InitiativeStatus Status { get; private set; }
-    public InitiativePriority Priority { get; private set; }
-    public string OkrObjective { get; private set; } = string.Empty;
     public string Color { get; private set; } = string.Empty;
     public Guid? ProjectId { get; private set; }
+    public string TshirtSize { get; private set; } = "M";
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+
+    private static readonly string[] ValidTshirtSizes = { "XS", "S", "M", "L", "XL" };
+
+    // Available colors for initiatives - used by service to assign unique colors
+    public static readonly string[] AvailableColors =
+    {
+        "#3B82F6", // Blue
+        "#10B981", // Green
+        "#F59E0B", // Amber
+        "#EF4444", // Red
+        "#8B5CF6", // Purple
+        "#EC4899", // Pink
+        "#06B6D4", // Cyan
+        "#F97316", // Orange
+        "#14B8A6", // Teal
+        "#6366F1", // Indigo
+        "#84CC16", // Lime
+        "#A855F7", // Violet
+    };
 
     private Initiative() { }
 
     public Initiative(
         Guid quarterId,
         string name,
+        string color,
         string? description = null,
-        InitiativePriority priority = InitiativePriority.Medium,
-        string? okrObjective = null,
-        string? color = null,
-        Guid? projectId = null)
+        Guid? projectId = null,
+        string? tshirtSize = null)
     {
         ValidateName(name);
         ValidateColor(color);
+        ValidateTshirtSize(tshirtSize);
 
         Id = Guid.NewGuid();
         QuarterId = quarterId;
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
-        Status = InitiativeStatus.Planned;
-        Priority = priority;
-        OkrObjective = okrObjective?.Trim() ?? string.Empty;
-        Color = string.IsNullOrWhiteSpace(color) ? GenerateDefaultColor() : color.Trim();
+        Color = color.Trim();
         ProjectId = projectId;
+        TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? "M" : tshirtSize.Trim().ToUpperInvariant();
         CreatedAt = DateTime.UtcNow;
     }
 
     public void Update(
         string name,
         string? description,
-        InitiativePriority priority,
-        string? okrObjective,
         string? color,
-        Guid? projectId)
+        Guid? projectId,
+        string? tshirtSize = null)
     {
         ValidateName(name);
         ValidateColor(color);
+        ValidateTshirtSize(tshirtSize);
 
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
-        Priority = priority;
-        OkrObjective = okrObjective?.Trim() ?? string.Empty;
         Color = string.IsNullOrWhiteSpace(color) ? Color : color.Trim();
         ProjectId = projectId;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void UpdateStatus(InitiativeStatus status)
-    {
-        Status = status;
+        TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? TshirtSize : tshirtSize.Trim().ToUpperInvariant();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -105,20 +113,14 @@ public class Initiative
         }
     }
 
-    private static string GenerateDefaultColor()
+    private static void ValidateTshirtSize(string? tshirtSize)
     {
-        // Generate a random pastel color for initiatives
-        var colors = new[]
+        if (string.IsNullOrWhiteSpace(tshirtSize)) return;
+
+        var size = tshirtSize.Trim().ToUpperInvariant();
+        if (!ValidTshirtSizes.Contains(size))
         {
-            "#3B82F6", // Blue
-            "#10B981", // Green
-            "#F59E0B", // Amber
-            "#EF4444", // Red
-            "#8B5CF6", // Purple
-            "#EC4899", // Pink
-            "#06B6D4", // Cyan
-            "#F97316", // Orange
-        };
-        return colors[Random.Shared.Next(colors.Length)];
+            throw new ArgumentException($"T-shirt size must be one of: {string.Join(", ", ValidTshirtSizes)}.", nameof(tshirtSize));
+        }
     }
 }

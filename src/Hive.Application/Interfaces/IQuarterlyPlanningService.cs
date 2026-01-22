@@ -23,7 +23,6 @@ public interface IQuarterlyPlanningService
     Task<IReadOnlyList<InitiativeDto>> GetInitiativesByQuarterAsync(Guid quarterId, CancellationToken cancellationToken = default);
     Task<InitiativeDto> CreateInitiativeAsync(CreateInitiativeDto dto, CancellationToken cancellationToken = default);
     Task<InitiativeDto> UpdateInitiativeAsync(Guid id, UpdateInitiativeDto dto, CancellationToken cancellationToken = default);
-    Task<InitiativeDto> UpdateInitiativeStatusAsync(Guid id, UpdateInitiativeStatusDto dto, CancellationToken cancellationToken = default);
     Task DeleteInitiativeAsync(Guid id, CancellationToken cancellationToken = default);
 
     // Allocation operations
