@@ -1,8 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { SkillMatrix, Skill, ProficiencyLevel } from '../types'
 
 export type MatrixSortBy = 'name' | 'avgProficiency' | 'gaps'
 export type MatrixSortOrder = 'asc' | 'desc'
+
+export interface SkillsHeatmapHandle {
+  getScrollPosition: () => number
+  setScrollPosition: (position: number) => void
+}
 
 interface SkillsHeatmapProps {
   matrix: SkillMatrix
@@ -35,7 +40,7 @@ const getProficiencyColor = (level: ProficiencyLevel): string => {
   return colors[level]
 }
 
-export function SkillsHeatmap({
+export const SkillsHeatmap = forwardRef<SkillsHeatmapHandle, SkillsHeatmapProps>(function SkillsHeatmap({
   matrix,
   onCellClick,
   categoryFilter,
@@ -43,7 +48,17 @@ export function SkillsHeatmap({
   teamMemberFilter = [],
   sortBy = 'name',
   sortOrder = 'asc'
-}: SkillsHeatmapProps) {
+}, ref) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    getScrollPosition: () => scrollContainerRef.current?.scrollLeft ?? 0,
+    setScrollPosition: (position: number) => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft = position
+      }
+    }
+  }))
   // Filter skills by category and search query
   const filteredSkills = useMemo(() => {
     let skills = matrix.skills.filter(s => s.isActive)
@@ -140,7 +155,7 @@ export function SkillsHeatmap({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div ref={scrollContainerRef} className="overflow-x-auto">
       <table className="min-w-full border-collapse">
         <thead>
           {/* Category headers */}
@@ -243,4 +258,4 @@ export function SkillsHeatmap({
       </div>
     </div>
   )
-}
+})

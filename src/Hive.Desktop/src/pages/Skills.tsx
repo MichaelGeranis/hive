@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   Award,
   Plus,
@@ -13,7 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
-import { SkillsHeatmap, type MatrixSortBy, type MatrixSortOrder } from '../components/SkillsHeatmap'
+import { SkillsHeatmap, type MatrixSortBy, type MatrixSortOrder, type SkillsHeatmapHandle } from '../components/SkillsHeatmap'
 import { SkillRadarChart } from '../components/SkillRadarChart'
 import { skillsApi, skillCategoriesApi, skillAssessmentsApi, directReportsApi } from '../services/api'
 import type {
@@ -108,6 +108,10 @@ export default function Skills() {
     description: '',
     sortOrder: 0
   })
+
+  // Ref for preserving scroll position
+  const heatmapRef = useRef<SkillsHeatmapHandle>(null)
+  const savedScrollPositionRef = useRef<number>(0)
 
   useEscapeKey(() => {
     setShowSkillModal(false)
@@ -235,6 +239,9 @@ export default function Skills() {
 
   const handleCreateAssessment = async () => {
     try {
+      // Save scroll position before update
+      savedScrollPositionRef.current = heatmapRef.current?.getScrollPosition() ?? 0
+
       const data: CreateSkillAssessmentDto = {
         directReportId: assessmentForm.directReportId,
         skillId: assessmentForm.skillId,
@@ -246,6 +253,11 @@ export default function Skills() {
       await loadData()
       setShowAssessmentModal(false)
       resetAssessmentForm()
+
+      // Restore scroll position after a brief delay to allow React to re-render
+      requestAnimationFrame(() => {
+        heatmapRef.current?.setScrollPosition(savedScrollPositionRef.current)
+      })
     } catch (err) {
       console.error('Failed to create assessment:', err)
     }
@@ -254,6 +266,9 @@ export default function Skills() {
   const handleUpdateAssessment = async () => {
     if (!editingAssessment) return
     try {
+      // Save scroll position before update
+      savedScrollPositionRef.current = heatmapRef.current?.getScrollPosition() ?? 0
+
       const data: UpdateSkillAssessmentDto = {
         level: assessmentForm.level,
         targetLevel: assessmentForm.targetLevel,
@@ -264,6 +279,11 @@ export default function Skills() {
       setShowAssessmentModal(false)
       resetAssessmentForm()
       setEditingAssessment(null)
+
+      // Restore scroll position after a brief delay to allow React to re-render
+      requestAnimationFrame(() => {
+        heatmapRef.current?.setScrollPosition(savedScrollPositionRef.current)
+      })
     } catch (err) {
       console.error('Failed to update assessment:', err)
     }
@@ -272,8 +292,19 @@ export default function Skills() {
   const handleDeleteAssessment = async (id: string) => {
     if (!confirm('Are you sure you want to delete this assessment?')) return
     try {
+      // Save scroll position before update
+      savedScrollPositionRef.current = heatmapRef.current?.getScrollPosition() ?? 0
+
       await skillAssessmentsApi.delete(id)
       await loadData()
+      setShowAssessmentModal(false)
+      resetAssessmentForm()
+      setEditingAssessment(null)
+
+      // Restore scroll position after a brief delay to allow React to re-render
+      requestAnimationFrame(() => {
+        heatmapRef.current?.setScrollPosition(savedScrollPositionRef.current)
+      })
     } catch (err) {
       console.error('Failed to delete assessment:', err)
     }
@@ -730,6 +761,7 @@ export default function Skills() {
             )}
 
             <SkillsHeatmap
+              ref={heatmapRef}
               matrix={matrix}
               onCellClick={handleCellClick}
               categoryFilter={categoryFilter}
