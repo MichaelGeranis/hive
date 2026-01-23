@@ -5,7 +5,6 @@ using Hive.Core.Entities;
 using Hive.Core.Interfaces;
 using FluentAssertions;
 using Moq;
-using System.Text.Json;
 using TaskStatus = Hive.Core.Entities.TaskStatus;
 
 namespace Hive.Tests.Application.Services;
@@ -20,12 +19,12 @@ public class JiraImportServiceTests
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<ISprintService> _sprintServiceMock;
     private readonly Mock<IParentService> _parentServiceMock;
-    private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
+    private readonly Mock<IAppSettingsService> _appSettingsServiceMock;
     private readonly JiraImportService _service;
 
     private readonly DirectReport _testDirectReport;
     private readonly Project _testProject;
-    private readonly AppSettings _testAppSettings;
+    private readonly AppSettingsDto _testAppSettings;
 
     public JiraImportServiceTests()
     {
@@ -34,7 +33,7 @@ public class JiraImportServiceTests
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _sprintServiceMock = new Mock<ISprintService>();
         _parentServiceMock = new Mock<IParentService>();
-        _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
+        _appSettingsServiceMock = new Mock<IAppSettingsService>();
 
         _service = new JiraImportService(
             _taskRepositoryMock.Object,
@@ -42,7 +41,7 @@ public class JiraImportServiceTests
             _projectRepositoryMock.Object,
             _sprintServiceMock.Object,
             _parentServiceMock.Object,
-            _appSettingsRepositoryMock.Object);
+            _appSettingsServiceMock.Object);
 
         _testDirectReport = new DirectReport(
             "John",
@@ -58,13 +57,16 @@ public class JiraImportServiceTests
             "test-label",
             "https://github.com/test/project");
 
-        var mappings = new List<StoryPointMapping>
+        _testAppSettings = new AppSettingsDto
         {
-            new() { Points = 1, Hours = 2, Label = "1 SP" },
-            new() { Points = 3, Hours = 8, Label = "3 SP" },
-            new() { Points = 5, Hours = 24, Label = "5 SP" }
+            Id = Guid.NewGuid(),
+            StoryPointMappings = new List<Hive.Application.DTOs.StoryPointMapping>
+            {
+                new() { Points = 1, Hours = 2, Label = "1 SP" },
+                new() { Points = 3, Hours = 8, Label = "3 SP" },
+                new() { Points = 5, Hours = 24, Label = "5 SP" }
+            }
         };
-        _testAppSettings = new AppSettings(JsonSerializer.Serialize(mappings));
     }
 
     #region Constructor Tests
@@ -79,7 +81,7 @@ public class JiraImportServiceTests
             _projectRepositoryMock.Object,
             _sprintServiceMock.Object,
             _parentServiceMock.Object,
-            _appSettingsRepositoryMock.Object);
+            _appSettingsServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -308,7 +310,7 @@ PROJ-123,Test Task,Done,LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -357,7 +359,7 @@ PROJ-123,Test Task,Done,InvalidSprintName";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         // Act
@@ -408,7 +410,7 @@ PROJ-123,Test Task,Done";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         // Act
@@ -459,7 +461,7 @@ PROJ-123,Test Task,New Description,Done";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _taskRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<TeamTask>(), It.IsAny<CancellationToken>()))
@@ -504,7 +506,7 @@ PROJ-123,Test Task,John Doe,LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -549,7 +551,7 @@ PROJ-123,Test Task,Test Project,LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project> { _testProject });
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -590,7 +592,7 @@ PROJ-123,Test Task,3,LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -633,7 +635,7 @@ PROJ-123,Test Task,""2h 30m"",LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -682,7 +684,7 @@ PROJ-123,Test Task,Parent Epic,LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -728,7 +730,7 @@ PROJ-123,Test Task,""LP_1Q25_S1,LP_1Q25_S2""";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -779,7 +781,7 @@ PROJ-123,Test Task,{jiraType},LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -829,7 +831,7 @@ PROJ-123,Test Task,{jiraPriority},LP_1Q25_S1";
             .ReturnsAsync(new List<DirectReport>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());
-        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testAppSettings);
 
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -849,12 +851,4 @@ PROJ-123,Test Task,{jiraPriority},LP_1Q25_S1";
     }
 
     #endregion
-}
-
-// Helper record for StoryPointMapping
-file record StoryPointMapping
-{
-    public int Points { get; init; }
-    public int Hours { get; init; }
-    public string? Label { get; init; }
 }

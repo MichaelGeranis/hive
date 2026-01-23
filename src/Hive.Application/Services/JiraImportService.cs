@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
@@ -20,7 +19,7 @@ public class JiraImportService : IJiraImportService
     private readonly IProjectRepository _projectRepository;
     private readonly ISprintService _sprintService;
     private readonly IParentService _parentService;
-    private readonly IAppSettingsRepository _appSettingsRepository;
+    private readonly IAppSettingsService _appSettingsService;
 
     // Sprint name pattern: TeamName_QuarterQYear_SSprintNumber (e.g., LP_1Q25_S4)
     private static readonly Regex SprintPatternRegex = new(@"^(\w+)_(\d)Q(\d{2})_S(\d+)$", RegexOptions.Compiled);
@@ -47,14 +46,14 @@ public class JiraImportService : IJiraImportService
         IProjectRepository projectRepository,
         ISprintService sprintService,
         IParentService parentService,
-        IAppSettingsRepository appSettingsRepository)
+        IAppSettingsService appSettingsService)
     {
         _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _sprintService = sprintService ?? throw new ArgumentNullException(nameof(sprintService));
         _parentService = parentService ?? throw new ArgumentNullException(nameof(parentService));
-        _appSettingsRepository = appSettingsRepository ?? throw new ArgumentNullException(nameof(appSettingsRepository));
+        _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
     }
 
     public Task<JiraImportPreviewDto> PreviewImportAsync(string csvContent, CancellationToken cancellationToken = default)
@@ -137,7 +136,7 @@ public class JiraImportService : IJiraImportService
         var existingTasks = await _taskRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
-        var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
+        var appSettings = await _appSettingsService.GetAsync(cancellationToken);
 
         var totalRows = lines.Count - 1;
         var successCount = 0;
@@ -546,7 +545,7 @@ public class JiraImportService : IJiraImportService
         Dictionary<string, string> rowData,
         IReadOnlyList<DirectReport> directReports,
         IReadOnlyList<Project> projects,
-        AppSettings? appSettings,
+        AppSettingsDto appSettings,
         out string? projectNameOut)
     {
         var issueKey = GetValue(rowData, IssueKeyColumns);
@@ -909,45 +908,29 @@ public class JiraImportService : IJiraImportService
     /// Calculates estimated hours from story points using the app settings mapping.
     /// If story points don't match exactly, uses the next biggest mapping (or last one if none bigger).
     /// </summary>
-    private static int? CalculateEstimatedHoursFromStoryPoints(int? storyPoints, AppSettings? appSettings)
+    private static int? CalculateEstimatedHoursFromStoryPoints(int? storyPoints, AppSettingsDto appSettings)
     {
         if (!storyPoints.HasValue || storyPoints.Value <= 0)
             return null;
 
-        if (appSettings is null || string.IsNullOrEmpty(appSettings.StoryPointMappings))
+        if (appSettings.StoryPointMappings.Count == 0)
             return null;
 
-        try
-        {
-            var mappings = JsonSerializer.Deserialize<List<StoryPointMapping>>(
-                appSettings.StoryPointMappings,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var sortedMappings = appSettings.StoryPointMappings.OrderBy(m => m.Points).ToList();
 
-            if (mappings is null || mappings.Count == 0)
-                return null;
+        // Find exact match first
+        var exactMatch = sortedMappings.FirstOrDefault(m => m.Points == storyPoints.Value);
+        if (exactMatch is not null)
+            return (int)exactMatch.Hours;
 
-            var sortedMappings = mappings.OrderBy(m => m.Points).ToList();
+        // Find next biggest mapping
+        var nextBiggest = sortedMappings.FirstOrDefault(m => m.Points > storyPoints.Value);
+        if (nextBiggest is not null)
+            return (int)nextBiggest.Hours;
 
-            // Find exact match first
-            var exactMatch = sortedMappings.FirstOrDefault(m => m.Points == storyPoints.Value);
-            if (exactMatch is not null)
-                return exactMatch.Hours;
-
-            // Find next biggest mapping
-            var nextBiggest = sortedMappings.FirstOrDefault(m => m.Points > storyPoints.Value);
-            if (nextBiggest is not null)
-                return nextBiggest.Hours;
-
-            // If no bigger mapping exists, use the last (maximum) mapping
-            return sortedMappings.Last().Hours;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        // If no bigger mapping exists, use the last (maximum) mapping
+        return (int)sortedMappings.Last().Hours;
     }
-
-    private record StoryPointMapping(int Points, int Hours, string? Label);
 
     private class TaskData
     {
