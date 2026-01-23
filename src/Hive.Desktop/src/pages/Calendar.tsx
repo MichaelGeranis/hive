@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Users, MessageCircle, CheckSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, CheckCircle2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { leavesApi, meetingsApi, tasksApi } from '../services/api'
-import type { Leave, OneOnOneMeeting, TeamTask } from '../types'
+import { notesApi, meetingNotesApi } from '../services/api'
+import type { ManagerNote, MeetingNote } from '../types'
 
 type CalendarEvent = {
   id: string
   title: string
-  date: Date
-  endDate?: Date
-  type: 'leave' | 'meeting' | 'task-deadline'
+  displayDate: Date  // The date to show on calendar (1 day before due)
+  dueDate: Date      // The actual due date
+  type: 'todo' | 'action-item'
   color: string
   details?: string
+  priority?: string
+  isOverdue: boolean
 }
 
 const monthNames = [
@@ -20,15 +22,15 @@ const monthNames = [
 ]
 
 const EVENT_COLORS = {
-  leave: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-l-4 border-blue-500',
-  meeting: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
-  'task-deadline': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-l-4 border-green-500',
+  todo: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-l-4 border-amber-500',
+  'todo-overdue': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-l-4 border-red-500',
+  'action-item': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
+  'action-item-overdue': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-l-4 border-red-500',
 }
 
 const EVENT_ICONS = {
-  leave: Users,
-  meeting: MessageCircle,
-  'task-deadline': CheckSquare,
+  todo: ClipboardList,
+  'action-item': CheckCircle2,
 }
 
 export default function Calendar() {
@@ -44,49 +46,50 @@ export default function Calendar() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const [leaves, meetings, tasks] = await Promise.all([
-        leavesApi.getAll(),
-        meetingsApi.getAll(),
-        tasksApi.getAll(),
+      const [todosResponse, actionItems] = await Promise.all([
+        notesApi.getPending(),  // Get incomplete TODOs
+        meetingNotesApi.getOpenActionItems(),  // Get open action items
       ])
 
       const calendarEvents: CalendarEvent[] = []
 
-      // Add leaves as events
-      leaves.forEach((leave: Leave) => {
-        calendarEvents.push({
-          id: `leave-${leave.id}`,
-          title: `${leave.directReportName} - ${leave.type} Leave`,
-          date: new Date(leave.startDate),
-          endDate: new Date(leave.endDate),
-          type: 'leave',
-          color: EVENT_COLORS.leave,
-          details: `${leave.businessDaysCount} days`,
-        })
-      })
+      // Add TODOs with due dates (show 1 day before due)
+      todosResponse.forEach((todo: ManagerNote) => {
+        if (todo.dueDate) {
+          const dueDate = new Date(todo.dueDate)
+          const displayDate = new Date(dueDate)
+          displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
 
-      // Add 1:1 meetings as events
-      meetings.forEach((meeting: OneOnOneMeeting) => {
-        calendarEvents.push({
-          id: `meeting-${meeting.id}`,
-          title: `1:1 with ${meeting.directReportName}`,
-          date: new Date(meeting.meetingDate),
-          type: 'meeting',
-          color: EVENT_COLORS.meeting,
-          details: meeting.location || undefined,
-        })
-      })
-
-      // Add task deadlines as events
-      tasks.items.forEach((task: TeamTask) => {
-        if (task.dueDate) {
           calendarEvents.push({
-            id: `task-${task.id}`,
-            title: task.title,
-            date: new Date(task.dueDate),
-            type: 'task-deadline',
-            color: EVENT_COLORS['task-deadline'],
-            details: task.assigneeName ? `Assigned to: ${task.assigneeName}` : 'Unassigned',
+            id: `todo-${todo.id}`,
+            title: todo.title,
+            displayDate,
+            dueDate,
+            type: 'todo',
+            color: todo.isOverdue ? EVENT_COLORS['todo-overdue'] : EVENT_COLORS.todo,
+            details: todo.content ? todo.content.substring(0, 100) : undefined,
+            priority: todo.priorityName,
+            isOverdue: todo.isOverdue,
+          })
+        }
+      })
+
+      // Add Action Items with due dates (show 1 day before due)
+      actionItems.forEach((actionItem: MeetingNote) => {
+        if (actionItem.actionDueDate) {
+          const dueDate = new Date(actionItem.actionDueDate)
+          const displayDate = new Date(dueDate)
+          displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
+
+          calendarEvents.push({
+            id: `action-${actionItem.id}`,
+            title: actionItem.content.substring(0, 50) + (actionItem.content.length > 50 ? '...' : ''),
+            displayDate,
+            dueDate,
+            type: 'action-item',
+            color: actionItem.isOverdue ? EVENT_COLORS['action-item-overdue'] : EVENT_COLORS['action-item'],
+            details: `1:1 with ${actionItem.directReportName}${actionItem.actionAssignee ? ` • Assigned: ${actionItem.actionAssignee}` : ''}`,
+            isOverdue: actionItem.isOverdue,
           })
         }
       })
@@ -118,16 +121,8 @@ export default function Calendar() {
     targetDate.setHours(0, 0, 0, 0)
 
     return events.filter(event => {
-      const eventDate = new Date(event.date)
+      const eventDate = new Date(event.displayDate)
       eventDate.setHours(0, 0, 0, 0)
-
-      // For multi-day events (leaves), check if target date is within range
-      if (event.endDate) {
-        const endDate = new Date(event.endDate)
-        endDate.setHours(0, 0, 0, 0)
-        return targetDate >= eventDate && targetDate <= endDate
-      }
-
       return eventDate.getTime() === targetDate.getTime()
     })
   }
@@ -142,6 +137,10 @@ export default function Calendar() {
 
   const today = () => {
     setCurrentDate(new Date())
+  }
+
+  const formatDate = (date: Date) => {
+    return `${monthNames[date.getMonth()]} ${date.getDate()}`
   }
 
   const daysInMonth = getDaysInMonth(currentDate)
@@ -165,8 +164,8 @@ export default function Calendar() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Calendar</h1>
-          <p className="text-slate-500 dark:text-slate-400">Team schedule and deadlines</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Daily Planner</h1>
+          <p className="text-slate-500 dark:text-slate-400">TODOs and Action Items (shown 1 day before due)</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -198,20 +197,16 @@ export default function Calendar() {
       {/* Legend */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">Leaves</span>
+          <div className="w-4 h-4 rounded bg-amber-500"></div>
+          <span className="text-sm text-slate-600 dark:text-slate-400">TODOs</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-purple-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">1:1 Meetings</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">1:1 Action Items</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-amber-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">Project Deadlines</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-green-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">Task Deadlines</span>
+          <div className="w-4 h-4 rounded bg-red-500"></div>
+          <span className="text-sm text-slate-600 dark:text-slate-400">Overdue</span>
         </div>
       </div>
 
@@ -260,7 +255,7 @@ export default function Calendar() {
                         <div
                           key={event.id}
                           className={`text-xs p-1 rounded ${event.color} truncate flex items-center gap-1`}
-                          title={event.title}
+                          title={`${event.title} (Due: ${formatDate(event.dueDate)})`}
                         >
                           <Icon className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate">{event.title}</span>
@@ -284,7 +279,7 @@ export default function Calendar() {
       {selectedDate && (
         <Card>
           <CardHeader
-            title={`Events for ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`}
+            title={`Tasks for ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`}
             action={
               <button
                 onClick={() => setSelectedDate(null)}
@@ -296,7 +291,7 @@ export default function Calendar() {
           />
           <CardContent>
             {getEventsForDate(selectedDate.getDate()).length === 0 ? (
-              <p className="text-slate-500 dark:text-slate-400 text-center py-4">No events on this day</p>
+              <p className="text-slate-500 dark:text-slate-400 text-center py-4">No tasks scheduled for this day</p>
             ) : (
               <div className="space-y-2">
                 {getEventsForDate(selectedDate.getDate()).map(event => {
@@ -306,14 +301,24 @@ export default function Calendar() {
                       <div className="flex items-start gap-2">
                         <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <h4 className="font-medium">{event.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{event.title}</h4>
+                            {event.priority && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                                {event.priority}
+                              </span>
+                            )}
+                            {event.isOverdue && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-red-500 text-white">
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs opacity-70 mt-1">
+                            Due: {formatDate(event.dueDate)}
+                          </p>
                           {event.details && (
                             <p className="text-sm opacity-80 mt-1">{event.details}</p>
-                          )}
-                          {event.endDate && (
-                            <p className="text-xs opacity-70 mt-1">
-                              {event.date.toLocaleDateString()} - {event.endDate.toLocaleDateString()}
-                            </p>
                           )}
                         </div>
                       </div>

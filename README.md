@@ -47,7 +47,7 @@ src/
 ## Prerequisites
 
 ### Backend
-- .NET 8.0 SDK ([Download](https://dotnet.microsoft.com/download/dotnet/8.0))
+- .NET 9.0 SDK ([Download](https://dotnet.microsoft.com/download/dotnet/9.0))
 
 ### Frontend
 - Node.js 18+ ([Download](https://nodejs.org/))
@@ -188,8 +188,10 @@ tests/Hive.Tests/
 ├── Core/
 │   ├── Entities/             # Domain entity tests
 │   └── Exceptions/           # Exception tests
-└── Infrastructure/
-    └── Repositories/         # Repository tests
+├── Infrastructure/
+│   ├── Persistence/          # Database service tests
+│   └── Repositories/         # Repository tests
+└── Integration/              # Integration tests
 ```
 
 ### Frontend Tests
@@ -230,7 +232,7 @@ Currently, the frontend does not have a test suite configured. To add tests:
          "type": "coreclr",
          "request": "launch",
          "preLaunchTask": "build",
-         "program": "${workspaceFolder}/src/Hive.Api/bin/Debug/net8.0/Hive.Api.dll",
+         "program": "${workspaceFolder}/src/Hive.Api/bin/Debug/net9.0/Hive.Api.dll",
          "args": [],
          "cwd": "${workspaceFolder}/src/Hive.Api",
          "stopAtEntry": false,
@@ -381,13 +383,21 @@ Navigate to http://localhost:5000 (or https://localhost:5001) to access Swagger 
 | Direct Reports | DELETE | /api/directreports/{id} | Delete direct report |
 | Reviews | GET | /api/performancereviews | Get all performance reviews |
 | Reviews | POST | /api/performancereviews | Create performance review |
-| Meetings | GET | /api/oneonoremeetings | Get all 1:1 meetings |
-| Meetings | POST | /api/oneonoremeetings | Schedule 1:1 meeting |
+| Meetings | GET | /api/oneononemeetings | Get all 1:1 meetings |
+| Meetings | POST | /api/oneononemeetings | Schedule 1:1 meeting |
 | Projects | GET | /api/projects | Get all projects |
 | Projects | POST | /api/projects | Create new project |
 | Tasks | GET | /api/teamtasks | Get all tasks |
 | Tasks | POST | /api/teamtasks | Create new task |
+| Sprints | GET | /api/sprints | Get all sprints |
+| Sprints | POST | /api/sprints | Create new sprint |
+| Leaves | GET | /api/leaves | Get all leave requests |
+| Leaves | POST | /api/leaves | Create leave request |
+| Skills | GET | /api/skills | Get all skills |
+| Settings | GET | /api/settings | Get application settings |
+| Backup | POST | /api/backup | Create database backup |
 | Reports | GET | /api/reports/dashboard | Get dashboard overview |
+| Jira Import | POST | /api/jiraimport | Import data from Jira |
 
 ## Authentication
 
@@ -452,6 +462,23 @@ src/Hive.Desktop/
 
 ## Configuration
 
+### Database Configuration
+
+The application supports two database modes:
+
+**Development (In-Memory)**
+- Configured via `UseInMemoryDatabase: true` in appsettings.json
+- Data is lost on restart
+- Automatically seeds sample data
+
+**Production (SQLite)**
+- Configured via `UseInMemoryDatabase: false`
+- Persistent storage in platform-specific locations:
+  - **macOS**: `~/Library/Application Support/Hive/hive.db`
+  - **Windows**: `%APPDATA%/Hive/hive.db`
+  - **Linux**: `~/.local/share/Hive/hive.db`
+- Override with `HIVE_DATABASE_PATH` environment variable
+
 ### Backend Configuration
 
 Admin credentials can be configured in `src/Hive.Api/appsettings.json`:
@@ -461,7 +488,8 @@ Admin credentials can be configured in `src/Hive.Api/appsettings.json`:
   "AdminCredentials": {
     "Username": "admin",
     "Password": "your-secure-password"
-  }
+  },
+  "UseInMemoryDatabase": false
 }
 ```
 
@@ -475,6 +503,14 @@ const api = axios.create({
   // ...
 })
 ```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `HIVE_DATABASE_PATH` | Override default SQLite database location |
+| `UseInMemoryDatabase` | Set to `true` for in-memory database (appsettings.json) |
+| `ASPNETCORE_ENVIRONMENT` | Set to `Development` for dev mode |
 
 ## Future Enhancements
 0. Use or remove Authentication for 

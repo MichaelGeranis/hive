@@ -29,7 +29,8 @@ const navigationGroups = [
   // Overview
   [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-    { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
+    { name: 'Calendar', to: '/calendar', icon: CalendarDays },
+    { name: 'TODOs', to: '/notes', icon: StickyNote },
   ],
   // Delivery
   [
@@ -48,15 +49,11 @@ const navigationGroups = [
     { name: 'Reviews', to: '/reviews', icon: Star },
     { name: 'Skills', to: '/skills', icon: Award },
   ],
-  // Planning
-  [
-    { name: 'TODOs', to: '/notes', icon: StickyNote },
-    { name: 'Hiring', to: '/checklists', icon: ClipboardList },
-  ],
   // Resources
   [
+    { name: 'Activity Feed', to: '/activity-feed', icon: Activity },    
     { name: 'Documents', to: '/documents', icon: FileText },
-    { name: 'Calendar', to: '/calendar', icon: CalendarDays },
+    { name: 'Hiring', to: '/checklists', icon: ClipboardList },
   ],
 ]
 
