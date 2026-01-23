@@ -1,7 +1,7 @@
 # Hive - Engineering Manager Tool
 # Common commands for development and deployment
 
-.PHONY: help install build test run dev clean backend frontend electron-dev electron-build
+.PHONY: help install build test run dev clean backend frontend electron-dev electron-build kill-backend test-coverage coverage-report
 
 # Default target
 help:
@@ -17,6 +17,8 @@ help:
 	@echo "Testing:"
 	@echo "  make test           - Run all backend tests"
 	@echo "  make test-watch     - Run tests in watch mode"
+	@echo "  make test-coverage  - Run tests with code coverage"
+	@echo "  make coverage-report - Generate HTML coverage report"
 	@echo ""
 	@echo "Building:"
 	@echo "  make build          - Build backend and frontend"
@@ -28,6 +30,7 @@ help:
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make restore        - Restore NuGet packages"
 	@echo "  make reset-db       - Reset SQLite database (creates backup)"
+	@echo "  make kill-backend   - Kill process using backend port 5002"
 	@echo ""
 	@echo "Migrations:"
 	@echo "  make migration-add     - Create a new migration"
@@ -105,3 +108,25 @@ migration-update:
 # List all migrations
 migration-list:
 	dotnet ef migrations list --project src/Hive.Infrastructure/Hive.Infrastructure.csproj --startup-project src/Hive.Api/Hive.Api.csproj --context HiveDbContext
+
+# Kill process using backend port 5002
+kill-backend:
+	@echo "Killing process on port 5002..."
+	@lsof -ti:5002 | xargs kill -9 2>/dev/null || echo "No process found on port 5002"
+
+# Run tests with code coverage (excludes migrations, interfaces, and tests)
+test-coverage:
+	@rm -rf coverage
+	dotnet test tests/Hive.Tests/Hive.Tests.csproj \
+		/p:CollectCoverage=true \
+		/p:CoverletOutputFormat=cobertura \
+		/p:CoverletOutput=../../coverage/ \
+		/p:Exclude="[Hive.Tests]*%2c[*]*.Migrations.*" \
+		/p:ExcludeByFile="**/Migrations/**/*.cs%2c**/Interfaces/**/*.cs"
+
+# Generate HTML coverage report (requires reportgenerator tool)
+coverage-report: test-coverage
+	@command -v reportgenerator >/dev/null 2>&1 || (echo "Installing reportgenerator..." && dotnet tool install -g dotnet-reportgenerator-globaltool)
+	reportgenerator -reports:"coverage/coverage.cobertura.xml" -targetdir:"coverage/report" -reporttypes:Html
+	@echo "Coverage report generated at coverage/report/index.html"
+	@open coverage/report/index.html 2>/dev/null || xdg-open coverage/report/index.html 2>/dev/null || echo "Open coverage/report/index.html in your browser"

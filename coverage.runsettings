@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura,opencover</Format>
+
+          <!-- Exclude from coverage using assembly filter syntax [assembly]namespace.class -->
+          <Exclude>
+            [Hive.Tests]*
+            [Hive.Infrastructure]Hive.Infrastructure.Migrations.*
+            [*]*.Migrations.*
+          </Exclude>
+
+          <!-- Exclude files by path pattern -->
+          <ExcludeByFile>
+            **/Migrations/**
+            **/Interfaces/**
+            **/*.Designer.cs
+          </ExcludeByFile>
+
+          <!-- Exclude by attribute -->
+          <ExcludeByAttribute>
+            System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute
+            System.CodeDom.Compiler.GeneratedCodeAttribute
+            System.Runtime.CompilerServices.CompilerGeneratedAttribute
+          </ExcludeByAttribute>
+
+          <!-- Include only main assemblies -->
+          <Include>
+            [Hive.Core]*
+            [Hive.Application]*
+            [Hive.Infrastructure]*
+            [Hive.Api]*
+          </Include>
+
+          <!-- Single hit for line coverage -->
+          <SingleHit>false</SingleHit>
+
+          <!-- Exclude test assembly -->
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+
+          <!-- Use source link -->
+          <UseSourceLink>true</UseSourceLink>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

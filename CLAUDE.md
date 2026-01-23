@@ -17,6 +17,8 @@ make backend-sqlite                  # Run backend with SQLite (production mode)
 make backend-inmemory                # Run backend with in-memory database (development)
 make frontend                        # Run frontend only (port 5173)
 make test                            # Run all tests (backend + frontend)
+make test-coverage                   # Run tests with code coverage
+make coverage-report                 # Generate HTML coverage report
 make build                           # Build backend and frontend
 make clean                           # Clean build artifacts
 make kill-backend                    # Kill process using backend port 5002
@@ -273,6 +275,15 @@ tests/Hive.Tests/
 - Use `IntegrationTestBase` class for tests that need real services
 - Integration tests use in-memory database with full DI container
 - Test cross-service interactions without mocking
+
+### Code Coverage
+- Run `make test-coverage` to generate coverage report
+- Run `make coverage-report` to generate and open HTML report
+- Coverage excludes:
+  - Test files (`Hive.Tests` assembly)
+  - Database migrations (`**/Migrations/**`)
+  - Interfaces (`**/Interfaces/**`)
+- Configuration in `tests/Hive.Tests/Hive.Tests.csproj` and `coverage.runsettings`
 
 ## Development Notes
 
