@@ -765,6 +765,8 @@ export interface Parent {
   openTasks: number
   totalStoryPoints: number
   totalTimeSpentMinutes: number
+  timeSpentMinutes?: number
+  teamTaskId?: string
   createdAt: string
   updatedAt?: string
 }

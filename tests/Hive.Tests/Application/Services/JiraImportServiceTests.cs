@@ -619,7 +619,7 @@ PROJ-123,Test Task,3,LP_1Q25_S1";
     public async Task ImportAsync_WithTimeSpent_ParsesCorrectly()
     {
         // Arrange
-        var csvContent = @"Issue key,Summary,Time Spent,Sprint
+        var csvContent = @"Issue key,Summary,Σ Time Spent,Sprint
 PROJ-123,Test Task,""2h 30m"",LP_1Q25_S1";
 
         var request = new JiraImportRequestDto
@@ -690,7 +690,7 @@ PROJ-123,Test Task,Parent Epic,LP_1Q25_S1";
         _sprintServiceMock.Setup(s => s.GetOrCreateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SprintDto { Id = Guid.NewGuid(), Name = "LP_1Q25_S1", TeamName = "LP", Quarter = 1, Year = 25, SprintNumber = 1 });
 
-        _parentServiceMock.Setup(s => s.GetOrCreateAsync("Parent Epic", It.IsAny<CancellationToken>()))
+        _parentServiceMock.Setup(s => s.GetOrCreateAsync("Parent Epic", It.IsAny<int?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(parentDto);
 
         _taskRepositoryMock.Setup(r => r.AddAsync(It.IsAny<TeamTask>(), It.IsAny<CancellationToken>()))
@@ -703,7 +703,7 @@ PROJ-123,Test Task,Parent Epic,LP_1Q25_S1";
         result.Should().NotBeNull();
         result.SuccessCount.Should().Be(1);
 
-        _parentServiceMock.Verify(s => s.GetOrCreateAsync("Parent Epic", It.IsAny<CancellationToken>()), Times.Once);
+        _parentServiceMock.Verify(s => s.GetOrCreateAsync("Parent Epic", It.IsAny<int?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once);
 
         _taskRepositoryMock.Verify(r => r.AddAsync(It.Is<TeamTask>(t =>
             t.ParentId == parentId

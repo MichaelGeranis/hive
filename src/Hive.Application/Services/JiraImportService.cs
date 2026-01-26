@@ -35,10 +35,11 @@ public class JiraImportService : IJiraImportService
     private static readonly string[] StoryPointsColumns = { "Story Points", "StoryPoints", "Story points", "Custom field (Story Points)" };
     private static readonly string[] ProjectColumns = { "Project", "Project name", "ProjectName" };
     private static readonly string[] DueDateColumns = { "Due date", "DueDate", "Due Date" };
-    private static readonly string[] TimeSpentColumns = { "Time Spent", "TimeSpent", "Time spent" };
+    private static readonly string[] TimeSpentColumns = { "Σ Time Spent" };
     private static readonly string[] SprintColumns = { "Sprint" };
     private static readonly string[] LabelsColumns = { "Labels", "Label" };
-    private static readonly string[] ParentColumns = { "Parent Summary"};
+    private static readonly string[] ParentColumns = { "Parent Summary", "Parent summary" };
+    private static readonly string[] ParentKeyColumns = { "Parent key", "Parent Key", "ParentKey" };
 
     public JiraImportService(
         ITeamTaskRepository taskRepository,
@@ -146,6 +147,19 @@ public class JiraImportService : IJiraImportService
         // Track created sprints and parents to avoid duplicate creation attempts
         var createdSprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var createdParents = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+
+        // First pass: collect all Parent keys to identify which Issue keys are parents
+        var parentIssueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 1; i < lines.Count; i++)
+        {
+            var values = ParseCsvRow(lines[i]);
+            var rowData = MapRowToDictionary(headers, values);
+            var parentKey = GetValue(rowData, ParentKeyColumns);
+            if (!string.IsNullOrWhiteSpace(parentKey))
+            {
+                parentIssueKeys.Add(parentKey);
+            }
+        }
 
         for (int i = 1; i < lines.Count; i++)
         {
@@ -272,7 +286,7 @@ public class JiraImportService : IJiraImportService
                     {
                         try
                         {
-                            var parent = await _parentService.GetOrCreateAsync(parentName, cancellationToken);
+                            var parent = await _parentService.GetOrCreateAsync(parentName, null, null, cancellationToken);
                             parentId = parent.Id;
                             createdParents[parentName] = parent.Id;
                         }
@@ -283,6 +297,7 @@ public class JiraImportService : IJiraImportService
                     }
                 }
 
+                Guid taskId;
                 if (existingTask != null)
                 {
                     // Update existing task
@@ -314,6 +329,7 @@ public class JiraImportService : IJiraImportService
                     UpdateTaskStatus(existingTask, taskData.Status);
 
                     await _taskRepository.UpdateAsync(existingTask, cancellationToken);
+                    taskId = existingTask.Id;
 
                     importedTasks.Add(new JiraImportedTaskDto
                     {
@@ -347,6 +363,7 @@ public class JiraImportService : IJiraImportService
                     UpdateTaskStatus(newTask, taskData.Status);
 
                     var created = await _taskRepository.AddAsync(newTask, cancellationToken);
+                    taskId = created.Id;
 
                     importedTasks.Add(new JiraImportedTaskDto
                     {
@@ -356,6 +373,21 @@ public class JiraImportService : IJiraImportService
                         IsNew = true,
                         IsUpdated = false
                     });
+                }
+
+                // If task is an Epic OR is referenced as a parent by other tasks,
+                // create/update a Parent entity with the same name, time spent, and link to task
+                var isParentTask = !string.IsNullOrWhiteSpace(issueKey) && parentIssueKeys.Contains(issueKey);
+                if ((taskData.Type == TaskType.Epic || isParentTask) && !string.IsNullOrWhiteSpace(taskData.Title))
+                {
+                    try
+                    {
+                        await _parentService.GetOrCreateAsync(taskData.Title, taskData.TimeSpentMinutes, taskId, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        warnings.Add($"Row {i + 1}: Failed to create parent for '{taskData.Title}': {ex.Message}");
+                    }
                 }
 
                 successCount++;

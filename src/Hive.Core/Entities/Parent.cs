@@ -9,27 +9,44 @@ public class Parent
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Labels { get; private set; } = string.Empty;
+    public int? TimeSpentMinutes { get; private set; }
+    public Guid? TeamTaskId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
     private Parent() { }
 
-    public Parent(string name, string? labels = null)
+    public Parent(string name, string? labels = null, int? timeSpentMinutes = null, Guid? teamTaskId = null)
     {
         ValidateName(name);
 
         Id = Guid.NewGuid();
         Name = name.Trim();
         Labels = labels?.Trim() ?? string.Empty;
+        TimeSpentMinutes = timeSpentMinutes;
+        TeamTaskId = teamTaskId;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string name, string? labels = null)
+    public void Update(string name, string? labels = null, int? timeSpentMinutes = null)
     {
         ValidateName(name);
 
         Name = name.Trim();
         Labels = labels?.Trim() ?? string.Empty;
+        TimeSpentMinutes = timeSpentMinutes;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateTimeSpent(int? timeSpentMinutes)
+    {
+        TimeSpentMinutes = timeSpentMinutes;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void LinkToTask(Guid teamTaskId)
+    {
+        TeamTaskId = teamTaskId;
         UpdatedAt = DateTime.UtcNow;
     }
 

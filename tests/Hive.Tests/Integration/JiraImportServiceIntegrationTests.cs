@@ -222,6 +222,125 @@ PROJ-2,Another Child,Epic Parent,LP_1Q25_S1";
     }
 
     [Fact]
+    public async Task ImportAsync_WithEpic_SetsParentTimeSpentAndTeamTaskId()
+    {
+        // Arrange - Import an Epic with time spent
+        var csvContent = @"Issue key,Summary,Issue Type,Σ Time Spent,Sprint
+PROJ-1,My Epic,Epic,2h 30m,LP_1Q25_S1";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = false,
+            MatchField = "IssueKey"
+        };
+
+        // Act
+        var result = await _jiraImportService.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+
+        // Verify the task was created as an Epic
+        var tasks = await _taskRepository.GetAllAsync();
+        tasks.Should().ContainSingle();
+        var epicTask = tasks.First();
+        epicTask.Type.Should().Be(TaskType.Epic);
+        epicTask.TimeSpentMinutes.Should().Be(150); // 2h 30m = 150 minutes
+
+        // Verify the Parent was created with TimeSpentMinutes and TeamTaskId
+        var parents = await _parentService.GetAllAsync();
+        parents.Should().ContainSingle(p => p.Name == "My Epic");
+        var parent = parents.First();
+        parent.TimeSpentMinutes.Should().Be(150);
+        parent.TeamTaskId.Should().Be(epicTask.Id);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithEpicAndChildren_SetsParentTimeSpentAndTeamTaskId()
+    {
+        // Arrange - Import children first, then the Epic
+        var csvContent = @"Issue key,Summary,Issue Type,Parent Summary,Σ Time Spent,Sprint
+PROJ-2,Child Task 1,Story,My Epic,30m,LP_1Q25_S1
+PROJ-3,Child Task 2,Story,My Epic,45m,LP_1Q25_S1
+PROJ-1,My Epic,Epic,,2h 30m,LP_1Q25_S1";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = false,
+            MatchField = "IssueKey"
+        };
+
+        // Act
+        var result = await _jiraImportService.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(3);
+
+        // Verify the Epic task was created
+        var tasks = await _taskRepository.GetAllAsync();
+        var epicTask = tasks.First(t => t.Type == TaskType.Epic);
+        epicTask.Title.Should().Be("My Epic");
+        epicTask.TimeSpentMinutes.Should().Be(150);
+
+        // Verify the Parent has TimeSpentMinutes and TeamTaskId set
+        var parents = await _parentService.GetAllAsync();
+        parents.Should().ContainSingle(p => p.Name == "My Epic");
+        var parent = parents.First();
+        parent.TimeSpentMinutes.Should().Be(150); // Epic's own time
+        parent.TeamTaskId.Should().Be(epicTask.Id);
+
+        // Verify children are linked to the parent
+        var childTasks = tasks.Where(t => t.Type != TaskType.Epic).ToList();
+        childTasks.Should().HaveCount(2);
+        childTasks.Should().OnlyContain(t => t.ParentId == parent.Id);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithParentKey_IdentifiesParentTaskAndSetsTimeSpentAndTeamTaskId()
+    {
+        // Arrange - Import tasks where parent is identified by "Parent key" column, not Issue Type
+        // This simulates a CSV where any task can be a parent (not just Epics)
+        var csvContent = @"Issue key,Summary,Issue Type,Parent key,Parent summary,Σ Time Spent,Sprint
+PROJ-1,Parent Task,Story,,,3h,LP_1Q25_S1
+PROJ-2,Child Task 1,Story,PROJ-1,Parent Task,30m,LP_1Q25_S1
+PROJ-3,Child Task 2,Task,PROJ-1,Parent Task,45m,LP_1Q25_S1";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = false,
+            MatchField = "IssueKey"
+        };
+
+        // Act
+        var result = await _jiraImportService.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(3);
+
+        // Verify the parent task was created (it's a Story, not an Epic)
+        var tasks = await _taskRepository.GetAllAsync();
+        var parentTask = tasks.First(t => t.Title == "Parent Task");
+        parentTask.Type.Should().Be(TaskType.Story); // Not an Epic!
+        parentTask.TimeSpentMinutes.Should().Be(180); // 3h = 180 minutes
+
+        // Verify the Parent entity has TimeSpentMinutes and TeamTaskId set
+        // because PROJ-1 is referenced by other tasks via "Parent key"
+        var parents = await _parentService.GetAllAsync();
+        parents.Should().ContainSingle(p => p.Name == "Parent Task");
+        var parent = parents.First();
+        parent.TimeSpentMinutes.Should().Be(180); // Parent's own time
+        parent.TeamTaskId.Should().Be(parentTask.Id);
+
+        // Verify children are linked to the parent
+        var childTasks = tasks.Where(t => t.Title != "Parent Task").ToList();
+        childTasks.Should().HaveCount(2);
+        childTasks.Should().OnlyContain(t => t.ParentId == parent.Id);
+    }
+
+    [Fact]
     public async Task ImportAsync_WithUpdateExisting_UpdatesExistingTask()
     {
         // Arrange - First import
@@ -437,7 +556,7 @@ PROJ-1,Status Test Task,{jiraStatus},LP_1Q25_S1";
     public async Task ImportAsync_ParsesTimeSpentCorrectly(string timeSpent, int expectedMinutes)
     {
         // Arrange
-        var csvContent = $@"Issue key,Summary,Time Spent,Sprint
+        var csvContent = $@"Issue key,Summary,Σ Time Spent,Sprint
 PROJ-1,Time Test Task,{timeSpent},LP_1Q25_S1";
 
         var request = new JiraImportRequestDto

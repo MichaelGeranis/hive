@@ -71,7 +71,7 @@ public class ParentService : IParentService
         return await MapToDtoAsync(created, cancellationToken);
     }
 
-    public async Task<ParentDto> GetOrCreateAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<ParentDto> GetOrCreateAsync(string name, int? timeSpentMinutes = null, Guid? teamTaskId = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -81,10 +81,31 @@ public class ParentService : IParentService
         var existing = await _parentRepository.GetByNameAsync(name, cancellationToken);
         if (existing is not null)
         {
+            var needsUpdate = false;
+
+            // Update time spent if provided
+            if (timeSpentMinutes.HasValue)
+            {
+                existing.UpdateTimeSpent(timeSpentMinutes);
+                needsUpdate = true;
+            }
+
+            // Link to task if provided and not already linked
+            if (teamTaskId.HasValue && !existing.TeamTaskId.HasValue)
+            {
+                existing.LinkToTask(teamTaskId.Value);
+                needsUpdate = true;
+            }
+
+            if (needsUpdate)
+            {
+                await _parentRepository.UpdateAsync(existing, cancellationToken);
+            }
+
             return await MapToDtoAsync(existing, cancellationToken);
         }
 
-        var entity = new Parent(name);
+        var entity = new Parent(name, null, timeSpentMinutes, teamTaskId);
         var created = await _parentRepository.AddAsync(entity, cancellationToken);
 
         return await MapToDtoAsync(created, cancellationToken);
@@ -172,6 +193,8 @@ public class ParentService : IParentService
             OpenTasks = openTasks,
             TotalStoryPoints = totalStoryPoints,
             TotalTimeSpentMinutes = totalTimeSpent,
+            TimeSpentMinutes = entity.TimeSpentMinutes,
+            TeamTaskId = entity.TeamTaskId,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };

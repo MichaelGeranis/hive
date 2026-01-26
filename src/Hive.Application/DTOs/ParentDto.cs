@@ -13,6 +13,8 @@ public record ParentDto
     public int OpenTasks { get; init; }
     public int TotalStoryPoints { get; init; }
     public int TotalTimeSpentMinutes { get; init; }
+    public int? TimeSpentMinutes { get; init; }
+    public Guid? TeamTaskId { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

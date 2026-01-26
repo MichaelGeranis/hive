@@ -17,8 +17,8 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -109,6 +109,7 @@ export default function Dashboard() {
   const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
   const [leaves, setLeaves] = useState<{ id: string; directReportId: string; startDate: string; endDate: string }[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
+  const [parents, setParents] = useState<Parent[]>([])
   const [actionItems, setActionItems] = useState<MeetingNote[]>([])
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
@@ -191,7 +192,7 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData, parentsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
@@ -201,7 +202,8 @@ export default function Dashboard() {
         sprintsApi.getAll(),
         sprintCapacityApi.getAll(),
         leavesApi.getAll(),
-        directReportsApi.getAll()
+        directReportsApi.getAll(),
+        parentsApi.getAll()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
@@ -216,6 +218,7 @@ export default function Dashboard() {
       setSprintCapacities(capacitiesData)
       setLeaves(leavesData)
       setDirectReports(directReportsData)
+      setParents(parentsData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
         if (!a.actionDueDate && !b.actionDueDate) return 0
@@ -597,6 +600,18 @@ export default function Dashboard() {
 
   const totalHours = Math.round(taskTypeHoursChartData.reduce((sum, d) => sum + d.value, 0) * 10) / 10
 
+  // Calculate total SP for current sprint from parents involved in the sprint
+  const currentSprintParentIds = capacityAnalysis?.currentSprint
+    ? new Set(
+        tasks
+          .filter(t => t.sprint === capacityAnalysis.currentSprint?.sprintName && t.parentId)
+          .map(t => t.parentId)
+      )
+    : new Set<string>()
+  const currentSprintTotalSP = parents
+    .filter(p => currentSprintParentIds.has(p.id))
+    .reduce((sum, p) => sum + (p.totalStoryPoints ?? 0), 0)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -659,8 +674,8 @@ export default function Dashboard() {
          {capacityAnalysis?.currentSprint && (
           <StatCard
             title={'Current Sprint' + (capacityAnalysis.currentSprint.sprintName ? `: ${capacityAnalysis.currentSprint.sprintName}` : '')}
-            value={`${capacityAnalysis.currentSprint.utilizationPercentage ?? 0}%`}
-            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0}/${capacityAnalysis.currentSprint.committedPoints ?? 0} SP`}
+            value={`${currentSprintTotalSP} SP`}
+            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0} completed`}
             icon={<ZapIcon className="w-6 h-6" />}
             color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
             onClick={() => navigate('/sprints')}

@@ -345,9 +345,17 @@ export default function Parents() {
                       <div className="flex items-center gap-2 text-sm col-span-2">
                         <Clock className="w-4 h-4 text-blue-500" />
                         <span className="text-slate-600 dark:text-slate-400">
-                          {formatTime(parent.totalTimeSpentMinutes)} logged
+                          {formatTime(parent.totalTimeSpentMinutes)} logged (children)
                         </span>
                       </div>
+                      {parent.timeSpentMinutes !== undefined && parent.timeSpentMinutes > 0 && (
+                        <div className="flex items-center gap-2 text-sm col-span-2">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <span className="text-slate-600 dark:text-slate-400">
+                            {formatTime(parent.timeSpentMinutes)} logged (parent)
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Progress */}
