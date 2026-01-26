@@ -37,6 +37,48 @@ import {
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 
+// Task type specific colors
+const TASK_TYPE_COLORS: Record<string, string> = {
+  'Spike': '#ef4444',      // Red
+  'Task': '#3b82f6',       // Blue
+  'Support': '#f59e0b',    // Orange
+  'Story': '#10b981',      // Green
+  'Sub-task': '#67e8f9',   // Light blue (cyan)
+  'SubTask': '#67e8f9',    // Light blue (alternative naming)
+  'Bug': '#8b5cf6',        // Purple
+  'Epic': '#ec4899',       // Pink
+}
+
+const getTaskTypeColor = (typeName: string): string => {
+  return TASK_TYPE_COLORS[typeName] || COLORS[Object.keys(TASK_TYPE_COLORS).length % COLORS.length]
+}
+
+// Get initials from a full name (e.g., "John Doe" -> "JD")
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+}
+
+// Custom pie label renderer with smaller font (10% smaller = ~11px from default 12px)
+const RADIAN = Math.PI / 180
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createPieLabel = (formatter: (props: any) => string) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (props: any) => {
+    const { cx, cy, midAngle, outerRadius, fill } = props
+    const radius = outerRadius * 1.35
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>
+        {formatter(props)}
+      </text>
+    )
+  }
+}
+
 const DASHBOARD_WIDGETS_KEY = 'hive-dashboard-widgets'
 
 interface SprintCapacitySuggestion {
@@ -529,6 +571,7 @@ export default function Dashboard() {
   const projectDistributionData = Object.entries(projectsByAssignee)
     .map(([name, projectIds]) => ({
       name,
+      initials: getInitials(name),
       value: projectIds.size
     }))
     .sort((a, b) => b.value - a.value)
@@ -582,8 +625,6 @@ export default function Dashboard() {
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value)
 
-  const totalSP = taskTypeSPChartData.reduce((sum, d) => sum + d.value, 0)
-
   // Calculate hours distribution by task type
   const taskTypeHoursData = tasks.reduce((acc, task) => {
     const typeName = task.typeName || 'Unknown'
@@ -598,8 +639,6 @@ export default function Dashboard() {
   const taskTypeHoursChartData = Object.values(taskTypeHoursData)
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value)
-
-  const totalHours = Math.round(taskTypeHoursChartData.reduce((sum, d) => sum + d.value, 0) * 10) / 10
 
   // Calculate total SP for current sprint from parents involved in the sprint
   const currentSprintParentIds = capacityAnalysis?.currentSprint
@@ -729,68 +768,50 @@ export default function Dashboard() {
       </div>
       )}
 
-      {/* Sprint & Tasks Overview Widget */}
+      {/* Sprint & Tasks Overview Widget - Full Width */}
       <div
         className="cursor-pointer"
         onClick={() => navigate('/tasks')}
       >
-      <Card className="hover:shadow-lg transition-shadow">
-        <CardHeader
-          title={capacityAnalysis?.currentSprint?.sprintName ? `Sprint: ${capacityAnalysis.currentSprint.sprintName}` : 'Sprint & Tasks'}
-          subtitle="Click to view all tasks"
-        />
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-            {/* SP Progress */}
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.completedPoints ?? 0}/{currentSprintTotalSP}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Total SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.completedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</p>
-            </div>
-            {/* Tasks Count */}
-            <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{dashboard.tasks.tasks.doneTasks}/{dashboard.tasks.tasks.totalTasks}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Tasks Done {dashboard.tasks.tasks.completionRate}%</p>
-            </div>
-          </div>
-
-          {/* Warnings Section */}
-          <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-            {/* Scope creep warning - when total SP differs from committed */}
-            {capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0 && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Scope creep detected: {currentSprintTotalSP} SP vs {capacityAnalysis.currentSprint.committedPoints} committed
-                  </p>
-                  <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
-                    More items were added mid-sprint than originally planned.
-                  </p>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {capacityAnalysis?.currentSprint?.sprintName || 'Current Sprint'}
+              </p>
+              <div className="flex flex-wrap items-center gap-6">
+                {/* SP Progress */}
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.completedPoints ?? 0}/{currentSprintTotalSP}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.completedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</span>
                 </div>
-              </div>
-            )}
-
-            {/* Unmatched tasks warning */}
-            {unmatchedTaskCount > 0 && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    {unmatchedTaskCount} task{unmatchedTaskCount !== 1 ? 's' : ''} not matched to any project
-                  </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                    Tasks without labels may cause discrepancies in stats.
-                  </p>
+                <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                {/* Tasks Count */}
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{dashboard.tasks.tasks.doneTasks}/{dashboard.tasks.tasks.totalTasks}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Tasks {dashboard.tasks.tasks.completionRate}%</span>
                 </div>
+                {/* Warnings indicators */}
+                {(capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0) && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600 dark:text-amber-400" title={`Scope creep: ${currentSprintTotalSP} SP vs ${capacityAnalysis.currentSprint.committedPoints} committed`}>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs font-medium">+{currentSprintTotalSP - (capacityAnalysis.currentSprint.committedPoints ?? 0)} SP creep</span>
+                  </div>
+                )}
+                {unmatchedTaskCount > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600 dark:text-amber-400" title={`${unmatchedTaskCount} tasks not matched to any project`}>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs font-medium">{unmatchedTaskCount} unmatched</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Distribution Charts Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      {/* Row 3: All Distribution Charts */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Projects Distribution by Member */}
         {widgets.projectsDistribution && (
         <Card>
@@ -807,7 +828,7 @@ export default function Dashboard() {
                     outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
+                    label={createPieLabel(({ initials, value }) => `${initials}: ${value}`)}
                     onClick={(data) => handleMemberClick(data.name)}
                     style={{ cursor: 'pointer' }}
                   >
@@ -815,7 +836,10 @@ export default function Dashboard() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} projects`]}
+                    labelFormatter={(_, payload) => payload?.[0]?.payload?.name || ''}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -900,10 +924,10 @@ export default function Dashboard() {
                     outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={createPieLabel(({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`)}
                   >
-                    {taskTypeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {taskTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -921,7 +945,7 @@ export default function Dashboard() {
         {/* Task Type Distribution by Story Points */}
         {widgets.tasksDistributionSP && (
         <Card>
-          <CardHeader title="Tasks Distribution" subtitle={`By type (${totalSP} SP)`} />
+          <CardHeader title="Tasks Distribution" subtitle={`By type (SP)`} />
           <CardContent className="h-64">
             {taskTypeSPChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -934,10 +958,10 @@ export default function Dashboard() {
                     outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, value, percent }) => `${name}: ${value} SP (${(percent * 100).toFixed(0)}%)`}
+                    label={createPieLabel(({ name, value, percent }) => `${name}: ${value} SP (${(percent * 100).toFixed(0)}%)`)}
                   >
-                    {taskTypeSPChartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {taskTypeSPChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -957,7 +981,7 @@ export default function Dashboard() {
         {/* Task Type Distribution by Hours */}
         {widgets.tasksDistributionHours && (
         <Card>
-          <CardHeader title="Tasks Distribution" subtitle={`By type (${totalHours}h logged)`} />
+          <CardHeader title="Tasks Distribution" subtitle={`By type (Hours Logged)`} />
           <CardContent className="h-64">
             {taskTypeHoursChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -970,10 +994,10 @@ export default function Dashboard() {
                     outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, value, percent }) => `${name}: ${value}h (${(percent * 100).toFixed(0)}%)`}
+                    label={createPieLabel(({ name, value, percent }) => `${name}: ${value}h (${(percent * 100).toFixed(0)}%)`)}
                   >
-                    {taskTypeHoursChartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {taskTypeHoursChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -991,7 +1015,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Support Distribution */}
+      {/* Row 4: Support Distribution */}
       {widgets.supportDistribution && (supportHours > 0 || nonSupportHours > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Support vs Other Work */}
@@ -1012,7 +1036,7 @@ export default function Dashboard() {
                       outerRadius={70}
                       paddingAngle={5}
                       dataKey="hours"
-                      label={({ name, hours, percent }) => `${name}: ${hours}h (${(percent * 100).toFixed(0)}%)`}
+                      label={createPieLabel(({ name, hours, percent }) => `${name}: ${hours}h (${(percent * 100).toFixed(0)}%)`)}
                     >
                       <Cell fill="#ef4444" /> {/* Red for Support */}
                       <Cell fill="#3b82f6" /> {/* Blue for Other Work */}
