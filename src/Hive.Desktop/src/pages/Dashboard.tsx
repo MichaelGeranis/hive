@@ -2,11 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users,
-  CheckSquare,
   AlertTriangle,
   X,
   FolderKanban,
-  ZapIcon,
   Settings2,
   Eye,
   EyeOff,
@@ -58,6 +56,7 @@ interface WidgetVisibility {
   tasksDistribution: boolean
   tasksDistributionSP: boolean
   tasksDistributionHours: boolean
+  supportDistribution: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
   sprintCapacitySuggestions: boolean
@@ -73,6 +72,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   tasksDistribution: true,
   tasksDistributionSP: true,
   tasksDistributionHours: true,
+  supportDistribution: true,
   teamSentiment: true,
   capacityAnalysis: true,
   sprintCapacitySuggestions: true,
@@ -88,6 +88,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   tasksDistribution: 'Tasks Distribution',
   tasksDistributionSP: 'Tasks Distribution (SP)',
   tasksDistributionHours: 'Tasks Distribution (Hours)',
+  supportDistribution: 'Support Distribution',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
   sprintCapacitySuggestions: 'Sprint Capacity Suggestions',
@@ -612,6 +613,43 @@ export default function Dashboard() {
     .filter(p => currentSprintParentIds.has(p.id))
     .reduce((sum, p) => sum + (p.totalStoryPoints ?? 0), 0)
 
+  // Calculate tasks not matched to any project (no labels or labels don't match any project)
+  const unmatchedTasks = tasks.filter(task => {
+    const matchedProjects = getMatchedProjects(task.labels)
+    return matchedProjects.length === 0
+  })
+  const unmatchedTaskCount = unmatchedTasks.length
+
+  // Calculate Support vs Non-Support hours distribution
+  const supportTasks = tasks.filter(t => t.typeName?.toLowerCase() === 'support')
+  const nonSupportTasks = tasks.filter(t => t.typeName?.toLowerCase() !== 'support')
+
+  const supportHours = Math.round(supportTasks.reduce((sum, t) => sum + (t.timeSpentMinutes || 0), 0) / 60 * 10) / 10
+  const nonSupportHours = Math.round(nonSupportTasks.reduce((sum, t) => sum + (t.timeSpentMinutes || 0), 0) / 60 * 10) / 10
+  const supportTaskCount = supportTasks.length
+  const nonSupportTaskCount = nonSupportTasks.length
+
+  // Support hours by assignee
+  const supportByAssignee = supportTasks.reduce((acc, task) => {
+    const assigneeName = task.assigneeName || 'Unassigned'
+    if (!acc[assigneeName]) {
+      acc[assigneeName] = { name: assigneeName, hours: 0, tasks: 0 }
+    }
+    acc[assigneeName].hours += Math.round((task.timeSpentMinutes || 0) / 60 * 10) / 10
+    acc[assigneeName].tasks += 1
+    return acc
+  }, {} as Record<string, { name: string; hours: number; tasks: number }>)
+
+  const supportByAssigneeData = Object.values(supportByAssignee)
+    .filter(d => d.hours > 0)
+    .sort((a, b) => b.hours - a.hours)
+
+  // Support vs Non-Support comparison data
+  const supportComparisonData = [
+    { name: 'Support', hours: supportHours, tasks: supportTaskCount },
+    { name: 'Other Work', hours: nonSupportHours, tasks: nonSupportTaskCount }
+  ].filter(d => d.hours > 0)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -671,31 +709,6 @@ export default function Dashboard() {
           color="purple"
           onClick={() => navigate('/projects?filter=active')}
         />
-         {capacityAnalysis?.currentSprint && (
-          <StatCard
-            title={'Current Sprint' + (capacityAnalysis.currentSprint.sprintName ? `: ${capacityAnalysis.currentSprint.sprintName}` : '')}
-            value={`${currentSprintTotalSP} SP`}
-            subtitle={`${capacityAnalysis.currentSprint.completedPoints ?? 0} completed`}
-            icon={<ZapIcon className="w-6 h-6" />}
-            color={(capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 100 ? 'red' : (capacityAnalysis.currentSprint.utilizationPercentage ?? 0) > 80 ? 'amber' : 'blue'}
-            onClick={() => navigate('/sprints')}
-          />
-        )}
-        <StatCard
-          title="Task Completion"
-          value={`${dashboard.tasks.tasks.completionRate}%`}
-          subtitle={`${dashboard.tasks.tasks.doneTasks} of ${dashboard.tasks.tasks.totalTasks} tasks`}
-          icon={<CheckSquare className="w-6 h-6" />}
-          color="green"
-          onClick={() => navigate('/tasks')}
-        />
-        <StatCard
-          title="Overdue Tasks"
-          value={dashboard.tasks.tasks.overdueTasks}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          color={dashboard.tasks.tasks.overdueTasks > 0 ? 'red' : 'green'}
-          onClick={() => navigate('/tasks?filter=overdue')}
-        />
         <StatCard
           title="1:1 Action Items"
           value={actionItems.length}
@@ -715,6 +728,66 @@ export default function Dashboard() {
 
       </div>
       )}
+
+      {/* Sprint & Tasks Overview Widget */}
+      <div
+        className="cursor-pointer"
+        onClick={() => navigate('/tasks')}
+      >
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader
+          title={capacityAnalysis?.currentSprint?.sprintName ? `Sprint: ${capacityAnalysis.currentSprint.sprintName}` : 'Sprint & Tasks'}
+          subtitle="Click to view all tasks"
+        />
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+            {/* SP Progress */}
+            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.completedPoints ?? 0}/{currentSprintTotalSP}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Total SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.completedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</p>
+            </div>
+            {/* Tasks Count */}
+            <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{dashboard.tasks.tasks.doneTasks}/{dashboard.tasks.tasks.totalTasks}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Tasks Done {dashboard.tasks.tasks.completionRate}%</p>
+            </div>
+          </div>
+
+          {/* Warnings Section */}
+          <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+            {/* Scope creep warning - when total SP differs from committed */}
+            {capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                    Scope creep detected: {currentSprintTotalSP} SP vs {capacityAnalysis.currentSprint.committedPoints} committed
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                    More items were added mid-sprint than originally planned.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Unmatched tasks warning */}
+            {unmatchedTaskCount > 0 && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    {unmatchedTaskCount} task{unmatchedTaskCount !== 1 ? 's' : ''} not matched to any project
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                    Tasks without labels may cause discrepancies in stats.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      </div>
 
       {/* Distribution Charts Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -917,6 +990,92 @@ export default function Dashboard() {
         </Card>
         )}
       </div>
+
+      {/* Support Distribution */}
+      {widgets.supportDistribution && (supportHours > 0 || nonSupportHours > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Support vs Other Work */}
+          <Card>
+            <CardHeader
+              title="Support vs Other Work"
+              subtitle={`Total: ${supportHours + nonSupportHours}h logged`}
+            />
+            <CardContent className="h-64">
+              {supportComparisonData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={supportComparisonData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={5}
+                      dataKey="hours"
+                      label={({ name, hours, percent }) => `${name}: ${hours}h (${(percent * 100).toFixed(0)}%)`}
+                    >
+                      <Cell fill="#ef4444" /> {/* Red for Support */}
+                      <Cell fill="#3b82f6" /> {/* Blue for Other Work */}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => [`${value}h`, 'Hours']}
+                      labelFormatter={(name) => name}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                  No hours logged
+                </div>
+              )}
+            </CardContent>
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportTaskCount} Support tasks</p>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{nonSupportHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{nonSupportTaskCount} Other tasks</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Support Hours by Assignee */}
+          <Card>
+            <CardHeader
+              title="Support Hours by Assignee"
+              subtitle={`${supportHours}h total support work`}
+            />
+            <CardContent className="h-64">
+              {supportByAssigneeData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={supportByAssigneeData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" unit="h" />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      formatter={(value: number) => [`${value}h`, 'Support Hours']}
+                    />
+                    <Bar
+                      dataKey="hours"
+                      name="Hours"
+                      fill="#ef4444"
+                      radius={[0, 4, 4, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                  No support hours logged
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Team Sentiment */}
       {widgets.teamSentiment && (
