@@ -82,4 +82,27 @@ public class ActivityRepository : IActivityRepository
     {
         return Task.FromResult(_context.Activities.ContainsKey(id));
     }
+
+    public Task<(IReadOnlyList<Activity> Items, int TotalCount)> SearchAsync(
+        string? searchTerm,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Activities.Values.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLowerInvariant();
+            query = query.Where(a =>
+                a.EntityName.ToLowerInvariant().Contains(term) ||
+                a.Description.ToLowerInvariant().Contains(term));
+        }
+
+        var orderedQuery = query.OrderByDescending(a => a.Timestamp);
+        var totalCount = orderedQuery.Count();
+        var items = orderedQuery.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<Activity>, int)>((items, totalCount));
+    }
 }

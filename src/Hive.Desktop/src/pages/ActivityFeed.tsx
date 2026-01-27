@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   FileText,
   CheckSquare,
@@ -15,7 +15,11 @@ import {
   ClipboardList,
   ClipboardCheck,
   Network,
-  BookOpen
+  BookOpen,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { activityFeedApi } from '../services/api'
 import { Activity } from '../types'
@@ -25,20 +29,73 @@ const ActivityFeed = () => {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    loadActivities()
-  }, [])
+  // Pagination state
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async (page = 1, search?: string) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await activityFeedApi.getRecent(7)
-      setActivities(data)
+      const data = await activityFeedApi.getAll(page, pageSize, search)
+      setActivities(data.items)
+      setTotalCount(data.totalCount)
+      setTotalPages(data.totalPages)
+      setPageNumber(data.pageNumber)
     } catch (err) {
       console.error('Failed to load activities:', err)
       setError('Failed to load activity feed')
+    } finally {
+      setLoading(false)
+    }
+  }, [pageSize])
+
+  useEffect(() => {
+    loadActivities()
+  }, [loadActivities])
+
+  // Debounced search
+  const searchTimeoutRef = useRef<number | null>(null)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = window.setTimeout(() => {
+      setPageNumber(1)
+      loadActivities(1, value.trim() || undefined)
+    }, 300)
+  }, [loadActivities])
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('')
+    setPageNumber(1)
+    loadActivities(1, undefined)
+  }, [loadActivities])
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      loadActivities(newPage, searchQuery.trim() || undefined)
+    }
+  }
+
+  const handlePageSizeChange = async (newSize: number) => {
+    setPageSize(newSize)
+    setPageNumber(1)
+    // Reload with new page size
+    try {
+      setLoading(true)
+      const data = await activityFeedApi.getAll(1, newSize, searchQuery.trim() || undefined)
+      setActivities(data.items)
+      setTotalCount(data.totalCount)
+      setTotalPages(data.totalPages)
+      setPageNumber(data.pageNumber)
+    } catch (err) {
+      console.error('Failed to load activities:', err)
     } finally {
       setLoading(false)
     }
@@ -146,13 +203,13 @@ const ActivityFeed = () => {
     })
   }
 
-  if (loading) {
+  if (loading && activities.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
-            <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+            <p className="text-slate-500 dark:text-slate-400">Changes across the system</p>
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
@@ -168,7 +225,7 @@ const ActivityFeed = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
-            <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+            <p className="text-slate-500 dark:text-slate-400">Changes across the system</p>
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
@@ -184,15 +241,35 @@ const ActivityFeed = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Feed</h1>
-          <p className="text-slate-500 dark:text-slate-400">Recent changes across the system from the past week</p>
+          <p className="text-slate-500 dark:text-slate-400">Changes across the system</p>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search activities..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {activities.length === 0 ? (
         <Card>
           <CardContent>
             <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-              No recent activities found
+              {searchQuery ? 'No activities found matching your search' : 'No activities found'}
             </div>
           </CardContent>
         </Card>
@@ -230,6 +307,50 @@ const ActivityFeed = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Showing {((pageNumber - 1) * pageSize) + 1} - {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} activities
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(pageNumber - 1)}
+              disabled={pageNumber <= 1}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
+              Page {pageNumber} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(pageNumber + 1)}
+              disabled={pageNumber >= totalPages}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

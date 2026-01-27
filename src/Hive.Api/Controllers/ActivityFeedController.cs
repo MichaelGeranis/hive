@@ -47,17 +47,33 @@ public class ActivityFeedController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all activities in the system, ordered by timestamp descending.
+    /// Gets activities with pagination and optional search.
     /// </summary>
+    /// <param name="pageNumber">Page number (default: 1).</param>
+    /// <param name="pageSize">Page size (default: 50, max: 100).</param>
+    /// <param name="search">Optional search term to filter by entity name or description.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A list of all activity DTOs.</returns>
+    /// <returns>A paginated list of activity DTOs.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<ActivityDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<ActivityDto>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PagedResult<ActivityDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ActivityDto>>> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting all activities");
-        var activities = await _activityService.GetAllAsync(cancellationToken);
-        return Ok(activities);
+        _logger.LogInformation("Getting activities with pagination. Page: {PageNumber}, Size: {PageSize}, Search: {Search}",
+            pageNumber, pageSize, search);
+
+        var pagination = new ActivityPaginationParams
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            SearchTerm = search
+        };
+
+        var result = await _activityService.SearchAsync(pagination, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>

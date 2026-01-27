@@ -62,6 +62,7 @@ export const createTeamTask = (overrides?: Partial<TeamTask>): TeamTask => ({
   priorityName: 'Medium',
   status: 1,
   statusName: 'Todo',
+  matchedProjectNames: [],
   tags: '',
   labels: '',
   sprint: '',

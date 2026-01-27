@@ -57,4 +57,14 @@ public interface IActivityService
         string entityName,
         string description,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches activities with pagination support.
+    /// </summary>
+    /// <param name="pagination">Pagination and search parameters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A paged result of activity DTOs.</returns>
+    Task<PagedResult<ActivityDto>> SearchAsync(
+        ActivityPaginationParams pagination,
+        CancellationToken cancellationToken = default);
 }

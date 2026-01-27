@@ -37,27 +37,45 @@ public class SkillAssessmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the full skill matrix showing all direct reports and their skills.
+    /// Gets the full skill matrix showing direct reports and their skills.
     /// </summary>
+    /// <param name="directOnly">If true, only shows direct reports (isDirect=true). Default is true.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet("matrix")]
     [ProducesResponseType(typeof(SkillMatrixDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<SkillMatrixDto>> GetMatrix(CancellationToken cancellationToken)
+    public async Task<ActionResult<SkillMatrixDto>> GetMatrix([FromQuery] bool directOnly = true, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting skill matrix");
-        var matrix = await _service.GetSkillMatrixAsync(cancellationToken);
+        _logger.LogInformation("Getting skill matrix (directOnly={DirectOnly})", directOnly);
+        var matrix = await _service.GetSkillMatrixAsync(directOnly, cancellationToken);
         return Ok(matrix);
     }
 
     /// <summary>
     /// Gets all skill gaps (assessments where current level is below target).
     /// </summary>
+    /// <param name="directOnly">If true, only shows direct reports (isDirect=true). Default is true.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet("gaps")]
     [ProducesResponseType(typeof(IEnumerable<SkillAssessmentDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<SkillAssessmentDto>>> GetGaps(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<SkillAssessmentDto>>> GetGaps([FromQuery] bool directOnly = true, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting skill gaps");
-        var gaps = await _service.GetSkillGapsAsync(cancellationToken);
+        _logger.LogInformation("Getting skill gaps (directOnly={DirectOnly})", directOnly);
+        var gaps = await _service.GetSkillGapsAsync(directOnly, cancellationToken);
         return Ok(gaps);
+    }
+
+    /// <summary>
+    /// Gets skills summary data for overview charts and stats.
+    /// </summary>
+    /// <param name="directOnly">If true, only includes direct reports (isDirect=true). Default is true.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("summary")]
+    [ProducesResponseType(typeof(SkillsSummaryDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SkillsSummaryDto>> GetSummary([FromQuery] bool directOnly = true, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting skills summary (directOnly={DirectOnly})", directOnly);
+        var summary = await _service.GetSummaryAsync(directOnly, cancellationToken);
+        return Ok(summary);
     }
 
     /// <summary>

@@ -64,6 +64,21 @@ public record NotePaginationParams : PaginationParams
 }
 
 /// <summary>
+/// Parameters for paginated and filtered activity queries.
+/// </summary>
+public record ActivityPaginationParams : PaginationParams
+{
+    private const int DefaultActivityPageSize = 50;
+
+    public ActivityPaginationParams()
+    {
+        PageSize = DefaultActivityPageSize;
+    }
+
+    public string? SearchTerm { get; init; }
+}
+
+/// <summary>
 /// Wrapper for paginated results.
 /// </summary>
 /// <typeparam name="T">The type of items in the result.</typeparam>

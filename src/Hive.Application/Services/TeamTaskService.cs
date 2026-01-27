@@ -397,7 +397,7 @@ public class TeamTaskService : ITeamTaskService
         return entity;
     }
 
-    private async Task<TeamTaskDto> MapToDtoAsync(TeamTask entity, CancellationToken cancellationToken)
+    private async Task<TeamTaskDto> MapToDtoAsync(TeamTask entity, CancellationToken cancellationToken, IReadOnlyList<Project>? allProjects = null)
     {
         string? assigneeName = null;
         string? projectName = null;
@@ -421,6 +421,9 @@ public class TeamTaskService : ITeamTaskService
             parentName = parent?.Name;
         }
 
+        // Calculate matched projects based on shared labels
+        var matchedProjectNames = GetMatchedProjectNames(entity.Labels, allProjects);
+
         return new TeamTaskDto
         {
             Id = entity.Id,
@@ -436,6 +439,7 @@ public class TeamTaskService : ITeamTaskService
             AssigneeName = assigneeName,
             ProjectId = entity.ProjectId,
             ProjectName = projectName,
+            MatchedProjectNames = matchedProjectNames,
             ParentId = entity.ParentId,
             ParentName = parentName,
             DueDate = entity.DueDate,
@@ -453,12 +457,45 @@ public class TeamTaskService : ITeamTaskService
 
     private async Task<IReadOnlyList<TeamTaskDto>> MapToDtosAsync(IReadOnlyList<TeamTask> entities, CancellationToken cancellationToken)
     {
+        // Load all projects once for efficient matched project calculation
+        var allProjects = await _projectRepository.GetAllAsync(cancellationToken);
+
         var result = new List<TeamTaskDto>();
         foreach (var entity in entities)
         {
-            result.Add(await MapToDtoAsync(entity, cancellationToken));
+            result.Add(await MapToDtoAsync(entity, cancellationToken, allProjects));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Finds projects that share at least one label with the task.
+    /// </summary>
+    private static IReadOnlyList<string> GetMatchedProjectNames(string? taskLabels, IReadOnlyList<Project>? allProjects)
+    {
+        if (string.IsNullOrEmpty(taskLabels) || allProjects is null || allProjects.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var taskLabelSet = taskLabels
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim().ToLowerInvariant())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToHashSet();
+
+        if (taskLabelSet.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        return allProjects
+            .Where(p => !string.IsNullOrEmpty(p.Labels) &&
+                        p.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(l => l.Trim().ToLowerInvariant())
+                            .Any(pl => taskLabelSet.Contains(pl)))
+            .Select(p => p.Name)
+            .ToList();
     }
 
     private static string GetTypeName(TaskType type) => type switch

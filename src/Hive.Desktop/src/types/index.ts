@@ -208,6 +208,7 @@ export interface TeamTask {
   assigneeName?: string
   projectId?: string
   projectName?: string
+  matchedProjectNames: string[]
   parentId?: string
   parentName?: string
   dueDate?: string
@@ -1014,6 +1015,26 @@ export interface UpdateSkillAssessmentDto {
   level: ProficiencyLevel
   targetLevel?: ProficiencyLevel
   notes: string
+}
+
+export interface SkillsSummaryDto {
+  totalSkills: number
+  activeSkills: number
+  totalAssessments: number
+  directReportCount: number
+  skillGapCount: number
+  skillsByCategory: SkillCategoryCount[]
+  proficiencyDistribution: ProficiencyLevelCount[]
+}
+
+export interface SkillCategoryCount {
+  name: string
+  value: number
+}
+
+export interface ProficiencyLevelCount {
+  name: string
+  value: number
 }
 
 // Activity Feed

@@ -21,6 +21,7 @@ public record TeamTaskDto
     public string? AssigneeName { get; init; }
     public Guid? ProjectId { get; init; }
     public string? ProjectName { get; init; }
+    public IReadOnlyList<string> MatchedProjectNames { get; init; } = Array.Empty<string>();
     public Guid? ParentId { get; init; }
     public string? ParentName { get; init; }
     public DateTime? DueDate { get; init; }

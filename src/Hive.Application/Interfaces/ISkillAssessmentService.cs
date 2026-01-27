@@ -15,6 +15,7 @@ public interface ISkillAssessmentService
     Task<SkillAssessmentDto> UpdateAsync(Guid id, UpdateSkillAssessmentDto dto, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SkillAssessmentDto>> BulkAssessAsync(BulkSkillAssessmentDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<SkillMatrixDto> GetSkillMatrixAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<SkillAssessmentDto>> GetSkillGapsAsync(CancellationToken cancellationToken = default);
+    Task<SkillMatrixDto> GetSkillMatrixAsync(bool directOnly = false, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SkillAssessmentDto>> GetSkillGapsAsync(bool directOnly = false, CancellationToken cancellationToken = default);
+    Task<SkillsSummaryDto> GetSummaryAsync(bool directOnly = false, CancellationToken cancellationToken = default);
 }

@@ -27,7 +27,8 @@ import type {
   UpdateSkillAssessmentDto,
   DirectReport,
   CreateSkillCategoryDto,
-  UpdateSkillCategoryDto
+  UpdateSkillCategoryDto,
+  SkillsSummaryDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
@@ -64,6 +65,7 @@ export default function Skills() {
   const [matrix, setMatrix] = useState<SkillMatrix | null>(null)
   const [gaps, setGaps] = useState<SkillAssessment[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
+  const [summary, setSummary] = useState<SkillsSummaryDto | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -127,34 +129,20 @@ export default function Skills() {
     try {
       setLoading(true)
       setError(null)
-      const [skillsData, categoriesData, matrixData, gapsData, reportsData] = await Promise.all([
+      // Backend filters to direct reports only (directOnly=true is default)
+      const [skillsData, categoriesData, matrixData, gapsData, reportsData, summaryData] = await Promise.all([
         skillsApi.getAll(false),
         skillCategoriesApi.getAll(false),
-        skillAssessmentsApi.getMatrix(),
-        skillAssessmentsApi.getGaps(),
-        directReportsApi.getAll()
+        skillAssessmentsApi.getMatrix(), // directOnly=true by default
+        skillAssessmentsApi.getGaps(),   // directOnly=true by default
+        directReportsApi.getAll(),
+        skillAssessmentsApi.getSummary() // directOnly=true by default
       ])
       setSkills(skillsData)
       setSkillCategories(categoriesData)
-
-      // Filter matrix to show only direct reports
-      const directReportIds = new Set(
-        reportsData.filter(r => r.isDirect).map(r => r.id)
-      )
-      const filteredMatrix = {
-        skills: matrixData.skills,
-        directReports: matrixData.directReports.filter(dr =>
-          directReportIds.has(dr.directReportId)
-        )
-      }
-      setMatrix(filteredMatrix)
-
-      // Filter gaps to show only direct reports
-      const filteredGaps = gapsData.filter(gap =>
-        directReportIds.has(gap.directReportId)
-      )
-      setGaps(filteredGaps)
-
+      setMatrix(matrixData)
+      setGaps(gapsData)
+      setSummary(summaryData)
       setDirectReports(reportsData.filter(r => r.isDirect))
     } catch (err) {
       console.error('Failed to load skills data:', err)
@@ -172,35 +160,9 @@ export default function Skills() {
     return matrix.directReports.flatMap(dr => dr.assessments)
   }, [matrix])
 
-  const skillsByCategoryData = useMemo(() => {
-    const categoryCounts: Record<string, { name: string; count: number }> = {}
-    activeSkills.forEach(skill => {
-      const categoryId = skill.categoryId
-      if (!categoryCounts[categoryId]) {
-        categoryCounts[categoryId] = { name: skill.categoryName, count: 0 }
-      }
-      categoryCounts[categoryId].count++
-    })
-    return Object.values(categoryCounts)
-      .filter(({ count }) => count > 0)
-      .map(({ name, count }) => ({
-        name,
-        value: count
-      }))
-  }, [activeSkills])
-
-  const proficiencyDistributionData = useMemo(() => {
-    const levels: Record<ProficiencyLevel, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    allAssessments.forEach(assessment => {
-      levels[assessment.level]++
-    })
-    return Object.entries(levels)
-      .filter(([level]) => Number(level) > 0) // Exclude "None"
-      .map(([level, count]) => ({
-        name: LEVEL_NAMES[Number(level) as ProficiencyLevel],
-        value: count
-      }))
-  }, [allAssessments])
+  // Use backend-provided chart data (falls back to empty arrays if not loaded)
+  const skillsByCategoryData = summary?.skillsByCategory ?? []
+  const proficiencyDistributionData = summary?.proficiencyDistribution ?? []
 
   // Handlers
   const handleCreateSkill = async () => {
@@ -577,21 +539,21 @@ export default function Skills() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard
               title="Total Skills"
-              value={skills.length}
-              subtitle={`${activeSkills.length} active`}
+              value={summary?.totalSkills ?? skills.length}
+              subtitle={`${summary?.activeSkills ?? activeSkills.length} active`}
               icon={<Award className="w-6 h-6" />}
               color="blue"
             />
             <StatCard
               title="Assessments"
-              value={allAssessments.length}
-              subtitle={`Across ${matrix?.directReports.length || 0} direct reports`}
+              value={summary?.totalAssessments ?? allAssessments.length}
+              subtitle={`Across ${summary?.directReportCount ?? matrix?.directReports.length ?? 0} direct reports`}
               icon={<Users className="w-6 h-6" />}
               color="purple"
             />
             <StatCard
               title="Skill Gaps"
-              value={gaps.length}
+              value={summary?.skillGapCount ?? gaps.length}
               subtitle="Development opportunities"
               icon={<TrendingUp className="w-6 h-6" />}
               color="amber"

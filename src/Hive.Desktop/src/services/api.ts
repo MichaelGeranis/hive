@@ -462,13 +462,17 @@ export const skillsApi = {
 }
 
 // Skill Assessments
+import type { SkillsSummaryDto } from '../types'
+
 export const skillAssessmentsApi = {
   getAll: () =>
     api.get<SkillAssessment[]>('/skillassessments').then(r => r.data),
-  getMatrix: () =>
-    api.get<SkillMatrix>('/skillassessments/matrix').then(r => r.data),
-  getGaps: () =>
-    api.get<SkillAssessment[]>('/skillassessments/gaps').then(r => r.data),
+  getMatrix: (directOnly = true) =>
+    api.get<SkillMatrix>(`/skillassessments/matrix?directOnly=${directOnly}`).then(r => r.data),
+  getGaps: (directOnly = true) =>
+    api.get<SkillAssessment[]>(`/skillassessments/gaps?directOnly=${directOnly}`).then(r => r.data),
+  getSummary: (directOnly = true) =>
+    api.get<SkillsSummaryDto>(`/skillassessments/summary?directOnly=${directOnly}`).then(r => r.data),
   getById: (id: string) =>
     api.get<SkillAssessment>(`/skillassessments/${id}`).then(r => r.data),
   getByDirectReport: (directReportId: string) =>
@@ -485,8 +489,13 @@ export const skillAssessmentsApi = {
 
 // Activity Feed
 export const activityFeedApi = {
-  getAll: () =>
-    api.get<Activity[]>('/activityfeed').then(r => r.data),
+  getAll: (pageNumber = 1, pageSize = 50, search?: string) => {
+    const params = new URLSearchParams()
+    params.append('pageNumber', pageNumber.toString())
+    params.append('pageSize', pageSize.toString())
+    if (search) params.append('search', search)
+    return api.get<PagedResult<Activity>>(`/activityfeed?${params.toString()}`).then(r => r.data)
+  },
   getRecent: (days: number = 7) =>
     api.get<Activity[]>(`/activityfeed/recent?days=${days}`).then(r => r.data),
   getByEntityType: (type: string) =>

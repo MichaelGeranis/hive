@@ -84,3 +84,35 @@ public record DirectReportSkillsDto
     public string DirectReportName { get; init; } = string.Empty;
     public IList<SkillAssessmentDto> Assessments { get; init; } = new List<SkillAssessmentDto>();
 }
+
+/// <summary>
+/// DTO for skills overview summary data (for charts and stats).
+/// </summary>
+public record SkillsSummaryDto
+{
+    public int TotalSkills { get; init; }
+    public int ActiveSkills { get; init; }
+    public int TotalAssessments { get; init; }
+    public int DirectReportCount { get; init; }
+    public int SkillGapCount { get; init; }
+    public IList<SkillCategoryCountDto> SkillsByCategory { get; init; } = new List<SkillCategoryCountDto>();
+    public IList<ProficiencyLevelCountDto> ProficiencyDistribution { get; init; } = new List<ProficiencyLevelCountDto>();
+}
+
+/// <summary>
+/// Count of skills in a category.
+/// </summary>
+public record SkillCategoryCountDto
+{
+    public string Name { get; init; } = string.Empty;
+    public int Value { get; init; }
+}
+
+/// <summary>
+/// Count of assessments at a proficiency level.
+/// </summary>
+public record ProficiencyLevelCountDto
+{
+    public string Name { get; init; } = string.Empty;
+    public int Value { get; init; }
+}

@@ -95,6 +95,7 @@ export function createTeamTask(overrides?: Partial<TeamTask>): TeamTask {
     priorityName: 'Medium',
     status: 1 as TaskStatus,
     statusName: 'Todo',
+    matchedProjectNames: [],
     tags: '',
     labels: '',
     sprint: '',

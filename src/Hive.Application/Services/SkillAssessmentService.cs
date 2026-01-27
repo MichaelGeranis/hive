@@ -167,11 +167,12 @@ public class SkillAssessmentService : ISkillAssessmentService
             cancellationToken);
     }
 
-    public async Task<SkillMatrixDto> GetSkillMatrixAsync(CancellationToken cancellationToken = default)
+    public async Task<SkillMatrixDto> GetSkillMatrixAsync(bool directOnly = false, CancellationToken cancellationToken = default)
     {
         var skills = await _skillRepository.GetAllAsync(false, cancellationToken);
         var categories = await _categoryRepository.GetAllAsync(true, cancellationToken);
-        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var allDirectReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var directReports = directOnly ? allDirectReports.Where(dr => dr.IsDirect).ToList() : allDirectReports;
         var allAssessments = await _assessmentRepository.GetAllAsync(cancellationToken);
 
         var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
@@ -188,11 +189,15 @@ public class SkillAssessmentService : ISkillAssessmentService
             UpdatedAt = s.UpdatedAt
         }).ToList();
 
+        // Filter assessments to only those from the filtered direct reports
+        var directReportIds = directReports.Select(dr => dr.Id).ToHashSet();
+        var filteredAssessments = allAssessments.Where(a => directReportIds.Contains(a.DirectReportId)).ToList();
+
         var directReportSkills = new List<DirectReportSkillsDto>();
 
         foreach (var dr in directReports)
         {
-            var drAssessments = allAssessments
+            var drAssessments = filteredAssessments
                 .Where(a => a.DirectReportId == dr.Id)
                 .Select(a =>
                 {
@@ -234,11 +239,73 @@ public class SkillAssessmentService : ISkillAssessmentService
         };
     }
 
-    public async Task<IReadOnlyList<SkillAssessmentDto>> GetSkillGapsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SkillAssessmentDto>> GetSkillGapsAsync(bool directOnly = false, CancellationToken cancellationToken = default)
     {
         var allAssessments = await _assessmentRepository.GetAllAsync(cancellationToken);
+
+        // Filter to direct reports only if requested
+        if (directOnly)
+        {
+            var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+            var directReportIds = directReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
+            allAssessments = allAssessments.Where(a => directReportIds.Contains(a.DirectReportId)).ToList();
+        }
+
         var gaps = allAssessments.Where(a => !a.MeetsTarget()).ToList();
         return await MapToDtosAsync(gaps, cancellationToken);
+    }
+
+    public async Task<SkillsSummaryDto> GetSummaryAsync(bool directOnly = false, CancellationToken cancellationToken = default)
+    {
+        var skills = await _skillRepository.GetAllAsync(false, cancellationToken);
+        var categories = await _categoryRepository.GetAllAsync(true, cancellationToken);
+        var allDirectReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var directReports = directOnly ? allDirectReports.Where(dr => dr.IsDirect).ToList() : allDirectReports;
+        var allAssessments = await _assessmentRepository.GetAllAsync(cancellationToken);
+
+        // Filter assessments to only those from the filtered direct reports
+        var directReportIds = directReports.Select(dr => dr.Id).ToHashSet();
+        var filteredAssessments = allAssessments.Where(a => directReportIds.Contains(a.DirectReportId)).ToList();
+
+        var activeSkills = skills.Where(s => s.IsActive).ToList();
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
+
+        // Skills by category
+        var skillsByCategory = activeSkills
+            .GroupBy(s => s.SkillCategoryId)
+            .Select(g => new SkillCategoryCountDto
+            {
+                Name = categoryLookup.GetValueOrDefault(g.Key, "Unknown"),
+                Value = g.Count()
+            })
+            .Where(c => c.Value > 0)
+            .ToList();
+
+        // Proficiency distribution (excluding "None" level)
+        var proficiencyDistribution = filteredAssessments
+            .Where(a => a.Level != ProficiencyLevel.None)
+            .GroupBy(a => a.Level)
+            .Select(g => new ProficiencyLevelCountDto
+            {
+                Name = GetLevelName(g.Key),
+                Value = g.Count()
+            })
+            .OrderBy(p => Enum.Parse<ProficiencyLevel>(p.Name.Replace(" ", ""), true))
+            .ToList();
+
+        // Skill gaps count
+        var gapCount = filteredAssessments.Count(a => !a.MeetsTarget());
+
+        return new SkillsSummaryDto
+        {
+            TotalSkills = skills.Count,
+            ActiveSkills = activeSkills.Count,
+            TotalAssessments = filteredAssessments.Count,
+            DirectReportCount = directReports.Count,
+            SkillGapCount = gapCount,
+            SkillsByCategory = skillsByCategory,
+            ProficiencyDistribution = proficiencyDistribution
+        };
     }
 
     private async Task ValidateReferencesAsync(Guid directReportId, Guid skillId, CancellationToken cancellationToken)

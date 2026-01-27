@@ -83,4 +83,31 @@ public class SqliteActivityRepository : IActivityRepository
     {
         return await _context.Activities.AnyAsync(a => a.Id == id, cancellationToken);
     }
+
+    public async Task<(IReadOnlyList<Activity> Items, int TotalCount)> SearchAsync(
+        string? searchTerm,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Activities.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLowerInvariant();
+            query = query.Where(a =>
+                a.EntityName.ToLower().Contains(term) ||
+                a.Description.ToLower().Contains(term));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(a => a.Timestamp)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

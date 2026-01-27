@@ -2,9 +2,9 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { tasksApi, directReportsApi, projectsApi, settingsApi, jiraImportApi, TaskFilters } from '../services/api'
+import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
-import type { TeamTask, DirectReport, Project, StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto } from '../types'
+import type { TeamTask, DirectReport, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<TaskStatus, string> = {
@@ -31,8 +31,6 @@ export default function Tasks() {
   const [searchParams] = useSearchParams()
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [storyPointMappings, setStoryPointMappings] = useState<StoryPointMapping[]>([])
   const [loading, setLoading] = useState(true)
 
   // Initialize filter from URL params if present
@@ -147,12 +145,10 @@ export default function Tasks() {
     try {
       setLoading(true)
       const filters = currentFilters ?? buildFilters()
-      const [tasksResult, summaryData, drData, projectsData, settingsData] = await Promise.all([
+      const [tasksResult, summaryData, drData] = await Promise.all([
         tasksApi.getAll(page, pageSize, filters),
         tasksApi.getSummary(),
-        directReportsApi.getAll(),
-        projectsApi.getAll(),
-        settingsApi.get()
+        directReportsApi.getAll()
       ])
       setTasks(tasksResult.items)
       setTotalCount(tasksResult.totalCount)
@@ -160,8 +156,6 @@ export default function Tasks() {
       setPageNumber(tasksResult.pageNumber)
       setSummary(summaryData)
       setDirectReports(drData)
-      setProjects(projectsData)
-      setStoryPointMappings(settingsData.storyPointMappings || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -420,62 +414,7 @@ export default function Tasks() {
     return `${mins}m`
   }
 
-  // Find projects that share at least one label with the task
-  const getMatchedProjects = (taskLabels?: string): Project[] => {
-    if (!taskLabels) return []
-    const taskLabelSet = new Set(
-      taskLabels.split(',').map(l => l.trim().toLowerCase()).filter(l => l)
-    )
-    if (taskLabelSet.size === 0) return []
-
-    return projects.filter(project => {
-      if (!project.labels) return false
-      const projectLabels = project.labels.split(',').map(l => l.trim().toLowerCase())
-      return projectLabels.some(pl => taskLabelSet.has(pl))
-    })
-  }
-
-  // Calculate estimated hours from story points using the mappings
-  const getEstimatedHours = (task: TeamTask): number | null => {
-    // If task already has estimated hours, use that
-    if (task.estimatedHours) return task.estimatedHours
-
-    // Otherwise calculate from story points
-    if (!task.storyPoints || task.storyPoints <= 0 || storyPointMappings.length === 0) {
-      return null
-    }
-
-    // Find exact match
-    const exactMatch = storyPointMappings.find(m => m.points === task.storyPoints)
-    if (exactMatch) return exactMatch.hours
-
-    // Sort mappings by points for interpolation
-    const sorted = [...storyPointMappings].sort((a, b) => a.points - b.points)
-
-    // If below minimum, use minimum's ratio
-    if (task.storyPoints < sorted[0].points) {
-      const ratio = sorted[0].hours / sorted[0].points
-      return Math.round(task.storyPoints * ratio)
-    }
-
-    // If above maximum, use maximum's ratio
-    if (task.storyPoints > sorted[sorted.length - 1].points) {
-      const last = sorted[sorted.length - 1]
-      const ratio = last.hours / last.points
-      return Math.round(task.storyPoints * ratio)
-    }
-
-    // Linear interpolation between two closest points
-    const lower = sorted.filter(m => m.points <= task.storyPoints!).pop()
-    const upper = sorted.find(m => m.points >= task.storyPoints!)
-
-    if (lower && upper && lower.points !== upper.points) {
-      const ratio = (task.storyPoints - lower.points) / (upper.points - lower.points)
-      return Math.round(lower.hours + ratio * (upper.hours - lower.hours))
-    }
-
-    return null
-  }
+  // Note: matchedProjectNames and estimatedHours are now provided by the backend
 
   if (loading) {
     return (
@@ -1155,17 +1094,17 @@ export default function Tasks() {
                       {task.projectName && (
                         <span className="text-purple-600 dark:text-purple-400">{task.projectName}</span>
                       )}
-                      {getMatchedProjects(task.labels).length > 0 && (
+                      {task.matchedProjectNames.length > 0 && (
                         <span className="flex items-center gap-1 flex-wrap">
-                          {getMatchedProjects(task.labels)
-                            .filter(p => p.name !== task.projectName) // Exclude direct project if already shown
-                            .map(p => (
+                          {task.matchedProjectNames
+                            .filter(name => name !== task.projectName) // Exclude direct project if already shown
+                            .map((name, idx) => (
                               <span
-                                key={p.id}
+                                key={idx}
                                 className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded text-xs"
-                                title={`Matched via labels: ${p.labels}`}
+                                title="Matched via labels"
                               >
-                                {p.name}
+                                {name}
                               </span>
                             ))
                           }
@@ -1177,8 +1116,8 @@ export default function Tasks() {
                           {formatDate(task.dueDate)}
                         </span>
                       )}
-                      {getEstimatedHours(task) && (
-                        <span>{getEstimatedHours(task)}h estimated</span>
+                      {task.estimatedHours && (
+                        <span>{task.estimatedHours}h estimated</span>
                       )}
                       {task.storyPoints && (
                         <span className="font-semibold text-amber-600 dark:text-amber-400">{task.storyPoints} SP</span>

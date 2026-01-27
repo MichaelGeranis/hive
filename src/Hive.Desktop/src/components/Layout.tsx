@@ -19,7 +19,7 @@ import {
   Award,
   Activity,
   ClipboardList,
-  BookOpen,
+  Brain,
   Target,
   PanelLeftClose,
   PanelLeft
@@ -39,7 +39,7 @@ const navigationGroups = [
     { name: 'Parents', to: '/parents', icon: Layers },
     { name: 'Tasks', to: '/tasks', icon: CheckSquare },
     { name: 'Projects', to: '/projects', icon: FolderKanban },
-    { name: 'Knowledge Matrix', to: '/project-knowledge', icon: BookOpen },
+    { name: 'Knowledge Matrix', to: '/project-knowledge', icon: Brain },
   ],
   // People
   [
@@ -83,7 +83,7 @@ export default function Layout() {
                   <NavLink
                     key={item.name}
                     to={item.to}
-                    title={isMenuCollapsed ? item.name : undefined}
+                    title={item.name}
                     className={({ isActive }) =>
                       `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
@@ -109,7 +109,7 @@ export default function Layout() {
         <div className="px-3 py-4 border-t border-slate-700 dark:border-slate-800 space-y-1">
           <NavLink
             to="/logs"
-            title={isMenuCollapsed ? 'Logs' : undefined}
+            title="Logs"
             className={({ isActive }) =>
               `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -123,7 +123,7 @@ export default function Layout() {
           </NavLink>
           <NavLink
             to="/settings"
-            title={isMenuCollapsed ? 'Settings' : undefined}
+            title="Settings"
             className={({ isActive }) =>
               `flex items-center ${isMenuCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 w-full rounded-lg text-sm font-medium transition-colors ${
                 isActive

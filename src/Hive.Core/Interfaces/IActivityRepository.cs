@@ -75,4 +75,18 @@ public interface IActivityRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the activity exists; otherwise, false.</returns>
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches activities with pagination support.
+    /// </summary>
+    /// <param name="searchTerm">Optional search term to filter by entity name or description.</param>
+    /// <param name="skip">Number of items to skip.</param>
+    /// <param name="take">Number of items to take.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A tuple containing the list of activities and total count.</returns>
+    Task<(IReadOnlyList<Activity> Items, int TotalCount)> SearchAsync(
+        string? searchTerm,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
 }

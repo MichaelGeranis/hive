@@ -124,4 +124,19 @@ public class ActivityService : IActivityService
             _ => entityType.ToString()
         };
     }
+
+    public async Task<PagedResult<ActivityDto>> SearchAsync(
+        ActivityPaginationParams pagination,
+        CancellationToken cancellationToken = default)
+    {
+        var (activities, totalCount) = await _activityRepository.SearchAsync(
+            pagination.SearchTerm,
+            pagination.Skip,
+            pagination.PageSize,
+            cancellationToken);
+
+        var items = activities.Select(MapToDto).ToList();
+
+        return PagedResult<ActivityDto>.Create(items, totalCount, pagination);
+    }
 }
