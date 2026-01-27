@@ -81,6 +81,7 @@ import type {
   ProjectKnowledge,
   ProjectKnowledgeMatrix,
   CreateOrUpdateProjectKnowledgeDto,
+  KnowledgeProgressionEntry,
   SentimentStatus,
   SentimentAnalysis,
   TeamSentimentOverview,
@@ -485,7 +486,11 @@ export const projectKnowledgeApi = {
   createOrUpdate: (data: CreateOrUpdateProjectKnowledgeDto) =>
     api.put<ProjectKnowledge>('/projectknowledge', data).then(r => r.data),
   delete: (id: string) =>
-    api.delete(`/projectknowledge/${id}`)
+    api.delete(`/projectknowledge/${id}`),
+  getProgressionByDirectReport: (directReportId: string) =>
+    api.get<KnowledgeProgressionEntry[]>(`/projectknowledge/progression/by-direct-report/${directReportId}`).then(r => r.data),
+  getProgressionByProject: (projectId: string) =>
+    api.get<KnowledgeProgressionEntry[]>(`/projectknowledge/progression/by-project/${projectId}`).then(r => r.data)
 }
 
 // Checklist Templates

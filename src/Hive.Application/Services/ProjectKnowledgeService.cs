@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
 using Hive.Core.Entities;
@@ -9,23 +10,29 @@ namespace Hive.Application.Services;
 /// <summary>
 /// Service implementing use cases for ProjectKnowledge management.
 /// </summary>
-public class ProjectKnowledgeService : IProjectKnowledgeService
+public partial class ProjectKnowledgeService : IProjectKnowledgeService
 {
     private readonly IProjectKnowledgeRepository _knowledgeRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
+    private readonly IActivityRepository _activityRepository;
+
+    [GeneratedRegex(@"from level (\d) to level (\d)")]
+    private static partial Regex LevelChangeRegex();
 
     public ProjectKnowledgeService(
         IProjectKnowledgeRepository knowledgeRepository,
         IProjectRepository projectRepository,
         IDirectReportRepository directReportRepository,
-        IActivityService activityService)
+        IActivityService activityService,
+        IActivityRepository activityRepository)
     {
         _knowledgeRepository = knowledgeRepository ?? throw new ArgumentNullException(nameof(knowledgeRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
+        _activityRepository = activityRepository ?? throw new ArgumentNullException(nameof(activityRepository));
     }
 
     public async Task<ProjectKnowledgeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -112,6 +119,7 @@ public class ProjectKnowledgeService : IProjectKnowledgeService
 
         if (existing is not null)
         {
+            var previousLevel = existing.KnowledgeLevel;
             existing.Update(dto.KnowledgeLevel);
             await _knowledgeRepository.UpdateAsync(existing, cancellationToken);
 
@@ -120,7 +128,7 @@ public class ProjectKnowledgeService : IProjectKnowledgeService
                 EntityType.ProjectKnowledge,
                 existing.Id,
                 $"Knowledge: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
-                $"Knowledge assessment updated to level {dto.KnowledgeLevel}",
+                $"Knowledge assessment changed from level {previousLevel} to level {dto.KnowledgeLevel}",
                 cancellationToken);
 
             return await MapToDtoAsync(existing, cancellationToken);
@@ -160,6 +168,83 @@ public class ProjectKnowledgeService : IProjectKnowledgeService
             $"Knowledge: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
             $"Knowledge assessment was deleted",
             cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<KnowledgeProgressionEntryDto>> GetProgressionByDirectReportAsync(
+        Guid directReportId,
+        CancellationToken cancellationToken = default)
+    {
+        var progressionEntries = await GetAllProgressionEntriesAsync(cancellationToken);
+        return progressionEntries
+            .Where(e => e.DirectReportId == directReportId)
+            .OrderBy(e => e.Timestamp)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<KnowledgeProgressionEntryDto>> GetProgressionByProjectAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        var progressionEntries = await GetAllProgressionEntriesAsync(cancellationToken);
+        return progressionEntries
+            .Where(e => e.ProjectId == projectId)
+            .OrderBy(e => e.Timestamp)
+            .ToList();
+    }
+
+    private async Task<List<KnowledgeProgressionEntryDto>> GetAllProgressionEntriesAsync(
+        CancellationToken cancellationToken)
+    {
+        // Get all ProjectKnowledge activities with "Updated" type
+        var activities = await _activityRepository.GetByEntityTypeAsync(EntityType.ProjectKnowledge, cancellationToken);
+        var updateActivities = activities
+            .Where(a => a.ActivityType == ActivityType.Updated)
+            .ToList();
+
+        // Get all knowledge records, direct reports, and projects for lookups
+        var knowledgeRecords = await _knowledgeRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+
+        var knowledgeLookup = knowledgeRecords.ToDictionary(k => k.Id);
+        var drLookup = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
+        var projectLookup = projects.ToDictionary(p => p.Id, p => p.Name);
+
+        var result = new List<KnowledgeProgressionEntryDto>();
+
+        foreach (var activity in updateActivities)
+        {
+            // Parse the description to extract levels: "from level X to level Y"
+            var match = LevelChangeRegex().Match(activity.Description);
+            if (!match.Success) continue;
+
+            if (!int.TryParse(match.Groups[1].Value, out var oldLevel) ||
+                !int.TryParse(match.Groups[2].Value, out var newLevel))
+            {
+                continue;
+            }
+
+            // Get the knowledge record to find DirectReportId and ProjectId
+            if (!knowledgeLookup.TryGetValue(activity.EntityId, out var knowledge))
+            {
+                continue;
+            }
+
+            result.Add(new KnowledgeProgressionEntryDto
+            {
+                Id = activity.Id,
+                DirectReportId = knowledge.DirectReportId,
+                DirectReportName = drLookup.GetValueOrDefault(knowledge.DirectReportId, "Unknown"),
+                ProjectId = knowledge.ProjectId,
+                ProjectName = projectLookup.GetValueOrDefault(knowledge.ProjectId, "Unknown"),
+                OldLevel = oldLevel,
+                NewLevel = newLevel,
+                Change = newLevel - oldLevel,
+                Timestamp = activity.Timestamp
+            });
+        }
+
+        return result;
     }
 
     private async Task ValidateReferencesAsync(Guid directReportId, Guid projectId, CancellationToken cancellationToken)

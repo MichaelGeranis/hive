@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { X, BookOpen, Info, Search, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react'
+import { X, BookOpen, Info, Search, AlertTriangle, TrendingUp, LayoutGrid, Filter, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectKnowledgeApi } from '../services/api'
 import type {
   ProjectKnowledgeMatrix,
   ProjectKnowledge,
-  CreateOrUpdateProjectKnowledgeDto
+  CreateOrUpdateProjectKnowledgeDto,
+  KnowledgeProgressionEntry
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
@@ -18,8 +19,9 @@ import {
   Tooltip,
   Legend
 } from 'recharts'
+import KnowledgeProgressionChart from '../components/KnowledgeProgressionChart'
 
-type SortBy = 'name' | 'avgKnowledge'
+type TabType = 'matrix' | 'progression'
 type SortOrder = 'asc' | 'desc'
 
 const KNOWLEDGE_LEVELS = [
@@ -48,14 +50,23 @@ export default function ProjectKnowledgePage() {
   } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>('matrix')
+
+  // Progression tab state
+  const [progressionView, setProgressionView] = useState<'byIndividual' | 'byProject'>('byIndividual')
+  const [selectedDirectReportId, setSelectedDirectReportId] = useState<string>('')
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [progressionData, setProgressionData] = useState<KnowledgeProgressionEntry[]>([])
+  const [progressionLoading, setProgressionLoading] = useState(false)
+
   // Filter state
-  const [projectSearch, setProjectSearch] = useState('')
-  const [teamMemberFilter, setTeamMemberFilter] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
 
   // Sort state
-  const [projectSortBy, setProjectSortBy] = useState<SortBy>('name')
+  const [sortByAvg, setSortByAvg] = useState(false)
   const [projectSortOrder, setProjectSortOrder] = useState<SortOrder>('asc')
-  const [memberSortBy, setMemberSortBy] = useState<SortBy>('name')
   const [memberSortOrder, setMemberSortOrder] = useState<SortOrder>('asc')
 
   useEscapeKey(() => {
@@ -91,6 +102,32 @@ export default function ProjectKnowledgePage() {
       setLoading(false)
     }
   }
+
+  const loadProgressionData = async () => {
+    setProgressionLoading(true)
+    try {
+      if (progressionView === 'byIndividual' && selectedDirectReportId) {
+        const data = await projectKnowledgeApi.getProgressionByDirectReport(selectedDirectReportId)
+        setProgressionData(data)
+      } else if (progressionView === 'byProject' && selectedProjectId) {
+        const data = await projectKnowledgeApi.getProgressionByProject(selectedProjectId)
+        setProgressionData(data)
+      } else {
+        setProgressionData([])
+      }
+    } catch (err) {
+      console.error('Failed to load progression data:', err)
+      setProgressionData([])
+    } finally {
+      setProgressionLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'progression') {
+      loadProgressionData()
+    }
+  }, [activeTab, progressionView, selectedDirectReportId, selectedProjectId])
 
   const handleCellClick = (projectId: string, directReportId: string) => {
     if (activeDropdown?.projectId === projectId && activeDropdown?.directReportId === directReportId) {
@@ -154,15 +191,15 @@ export default function ProjectKnowledgePage() {
     let projects = [...matrix.projects]
 
     // Filter by search
-    if (projectSearch.trim()) {
-      const query = projectSearch.toLowerCase().trim()
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
       projects = projects.filter(p => p.name.toLowerCase().includes(query))
     }
 
     // Sort projects
     projects.sort((a, b) => {
       let comparison = 0
-      if (projectSortBy === 'name') {
+      if (!sortByAvg) {
         comparison = a.name.localeCompare(b.name)
       } else {
         comparison = getProjectAvgKnowledge(b.id) - getProjectAvgKnowledge(a.id)
@@ -171,7 +208,7 @@ export default function ProjectKnowledgePage() {
     })
 
     return projects
-  }, [matrix, projectSearch, projectSortBy, projectSortOrder])
+  }, [matrix, searchQuery, sortByAvg, projectSortOrder])
 
   // Filtered and sorted direct reports
   const filteredDirectReports = useMemo(() => {
@@ -179,15 +216,15 @@ export default function ProjectKnowledgePage() {
 
     let reports = [...matrix.directReports]
 
-    // Filter by selection
-    if (teamMemberFilter.length > 0) {
-      reports = reports.filter(dr => teamMemberFilter.includes(dr.id))
+    // Filter by selected members
+    if (selectedMembers.length > 0) {
+      reports = reports.filter(dr => selectedMembers.includes(dr.id))
     }
 
     // Sort direct reports
     reports.sort((a, b) => {
       let comparison = 0
-      if (memberSortBy === 'name') {
+      if (!sortByAvg) {
         comparison = a.name.localeCompare(b.name)
       } else {
         comparison = getMemberAvgKnowledge(b.id) - getMemberAvgKnowledge(a.id)
@@ -196,20 +233,26 @@ export default function ProjectKnowledgePage() {
     })
 
     return reports
-  }, [matrix, teamMemberFilter, memberSortBy, memberSortOrder])
+  }, [matrix, selectedMembers, sortByAvg, memberSortOrder])
 
   // Check if any filters are active
-  const hasActiveFilters = projectSearch.trim() !== '' || teamMemberFilter.length > 0 ||
-    projectSortBy !== 'name' || projectSortOrder !== 'asc' ||
-    memberSortBy !== 'name' || memberSortOrder !== 'asc'
+  const hasActiveFilters = searchQuery.trim() !== '' || selectedMembers.length > 0 || sortByAvg
 
   const clearAllFilters = () => {
-    setProjectSearch('')
-    setTeamMemberFilter([])
-    setProjectSortBy('name')
+    setSearchQuery('')
+    setSelectedMembers([])
+    setSortByAvg(false)
     setProjectSortOrder('asc')
-    setMemberSortBy('name')
     setMemberSortOrder('asc')
+  }
+
+  // Toggle member selection (for tag-style filter)
+  const toggleMemberSelection = (memberId: string) => {
+    setSelectedMembers(prev =>
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    )
   }
 
   if (loading) {
@@ -261,145 +304,130 @@ export default function ProjectKnowledgePage() {
         </button>
       </div>
 
-      {/* Filter and Sort Controls */}
-      {hasProjects && hasDirectReports && (
-        <Card>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              {/* Project Search */}
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Search Projects
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by project name..."
-                    value={projectSearch}
-                    onChange={(e) => setProjectSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+        {[
+          { key: 'matrix', label: 'Matrix', icon: LayoutGrid },
+          { key: 'progression', label: 'Progression', icon: TrendingUp }
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key as TabType)}
+            className={`
+              px-4 py-2 font-medium transition-colors flex items-center gap-2
+              ${activeTab === key
+                ? 'text-amber-500 border-b-2 border-amber-500'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }
+            `}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
 
-              {/* Team Member Filter */}
-              <div className="min-w-[200px]">
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Team Members
-                </label>
-                <select
-                  multiple
-                  value={teamMemberFilter}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value)
-                    setTeamMemberFilter(selected)
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[70px]"
-                >
-                  {matrix?.directReports.map(dr => (
-                    <option key={dr.id} value={dr.id}>{dr.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-400 mt-1">Ctrl/Cmd + click to multi-select</p>
-              </div>
-
-              {/* Project Sort */}
-              <div className="min-w-[160px]">
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Sort Projects
-                </label>
-                <div className="flex gap-1">
-                  <select
-                    value={projectSortBy}
-                    onChange={(e) => setProjectSortBy(e.target.value as SortBy)}
-                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  >
-                    <option value="name">Name</option>
-                    <option value="avgKnowledge">Avg. Knowledge</option>
-                  </select>
-                  <button
-                    onClick={() => setProjectSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className="px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                    title={projectSortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                  >
-                    {projectSortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Member Sort */}
-              <div className="min-w-[160px]">
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Sort Members
-                </label>
-                <div className="flex gap-1">
-                  <select
-                    value={memberSortBy}
-                    onChange={(e) => setMemberSortBy(e.target.value as SortBy)}
-                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  >
-                    <option value="name">Name</option>
-                    <option value="avgKnowledge">Avg. Knowledge</option>
-                  </select>
-                  <button
-                    onClick={() => setMemberSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className="px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                    title={memberSortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                  >
-                    {memberSortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <div className="flex items-end">
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear All
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Active filters summary */}
+      {/* Search & Filters - Only show on Matrix tab */}
+      {activeTab === 'matrix' && hasProjects && hasDirectReports && (
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+            />
             {hasActiveFilters && (
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 text-sm">
-                {projectSearch && (
-                  <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded">
-                    Search: "{projectSearch}"
-                  </span>
-                )}
-                {teamMemberFilter.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
-                    {teamMemberFilter.length} member{teamMemberFilter.length > 1 ? 's' : ''} selected
-                  </span>
-                )}
-                {(projectSortBy !== 'name' || projectSortOrder !== 'asc') && (
-                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
-                    Projects: {projectSortBy === 'avgKnowledge' ? 'Avg. Knowledge' : 'Name'} ({projectSortOrder})
-                  </span>
-                )}
-                {(memberSortBy !== 'name' || memberSortOrder !== 'asc') && (
-                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded">
-                    Members: {memberSortBy === 'avgKnowledge' ? 'Avg. Knowledge' : 'Name'} ({memberSortOrder})
-                  </span>
-                )}
-                <span className="text-slate-500 dark:text-slate-400">
-                  Showing {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} × {filteredDirectReports.length} member{filteredDirectReports.length !== 1 ? 's' : ''}
-                </span>
-              </div>
+              <button
+                onClick={clearAllFilters}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Members Tags */}
+          {matrix && matrix.directReports.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Users className="w-4 h-4 text-slate-400" />
+              {matrix.directReports.map((dr) => (
+                <button
+                  key={dr.id}
+                  onClick={() => toggleMemberSelection(dr.id)}
+                  className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedMembers.includes(dr.id)
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {dr.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setSortByAvg(false)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  !sortByAvg
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                Sort by Name
+              </button>
+              <button
+                onClick={() => setSortByAvg(true)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  sortByAvg
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                Sort by Avg
+              </button>
+            </div>
+          </div>
+
+          {/* Active filters summary */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap gap-2 text-sm">
+              {searchQuery && (
+                <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded">
+                  Search: "{searchQuery}"
+                </span>
+              )}
+              {selectedMembers.length > 0 && (
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                  {selectedMembers.length} member{selectedMembers.length > 1 ? 's' : ''} selected
+                </span>
+              )}
+              {sortByAvg && (
+                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
+                  Sorted by Avg. Knowledge
+                </span>
+              )}
+              <span className="text-slate-500 dark:text-slate-400">
+                Showing {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} × {filteredDirectReports.length} member{filteredDirectReports.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Knowledge Radar */}
-      {hasProjects && hasDirectReports && matrix && matrix.scores.length > 0 && (() => {
+      {/* Matrix Tab Content */}
+      {activeTab === 'matrix' && (
+        <>
+          {/* Knowledge Radar */}
+          {hasProjects && hasDirectReports && matrix && matrix.scores.length > 0 && (() => {
         // Calculate average knowledge level per project
         const radarData = matrix.projects.map(project => {
           const projectScores = matrix.scores.filter(s => s.projectId === project.id)
@@ -579,7 +607,7 @@ export default function ProjectKnowledgePage() {
                         className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 min-w-[100px]"
                       >
                         <div>{dr.name}</div>
-                        {memberSortBy === 'avgKnowledge' && (
+                        {sortByAvg && (
                           <div className="text-[10px] font-normal text-slate-400">
                             avg: {getMemberAvgKnowledge(dr.id).toFixed(1)}
                           </div>
@@ -593,7 +621,7 @@ export default function ProjectKnowledgePage() {
                     <tr key={project.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-slate-700">
                         <div>{project.name}</div>
-                        {projectSortBy === 'avgKnowledge' && (
+                        {sortByAvg && (
                           <div className="text-xs font-normal text-slate-400">
                             avg: {getProjectAvgKnowledge(project.id).toFixed(1)}
                           </div>
@@ -647,6 +675,181 @@ export default function ProjectKnowledgePage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {/* Progression Tab Content */}
+      {activeTab === 'progression' && (
+        <div className="space-y-6">
+          {/* View Toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setProgressionView('byIndividual')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                progressionView === 'byIndividual'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              By Individual
+            </button>
+            <button
+              onClick={() => setProgressionView('byProject')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                progressionView === 'byProject'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              By Project
+            </button>
+          </div>
+
+          <Card>
+            <CardHeader
+              title="Knowledge Progression"
+              subtitle={progressionView === 'byIndividual'
+                ? "Track an individual's knowledge growth across projects"
+                : "Track team knowledge growth for a specific project"}
+            />
+            <CardContent>
+              {/* Selection */}
+              <div className="mb-6">
+                {progressionView === 'byIndividual' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Select Team Member
+                    </label>
+                    <select
+                      value={selectedDirectReportId}
+                      onChange={(e) => setSelectedDirectReportId(e.target.value)}
+                      className="w-full max-w-md px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    >
+                      <option value="">Select a team member...</option>
+                      {matrix?.directReports.map(dr => (
+                        <option key={dr.id} value={dr.id}>{dr.name}</option>
+                      ))}
+                    </select>
+                    {selectedDirectReportId && (
+                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        Showing knowledge progression across all projects for the selected team member.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Select Project
+                    </label>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      className="w-full max-w-md px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    >
+                      <option value="">Select a project...</option>
+                      {matrix?.projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {selectedProjectId && (
+                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        Showing knowledge progression for all team members on the selected project.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Chart */}
+              {progressionLoading ? (
+                <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
+                  Loading progression data...
+                </div>
+              ) : (
+                <>
+                  <KnowledgeProgressionChart
+                    data={progressionData}
+                    groupBy={progressionView === 'byIndividual' ? 'project' : 'directReport'}
+                  />
+
+                  {/* Summary Stats */}
+                  {progressionData.length > 0 && (
+                    <div className="mt-6 grid grid-cols-3 gap-4">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-amber-500">
+                          {progressionData.length}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Total Changes</p>
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-green-500">
+                          +{progressionData.filter(e => e.change > 0).reduce((sum, e) => sum + e.change, 0)}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Total Improvement</p>
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-blue-500">
+                          {progressionData.filter(e => e.change > 0).length}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Improvements</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Changes Table */}
+                  {progressionData.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                        Recent Changes
+                      </h3>
+                      <div className="overflow-x-auto max-h-64">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase">
+                              <th className="pb-2 pr-4">Date</th>
+                              <th className="pb-2 pr-4">
+                                {progressionView === 'byIndividual' ? 'Project' : 'Team Member'}
+                              </th>
+                              <th className="pb-2 pr-4">Change</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {[...progressionData]
+                              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                              .slice(0, 10)
+                              .map((entry) => (
+                                <tr key={entry.id}>
+                                  <td className="py-2 pr-4 text-slate-600 dark:text-slate-400">
+                                    {new Date(entry.timestamp).toLocaleDateString()}
+                                  </td>
+                                  <td className="py-2 pr-4 text-slate-900 dark:text-slate-100">
+                                    {progressionView === 'byIndividual' ? entry.projectName : entry.directReportName}
+                                  </td>
+                                  <td className="py-2 pr-4">
+                                    <span className={`inline-flex items-center gap-1 ${
+                                      entry.change > 0 ? 'text-green-600 dark:text-green-400' :
+                                      entry.change < 0 ? 'text-red-600 dark:text-red-400' :
+                                      'text-slate-500'
+                                    }`}>
+                                      {entry.oldLevel} → {entry.newLevel}
+                                      <span className="text-xs">
+                                        ({entry.change > 0 ? '+' : ''}{entry.change})
+                                      </span>
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Legend Modal */}
       {showLegend && (
@@ -693,6 +896,7 @@ export default function ProjectKnowledgePage() {
           </div>
         </div>
       )}
+
     </div>
   )
 }

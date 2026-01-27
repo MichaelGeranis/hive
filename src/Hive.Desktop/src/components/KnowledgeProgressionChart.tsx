@@ -1,0 +1,165 @@
+import { useMemo } from 'react'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts'
+import type { KnowledgeProgressionEntry } from '../types'
+
+interface KnowledgeProgressionChartProps {
+  data: KnowledgeProgressionEntry[]
+  groupBy: 'project' | 'directReport'
+}
+
+interface ChartDataPoint {
+  timestamp: string
+  displayDate: string
+  [key: string]: number | string
+}
+
+const COLORS = [
+  '#f59e0b', // amber
+  '#10b981', // emerald
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#84cc16', // lime
+]
+
+export default function KnowledgeProgressionChart({
+  data,
+  groupBy
+}: KnowledgeProgressionChartProps) {
+  const { chartData, entities } = useMemo(() => {
+    if (data.length === 0) {
+      return { chartData: [], entities: [] }
+    }
+
+    // Group by the specified dimension
+    const entityKey = groupBy === 'project' ? 'projectId' : 'directReportId'
+    const entityNameKey = groupBy === 'project' ? 'projectName' : 'directReportName'
+
+    // Get unique entities
+    const uniqueEntities = [...new Map(
+      data.map(d => [d[entityKey], d[entityNameKey]])
+    ).entries()].map(([id, name]) => ({ id, name: name as string }))
+
+    // Build chart data: each entry is a data point with levels for each entity
+    // We need to track the "current" level as we process entries chronologically
+    const levelTracker: Record<string, number> = {}
+
+    // Sort by timestamp
+    const sortedData = [...data].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+
+    // Build data points
+    const points: ChartDataPoint[] = []
+
+    for (const entry of sortedData) {
+      const entityName = entry[entityNameKey] as string
+
+      // Update tracker with new level
+      levelTracker[entityName] = entry.newLevel
+
+      // Create data point
+      const timestamp = new Date(entry.timestamp)
+      const displayDate = timestamp.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: '2-digit'
+      })
+
+      const point: ChartDataPoint = {
+        timestamp: entry.timestamp,
+        displayDate,
+        ...levelTracker
+      }
+
+      points.push(point)
+    }
+
+    return { chartData: points, entities: uniqueEntities }
+  }, [data, groupBy])
+
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
+        No progression data available. Knowledge levels need to be changed to track progression.
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={chartData}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+          <XAxis
+            dataKey="displayDate"
+            tick={{ fontSize: 11, fill: 'currentColor' }}
+            className="text-slate-600 dark:text-slate-400"
+          />
+          <YAxis
+            domain={[0, 5]}
+            ticks={[1, 2, 3, 4, 5]}
+            tick={{ fontSize: 11, fill: 'currentColor' }}
+            className="text-slate-600 dark:text-slate-400"
+            label={{
+              value: 'Knowledge Level',
+              angle: -90,
+              position: 'insideLeft',
+              style: { textAnchor: 'middle', fontSize: 12 }
+            }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'var(--tooltip-bg, #fff)',
+              border: '1px solid var(--tooltip-border, #e2e8f0)',
+              borderRadius: '8px'
+            }}
+            formatter={(value: number, name: string) => {
+              const levelLabel = getLevelLabel(value)
+              return [`${value} - ${levelLabel}`, name]
+            }}
+            labelFormatter={(label) => `Date: ${label}`}
+          />
+          <Legend />
+          {entities.map((entity, index) => (
+            <Line
+              key={entity.id}
+              type="monotone"
+              dataKey={entity.name}
+              stroke={COLORS[index % COLORS.length]}
+              strokeWidth={2}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function getLevelLabel(level: number): string {
+  switch (level) {
+    case 1: return 'No clue'
+    case 2: return 'Limited'
+    case 3: return 'Moderate'
+    case 4: return 'Good'
+    case 5: return 'Confident'
+    default: return 'Unknown'
+  }
+}

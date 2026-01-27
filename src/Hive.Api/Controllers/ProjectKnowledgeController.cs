@@ -144,4 +144,34 @@ public class ProjectKnowledgeController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Gets knowledge progression history for a specific direct report.
+    /// Returns all knowledge level changes over time for the specified team member.
+    /// </summary>
+    [HttpGet("progression/by-direct-report/{directReportId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<KnowledgeProgressionEntryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<KnowledgeProgressionEntryDto>>> GetProgressionByDirectReport(
+        Guid directReportId,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting knowledge progression for direct report: {DirectReportId}", directReportId);
+        var progression = await _service.GetProgressionByDirectReportAsync(directReportId, cancellationToken);
+        return Ok(progression);
+    }
+
+    /// <summary>
+    /// Gets knowledge progression history for a specific project.
+    /// Returns all knowledge level changes over time for the specified project.
+    /// </summary>
+    [HttpGet("progression/by-project/{projectId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<KnowledgeProgressionEntryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<KnowledgeProgressionEntryDto>>> GetProgressionByProject(
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting knowledge progression for project: {ProjectId}", projectId);
+        var progression = await _service.GetProgressionByProjectAsync(projectId, cancellationToken);
+        return Ok(progression);
+    }
 }

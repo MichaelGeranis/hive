@@ -1162,6 +1162,18 @@ export interface KnowledgeMatrixMember {
   name: string
 }
 
+export interface KnowledgeProgressionEntry {
+  id: string
+  directReportId: string
+  directReportName: string
+  projectId: string
+  projectName: string
+  oldLevel: number
+  newLevel: number
+  change: number
+  timestamp: string
+}
+
 // Sentiment Analysis
 export interface SentimentStatus {
   isEnabled: boolean

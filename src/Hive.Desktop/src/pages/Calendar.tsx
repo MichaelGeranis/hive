@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, ClipboardList, CheckCircle2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, StickyNote, Calendar as CalendarIcon, Check } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { notesApi, meetingNotesApi } from '../services/api'
 import type { ManagerNote, MeetingNote } from '../types'
@@ -29,8 +29,8 @@ const EVENT_COLORS = {
 }
 
 const EVENT_ICONS = {
-  todo: ClipboardList,
-  'action-item': CheckCircle2,
+  todo: StickyNote,
+  'action-item': CalendarIcon,
 }
 
 export default function Calendar() {
@@ -99,6 +99,24 @@ export default function Calendar() {
       console.error('Failed to load calendar events:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCompleteTask = async (eventId: string, eventType: 'todo' | 'action-item') => {
+    try {
+      // Extract the actual ID from the event ID (e.g., "todo-123" -> "123")
+      const actualId = eventId.replace(/^(todo|action)-/, '')
+
+      if (eventType === 'todo') {
+        await notesApi.toggle(actualId)
+      } else {
+        await meetingNotesApi.completeAction(actualId)
+      }
+
+      // Remove the completed item from the list
+      setEvents(prev => prev.filter(event => event.id !== eventId))
+    } catch (err) {
+      console.error('Failed to complete task:', err)
     }
   }
 
@@ -321,6 +339,13 @@ export default function Calendar() {
                             <p className="text-sm opacity-80 mt-1">{event.details}</p>
                           )}
                         </div>
+                        <button
+                          onClick={() => handleCompleteTask(event.id, event.type)}
+                          className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
+                          title="Mark as completed"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   )

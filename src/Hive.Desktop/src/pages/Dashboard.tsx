@@ -17,6 +17,7 @@ import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
 import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi } from '../services/api'
 import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent } from '../types'
+import { TaskStatus } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -552,6 +553,40 @@ export default function Dashboard() {
     overdue: assignee.overdueTasks
   }))
 
+  // Calculate workload warnings (blocked, in-review tasks per assignee)
+  // Use dashboard data for in-progress (matches chart), compute blocked/in-review from tasks
+  const blockedAndReviewByAssignee = tasks.reduce((acc, task) => {
+    const assigneeName = task.assigneeName || 'Unassigned'
+    if (!acc[assigneeName]) {
+      acc[assigneeName] = { blocked: 0, inReview: 0 }
+    }
+    if (task.status === TaskStatus.Blocked) {
+      acc[assigneeName].blocked += 1
+    } else if (task.status === TaskStatus.InReview) {
+      acc[assigneeName].inReview += 1
+    }
+    return acc
+  }, {} as Record<string, { blocked: number; inReview: number }>)
+
+  // Find members with workload warnings
+  const workloadWarnings = dashboard.tasks.tasksByAssignee
+    .map(assignee => {
+      const name = assignee.assigneeName || 'Unassigned'
+      const inProgress = assignee.inProgressTasks
+      const blocked = blockedAndReviewByAssignee[name]?.blocked || 0
+      const inReview = blockedAndReviewByAssignee[name]?.inReview || 0
+      return { name, inProgress, blocked, inReview }
+    })
+    .filter(data => data.inProgress > 2 || data.blocked > 1 || data.inReview > 1)
+    .map(data => ({
+      ...data,
+      issues: [
+        data.inProgress > 2 ? `${data.inProgress} in progress` : null,
+        data.blocked > 1 ? `${data.blocked} blocked` : null,
+        data.inReview > 1 ? `${data.inReview} in review` : null,
+      ].filter(Boolean)
+    }))
+
   // Calculate project distribution by assignee (using label-based matching)
   const projectsByAssignee = tasks
     .filter(task => task.assigneeId && task.labels) // Only tasks with assignee and labels
@@ -576,6 +611,26 @@ export default function Dashboard() {
     }))
     .sort((a, b) => b.value - a.value)
     .filter(d => d.value > 0)
+
+  // Find direct reports not engaged in any projects (not showing in pie chart)
+  // Exclude team members currently on leave
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const directReportsOnLeaveIds = new Set(
+    leaves
+      .filter(leave => {
+        const startDate = new Date(leave.startDate)
+        const endDate = new Date(leave.endDate)
+        startDate.setHours(0, 0, 0, 0)
+        endDate.setHours(23, 59, 59, 999)
+        return today >= startDate && today <= endDate
+      })
+      .map(leave => leave.directReportId)
+  )
+  const engagedMemberNames = new Set(projectDistributionData.map(d => d.name))
+  const unengagedDirectReports = directReports
+    .filter(dr => dr.isDirect && !engagedMemberNames.has(dr.fullName) && !directReportsOnLeaveIds.has(dr.id))
+    .map(dr => dr.fullName)
 
   // Calculate members distribution by project (reverse of projectsByAssignee)
   // This helps identify knowledge silos - projects with less than 2 members
@@ -848,6 +903,21 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
+          {unengagedDirectReports.length > 0 && (
+            <div className="px-4 pb-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Unengaged team members</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    {unengagedDirectReports.length === 1
+                      ? `${unengagedDirectReports[0]} is not engaged in any projects.`
+                      : `${unengagedDirectReports.slice(0, 3).join(', ')}${unengagedDirectReports.length > 3 ? ` and ${unengagedDirectReports.length - 3} more` : ''} are not engaged in any projects.`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
         )}
 
@@ -1099,6 +1169,43 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+   {/* Task Distribution by Assignee - Members Workload*/}
+      {widgets.membersWorkload && (
+      <Card>
+        <CardHeader title="Members Workload" subtitle="" />
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={tasksByAssigneeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+        {workloadWarnings.length > 0 && (
+          <div className="px-4 pb-4">
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Workload concerns detected</p>
+                <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 space-y-1">
+                  {workloadWarnings.map(warning => (
+                    <li key={warning.name}>
+                      <span className="font-medium">{warning.name}</span>: {warning.issues.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
       )}
 
       {/* Team Sentiment */}
@@ -1471,27 +1578,7 @@ export default function Dashboard() {
         </Card>
         ) : null
       )}
-
-      {/* Task Distribution by Assignee - Members Workload*/}
-      {widgets.membersWorkload && (
-      <Card>
-        <CardHeader title="Members Workload" subtitle="" />
-        <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={tasksByAssigneeData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-      )}
-
+   
       {/* Customize Dashboard Modal */}
       {showCustomize && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
