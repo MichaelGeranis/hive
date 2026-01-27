@@ -221,13 +221,60 @@ export interface TeamTask {
   isOverdue: boolean
 }
 
+export interface TaskSummaryDto {
+  totalTasks: number
+  backlogTasks: number
+  todoTasks: number
+  blockedTasks: number
+  inProgressTasks: number
+  inReviewTasks: number
+  inTestTasks: number
+  poAcceptanceTasks: number
+  readyToReleaseTasks: number
+  doneTasks: number
+  cancelledTasks: number
+  overdueTasks: number
+  unassignedTasks: number
+  allLabels: string[]
+  allSprints: string[]
+}
+
 // Dashboard & Reports
 export interface DashboardOverview {
   team: TeamOverview
   reviews: ReviewsOverview
   oneOnOnes: OneOnOnesOverview
   tasks: TasksOverview
+  insights: DashboardInsights
   generatedAt: string
+}
+
+export interface DashboardInsights {
+  workloadWarnings: WorkloadWarning[]
+  knowledgeSilos: KnowledgeSilo[]
+  unengagedMembers: UnengagedMember[]
+}
+
+export interface WorkloadWarning {
+  assigneeId?: string
+  assigneeName: string
+  inProgressTasks: number
+  blockedTasks: number
+  inReviewTasks: number
+  issues: string[]
+}
+
+export interface KnowledgeSilo {
+  projectId: string
+  projectName: string
+  memberCount: number
+  memberNames: string[]
+}
+
+export interface UnengagedMember {
+  directReportId: string
+  fullName: string
+  isOnLeave: boolean
 }
 
 export interface TeamOverview {
@@ -310,8 +357,40 @@ export interface TasksOverview {
   tasks: TasksSummary
   tasksByAssignee: TasksByAssignee[]
   tasksByType: TasksByType[]
+  tasksByTypeSP: TasksByTypeSP[]
+  tasksByTypeHours: TasksByTypeHours[]
   tasksByPriority: TasksByPriority[]
+  supportDistribution: SupportDistribution
   productivity: ProductivityMetrics
+}
+
+export interface TasksByTypeSP {
+  type: TaskType
+  typeName: string
+  totalStoryPoints: number
+  taskCount: number
+}
+
+export interface TasksByTypeHours {
+  type: TaskType
+  typeName: string
+  totalHours: number
+  taskCount: number
+}
+
+export interface SupportDistribution {
+  supportHours: number
+  supportTaskCount: number
+  nonSupportHours: number
+  nonSupportTaskCount: number
+  byAssignee: SupportByAssignee[]
+}
+
+export interface SupportByAssignee {
+  assigneeId?: string
+  assigneeName: string
+  hours: number
+  taskCount: number
 }
 
 export interface ProjectsSummary {
@@ -343,6 +422,8 @@ export interface TasksByAssignee {
   totalTasks: number
   completedTasks: number
   inProgressTasks: number
+  blockedTasks: number
+  inReviewTasks: number
   overdueTasks: number
   completionRate: number
 }
@@ -523,6 +604,10 @@ export interface AppSettings {
   sentimentAnalysisDays: number
   sentimentAnalysisEnabled: boolean
   sprintTeamFilter?: string | null
+  maxInProgressTasks: number
+  maxBlockedTasks: number
+  maxInReviewTasks: number
+  minProjectMembers: number
   createdAt: string
   updatedAt?: string
 }
@@ -535,6 +620,10 @@ export interface UpdateAppSettings {
   sentimentAnalysisEnabled?: boolean
   sprintTeamFilter?: string | null
   clearSprintTeamFilter?: boolean
+  maxInProgressTasks?: number
+  maxBlockedTasks?: number
+  maxInReviewTasks?: number
+  minProjectMembers?: number
 }
 
 // Jira Import

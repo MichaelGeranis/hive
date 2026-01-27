@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { tasksApi, directReportsApi, projectsApi, settingsApi, jiraImportApi } from '../services/api'
+import { tasksApi, directReportsApi, projectsApi, settingsApi, jiraImportApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
-import type { TeamTask, DirectReport, Project, StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest } from '../types'
+import type { TeamTask, DirectReport, Project, StoryPointMapping, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const statusColors: Record<TaskStatus, string> = {
@@ -48,6 +48,11 @@ export default function Tasks() {
 
   const [filter, setFilter] = useState<'all' | 'overdue' | TaskStatus>(initialFilter)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+
+  // Summary state (from server)
+  const [summary, setSummary] = useState<TaskSummaryDto | null>(null)
 
   // Pagination state
   const [pageNumber, setPageNumber] = useState(1)
@@ -118,15 +123,33 @@ export default function Tasks() {
   useEscapeKey(closeModal, showForm)
   useEscapeKey(closeImportModal, showImportModal)
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  // Build current filters object
+  const buildFilters = useCallback((): TaskFilters => {
+    const filters: TaskFilters = {}
+    if (filter === 'overdue') {
+      filters.filter = 'overdue'
+    } else if (filter !== 'all') {
+      filters.status = filter as number
+    }
+    if (searchQuery.trim()) {
+      filters.search = searchQuery.trim()
+    }
+    if (selectedLabel) {
+      filters.label = selectedLabel
+    }
+    if (selectedSprint) {
+      filters.sprint = selectedSprint
+    }
+    return filters
+  }, [filter, searchQuery, selectedLabel, selectedSprint])
 
-  const loadData = async (page = pageNumber) => {
+  const loadData = useCallback(async (page = 1, currentFilters?: TaskFilters) => {
     try {
       setLoading(true)
-      const [tasksResult, drData, projectsData, settingsData] = await Promise.all([
-        tasksApi.getAll(page, pageSize),
+      const filters = currentFilters ?? buildFilters()
+      const [tasksResult, summaryData, drData, projectsData, settingsData] = await Promise.all([
+        tasksApi.getAll(page, pageSize, filters),
+        tasksApi.getSummary(),
         directReportsApi.getAll(),
         projectsApi.getAll(),
         settingsApi.get()
@@ -135,6 +158,7 @@ export default function Tasks() {
       setTotalCount(tasksResult.totalCount)
       setTotalPages(tasksResult.totalPages)
       setPageNumber(tasksResult.pageNumber)
+      setSummary(summaryData)
       setDirectReports(drData)
       setProjects(projectsData)
       setStoryPointMappings(settingsData.storyPointMappings || [])
@@ -143,97 +167,106 @@ export default function Tasks() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pageSize, buildFilters])
+
+  // Load filtered tasks (without reloading summary/other data)
+  const loadFilteredTasks = useCallback(async (page = 1) => {
+    try {
+      setLoading(true)
+      const filters = buildFilters()
+      const tasksResult = await tasksApi.getAll(page, pageSize, filters)
+      setTasks(tasksResult.items)
+      setTotalCount(tasksResult.totalCount)
+      setTotalPages(tasksResult.totalPages)
+      setPageNumber(tasksResult.pageNumber)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [pageSize, buildFilters])
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadData(newPage)
+      loadFilteredTasks(newPage)
     }
   }
 
-  const handlePageSizeChange = (newSize: number) => {
+  const handlePageSizeChange = async (newSize: number) => {
     setPageSize(newSize)
     setPageNumber(1)
     // Reload with new page size
-    tasksApi.getAll(1, newSize).then(result => {
-      setTasks(result.items)
-      setTotalCount(result.totalCount)
-      setTotalPages(result.totalPages)
-      setPageNumber(result.pageNumber)
-    })
+    const filters = buildFilters()
+    const result = await tasksApi.getAll(1, newSize, filters)
+    setTasks(result.items)
+    setTotalCount(result.totalCount)
+    setTotalPages(result.totalPages)
+    setPageNumber(result.pageNumber)
   }
 
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
-  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+  // Labels and sprints come from summary (all tasks, not just current page)
+  const allLabels = summary?.allLabels ?? []
+  const allSprints = summary?.allSprints ?? []
 
-  // Get all unique labels from tasks
-  const allLabels = useMemo(() => {
-    const labelSet = new Set<string>()
-    tasks.forEach(t => {
-      if (t.labels) {
-        t.labels.split(',').forEach(label => {
-          const trimmed = label.trim()
-          if (trimmed) labelSet.add(trimmed)
-        })
-      }
-    })
-    return Array.from(labelSet).sort()
-  }, [tasks])
-
-  // Get all unique sprints from tasks
-  const allSprints = useMemo(() => {
-    const sprintSet = new Set<string>()
-    tasks.forEach(t => {
-      if (t.sprint) sprintSet.add(t.sprint.trim())
-    })
-    return Array.from(sprintSet).sort()
-  }, [tasks])
-
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchQuery('')
     setSelectedLabel(null)
     setSelectedSprint(null)
     setFilter('all')
-  }
+    // Reload with no filters
+    loadData(1, {})
+  }, [loadData])
 
-  const filteredTasks = () => {
-    let result = tasks
+  // Handle filter changes - trigger server-side filtering
+  const handleFilterChange = useCallback((newFilter: 'all' | 'overdue' | TaskStatus) => {
+    setFilter(newFilter)
+    setPageNumber(1)
+  }, [])
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(t =>
-        t.title.toLowerCase().includes(query) ||
-        t.description?.toLowerCase().includes(query) ||
-        t.assigneeName?.toLowerCase().includes(query) ||
-        t.projectName?.toLowerCase().includes(query) ||
-        t.labels?.toLowerCase().includes(query) ||
-        t.sprint?.toLowerCase().includes(query) ||
-        t.tags?.toLowerCase().includes(query)
-      )
+  const handleLabelChange = useCallback((label: string | null) => {
+    setSelectedLabel(label)
+    setPageNumber(1)
+  }, [])
+
+  const handleSprintChange = useCallback((sprint: string | null) => {
+    setSelectedSprint(sprint)
+    setPageNumber(1)
+  }, [])
+
+  // Debounced search
+  const searchTimeoutRef = useRef<number | null>(null)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
     }
+    searchTimeoutRef.current = window.setTimeout(() => {
+      setPageNumber(1)
+      loadFilteredTasks(1)
+    }, 300)
+  }, [loadFilteredTasks])
 
-    // Apply label filter
-    if (selectedLabel) {
-      result = result.filter(t =>
-        t.labels?.split(',').some(label => label.trim().toLowerCase() === selectedLabel.toLowerCase())
-      )
+  // Track if initial data has been loaded
+  const isInitialLoadDone = useRef(false)
+
+  // Effect to reload when filters change (except search which is debounced)
+  useEffect(() => {
+    // Skip initial render - wait until first data load is done
+    if (!isInitialLoadDone.current) return
+    loadFilteredTasks(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, selectedLabel, selectedSprint])
+
+  // Mark initial load as done when loading finishes
+  useEffect(() => {
+    if (!loading && !isInitialLoadDone.current) {
+      isInitialLoadDone.current = true
     }
-
-    // Apply sprint filter
-    if (selectedSprint) {
-      result = result.filter(t => t.sprint?.trim() === selectedSprint)
-    }
-
-    // Apply status filter
-    if (filter === 'overdue') {
-      result = result.filter(t => t.isOverdue)
-    } else if (filter !== 'all') {
-      result = result.filter(t => t.status === filter)
-    }
-
-    return result
-  }
+  }, [loading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -282,7 +315,7 @@ export default function Tasks() {
   }
 
   const handleSelectAll = () => {
-    const currentTasks = filteredTasks()
+    const currentTasks = tasks
     if (selectedIds.size === currentTasks.length) {
       setSelectedIds(new Set())
     } else {
@@ -452,16 +485,18 @@ export default function Tasks() {
     )
   }
 
-  const overdueCount = tasks.filter(t => t.isOverdue).length
-  const backlogCount = tasks.filter(t => t.status === TaskStatus.Backlog).length
-  const todoCount = tasks.filter(t => t.status === TaskStatus.Todo).length
-  const blockedCount = tasks.filter(t => t.status === TaskStatus.Blocked).length
-  const inProgressCount = tasks.filter(t => t.status === TaskStatus.InProgress).length
-  const inReviewCount = tasks.filter(t => t.status === TaskStatus.InReview).length
-  const inTestCount = tasks.filter(t => t.status === TaskStatus.InTest).length
-  const poAcceptanceCount = tasks.filter(t => t.status === TaskStatus.POAcceptance).length
-  const readyToReleaseCount = tasks.filter(t => t.status === TaskStatus.ReadyToRelease).length
-  const doneCount = tasks.filter(t => t.status === TaskStatus.Done).length
+  // Counts from summary (reflects all tasks, not just current page)
+  const overdueCount = summary?.overdueTasks ?? 0
+  const backlogCount = summary?.backlogTasks ?? 0
+  const todoCount = summary?.todoTasks ?? 0
+  const blockedCount = summary?.blockedTasks ?? 0
+  const inProgressCount = summary?.inProgressTasks ?? 0
+  const inReviewCount = summary?.inReviewTasks ?? 0
+  const inTestCount = summary?.inTestTasks ?? 0
+  const poAcceptanceCount = summary?.poAcceptanceTasks ?? 0
+  const readyToReleaseCount = summary?.readyToReleaseTasks ?? 0
+  const doneCount = summary?.doneTasks ?? 0
+  const totalTasksCount = summary?.totalTasks ?? 0
 
   return (
     <div className="space-y-6">
@@ -965,10 +1000,10 @@ export default function Tasks() {
             type="text"
             placeholder="Search tasks..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedLabel || selectedSprint) && (
+          {(searchQuery || selectedLabel || selectedSprint || filter !== 'all') && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -985,7 +1020,7 @@ export default function Tasks() {
             {allLabels.map((label) => (
               <button
                 key={label}
-                onClick={() => setSelectedLabel(selectedLabel === label ? null : label)}
+                onClick={() => handleLabelChange(selectedLabel === label ? null : label)}
                 className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                   selectedLabel === label
                     ? 'bg-amber-500 text-white'
@@ -1005,7 +1040,7 @@ export default function Tasks() {
             {allSprints.map((sprint) => (
               <button
                 key={sprint}
-                onClick={() => setSelectedSprint(selectedSprint === sprint ? null : sprint)}
+                onClick={() => handleSprintChange(selectedSprint === sprint ? null : sprint)}
                 className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                   selectedSprint === sprint
                     ? 'bg-amber-500 text-white'
@@ -1023,8 +1058,8 @@ export default function Tasks() {
           <Filter className="w-4 h-4 text-slate-400" />
           <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all', label: `All (${tasks.length})`, count: tasks.length },
-              { value: 'overdue', label: `Overdue (${overdueCount})`, count: overdueCount },
+              { value: 'all' as const, label: `All (${totalTasksCount})`, count: totalTasksCount },
+              { value: 'overdue' as const, label: `Overdue (${overdueCount})`, count: overdueCount },
               { value: TaskStatus.Backlog, label: `Backlog (${backlogCount})`, count: backlogCount },
               { value: TaskStatus.Todo, label: `To Do (${todoCount})`, count: todoCount },
               { value: TaskStatus.Blocked, label: `Blocked (${blockedCount})`, count: blockedCount },
@@ -1039,7 +1074,7 @@ export default function Tasks() {
               .map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setFilter(f.value as any)}
+                  onClick={() => handleFilterChange(f.value)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === f.value
                       ? 'bg-amber-500 text-white'
@@ -1054,22 +1089,22 @@ export default function Tasks() {
       </div>
 
       {/* Select All */}
-      {filteredTasks().length > 0 && (
+      {tasks.length > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
           <input
             type="checkbox"
-            checked={filteredTasks().length > 0 && selectedIds.size === filteredTasks().length}
+            checked={tasks.length > 0 && selectedIds.size === tasks.length}
             onChange={handleSelectAll}
             className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
           />
           <label className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer" onClick={handleSelectAll}>
-            Select All ({filteredTasks().length})
+            Select All ({tasks.length})
           </label>
         </div>
       )}
 
       {/* Tasks List */}
-      {filteredTasks().length === 0 ? (
+      {tasks.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-slate-500 dark:text-slate-400">No tasks found</p>
@@ -1077,7 +1112,7 @@ export default function Tasks() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredTasks().map((task) => (
+          {tasks.map((task) => (
             <Card key={task.id} className={task.isOverdue ? 'border-red-300 dark:border-red-700' : ''}>
               <CardContent>
                 <div className="flex items-start gap-3">

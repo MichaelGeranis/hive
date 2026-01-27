@@ -27,10 +27,15 @@ public class TeamTasksController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all tasks with pagination.
+    /// Gets all tasks with pagination and optional filtering.
     /// </summary>
     /// <param name="pageNumber">Page number (1-based, default: 1).</param>
     /// <param name="pageSize">Items per page (default: 20, max: 100).</param>
+    /// <param name="status">Optional status filter.</param>
+    /// <param name="filter">Optional filter (all, overdue).</param>
+    /// <param name="search">Optional search term.</param>
+    /// <param name="label">Optional label filter.</param>
+    /// <param name="sprint">Optional sprint filter.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paginated list of tasks ordered by Sprint desc, Priority desc, DueDate asc.</returns>
     [HttpGet]
@@ -38,11 +43,30 @@ public class TeamTasksController : ControllerBase
     public async Task<ActionResult<PagedResult<TeamTaskDto>>> GetAll(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] TaskStatus? status = null,
+        [FromQuery] string? filter = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string? label = null,
+        [FromQuery] string? sprint = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting tasks page {PageNumber} with size {PageSize}", pageNumber, pageSize);
-        var pagination = new PaginationParams { PageNumber = pageNumber, PageSize = pageSize };
-        var tasks = await _service.GetAllPagedAsync(pagination, cancellationToken);
+        _logger.LogInformation("Getting tasks page {PageNumber} with size {PageSize}, status={Status}, filter={Filter}, search={Search}, label={Label}, sprint={Sprint}",
+            pageNumber, pageSize, status, filter, search, label, sprint);
+
+        var taskFilter = filter?.ToLowerInvariant() == "overdue" ? TaskFilter.Overdue : TaskFilter.All;
+
+        var pagination = new TaskPaginationParams
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            Status = status,
+            Filter = taskFilter,
+            SearchTerm = search,
+            Label = label,
+            Sprint = sprint
+        };
+
+        var tasks = await _service.GetFilteredPagedAsync(pagination, cancellationToken);
         return Ok(tasks);
     }
 

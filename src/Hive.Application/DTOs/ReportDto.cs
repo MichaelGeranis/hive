@@ -11,7 +11,52 @@ public record DashboardOverviewDto
     public ReviewsOverviewDto Reviews { get; init; } = new();
     public OneOnOnesOverviewDto OneOnOnes { get; init; } = new();
     public TasksOverviewDto Tasks { get; init; } = new();
+    public DashboardInsightsDto Insights { get; init; } = new();
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Computed insights and warnings for the dashboard.
+/// </summary>
+public record DashboardInsightsDto
+{
+    public IReadOnlyList<WorkloadWarningDto> WorkloadWarnings { get; init; } = [];
+    public IReadOnlyList<KnowledgeSiloDto> KnowledgeSilos { get; init; } = [];
+    public IReadOnlyList<UnengagedMemberDto> UnengagedMembers { get; init; } = [];
+}
+
+/// <summary>
+/// Warning about a team member with concerning workload.
+/// </summary>
+public record WorkloadWarningDto
+{
+    public Guid? AssigneeId { get; init; }
+    public string AssigneeName { get; init; } = string.Empty;
+    public int InProgressTasks { get; init; }
+    public int BlockedTasks { get; init; }
+    public int InReviewTasks { get; init; }
+    public IReadOnlyList<string> Issues { get; init; } = [];
+}
+
+/// <summary>
+/// A project that represents a knowledge silo (too few members).
+/// </summary>
+public record KnowledgeSiloDto
+{
+    public Guid ProjectId { get; init; }
+    public string ProjectName { get; init; } = string.Empty;
+    public int MemberCount { get; init; }
+    public IReadOnlyList<string> MemberNames { get; init; } = [];
+}
+
+/// <summary>
+/// A team member not engaged in any project.
+/// </summary>
+public record UnengagedMemberDto
+{
+    public Guid DirectReportId { get; init; }
+    public string FullName { get; init; } = string.Empty;
+    public bool IsOnLeave { get; init; }
 }
 
 /// <summary>
@@ -124,7 +169,10 @@ public record TasksOverviewDto
     public TasksSummaryDto Tasks { get; init; } = new();
     public IReadOnlyList<TasksByAssigneeDto> TasksByAssignee { get; init; } = [];
     public IReadOnlyList<TasksByTypeDto> TasksByType { get; init; } = [];
+    public IReadOnlyList<TasksByTypeSPDto> TasksByTypeSP { get; init; } = [];
+    public IReadOnlyList<TasksByTypeHoursDto> TasksByTypeHours { get; init; } = [];
     public IReadOnlyList<TasksByPriorityDto> TasksByPriority { get; init; } = [];
+    public SupportDistributionDto SupportDistribution { get; init; } = new();
     public ProductivityMetricsDto Productivity { get; init; } = new();
 }
 
@@ -163,6 +211,8 @@ public record TasksByAssigneeDto
     public int TotalTasks { get; init; }
     public int CompletedTasks { get; init; }
     public int InProgressTasks { get; init; }
+    public int BlockedTasks { get; init; }
+    public int InReviewTasks { get; init; }
     public int OverdueTasks { get; init; }
     public double CompletionRate { get; init; }
     public int TotalEstimatedHours { get; init; }
@@ -179,6 +229,51 @@ public record TasksByTypeDto
     public int TotalTasks { get; init; }
     public int CompletedTasks { get; init; }
     public double CompletionRate { get; init; }
+}
+
+/// <summary>
+/// Tasks grouped by type with story points.
+/// </summary>
+public record TasksByTypeSPDto
+{
+    public TaskType Type { get; init; }
+    public string TypeName { get; init; } = string.Empty;
+    public int TotalStoryPoints { get; init; }
+    public int TaskCount { get; init; }
+}
+
+/// <summary>
+/// Tasks grouped by type with hours logged.
+/// </summary>
+public record TasksByTypeHoursDto
+{
+    public TaskType Type { get; init; }
+    public string TypeName { get; init; } = string.Empty;
+    public double TotalHours { get; init; }
+    public int TaskCount { get; init; }
+}
+
+/// <summary>
+/// Support vs non-support work distribution.
+/// </summary>
+public record SupportDistributionDto
+{
+    public double SupportHours { get; init; }
+    public int SupportTaskCount { get; init; }
+    public double NonSupportHours { get; init; }
+    public int NonSupportTaskCount { get; init; }
+    public IReadOnlyList<SupportByAssigneeDto> ByAssignee { get; init; } = [];
+}
+
+/// <summary>
+/// Support hours by assignee.
+/// </summary>
+public record SupportByAssigneeDto
+{
+    public Guid? AssigneeId { get; init; }
+    public string AssigneeName { get; init; } = string.Empty;
+    public double Hours { get; init; }
+    public int TaskCount { get; init; }
 }
 
 /// <summary>

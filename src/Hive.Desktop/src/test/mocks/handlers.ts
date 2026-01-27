@@ -331,12 +331,26 @@ export const handlers = [
         },
         tasksByAssignee: [],
         tasksByType: [],
+        tasksByTypeSP: [],
+        tasksByTypeHours: [],
         tasksByPriority: [],
+        supportDistribution: {
+          supportHours: 0,
+          supportTaskCount: 0,
+          nonSupportHours: 0,
+          nonSupportTaskCount: 0,
+          byAssignee: [],
+        },
         productivity: {
           totalEstimatedHours: 0,
           totalActualHours: 0,
           estimationAccuracy: 0,
         },
+      },
+      insights: {
+        workloadWarnings: [],
+        knowledgeSilos: [],
+        unengagedMembers: [],
       },
       generatedAt: new Date().toISOString(),
     }

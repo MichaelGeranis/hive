@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt, Gauge } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi, backupApi, sentimentApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
@@ -54,6 +54,15 @@ export default function Settings() {
   const [sentimentSaved, setSentimentSaved] = useState(false)
   const [sentimentError, setSentimentError] = useState<string | null>(null)
 
+  // Dashboard Thresholds state
+  const [maxInProgressTasks, setMaxInProgressTasks] = useState(2)
+  const [maxBlockedTasks, setMaxBlockedTasks] = useState(1)
+  const [maxInReviewTasks, setMaxInReviewTasks] = useState(1)
+  const [minProjectMembers, setMinProjectMembers] = useState(2)
+  const [savingThresholds, setSavingThresholds] = useState(false)
+  const [thresholdsSaved, setThresholdsSaved] = useState(false)
+  const [thresholdsError, setThresholdsError] = useState<string | null>(null)
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -69,6 +78,11 @@ export default function Settings() {
       setSentimentEnabled(settings.sentimentAnalysisEnabled)
       setSentimentDays(settings.sentimentAnalysisDays)
       setHasApiKey(settings.hasClaudeApiKey)
+      // Load dashboard threshold settings
+      setMaxInProgressTasks(settings.maxInProgressTasks ?? 2)
+      setMaxBlockedTasks(settings.maxBlockedTasks ?? 1)
+      setMaxInReviewTasks(settings.maxInReviewTasks ?? 1)
+      setMinProjectMembers(settings.minProjectMembers ?? 2)
     } catch (err) {
       console.error('Failed to load settings', err)
       setError('Failed to load settings. Using default values.')
@@ -252,6 +266,51 @@ export default function Settings() {
       setSentimentError(err.response?.data?.message || 'Failed to clear API key')
     } finally {
       setSavingSentiment(false)
+    }
+  }
+
+  // Dashboard Thresholds handlers
+  const handleSaveThresholds = async () => {
+    try {
+      setSavingThresholds(true)
+      setThresholdsError(null)
+      await settingsApi.update({
+        maxInProgressTasks,
+        maxBlockedTasks,
+        maxInReviewTasks,
+        minProjectMembers
+      })
+      setThresholdsSaved(true)
+      setTimeout(() => setThresholdsSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to save threshold settings', err)
+      setThresholdsError('Failed to save threshold settings. Please try again.')
+    } finally {
+      setSavingThresholds(false)
+    }
+  }
+
+  const handleResetThresholds = async () => {
+    try {
+      setSavingThresholds(true)
+      setThresholdsError(null)
+      await settingsApi.update({
+        maxInProgressTasks: 2,
+        maxBlockedTasks: 1,
+        maxInReviewTasks: 1,
+        minProjectMembers: 2
+      })
+      setMaxInProgressTasks(2)
+      setMaxBlockedTasks(1)
+      setMaxInReviewTasks(1)
+      setMinProjectMembers(2)
+      setThresholdsSaved(true)
+      setTimeout(() => setThresholdsSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to reset threshold settings', err)
+      setThresholdsError('Failed to reset threshold settings. Please try again.')
+    } finally {
+      setSavingThresholds(false)
     }
   }
 
@@ -761,6 +820,150 @@ export default function Settings() {
             {tshirtSaved && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 T-shirt size mappings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dashboard Thresholds */}
+      <Card>
+        <CardHeader
+          title="Dashboard Warning Thresholds"
+          subtitle="Configure when warnings appear on the dashboard for workload and knowledge silos"
+          action={<Gauge className="w-5 h-5 text-orange-500" />}
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Adjust these thresholds to control when the dashboard shows warnings about team workload and project coverage.
+            </p>
+
+            {/* Workload Thresholds */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Workload Warnings</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Show a warning when a team member exceeds these task counts
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-2">
+                    Max In Progress Tasks
+                  </label>
+                  <input
+                    type="number"
+                    value={maxInProgressTasks}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      if (!isNaN(val) && val >= 1) setMaxInProgressTasks(val)
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    min="1"
+                    disabled={savingThresholds}
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Warn if &gt; {maxInProgressTasks} in progress
+                  </p>
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-2">
+                    Max Blocked Tasks
+                  </label>
+                  <input
+                    type="number"
+                    value={maxBlockedTasks}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      if (!isNaN(val) && val >= 1) setMaxBlockedTasks(val)
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    min="1"
+                    disabled={savingThresholds}
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Warn if &gt; {maxBlockedTasks} blocked
+                  </p>
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-2">
+                    Max In Review Tasks
+                  </label>
+                  <input
+                    type="number"
+                    value={maxInReviewTasks}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      if (!isNaN(val) && val >= 1) setMaxInReviewTasks(val)
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    min="1"
+                    disabled={savingThresholds}
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Warn if &gt; {maxInReviewTasks} in review
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Knowledge Silo Threshold */}
+            <div className="pt-4 border-t dark:border-slate-700 space-y-3">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Knowledge Silo Detection</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Flag projects as knowledge silos when they have fewer team members than this threshold
+              </p>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg max-w-xs">
+                <label className="block text-sm text-slate-600 dark:text-slate-400 mb-2">
+                  Minimum Project Members
+                </label>
+                <input
+                  type="number"
+                  value={minProjectMembers}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val >= 1) setMinProjectMembers(val)
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  min="1"
+                  disabled={savingThresholds}
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Warn if &lt; {minProjectMembers} members on a project
+                </p>
+              </div>
+            </div>
+
+            {thresholdsError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {thresholdsError}
+              </div>
+            )}
+
+            <div className="pt-4 border-t dark:border-slate-700 flex gap-3">
+              <button
+                onClick={handleSaveThresholds}
+                disabled={savingThresholds}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-5 h-5" />
+                {savingThresholds ? 'Saving...' : thresholdsSaved ? 'Saved!' : 'Save Changes'}
+              </button>
+              <button
+                onClick={handleResetThresholds}
+                disabled={savingThresholds}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reset to Defaults
+              </button>
+            </div>
+
+            {thresholdsSaved && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
+                Dashboard threshold settings saved successfully!
               </div>
             )}
           </div>

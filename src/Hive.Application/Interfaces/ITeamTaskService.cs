@@ -12,6 +12,7 @@ public interface ITeamTaskService
     Task<TeamTaskDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTaskDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<PagedResult<TeamTaskDto>> GetAllPagedAsync(PaginationParams pagination, CancellationToken cancellationToken = default);
+    Task<PagedResult<TeamTaskDto>> GetFilteredPagedAsync(TaskPaginationParams pagination, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTaskDto>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTaskDto>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTaskDto>> GetByStatusAsync(TaskStatus status, CancellationToken cancellationToken = default);

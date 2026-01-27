@@ -18,6 +18,12 @@ public record AppSettingsDto
 
     // Sprint Import settings
     public string? SprintTeamFilter { get; init; }
+
+    // Dashboard insight thresholds
+    public int MaxInProgressTasks { get; init; }
+    public int MaxBlockedTasks { get; init; }
+    public int MaxInReviewTasks { get; init; }
+    public int MinProjectMembers { get; init; }
 }
 
 public record StoryPointMapping
@@ -52,4 +58,10 @@ public record UpdateAppSettingsDto
     public string? SprintTeamFilter { get; init; }
     // Explicit flag to clear the team filter (set to true with null SprintTeamFilter to clear)
     public bool ClearSprintTeamFilter { get; init; }
+
+    // Dashboard insight thresholds
+    public int? MaxInProgressTasks { get; init; }
+    public int? MaxBlockedTasks { get; init; }
+    public int? MaxInReviewTasks { get; init; }
+    public int? MinProjectMembers { get; init; }
 }

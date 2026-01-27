@@ -91,10 +91,16 @@ public record TaskSummaryDto
     public int TotalTasks { get; init; }
     public int BacklogTasks { get; init; }
     public int TodoTasks { get; init; }
+    public int BlockedTasks { get; init; }
     public int InProgressTasks { get; init; }
     public int InReviewTasks { get; init; }
+    public int InTestTasks { get; init; }
+    public int POAcceptanceTasks { get; init; }
+    public int ReadyToReleaseTasks { get; init; }
     public int DoneTasks { get; init; }
     public int CancelledTasks { get; init; }
     public int OverdueTasks { get; init; }
     public int UnassignedTasks { get; init; }
+    public IReadOnlyList<string> AllLabels { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> AllSprints { get; init; } = Array.Empty<string>();
 }

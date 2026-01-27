@@ -22,6 +22,7 @@ public class ReportingService : IReportingService
     private readonly ISprintCapacityRepository _sprintCapacityRepository;
     private readonly IAppSettingsRepository _appSettingsRepository;
     private readonly IParentRepository _parentRepository;
+    private readonly ILeaveRepository _leaveRepository;
 
     public ReportingService(
         IDirectReportRepository directReportRepository,
@@ -33,7 +34,8 @@ public class ReportingService : IReportingService
         ISprintRepository sprintRepository,
         ISprintCapacityRepository sprintCapacityRepository,
         IAppSettingsRepository appSettingsRepository,
-        IParentRepository parentRepository)
+        IParentRepository parentRepository,
+        ILeaveRepository leaveRepository)
     {
         _directReportRepository = directReportRepository;
         _reviewRepository = reviewRepository;
@@ -45,6 +47,7 @@ public class ReportingService : IReportingService
         _sprintCapacityRepository = sprintCapacityRepository;
         _appSettingsRepository = appSettingsRepository;
         _parentRepository = parentRepository;
+        _leaveRepository = leaveRepository;
     }
 
     /// <summary>
@@ -103,6 +106,7 @@ public class ReportingService : IReportingService
         var reviewsOverview = await GetReviewsAnalyticsAsync(cancellationToken);
         var oneOnOnesOverview = await GetOneOnOnesAnalyticsAsync(cancellationToken);
         var tasksOverview = await GetTasksAnalyticsAsync(sprintCount, cancellationToken);
+        var insights = await GetDashboardInsightsAsync(tasksOverview.TasksByAssignee, cancellationToken);
 
         return new DashboardOverviewDto
         {
@@ -110,7 +114,128 @@ public class ReportingService : IReportingService
             Reviews = reviewsOverview,
             OneOnOnes = oneOnOnesOverview,
             Tasks = tasksOverview,
+            Insights = insights,
             GeneratedAt = DateTime.UtcNow
+        };
+    }
+
+    private async Task<DashboardInsightsDto> GetDashboardInsightsAsync(
+        IReadOnlyList<TasksByAssigneeDto> tasksByAssignee,
+        CancellationToken cancellationToken)
+    {
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _taskRepository.GetAllAsync(cancellationToken);
+        var parents = await _parentRepository.GetAllAsync(cancellationToken);
+        var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
+        var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
+
+        var tasks = ExcludeParentTasks(allTasks, parents);
+
+        // Get configurable thresholds (use defaults if settings not found)
+        var maxInProgress = appSettings?.MaxInProgressTasks ?? 2;
+        var maxBlocked = appSettings?.MaxBlockedTasks ?? 1;
+        var maxInReview = appSettings?.MaxInReviewTasks ?? 1;
+        var minProjectMembers = appSettings?.MinProjectMembers ?? 2;
+
+        // 1. Workload warnings (using configurable thresholds)
+        var workloadWarnings = tasksByAssignee
+            .Where(a => a.InProgressTasks > maxInProgress || a.BlockedTasks > maxBlocked || a.InReviewTasks > maxInReview)
+            .Select(a =>
+            {
+                var issues = new List<string>();
+                if (a.InProgressTasks > maxInProgress) issues.Add($"{a.InProgressTasks} in progress");
+                if (a.BlockedTasks > maxBlocked) issues.Add($"{a.BlockedTasks} blocked");
+                if (a.InReviewTasks > maxInReview) issues.Add($"{a.InReviewTasks} in review");
+
+                return new WorkloadWarningDto
+                {
+                    AssigneeId = a.AssigneeId,
+                    AssigneeName = a.AssigneeName,
+                    InProgressTasks = a.InProgressTasks,
+                    BlockedTasks = a.BlockedTasks,
+                    InReviewTasks = a.InReviewTasks,
+                    Issues = issues
+                };
+            })
+            .ToList();
+
+        // 2. Knowledge silos (projects with < minProjectMembers members engaged)
+        var projectLabelsMap = projects
+            .Where(p => !string.IsNullOrWhiteSpace(p.Labels))
+            .ToDictionary(
+                p => p.Id,
+                p => p.Labels!.Split(',').Select(l => l.Trim().ToLowerInvariant()).ToHashSet()
+            );
+
+        var membersByProject = new Dictionary<Guid, HashSet<string>>();
+        foreach (var task in tasks.Where(t => t.AssigneeId.HasValue && !string.IsNullOrWhiteSpace(t.Labels)))
+        {
+            var taskLabels = task.Labels!.Split(',').Select(l => l.Trim().ToLowerInvariant()).ToHashSet();
+            var assigneeName = directReports.FirstOrDefault(dr => dr.Id == task.AssigneeId)?.FullName ?? "Unknown";
+
+            foreach (var project in projects)
+            {
+                if (!projectLabelsMap.TryGetValue(project.Id, out var projectLabels)) continue;
+                if (taskLabels.Overlaps(projectLabels))
+                {
+                    if (!membersByProject.ContainsKey(project.Id))
+                        membersByProject[project.Id] = new HashSet<string>();
+                    membersByProject[project.Id].Add(assigneeName);
+                }
+            }
+        }
+
+        var knowledgeSilos = membersByProject
+            .Where(kvp => kvp.Value.Count < minProjectMembers)
+            .Select(kvp =>
+            {
+                var project = projects.First(p => p.Id == kvp.Key);
+                return new KnowledgeSiloDto
+                {
+                    ProjectId = project.Id,
+                    ProjectName = project.Name,
+                    MemberCount = kvp.Value.Count,
+                    MemberNames = kvp.Value.ToList()
+                };
+            })
+            .ToList();
+
+        // 3. Unengaged members (direct reports not engaged in any project, excluding those on leave today)
+        var today = DateTime.UtcNow.Date;
+        var directReportsOnLeaveToday = leaves
+            .Where(l => l.StartDate.Date <= today && l.EndDate.Date >= today)
+            .Select(l => l.DirectReportId)
+            .ToHashSet();
+
+        var engagedMemberIds = tasks
+            .Where(t => t.AssigneeId.HasValue && !string.IsNullOrWhiteSpace(t.Labels))
+            .Where(t =>
+            {
+                var taskLabels = t.Labels!.Split(',').Select(l => l.Trim().ToLowerInvariant()).ToHashSet();
+                return projects.Any(p =>
+                    projectLabelsMap.TryGetValue(p.Id, out var projectLabels) &&
+                    taskLabels.Overlaps(projectLabels));
+            })
+            .Select(t => t.AssigneeId!.Value)
+            .ToHashSet();
+
+        var unengagedMembers = directReports
+            .Where(dr => dr.IsDirect && !engagedMemberIds.Contains(dr.Id))
+            .Select(dr => new UnengagedMemberDto
+            {
+                DirectReportId = dr.Id,
+                FullName = dr.FullName,
+                IsOnLeave = directReportsOnLeaveToday.Contains(dr.Id)
+            })
+            .Where(u => !u.IsOnLeave) // Exclude those on leave from the warning
+            .ToList();
+
+        return new DashboardInsightsDto
+        {
+            WorkloadWarnings = workloadWarnings,
+            KnowledgeSilos = knowledgeSilos,
+            UnengagedMembers = unengagedMembers
         };
     }
 
@@ -284,6 +409,8 @@ public class ReportingService : IReportingService
                 var assigneeTasks = g.ToList();
                 var completed = assigneeTasks.Count(t => t.Status == TaskStatus.Done);
                 var inProgress = assigneeTasks.Count(t => t.Status == TaskStatus.InProgress);
+                var blocked = assigneeTasks.Count(t => t.Status == TaskStatus.Blocked);
+                var inReview = assigneeTasks.Count(t => t.Status == TaskStatus.InReview);
                 var overdue = assigneeTasks.Count(t => t.IsOverdue());
 
                 return new TasksByAssigneeDto
@@ -295,6 +422,8 @@ public class ReportingService : IReportingService
                     TotalTasks = assigneeTasks.Count,
                     CompletedTasks = completed,
                     InProgressTasks = inProgress,
+                    BlockedTasks = blocked,
+                    InReviewTasks = inReview,
                     OverdueTasks = overdue,
                     CompletionRate = assigneeTasks.Count > 0 ? Math.Round((double)completed / assigneeTasks.Count * 100, 1) : 0,
                     TotalEstimatedHours = assigneeTasks.Sum(t => t.EstimatedHours ?? 0),
@@ -352,13 +481,76 @@ public class ReportingService : IReportingService
             EstimationAccuracy = Math.Max(0, estimationAccuracy),
         };
 
+        // Calculate story points by task type
+        var tasksByTypeSP = Enum.GetValues<TaskType>()
+            .Select(type =>
+            {
+                var typeTasks = tasks.Where(t => t.Type == type).ToList();
+                return new TasksByTypeSPDto
+                {
+                    Type = type,
+                    TypeName = type.ToString(),
+                    TotalStoryPoints = typeTasks.Sum(t => t.StoryPoints ?? 0),
+                    TaskCount = typeTasks.Count
+                };
+            })
+            .Where(t => t.TotalStoryPoints > 0)
+            .ToList();
+
+        // Calculate hours by task type
+        var tasksByTypeHours = Enum.GetValues<TaskType>()
+            .Select(type =>
+            {
+                var typeTasks = tasks.Where(t => t.Type == type).ToList();
+                return new TasksByTypeHoursDto
+                {
+                    Type = type,
+                    TypeName = type.ToString(),
+                    TotalHours = Math.Round(typeTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    TaskCount = typeTasks.Count
+                };
+            })
+            .Where(t => t.TotalHours > 0)
+            .ToList();
+
+        // Calculate support distribution (tasks with type name containing "Support")
+        var supportTasks = tasks.Where(t => t.Type.ToString().Contains("Support", StringComparison.OrdinalIgnoreCase)).ToList();
+        var nonSupportTasks = tasks.Where(t => !t.Type.ToString().Contains("Support", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var supportByAssignee = supportTasks
+            .GroupBy(t => t.AssigneeId)
+            .Select(g => new SupportByAssigneeDto
+            {
+                AssigneeId = g.Key,
+                AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
+                    ? name
+                    : (g.Key.HasValue ? "Unknown" : "Unassigned"),
+                Hours = Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                TaskCount = g.Count()
+            })
+            .Where(s => s.Hours > 0)
+            .OrderByDescending(s => s.Hours)
+            .ToList();
+
+        var supportDistribution = new SupportDistributionDto
+        {
+            SupportHours = Math.Round(supportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            SupportTaskCount = supportTasks.Count,
+            NonSupportHours = Math.Round(nonSupportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            NonSupportTaskCount = nonSupportTasks.Count,
+            ByAssignee = supportByAssignee
+        };
+
         return new TasksOverviewDto
         {
             Projects = projectsSummary,
             Tasks = tasksSummary,
             TasksByAssignee = tasksByAssignee,
             TasksByType = tasksByType,
+            TasksByTypeSP = tasksByTypeSP,
+            TasksByTypeHours = tasksByTypeHours,
             TasksByPriority = tasksByPriority,
+            SupportDistribution = supportDistribution,
             Productivity = productivity
         };
     }
@@ -556,6 +748,8 @@ public class ReportingService : IReportingService
                 var assigneeTasks = g.ToList();
                 var completed = assigneeTasks.Count(t => t.Status == TaskStatus.Done);
                 var inProgress = assigneeTasks.Count(t => t.Status == TaskStatus.InProgress);
+                var blocked = assigneeTasks.Count(t => t.Status == TaskStatus.Blocked);
+                var inReview = assigneeTasks.Count(t => t.Status == TaskStatus.InReview);
                 var overdue = assigneeTasks.Count(t => t.IsOverdue());
 
                 return new TasksByAssigneeDto
@@ -567,6 +761,8 @@ public class ReportingService : IReportingService
                     TotalTasks = assigneeTasks.Count,
                     CompletedTasks = completed,
                     InProgressTasks = inProgress,
+                    BlockedTasks = blocked,
+                    InReviewTasks = inReview,
                     OverdueTasks = overdue,
                     CompletionRate = assigneeTasks.Count > 0 ? Math.Round((double)completed / assigneeTasks.Count * 100, 1) : 0,
                     TotalEstimatedHours = assigneeTasks.Sum(t => t.EstimatedHours ?? 0),

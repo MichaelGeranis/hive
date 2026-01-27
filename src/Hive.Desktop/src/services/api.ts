@@ -85,7 +85,8 @@ import type {
   SentimentStatus,
   SentimentAnalysis,
   TeamSentimentOverview,
-  ApiKeyValidationResult
+  ApiKeyValidationResult,
+  TaskSummaryDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -243,9 +244,30 @@ export const projectsApi = {
 }
 
 // Tasks
+export interface TaskFilters {
+  status?: number
+  filter?: 'all' | 'overdue'
+  search?: string
+  label?: string
+  sprint?: string
+}
+
 export const tasksApi = {
-  getAll: (pageNumber = 1, pageSize = 20) =>
-    api.get<PagedResult<TeamTask>>(`/teamtasks?pageNumber=${pageNumber}&pageSize=${pageSize}`).then(r => r.data),
+  getAll: (pageNumber = 1, pageSize = 20, filters?: TaskFilters) => {
+    const params = new URLSearchParams()
+    params.append('pageNumber', pageNumber.toString())
+    params.append('pageSize', pageSize.toString())
+    if (filters?.status !== undefined) params.append('status', filters.status.toString())
+    if (filters?.filter && filters.filter !== 'all') params.append('filter', filters.filter)
+    if (filters?.search) params.append('search', filters.search)
+    if (filters?.label) params.append('label', filters.label)
+    if (filters?.sprint) params.append('sprint', filters.sprint)
+    return api.get<PagedResult<TeamTask>>(`/teamtasks?${params.toString()}`).then(r => r.data)
+  },
+  getSummary: (projectId?: string) => {
+    const params = projectId ? `?projectId=${projectId}` : ''
+    return api.get<TaskSummaryDto>(`/teamtasks/summary${params}`).then(r => r.data)
+  },
   getById: (id: string) => api.get<TeamTask>(`/teamtasks/${id}`).then(r => r.data),
   getByAssignee: (assigneeId: string) => api.get<TeamTask[]>(`/teamtasks/assignee/${assigneeId}`).then(r => r.data),
   getByProject: (projectId: string) => api.get<TeamTask[]>(`/teamtasks/project/${projectId}`).then(r => r.data),

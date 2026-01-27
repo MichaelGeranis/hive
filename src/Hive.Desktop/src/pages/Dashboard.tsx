@@ -17,7 +17,6 @@ import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
 import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi } from '../services/api'
 import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent } from '../types'
-import { TaskStatus } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -553,39 +552,14 @@ export default function Dashboard() {
     overdue: assignee.overdueTasks
   }))
 
-  // Calculate workload warnings (blocked, in-review tasks per assignee)
-  // Use dashboard data for in-progress (matches chart), compute blocked/in-review from tasks
-  const blockedAndReviewByAssignee = tasks.reduce((acc, task) => {
-    const assigneeName = task.assigneeName || 'Unassigned'
-    if (!acc[assigneeName]) {
-      acc[assigneeName] = { blocked: 0, inReview: 0 }
-    }
-    if (task.status === TaskStatus.Blocked) {
-      acc[assigneeName].blocked += 1
-    } else if (task.status === TaskStatus.InReview) {
-      acc[assigneeName].inReview += 1
-    }
-    return acc
-  }, {} as Record<string, { blocked: number; inReview: number }>)
-
-  // Find members with workload warnings
-  const workloadWarnings = dashboard.tasks.tasksByAssignee
-    .map(assignee => {
-      const name = assignee.assigneeName || 'Unassigned'
-      const inProgress = assignee.inProgressTasks
-      const blocked = blockedAndReviewByAssignee[name]?.blocked || 0
-      const inReview = blockedAndReviewByAssignee[name]?.inReview || 0
-      return { name, inProgress, blocked, inReview }
-    })
-    .filter(data => data.inProgress > 2 || data.blocked > 1 || data.inReview > 1)
-    .map(data => ({
-      ...data,
-      issues: [
-        data.inProgress > 2 ? `${data.inProgress} in progress` : null,
-        data.blocked > 1 ? `${data.blocked} blocked` : null,
-        data.inReview > 1 ? `${data.inReview} in review` : null,
-      ].filter(Boolean)
-    }))
+  // Use backend-computed workload warnings
+  const workloadWarnings = dashboard.insights.workloadWarnings.map(w => ({
+    name: w.assigneeName,
+    inProgress: w.inProgressTasks,
+    blocked: w.blockedTasks,
+    inReview: w.inReviewTasks,
+    issues: w.issues
+  }))
 
   // Calculate project distribution by assignee (using label-based matching)
   const projectsByAssignee = tasks
@@ -612,25 +586,8 @@ export default function Dashboard() {
     .sort((a, b) => b.value - a.value)
     .filter(d => d.value > 0)
 
-  // Find direct reports not engaged in any projects (not showing in pie chart)
-  // Exclude team members currently on leave
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const directReportsOnLeaveIds = new Set(
-    leaves
-      .filter(leave => {
-        const startDate = new Date(leave.startDate)
-        const endDate = new Date(leave.endDate)
-        startDate.setHours(0, 0, 0, 0)
-        endDate.setHours(23, 59, 59, 999)
-        return today >= startDate && today <= endDate
-      })
-      .map(leave => leave.directReportId)
-  )
-  const engagedMemberNames = new Set(projectDistributionData.map(d => d.name))
-  const unengagedDirectReports = directReports
-    .filter(dr => dr.isDirect && !engagedMemberNames.has(dr.fullName) && !directReportsOnLeaveIds.has(dr.id))
-    .map(dr => dr.fullName)
+  // Use backend-computed unengaged members (already excludes those on leave)
+  const unengagedDirectReports = dashboard.insights.unengagedMembers.map(u => u.fullName)
 
   // Calculate members distribution by project (reverse of projectsByAssignee)
   // This helps identify knowledge silos - projects with less than 2 members
@@ -657,7 +614,8 @@ export default function Dashboard() {
     }))
     .sort((a, b) => a.value - b.value) // Sort ascending so silos appear first
 
-  const siloCount = membersDistributionData.filter(d => d.isSilo).length
+  // Use backend-computed knowledge silos count
+  const siloCount = dashboard.insights.knowledgeSilos.length
 
   const taskTypeData = dashboard.tasks.tasksByType.map(type => ({
     name: type.typeName,
@@ -665,34 +623,14 @@ export default function Dashboard() {
     completed: type.completedTasks
   })).filter(d => d.value > 0)
 
-  // Calculate story points distribution by task type
-  const taskTypeSPData = tasks.reduce((acc, task) => {
-    const typeName = task.typeName || 'Unknown'
-    if (!acc[typeName]) {
-      acc[typeName] = { name: typeName, value: 0, tasks: 0 }
-    }
-    acc[typeName].value += task.storyPoints || 0
-    acc[typeName].tasks += 1
-    return acc
-  }, {} as Record<string, { name: string; value: number; tasks: number }>)
-
-  const taskTypeSPChartData = Object.values(taskTypeSPData)
-    .filter(d => d.value > 0)
+  // Use backend-computed story points distribution by task type
+  const taskTypeSPChartData = dashboard.tasks.tasksByTypeSP
+    .map(t => ({ name: t.typeName, value: t.totalStoryPoints, tasks: t.taskCount }))
     .sort((a, b) => b.value - a.value)
 
-  // Calculate hours distribution by task type
-  const taskTypeHoursData = tasks.reduce((acc, task) => {
-    const typeName = task.typeName || 'Unknown'
-    if (!acc[typeName]) {
-      acc[typeName] = { name: typeName, value: 0, tasks: 0 }
-    }
-    acc[typeName].value += Math.round((task.timeSpentMinutes || 0) / 60 * 10) / 10
-    acc[typeName].tasks += 1
-    return acc
-  }, {} as Record<string, { name: string; value: number; tasks: number }>)
-
-  const taskTypeHoursChartData = Object.values(taskTypeHoursData)
-    .filter(d => d.value > 0)
+  // Use backend-computed hours distribution by task type
+  const taskTypeHoursChartData = dashboard.tasks.tasksByTypeHours
+    .map(t => ({ name: t.typeName, value: t.totalHours, tasks: t.taskCount }))
     .sort((a, b) => b.value - a.value)
 
   // Calculate total SP for current sprint from parents involved in the sprint
@@ -714,34 +652,15 @@ export default function Dashboard() {
   })
   const unmatchedTaskCount = unmatchedTasks.length
 
-  // Calculate Support vs Non-Support hours distribution
-  const supportTasks = tasks.filter(t => t.typeName?.toLowerCase() === 'support')
-  const nonSupportTasks = tasks.filter(t => t.typeName?.toLowerCase() !== 'support')
-
-  const supportHours = Math.round(supportTasks.reduce((sum, t) => sum + (t.timeSpentMinutes || 0), 0) / 60 * 10) / 10
-  const nonSupportHours = Math.round(nonSupportTasks.reduce((sum, t) => sum + (t.timeSpentMinutes || 0), 0) / 60 * 10) / 10
-  const supportTaskCount = supportTasks.length
-  const nonSupportTaskCount = nonSupportTasks.length
-
-  // Support hours by assignee
-  const supportByAssignee = supportTasks.reduce((acc, task) => {
-    const assigneeName = task.assigneeName || 'Unassigned'
-    if (!acc[assigneeName]) {
-      acc[assigneeName] = { name: assigneeName, hours: 0, tasks: 0 }
-    }
-    acc[assigneeName].hours += Math.round((task.timeSpentMinutes || 0) / 60 * 10) / 10
-    acc[assigneeName].tasks += 1
-    return acc
-  }, {} as Record<string, { name: string; hours: number; tasks: number }>)
-
-  const supportByAssigneeData = Object.values(supportByAssignee)
-    .filter(d => d.hours > 0)
-    .sort((a, b) => b.hours - a.hours)
+  // Use backend-computed support distribution
+  const { supportDistribution } = dashboard.tasks
+  const supportByAssigneeData = supportDistribution.byAssignee
+    .map(a => ({ name: a.assigneeName, hours: a.hours, tasks: a.taskCount }))
 
   // Support vs Non-Support comparison data
   const supportComparisonData = [
-    { name: 'Support', hours: supportHours, tasks: supportTaskCount },
-    { name: 'Other Work', hours: nonSupportHours, tasks: nonSupportTaskCount }
+    { name: 'Support', hours: supportDistribution.supportHours, tasks: supportDistribution.supportTaskCount },
+    { name: 'Other Work', hours: supportDistribution.nonSupportHours, tasks: supportDistribution.nonSupportTaskCount }
   ].filter(d => d.hours > 0)
 
   return (
@@ -1086,13 +1005,13 @@ export default function Dashboard() {
       </div>
 
       {/* Row 4: Support Distribution */}
-      {widgets.supportDistribution && (supportHours > 0 || nonSupportHours > 0) && (
+      {widgets.supportDistribution && (supportDistribution.supportHours > 0 || supportDistribution.nonSupportHours > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Support vs Other Work */}
           <Card>
             <CardHeader
               title="Support vs Other Work"
-              subtitle={`Total: ${supportHours + nonSupportHours}h logged`}
+              subtitle={`Total: ${supportDistribution.supportHours + supportDistribution.nonSupportHours}h logged`}
             />
             <CardContent className="h-64">
               {supportComparisonData.length > 0 ? (
@@ -1126,12 +1045,12 @@ export default function Dashboard() {
             <div className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportTaskCount} Support tasks</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportDistribution.supportHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.supportTaskCount} Support tasks</p>
                 </div>
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{nonSupportHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{nonSupportTaskCount} Other tasks</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{supportDistribution.nonSupportHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.nonSupportTaskCount} Other tasks</p>
                 </div>
               </div>
             </div>
@@ -1141,7 +1060,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support Hours by Assignee"
-              subtitle={`${supportHours}h total support work`}
+              subtitle={`${supportDistribution.supportHours}h total support work`}
             />
             <CardContent className="h-64">
               {supportByAssigneeData.length > 0 ? (

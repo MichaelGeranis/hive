@@ -21,6 +21,12 @@ public class AppSettings
     // If null, all sprints matching the pattern will be imported
     public string? SprintTeamFilter { get; private set; }
 
+    // Dashboard insight thresholds
+    public int MaxInProgressTasks { get; private set; } = 2;
+    public int MaxBlockedTasks { get; private set; } = 1;
+    public int MaxInReviewTasks { get; private set; } = 1;
+    public int MinProjectMembers { get; private set; } = 2;
+
     // Private constructor for EF Core / serialization
     private AppSettings() { }
 
@@ -61,6 +67,15 @@ public class AppSettings
     public void UpdateSprintTeamFilter(string? teamFilter)
     {
         SprintTeamFilter = string.IsNullOrWhiteSpace(teamFilter) ? null : teamFilter.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateDashboardThresholds(int maxInProgress, int maxBlocked, int maxInReview, int minProjectMembers)
+    {
+        MaxInProgressTasks = maxInProgress > 0 ? maxInProgress : 2;
+        MaxBlockedTasks = maxBlocked > 0 ? maxBlocked : 1;
+        MaxInReviewTasks = maxInReview > 0 ? maxInReview : 1;
+        MinProjectMembers = minProjectMembers > 0 ? minProjectMembers : 2;
         UpdatedAt = DateTime.UtcNow;
     }
 }

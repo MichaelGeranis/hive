@@ -23,6 +23,7 @@ public class ReportingServiceTests
     private readonly Mock<ISprintCapacityRepository> _sprintCapacityRepositoryMock;
     private readonly Mock<IAppSettingsRepository> _appSettingsRepositoryMock;
     private readonly Mock<IParentRepository> _parentRepositoryMock;
+    private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
     private readonly ReportingService _service;
 
     private readonly DirectReport _testDirectReport;
@@ -40,6 +41,7 @@ public class ReportingServiceTests
         _sprintCapacityRepositoryMock = new Mock<ISprintCapacityRepository>();
         _appSettingsRepositoryMock = new Mock<IAppSettingsRepository>();
         _parentRepositoryMock = new Mock<IParentRepository>();
+        _leaveRepositoryMock = new Mock<ILeaveRepository>();
 
         _service = new ReportingService(
             _directReportRepositoryMock.Object,
@@ -51,7 +53,8 @@ public class ReportingServiceTests
             _sprintRepositoryMock.Object,
             _sprintCapacityRepositoryMock.Object,
             _appSettingsRepositoryMock.Object,
-            _parentRepositoryMock.Object);
+            _parentRepositoryMock.Object,
+            _leaveRepositoryMock.Object);
 
         _testDirectReport = new DirectReport(
             "John",
@@ -575,6 +578,10 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<Sprint>());
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
+        _leaveRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Leave>());
+        _appSettingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AppSettings("[]"));
     }
 
     private PerformanceReview CreateReview(Guid directReportId, PerformanceRating rating)

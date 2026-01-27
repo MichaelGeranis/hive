@@ -32,6 +32,28 @@ public enum NoteFilter
 }
 
 /// <summary>
+/// Filter options for tasks.
+/// </summary>
+public enum TaskFilter
+{
+    All,
+    Overdue
+    // Individual statuses are handled via TaskStatus enum
+}
+
+/// <summary>
+/// Parameters for paginated and filtered task queries.
+/// </summary>
+public record TaskPaginationParams : PaginationParams
+{
+    public TaskFilter Filter { get; init; } = TaskFilter.All;
+    public Hive.Core.Entities.TaskStatus? Status { get; init; }
+    public string? SearchTerm { get; init; }
+    public string? Label { get; init; }
+    public string? Sprint { get; init; }
+}
+
+/// <summary>
 /// Parameters for paginated and filtered note queries.
 /// </summary>
 public record NotePaginationParams : PaginationParams

@@ -46,6 +46,72 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.FromResult<(IReadOnlyList<TeamTask>, int)>((items, totalCount));
     }
 
+    public Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetFilteredPagedAsync(
+        int skip,
+        int take,
+        TaskStatus? status = null,
+        bool? overdue = null,
+        string? searchTerm = null,
+        string? label = null,
+        string? sprint = null,
+        CancellationToken cancellationToken = default)
+    {
+        IEnumerable<TeamTask> query = _context.TeamTasks.Values;
+
+        // Apply status filter
+        if (status.HasValue)
+        {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        // Apply overdue filter
+        if (overdue == true)
+        {
+            query = query.Where(x => x.IsOverdue());
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLowerInvariant();
+            query = query.Where(x =>
+                x.Title.ToLowerInvariant().Contains(term) ||
+                (x.Description?.ToLowerInvariant().Contains(term) ?? false) ||
+                (x.Labels?.ToLowerInvariant().Contains(term) ?? false) ||
+                (x.Sprint?.ToLowerInvariant().Contains(term) ?? false) ||
+                (x.Tags?.ToLowerInvariant().Contains(term) ?? false));
+        }
+
+        // Apply label filter
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            var labelLower = label.Trim().ToLowerInvariant();
+            query = query.Where(x =>
+                !string.IsNullOrEmpty(x.Labels) &&
+                x.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim().ToLowerInvariant())
+                    .Contains(labelLower));
+        }
+
+        // Apply sprint filter
+        if (!string.IsNullOrWhiteSpace(sprint))
+        {
+            query = query.Where(x => x.Sprint?.Trim() == sprint.Trim());
+        }
+
+        // Order and paginate
+        var orderedQuery = query
+            .OrderByDescending(x => x.Sprint)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate)
+            .ThenBy(x => x.CreatedAt);
+
+        var totalCount = orderedQuery.Count();
+        var items = orderedQuery.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<TeamTask>, int)>((items, totalCount));
+    }
+
     public Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         var entities = _context.TeamTasks.Values

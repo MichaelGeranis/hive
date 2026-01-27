@@ -57,6 +57,21 @@ public class TeamTaskService : ITeamTaskService
         return PagedResult<TeamTaskDto>.Create(dtos, totalCount, pagination);
     }
 
+    public async Task<PagedResult<TeamTaskDto>> GetFilteredPagedAsync(TaskPaginationParams pagination, CancellationToken cancellationToken = default)
+    {
+        var (entities, totalCount) = await _taskRepository.GetFilteredPagedAsync(
+            pagination.Skip,
+            pagination.PageSize,
+            pagination.Status,
+            pagination.Filter == TaskFilter.Overdue ? true : null,
+            pagination.SearchTerm,
+            pagination.Label,
+            pagination.Sprint,
+            cancellationToken);
+        var dtos = await MapToDtosAsync(entities, cancellationToken);
+        return PagedResult<TeamTaskDto>.Create(dtos, totalCount, pagination);
+    }
+
     public async Task<IReadOnlyList<TeamTaskDto>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         var entities = await _taskRepository.GetByAssigneeIdAsync(assigneeId, cancellationToken);
@@ -99,17 +114,42 @@ public class TeamTaskService : ITeamTaskService
             ? await _taskRepository.GetByProjectIdAsync(projectId.Value, cancellationToken)
             : await _taskRepository.GetAllAsync(cancellationToken);
 
+        // Extract unique labels
+        var allLabels = allTasks
+            .Where(t => !string.IsNullOrEmpty(t.Labels))
+            .SelectMany(t => t.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .Distinct()
+            .OrderBy(l => l)
+            .ToList();
+
+        // Extract unique sprints
+        var allSprints = allTasks
+            .Where(t => !string.IsNullOrEmpty(t.Sprint))
+            .Select(t => t.Sprint.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+
         return new TaskSummaryDto
         {
             TotalTasks = allTasks.Count,
             BacklogTasks = allTasks.Count(t => t.Status == TaskStatus.Backlog),
             TodoTasks = allTasks.Count(t => t.Status == TaskStatus.Todo),
+            BlockedTasks = allTasks.Count(t => t.Status == TaskStatus.Blocked),
             InProgressTasks = allTasks.Count(t => t.Status == TaskStatus.InProgress),
             InReviewTasks = allTasks.Count(t => t.Status == TaskStatus.InReview),
+            InTestTasks = allTasks.Count(t => t.Status == TaskStatus.InTest),
+            POAcceptanceTasks = allTasks.Count(t => t.Status == TaskStatus.POAcceptance),
+            ReadyToReleaseTasks = allTasks.Count(t => t.Status == TaskStatus.ReadyToRelease),
             DoneTasks = allTasks.Count(t => t.Status == TaskStatus.Done),
             CancelledTasks = allTasks.Count(t => t.Status == TaskStatus.Cancelled),
             OverdueTasks = allTasks.Count(t => t.IsOverdue()),
-            UnassignedTasks = allTasks.Count(t => !t.AssigneeId.HasValue && t.Status != TaskStatus.Done && t.Status != TaskStatus.Cancelled)
+            UnassignedTasks = allTasks.Count(t => !t.AssigneeId.HasValue && t.Status != TaskStatus.Done && t.Status != TaskStatus.Cancelled),
+            AllLabels = allLabels,
+            AllSprints = allSprints
         };
     }
 

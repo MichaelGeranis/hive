@@ -42,6 +42,94 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
         return (items, totalCount);
     }
 
+    public async Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetFilteredPagedAsync(
+        int skip,
+        int take,
+        TaskStatus? status = null,
+        bool? overdue = null,
+        string? searchTerm = null,
+        string? label = null,
+        string? sprint = null,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<TeamTask> query = _context.TeamTasks;
+
+        // Apply status filter
+        if (status.HasValue)
+        {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        // Apply overdue filter
+        if (overdue == true)
+        {
+            var now = DateTime.UtcNow;
+            query = query.Where(x => x.DueDate.HasValue
+                                     && x.DueDate < now
+                                     && x.Status != TaskStatus.Done
+                                     && x.Status != TaskStatus.Cancelled);
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLowerInvariant();
+            query = query.Where(x =>
+                x.Title.ToLower().Contains(term) ||
+                (x.Description != null && x.Description.ToLower().Contains(term)) ||
+                (x.Labels != null && x.Labels.ToLower().Contains(term)) ||
+                (x.Sprint != null && x.Sprint.ToLower().Contains(term)) ||
+                (x.Tags != null && x.Tags.ToLower().Contains(term)));
+        }
+
+        // Apply sprint filter
+        if (!string.IsNullOrWhiteSpace(sprint))
+        {
+            query = query.Where(x => x.Sprint != null && x.Sprint.Trim() == sprint.Trim());
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply label filter (needs to be done after count for efficiency with in-memory filtering)
+        List<TeamTask> items;
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            var labelLower = label.Trim().ToLowerInvariant();
+            // Fetch and filter in memory for comma-separated label matching
+            var allItems = await query
+                .OrderByDescending(x => x.Sprint)
+                .ThenByDescending(x => x.Priority)
+                .ThenBy(x => x.DueDate)
+                .ThenBy(x => x.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+            var filtered = allItems
+                .Where(x => !string.IsNullOrEmpty(x.Labels) &&
+                            x.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(l => l.Trim().ToLowerInvariant())
+                                .Contains(labelLower))
+                .ToList();
+
+            totalCount = filtered.Count;
+            items = filtered.Skip(skip).Take(take).ToList();
+        }
+        else
+        {
+            // Order and paginate
+            items = await query
+                .OrderByDescending(x => x.Sprint)
+                .ThenByDescending(x => x.Priority)
+                .ThenBy(x => x.DueDate)
+                .ThenBy(x => x.CreatedAt)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+        }
+
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
     {
         return await _context.TeamTasks

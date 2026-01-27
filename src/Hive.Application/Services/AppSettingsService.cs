@@ -80,6 +80,19 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update dashboard thresholds if any provided
+        if (dto.MaxInProgressTasks.HasValue || dto.MaxBlockedTasks.HasValue ||
+            dto.MaxInReviewTasks.HasValue || dto.MinProjectMembers.HasValue)
+        {
+            entity.UpdateDashboardThresholds(
+                dto.MaxInProgressTasks ?? entity.MaxInProgressTasks,
+                dto.MaxBlockedTasks ?? entity.MaxBlockedTasks,
+                dto.MaxInReviewTasks ?? entity.MaxInReviewTasks,
+                dto.MinProjectMembers ?? entity.MinProjectMembers
+            );
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         return MapToDto(entity);
     }
 
@@ -98,7 +111,11 @@ public class AppSettingsService : IAppSettingsService
             HasClaudeApiKey = entity.HasClaudeApiKey,
             SentimentAnalysisDays = entity.SentimentAnalysisDays,
             SentimentAnalysisEnabled = entity.SentimentAnalysisEnabled,
-            SprintTeamFilter = entity.SprintTeamFilter
+            SprintTeamFilter = entity.SprintTeamFilter,
+            MaxInProgressTasks = entity.MaxInProgressTasks,
+            MaxBlockedTasks = entity.MaxBlockedTasks,
+            MaxInReviewTasks = entity.MaxInReviewTasks,
+            MinProjectMembers = entity.MinProjectMembers
         };
     }
 
