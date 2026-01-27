@@ -663,6 +663,48 @@ export default function Dashboard() {
     { name: 'Other Work', hours: supportDistribution.nonSupportHours, tasks: supportDistribution.nonSupportTaskCount }
   ].filter(d => d.hours > 0)
 
+  // Calculate total warning count from all sources
+  const warningCount = (() => {
+    let count = 0
+    // Workload warnings
+    count += workloadWarnings.length
+    // Unengaged team members
+    if (unengagedDirectReports.length > 0) count++
+    // Knowledge silos
+    if (siloCount > 0) count++
+    // Scope creep (when currentSprintTotalSP > committedPoints and committedPoints > 0)
+    if (capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0) count++
+    // Unmatched tasks
+    if (unmatchedTaskCount > 0) count++
+    // Low capacity utilization
+    if ((capacityAnalysis?.averageUtilization ?? 100) < 75) count++
+    // Sprint capacity suggestions needing adjustment
+    const suggestionsNeedingAdjustment = sprintSuggestions.filter(s =>
+      s.currentCapacity && s.currentCapacity.availableMembers !== s.suggestedAvailableMembers
+    )
+    count += suggestionsNeedingAdjustment.length
+    // Negative velocity trend
+    if (velocity && velocity.completionTrend < 0) count++
+    // Low estimation accuracy
+    if (accuracy && accuracy.sprints.some(s => s.accuracyPercentage < 75)) count++
+    return count
+  })()
+
+  // Determine warning tile color intensity based on count
+  const getWarningColor = (count: number): 'green' | 'amber' | 'red' => {
+    if (count === 0) return 'green'
+    if (count <= 3) return 'amber'
+    return 'red'
+  }
+
+  const getWarningBgClass = (count: number): string => {
+    if (count === 0) return 'bg-green-50 dark:bg-green-900/20'
+    if (count <= 2) return 'bg-amber-50 dark:bg-amber-900/20'
+    if (count <= 4) return 'bg-amber-100 dark:bg-amber-900/40'
+    if (count <= 6) return 'bg-orange-100 dark:bg-orange-900/40'
+    return 'bg-red-100 dark:bg-red-900/40'
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -738,6 +780,31 @@ export default function Dashboard() {
           color={priorityNotes.some(n => n.priority === 3) ? 'red' : priorityNotes.length > 0 ? 'amber' : 'green'}
           onClick={() => setShowPriorityNotesModal(true)}
         />
+        <div className={`rounded-xl p-4 ${getWarningBgClass(warningCount)} transition-colors`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Warnings</p>
+              <p className={`text-3xl font-bold mt-1 ${
+                warningCount === 0 ? 'text-green-600 dark:text-green-400' :
+                warningCount <= 3 ? 'text-amber-600 dark:text-amber-400' :
+                'text-red-600 dark:text-red-400'
+              }`}>
+                {warningCount}
+              </p>
+            </div>
+            <div className={`p-3 rounded-lg ${
+              warningCount === 0 ? 'bg-green-100 dark:bg-green-800/30' :
+              warningCount <= 3 ? 'bg-amber-100 dark:bg-amber-800/30' :
+              'bg-red-100 dark:bg-red-800/30'
+            }`}>
+              <AlertTriangle className={`w-6 h-6 ${
+                warningCount === 0 ? 'text-green-600 dark:text-green-400' :
+                warningCount <= 3 ? 'text-amber-600 dark:text-amber-400' :
+                'text-red-600 dark:text-red-400'
+              }`} />
+            </div>
+          </div>
+        </div>
 
       </div>
       )}
