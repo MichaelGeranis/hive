@@ -19,7 +19,15 @@ public class KnowledgePointService : IKnowledgePointService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
 
-    private const int LevelIncreaseThreshold = 21;
+    // Level thresholds: points needed to suggest upgrade to each level
+    // Level 1 is default (0-4 points), Level 2 at 5 points, etc.
+    private static readonly Dictionary<int, int> LevelThresholds = new()
+    {
+        { 2, 5 },   // 5 points to suggest level 2
+        { 3, 13 },  // 13 points to suggest level 3
+        { 4, 21 },  // 21 points to suggest level 4
+        { 5, 55 }   // 55 points to suggest level 5
+    };
 
     public KnowledgePointService(
         IKnowledgePointRepository knowledgePointRepository,
@@ -176,6 +184,32 @@ public class KnowledgePointService : IKnowledgePointService
             cancellationToken);
     }
 
+    public async Task ResetPointsAsync(Guid directReportId, Guid projectId, CancellationToken cancellationToken = default)
+    {
+        var existing = await _knowledgePointRepository.GetByDirectReportAndProjectAsync(directReportId, projectId, cancellationToken);
+
+        if (existing is null)
+        {
+            // No points to reset
+            return;
+        }
+
+        var previousPoints = existing.ManualPoints;
+        existing.UpdateManualPoints(0, null);
+        await _knowledgePointRepository.UpdateAsync(existing, cancellationToken);
+
+        var project = await _projectRepository.GetByIdAsync(projectId, cancellationToken);
+        var directReport = await _directReportRepository.GetByIdAsync(directReportId, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.ProjectKnowledge,
+            existing.Id,
+            $"Points: {project?.Name ?? "Unknown"} - {directReport?.FullName ?? "Unknown"}",
+            $"Manual points reset from {previousPoints} to 0 after level increase",
+            cancellationToken);
+    }
+
     public async Task<int> CalculateAutomaticPointsAsync(Guid directReportId, Guid projectId, CancellationToken cancellationToken = default)
     {
         var tasks = await _teamTaskRepository.GetByAssigneeIdAsync(directReportId, cancellationToken);
@@ -251,30 +285,62 @@ public class KnowledgePointService : IKnowledgePointService
                 var manualPoints = kp?.ManualPoints ?? 0;
                 var totalPoints = manualPoints + automaticPoints;
 
-                if (totalPoints >= LevelIncreaseThreshold)
-                {
-                    var currentKnowledge = allKnowledge.FirstOrDefault(k => k.DirectReportId == dr.Id && k.ProjectId == project.Id);
-                    var currentLevel = currentKnowledge?.KnowledgeLevel;
+                var currentKnowledge = allKnowledge.FirstOrDefault(k => k.DirectReportId == dr.Id && k.ProjectId == project.Id);
+                var currentLevel = currentKnowledge?.KnowledgeLevel ?? 0;
 
-                    // Only suggest if not already at max level (5)
-                    if (currentLevel is null || currentLevel < 5)
+                // Check if points meet threshold for next level
+                var suggestedLevel = GetSuggestedLevel(currentLevel, totalPoints);
+                if (suggestedLevel.HasValue)
+                {
+                    suggestions.Add(new KnowledgeLevelSuggestionDto
                     {
-                        suggestions.Add(new KnowledgeLevelSuggestionDto
-                        {
-                            DirectReportId = dr.Id,
-                            DirectReportName = drLookup.GetValueOrDefault(dr.Id, "Unknown"),
-                            ProjectId = project.Id,
-                            ProjectName = projectLookup.GetValueOrDefault(project.Id, "Unknown"),
-                            TotalPoints = totalPoints,
-                            CurrentLevel = currentLevel,
-                            SuggestedLevel = Math.Min((currentLevel ?? 0) + 1, 5)
-                        });
-                    }
+                        DirectReportId = dr.Id,
+                        DirectReportName = drLookup.GetValueOrDefault(dr.Id, "Unknown"),
+                        ProjectId = project.Id,
+                        ProjectName = projectLookup.GetValueOrDefault(project.Id, "Unknown"),
+                        TotalPoints = totalPoints,
+                        CurrentLevel = currentLevel == 0 ? null : currentLevel,
+                        SuggestedLevel = suggestedLevel.Value
+                    });
                 }
             }
         }
 
         return suggestions;
+    }
+
+    /// <summary>
+    /// Gets the suggested level based on current level and total points.
+    /// Returns null if no level increase should be suggested.
+    /// Level 0 and 1 are both considered the "starting level" (0-4 points).
+    /// Thresholds: Level 2 at 5 points, Level 3 at 13 points, Level 4 at 21 points, Level 5 at 55 points.
+    /// </summary>
+    private static int? GetSuggestedLevel(int currentLevel, int totalPoints)
+    {
+        // Already at max level
+        if (currentLevel >= 5)
+            return null;
+
+        // Level 0 and 1 are both considered "starting level"
+        // When at level 0 or 1, the next level to suggest is 2
+        var effectiveLevel = Math.Max(currentLevel, 1);
+        var nextLevel = effectiveLevel + 1;
+
+        // Check if points meet the threshold for the next level
+        if (LevelThresholds.TryGetValue(nextLevel, out var threshold) && totalPoints >= threshold)
+        {
+            return nextLevel;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a level increase should be suggested based on current level and total points.
+    /// </summary>
+    private static bool ShouldSuggestLevelIncrease(int? currentLevel, int totalPoints)
+    {
+        return GetSuggestedLevel(currentLevel ?? 0, totalPoints).HasValue;
     }
 
     public async Task<ProjectKnowledgeMatrixWithPointsDto> GetMatrixWithPointsAsync(CancellationToken cancellationToken = default)
@@ -338,7 +404,7 @@ public class KnowledgePointService : IKnowledgePointService
                 AutomaticPoints = automaticPoints,
                 TotalPoints = totalPoints,
                 CurrentKnowledgeLevel = knowledge?.KnowledgeLevel,
-                SuggestLevelIncrease = totalPoints >= LevelIncreaseThreshold && (knowledge?.KnowledgeLevel ?? 0) < 5,
+                SuggestLevelIncrease = ShouldSuggestLevelIncrease(knowledge?.KnowledgeLevel, totalPoints),
                 Notes = kp.Notes,
                 CreatedAt = kp.CreatedAt,
                 UpdatedAt = kp.UpdatedAt
@@ -370,7 +436,7 @@ public class KnowledgePointService : IKnowledgePointService
                         AutomaticPoints = automaticPoints,
                         TotalPoints = automaticPoints,
                         CurrentKnowledgeLevel = knowledge?.KnowledgeLevel,
-                        SuggestLevelIncrease = automaticPoints >= LevelIncreaseThreshold && (knowledge?.KnowledgeLevel ?? 0) < 5,
+                        SuggestLevelIncrease = ShouldSuggestLevelIncrease(knowledge?.KnowledgeLevel, automaticPoints),
                         Notes = null,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = null
@@ -427,7 +493,7 @@ public class KnowledgePointService : IKnowledgePointService
             AutomaticPoints = automaticPoints,
             TotalPoints = totalPoints,
             CurrentKnowledgeLevel = knowledge?.KnowledgeLevel,
-            SuggestLevelIncrease = totalPoints >= LevelIncreaseThreshold && (knowledge?.KnowledgeLevel ?? 0) < 5,
+            SuggestLevelIncrease = ShouldSuggestLevelIncrease(knowledge?.KnowledgeLevel, totalPoints),
             Notes = entity.Notes,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
@@ -462,7 +528,7 @@ public class KnowledgePointService : IKnowledgePointService
                 AutomaticPoints = automaticPoints,
                 TotalPoints = totalPoints,
                 CurrentKnowledgeLevel = knowledge?.KnowledgeLevel,
-                SuggestLevelIncrease = totalPoints >= LevelIncreaseThreshold && (knowledge?.KnowledgeLevel ?? 0) < 5,
+                SuggestLevelIncrease = ShouldSuggestLevelIncrease(knowledge?.KnowledgeLevel, totalPoints),
                 Notes = e.Notes,
                 CreatedAt = e.CreatedAt,
                 UpdatedAt = e.UpdatedAt

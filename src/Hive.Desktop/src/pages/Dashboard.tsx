@@ -362,11 +362,14 @@ export default function Dashboard() {
 
   const handleIncreaseKnowledgeLevel = async (suggestion: KnowledgeLevelSuggestion) => {
     try {
+      // Increase the knowledge level
       await projectKnowledgeApi.createOrUpdate({
         directReportId: suggestion.directReportId,
         projectId: suggestion.projectId,
         knowledgeLevel: suggestion.suggestedLevel
       })
+      // Reset points after level increase
+      await knowledgePointsApi.resetPoints(suggestion.directReportId, suggestion.projectId)
       // Remove the suggestion from the list
       setKnowledgeSuggestions(prev => prev.filter(
         s => !(s.directReportId === suggestion.directReportId && s.projectId === suggestion.projectId)

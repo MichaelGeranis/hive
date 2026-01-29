@@ -444,12 +444,16 @@ public class KnowledgePointServiceTests
         var projectIdField = typeof(Project).GetProperty("Id")!;
         projectIdField.SetValue(project, projectId);
 
-        var knowledgePoint = new KnowledgePoint(directReportId, projectId, 25); // >= 21 threshold
+        // 5 points is threshold for level 2 (from level 0/1)
+        var knowledgePoint = new KnowledgePoint(directReportId, projectId, 5);
 
         _directReportRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { directReport });
         _projectRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project> { project });
+        // Use It.IsAny<Guid>() to match any project ID
+        _projectRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
         _knowledgePointRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<KnowledgePoint> { knowledgePoint });
         _projectKnowledgeRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -463,8 +467,103 @@ public class KnowledgePointServiceTests
         // Assert
         result.Should().HaveCount(1);
         result[0].DirectReportName.Should().Be("John Doe");
-        result[0].TotalPoints.Should().Be(25);
-        result[0].SuggestedLevel.Should().Be(1); // From 0 to 1
+        result[0].TotalPoints.Should().Be(5);
+        result[0].SuggestedLevel.Should().Be(2); // From 0/1 to 2 at 5 points
+    }
+
+    [Theory]
+    [InlineData(0, 5, 2)]   // Level 0 + 5 points → suggest level 2
+    [InlineData(1, 5, 2)]   // Level 1 + 5 points → suggest level 2
+    [InlineData(2, 13, 3)]  // Level 2 + 13 points → suggest level 3
+    [InlineData(3, 21, 4)]  // Level 3 + 21 points → suggest level 4
+    [InlineData(4, 55, 5)]  // Level 4 + 55 points → suggest level 5
+    public async Task GetLevelIncreaseSuggestionsAsync_WithVariousThresholds_SuggestsCorrectLevel(
+        int currentLevel, int totalPoints, int expectedSuggestedLevel)
+    {
+        // Arrange
+        var directReportId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
+        var directReportIdField = typeof(DirectReport).GetProperty("Id")!;
+        directReportIdField.SetValue(directReport, directReportId);
+
+        var project = new Project("Test Project", "Description");
+        var projectIdField = typeof(Project).GetProperty("Id")!;
+        projectIdField.SetValue(project, projectId);
+
+        var knowledgePoint = new KnowledgePoint(directReportId, projectId, totalPoints);
+        var projectKnowledge = currentLevel > 0
+            ? new ProjectKnowledge(directReportId, projectId, currentLevel)
+            : null;
+
+        _directReportRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { directReport });
+        _projectRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project> { project });
+        _projectRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
+        _knowledgePointRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KnowledgePoint> { knowledgePoint });
+        _projectKnowledgeRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(projectKnowledge != null
+                ? new List<ProjectKnowledge> { projectKnowledge }
+                : new List<ProjectKnowledge>());
+        _teamTaskRepoMock.Setup(r => r.GetByAssigneeIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask>());
+
+        // Act
+        var result = await _service.GetLevelIncreaseSuggestionsAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].SuggestedLevel.Should().Be(expectedSuggestedLevel);
+    }
+
+    [Theory]
+    [InlineData(0, 4)]   // Level 0 + 4 points → no suggestion (need 5 for level 2)
+    [InlineData(2, 12)]  // Level 2 + 12 points → no suggestion (need 13 for level 3)
+    [InlineData(3, 20)]  // Level 3 + 20 points → no suggestion (need 21 for level 4)
+    [InlineData(4, 54)]  // Level 4 + 54 points → no suggestion (need 55 for level 5)
+    public async Task GetLevelIncreaseSuggestionsAsync_BelowThreshold_NoSuggestion(int currentLevel, int totalPoints)
+    {
+        // Arrange
+        var directReportId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
+        var directReportIdField = typeof(DirectReport).GetProperty("Id")!;
+        directReportIdField.SetValue(directReport, directReportId);
+
+        var project = new Project("Test Project", "Description");
+        var projectIdField = typeof(Project).GetProperty("Id")!;
+        projectIdField.SetValue(project, projectId);
+
+        var knowledgePoint = new KnowledgePoint(directReportId, projectId, totalPoints);
+        var projectKnowledge = currentLevel > 0
+            ? new ProjectKnowledge(directReportId, projectId, currentLevel)
+            : null;
+
+        _directReportRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { directReport });
+        _projectRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project> { project });
+        _projectRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
+        _knowledgePointRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KnowledgePoint> { knowledgePoint });
+        _projectKnowledgeRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(projectKnowledge != null
+                ? new List<ProjectKnowledge> { projectKnowledge }
+                : new List<ProjectKnowledge>());
+        _teamTaskRepoMock.Setup(r => r.GetByAssigneeIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask>());
+
+        // Act
+        var result = await _service.GetLevelIncreaseSuggestionsAsync();
+
+        // Assert
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -483,13 +582,15 @@ public class KnowledgePointServiceTests
         var projectIdField = typeof(Project).GetProperty("Id")!;
         projectIdField.SetValue(project, projectId);
 
-        var knowledgePoint = new KnowledgePoint(directReportId, projectId, 30);
+        var knowledgePoint = new KnowledgePoint(directReportId, projectId, 100);
         var projectKnowledge = new ProjectKnowledge(directReportId, projectId, 5); // Already at max level
 
         _directReportRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { directReport });
         _projectRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project> { project });
+        _projectRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
         _knowledgePointRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<KnowledgePoint> { knowledgePoint });
         _projectKnowledgeRepoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -502,5 +603,48 @@ public class KnowledgePointServiceTests
 
         // Assert
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ResetPointsAsync_WithExistingPoints_ResetsToZero()
+    {
+        // Arrange
+        var directReportId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var existingEntity = new KnowledgePoint(directReportId, projectId, 25, "Some notes");
+
+        var directReport = new DirectReport("John", "Doe", "john@test.com", "Engineer", "Engineering", DateTime.UtcNow);
+        var project = new Project("Test Project", "Description");
+
+        _knowledgePointRepoMock.Setup(r => r.GetByDirectReportAndProjectAsync(directReportId, projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEntity);
+        _directReportRepoMock.Setup(r => r.GetByIdAsync(directReportId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(directReport);
+        _projectRepoMock.Setup(r => r.GetByIdAsync(projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(project);
+
+        // Act
+        await _service.ResetPointsAsync(directReportId, projectId);
+
+        // Assert
+        existingEntity.ManualPoints.Should().Be(0);
+        _knowledgePointRepoMock.Verify(r => r.UpdateAsync(existingEntity, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPointsAsync_WithNoExistingPoints_DoesNothing()
+    {
+        // Arrange
+        var directReportId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        _knowledgePointRepoMock.Setup(r => r.GetByDirectReportAndProjectAsync(directReportId, projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((KnowledgePoint?)null);
+
+        // Act
+        await _service.ResetPointsAsync(directReportId, projectId);
+
+        // Assert
+        _knowledgePointRepoMock.Verify(r => r.UpdateAsync(It.IsAny<KnowledgePoint>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

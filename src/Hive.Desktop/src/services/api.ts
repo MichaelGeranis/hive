@@ -545,6 +545,8 @@ export const knowledgePointsApi = {
     api.put<KnowledgePoint>('/knowledgepoints', data).then(r => r.data),
   addPoints: (data: AddKnowledgePointsDto) =>
     api.post<KnowledgePoint>('/knowledgepoints/add', data).then(r => r.data),
+  resetPoints: (directReportId: string, projectId: string) =>
+    api.post('/knowledgepoints/reset', { directReportId, projectId }),
   delete: (id: string) =>
     api.delete(`/knowledgepoints/${id}`),
   getSuggestions: () =>

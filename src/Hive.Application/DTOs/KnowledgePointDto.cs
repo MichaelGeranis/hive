@@ -43,6 +43,15 @@ public record AddKnowledgePointsDto
 }
 
 /// <summary>
+/// DTO for resetting points after a knowledge level increase.
+/// </summary>
+public record ResetKnowledgePointsDto
+{
+    public Guid DirectReportId { get; init; }
+    public Guid ProjectId { get; init; }
+}
+
+/// <summary>
 /// DTO for suggesting knowledge level increase based on accumulated points.
 /// </summary>
 public record KnowledgeLevelSuggestionDto

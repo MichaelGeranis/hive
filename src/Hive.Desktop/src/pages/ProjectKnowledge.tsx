@@ -165,7 +165,7 @@ export default function ProjectKnowledgePage() {
     }
   }
 
-  // Handle suggestion click - increase knowledge level
+  // Handle suggestion click - increase knowledge level and reset points
   const handleSuggestionClick = async (suggestion: KnowledgeLevelSuggestion) => {
     try {
       const dto: CreateOrUpdateProjectKnowledgeDto = {
@@ -173,7 +173,10 @@ export default function ProjectKnowledgePage() {
         projectId: suggestion.projectId,
         knowledgeLevel: suggestion.suggestedLevel
       }
+      // Increase the knowledge level
       await projectKnowledgeApi.createOrUpdate(dto)
+      // Reset points after level increase
+      await knowledgePointsApi.resetPoints(suggestion.directReportId, suggestion.projectId)
       await loadMatrix()
     } catch (err) {
       console.error('Failed to update knowledge level:', err)

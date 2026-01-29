@@ -164,8 +164,24 @@ public class KnowledgePointsController : ControllerBase
     }
 
     /// <summary>
+    /// Resets manual points for a direct report and project combination.
+    /// Typically called after a knowledge level increase.
+    /// </summary>
+    [HttpPost("reset")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ResetPoints(
+        [FromBody] ResetKnowledgePointsDto dto,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Resetting knowledge points for direct report {DirectReportId} and project {ProjectId}",
+            dto.DirectReportId, dto.ProjectId);
+        await _service.ResetPointsAsync(dto.DirectReportId, dto.ProjectId, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Gets suggestions for knowledge level increases based on accumulated points.
-    /// Returns combinations where total points >= 21 and current knowledge level < 5.
+    /// Thresholds: Level 2 at 5 points, Level 3 at 13 points, Level 4 at 21 points, Level 5 at 55 points.
     /// </summary>
     [HttpGet("suggestions")]
     [ProducesResponseType(typeof(IEnumerable<KnowledgeLevelSuggestionDto>), StatusCodes.Status200OK)]
