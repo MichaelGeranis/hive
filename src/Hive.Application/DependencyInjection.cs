@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<ISentimentAnalysisService, SentimentAnalysisService>();
         services.AddScoped<IQuarterlyPlanningService, QuarterlyPlanningService>();
         services.AddScoped<IQuarterlyPlanningInsightsService, QuarterlyPlanningInsightsService>();
+        services.AddScoped<IKnowledgePointService, KnowledgePointService>();
         return services;
     }
 }

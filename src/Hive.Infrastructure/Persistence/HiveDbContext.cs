@@ -40,6 +40,7 @@ public class HiveDbContext : DbContext
     public DbSet<Allocation> Allocations => Set<Allocation>();
     public DbSet<SprintGoal> SprintGoals => Set<SprintGoal>();
     public DbSet<InitiativeDependency> InitiativeDependencies => Set<InitiativeDependency>();
+    public DbSet<KnowledgePoint> KnowledgePoints => Set<KnowledgePoint>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -350,6 +351,16 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.DependentInitiativeId);
             entity.HasIndex(e => e.DependencyInitiativeId);
             entity.HasIndex(e => new { e.DependentInitiativeId, e.DependencyInitiativeId }).IsUnique();
+        });
+
+        // KnowledgePoint configuration
+        modelBuilder.Entity<KnowledgePoint>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Notes).HasMaxLength(4000);
+            entity.HasIndex(e => e.DirectReportId);
+            entity.HasIndex(e => e.ProjectId);
+            entity.HasIndex(e => new { e.DirectReportId, e.ProjectId }).IsUnique();
         });
     }
     /// Seeds initial data into the database.

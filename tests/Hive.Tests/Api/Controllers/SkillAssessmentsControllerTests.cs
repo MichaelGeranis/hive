@@ -86,11 +86,11 @@ public class SkillAssessmentsControllerTests
                 }
             }
         };
-        _serviceMock.Setup(s => s.GetSkillMatrixAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetSkillMatrixAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(matrix);
 
         // Act
-        var result = await _controller.GetMatrix(CancellationToken.None);
+        var result = await _controller.GetMatrix(true, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -111,11 +111,11 @@ public class SkillAssessmentsControllerTests
         {
             CreateDto(level: ProficiencyLevel.Beginner, targetLevel: ProficiencyLevel.Advanced, skillGap: 2)
         };
-        _serviceMock.Setup(s => s.GetSkillGapsAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetSkillGapsAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(gaps);
 
         // Act
-        var result = await _controller.GetGaps(CancellationToken.None);
+        var result = await _controller.GetGaps(true, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -128,11 +128,11 @@ public class SkillAssessmentsControllerTests
     public async Task GetGaps_WhenNoGaps_ReturnsEmptyList()
     {
         // Arrange
-        _serviceMock.Setup(s => s.GetSkillGapsAsync(It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetSkillGapsAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SkillAssessmentDto>());
 
         // Act
-        var result = await _controller.GetGaps(CancellationToken.None);
+        var result = await _controller.GetGaps(true, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;

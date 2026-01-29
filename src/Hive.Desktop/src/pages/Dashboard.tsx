@@ -11,12 +11,14 @@ import {
   ListTodo,
   Calendar,
   StickyNote,
-  Check
+  Check,
+  Star,
+  TrendingUp
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent } from '../types'
+import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent, KnowledgeLevelSuggestion } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
   BarChart,
@@ -102,6 +104,7 @@ interface WidgetVisibility {
   teamSentiment: boolean
   capacityAnalysis: boolean
   sprintCapacitySuggestions: boolean
+  knowledgeLevelSuggestions: boolean
   estimationAccuracy: boolean
   teamVelocity: boolean
   membersWorkload: boolean
@@ -118,6 +121,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   teamSentiment: true,
   capacityAnalysis: true,
   sprintCapacitySuggestions: true,
+  knowledgeLevelSuggestions: true,
   estimationAccuracy: true,
   teamVelocity: true,
   membersWorkload: true
@@ -134,6 +138,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
   sprintCapacitySuggestions: 'Sprint Capacity Suggestions',
+  knowledgeLevelSuggestions: 'Knowledge Level Suggestions',
   estimationAccuracy: 'Estimation Accuracy',
   teamVelocity: 'Team Velocity',
   membersWorkload: 'Members Workload'
@@ -157,6 +162,7 @@ export default function Dashboard() {
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
   const [showPriorityNotesModal, setShowPriorityNotesModal] = useState(false)
+  const [knowledgeSuggestions, setKnowledgeSuggestions] = useState<KnowledgeLevelSuggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -235,7 +241,7 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData, parentsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData, parentsData, knowledgeSuggestionsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
@@ -246,7 +252,8 @@ export default function Dashboard() {
         sprintCapacityApi.getAll(),
         leavesApi.getAll(),
         directReportsApi.getAll(),
-        parentsApi.getAll()
+        parentsApi.getAll(),
+        knowledgePointsApi.getSuggestions()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
@@ -262,6 +269,7 @@ export default function Dashboard() {
       setLeaves(leavesData)
       setDirectReports(directReportsData)
       setParents(parentsData)
+      setKnowledgeSuggestions(knowledgeSuggestionsData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
         if (!a.actionDueDate && !b.actionDueDate) return 0
@@ -349,6 +357,22 @@ export default function Dashboard() {
       setPriorityNotes(prev => prev.filter(item => item.id !== noteId))
     } catch (err) {
       console.error('Failed to complete priority note:', err)
+    }
+  }
+
+  const handleIncreaseKnowledgeLevel = async (suggestion: KnowledgeLevelSuggestion) => {
+    try {
+      await projectKnowledgeApi.createOrUpdate({
+        directReportId: suggestion.directReportId,
+        projectId: suggestion.projectId,
+        knowledgeLevel: suggestion.suggestedLevel
+      })
+      // Remove the suggestion from the list
+      setKnowledgeSuggestions(prev => prev.filter(
+        s => !(s.directReportId === suggestion.directReportId && s.projectId === suggestion.projectId)
+      ))
+    } catch (err) {
+      console.error('Failed to increase knowledge level:', err)
     }
   }
 
@@ -691,12 +715,6 @@ export default function Dashboard() {
   })()
 
   // Determine warning tile color intensity based on count
-  const getWarningColor = (count: number): 'green' | 'amber' | 'red' => {
-    if (count === 0) return 'green'
-    if (count <= 3) return 'amber'
-    return 'red'
-  }
-
   const getWarningBgClass = (count: number): string => {
     if (count === 0) return 'bg-green-50 dark:bg-green-900/20'
     if (count <= 2) return 'bg-amber-50 dark:bg-amber-900/20'
@@ -850,6 +868,60 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Knowledge Level Suggestions */}
+      {widgets.knowledgeLevelSuggestions && knowledgeSuggestions.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Knowledge Level Suggestions"
+            subtitle={`${knowledgeSuggestions.length} team member${knowledgeSuggestions.length > 1 ? 's have' : ' has'} accumulated enough points for a knowledge level increase`}
+            action={
+              <button
+                onClick={() => navigate('/knowledge')}
+                className="text-sm text-amber-500 hover:text-amber-600 flex items-center gap-1"
+              >
+                View Matrix
+                <TrendingUp className="w-4 h-4" />
+              </button>
+            }
+          />
+          <CardContent>
+            <div className="space-y-3">
+              {knowledgeSuggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                      <Star className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                        {suggestion.directReportName}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {suggestion.projectName} - {suggestion.totalPoints} pts accumulated
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Level {suggestion.currentLevel || 0} → {suggestion.suggestedLevel}
+                    </span>
+                    <button
+                      onClick={() => handleIncreaseKnowledgeLevel(suggestion)}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Increase Level
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Row 3: All Distribution Charts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">

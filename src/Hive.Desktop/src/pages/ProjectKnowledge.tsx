@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { X, BookOpen, Info, Search, AlertTriangle, TrendingUp, LayoutGrid, Filter, Users } from 'lucide-react'
+import { X, BookOpen, Info, Search, AlertTriangle, TrendingUp, LayoutGrid, Filter, Users, Plus, Minus, Star } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { projectKnowledgeApi } from '../services/api'
+import { projectKnowledgeApi, knowledgePointsApi } from '../services/api'
 import type {
-  ProjectKnowledgeMatrix,
+  ProjectKnowledgeMatrixWithPoints,
   ProjectKnowledge,
   CreateOrUpdateProjectKnowledgeDto,
-  KnowledgeProgressionEntry
+  KnowledgeProgressionEntry,
+  KnowledgeLevelSuggestion,
+  KnowledgePoint,
+  AddKnowledgePointsDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import {
@@ -40,7 +43,7 @@ const getKnowledgeColor = (level: number | undefined): string => {
 }
 
 export default function ProjectKnowledgePage() {
-  const [matrix, setMatrix] = useState<ProjectKnowledgeMatrix | null>(null)
+  const [matrix, setMatrix] = useState<ProjectKnowledgeMatrixWithPoints | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showLegend, setShowLegend] = useState(false)
@@ -49,6 +52,9 @@ export default function ProjectKnowledgePage() {
     directReportId: string
   } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Points update state - track which cell is being updated
+  const [updatingPoints, setUpdatingPoints] = useState<string | null>(null)
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('matrix')
@@ -93,13 +99,84 @@ export default function ProjectKnowledgePage() {
     try {
       setLoading(true)
       setError(null)
-      const data = await projectKnowledgeApi.getMatrix()
+      const data = await projectKnowledgeApi.getMatrixWithPoints()
       setMatrix(data)
     } catch (err) {
       console.error('Failed to load project knowledge matrix:', err)
       setError('Failed to load project knowledge matrix')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Get points for a cell
+  const getPointsForCell = (projectId: string, directReportId: string): KnowledgePoint | undefined => {
+    return matrix?.points.find(
+      p => p.projectId === projectId && p.directReportId === directReportId
+    )
+  }
+
+  // Add one point
+  const handleAddPoint = async (projectId: string, directReportId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const cellKey = `${projectId}-${directReportId}`
+    setUpdatingPoints(cellKey)
+    try {
+      const dto: AddKnowledgePointsDto = {
+        directReportId,
+        projectId,
+        pointsToAdd: 1
+      }
+      await knowledgePointsApi.addPoints(dto)
+      await loadMatrix()
+    } catch (err) {
+      console.error('Failed to add point:', err)
+    } finally {
+      setUpdatingPoints(null)
+    }
+  }
+
+  // Remove one point (set manual points to current - 1)
+  const handleRemovePoint = async (projectId: string, directReportId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const currentPoints = getPointsForCell(projectId, directReportId)
+    if (!currentPoints || currentPoints.manualPoints <= 0) return
+
+    const cellKey = `${projectId}-${directReportId}`
+    setUpdatingPoints(cellKey)
+    try {
+      const newManualPoints = Math.max(0, currentPoints.manualPoints - 1)
+      if (newManualPoints === 0 && currentPoints.id) {
+        // Delete the record if no manual points left
+        await knowledgePointsApi.delete(currentPoints.id)
+      } else {
+        // Update with new manual points value
+        await knowledgePointsApi.createOrUpdate({
+          directReportId,
+          projectId,
+          manualPoints: newManualPoints
+        })
+      }
+      await loadMatrix()
+    } catch (err) {
+      console.error('Failed to remove point:', err)
+    } finally {
+      setUpdatingPoints(null)
+    }
+  }
+
+  // Handle suggestion click - increase knowledge level
+  const handleSuggestionClick = async (suggestion: KnowledgeLevelSuggestion) => {
+    try {
+      const dto: CreateOrUpdateProjectKnowledgeDto = {
+        directReportId: suggestion.directReportId,
+        projectId: suggestion.projectId,
+        knowledgeLevel: suggestion.suggestedLevel
+      }
+      await projectKnowledgeApi.createOrUpdate(dto)
+      await loadMatrix()
+    } catch (err) {
+      console.error('Failed to update knowledge level:', err)
     }
   }
 
@@ -629,18 +706,65 @@ export default function ProjectKnowledgePage() {
                       </td>
                       {filteredDirectReports.map(dr => {
                         const score = getScoreForCell(project.id, dr.id)
+                        const pointsData = getPointsForCell(project.id, dr.id)
                         const isActive = activeDropdown?.projectId === project.id && activeDropdown?.directReportId === dr.id
+                        const cellKey = `${project.id}-${dr.id}`
+                        const isUpdating = updatingPoints === cellKey
+                        const manualPoints = pointsData?.manualPoints || 0
+                        const autoPoints = pointsData?.automaticPoints || 0
+                        const totalPoints = manualPoints + autoPoints
+                        const suggestLevelIncrease = pointsData?.suggestLevelIncrease || false
                         return (
                           <td
-                            key={`${project.id}-${dr.id}`}
+                            key={cellKey}
                             className="px-4 py-3 text-center relative"
                           >
-                            <button
-                              onClick={() => handleCellClick(project.id, dr.id)}
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all hover:ring-2 hover:ring-amber-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900 ${getKnowledgeColor(score?.knowledgeLevel)}`}
-                            >
-                              {score?.knowledgeLevel || '-'}
-                            </button>
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={() => handleCellClick(project.id, dr.id)}
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all hover:ring-2 hover:ring-amber-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900 ${getKnowledgeColor(score?.knowledgeLevel)} ${suggestLevelIncrease ? 'ring-2 ring-amber-400 ring-offset-1' : ''}`}
+                              >
+                                {score?.knowledgeLevel || '-'}
+                              </button>
+                              {/* Points display with +/- buttons */}
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={(e) => handleRemovePoint(project.id, dr.id, e)}
+                                  disabled={isUpdating || manualPoints <= 0}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  title="Remove 1 manual point"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <div
+                                  className={`text-xs px-1 min-w-[36px] text-center ${
+                                    suggestLevelIncrease
+                                      ? 'text-amber-600 dark:text-amber-400 font-medium'
+                                      : 'text-slate-600 dark:text-slate-400'
+                                  }`}
+                                  title={`${manualPoints} manual + ${autoPoints} auto = ${totalPoints} total`}
+                                >
+                                  {isUpdating ? (
+                                    <span className="inline-block w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <span>
+                                      <span className="font-medium">{manualPoints}</span>
+                                      {autoPoints > 0 && (
+                                        <span className="text-green-600 dark:text-green-400">+{autoPoints}</span>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={(e) => handleAddPoint(project.id, dr.id, e)}
+                                  disabled={isUpdating}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 transition-colors"
+                                  title="Add 1 manual point"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
 
                             {/* Dropdown */}
                             {isActive && (
@@ -851,6 +975,55 @@ export default function ProjectKnowledgePage() {
         </div>
       )}
 
+      {/* Suggestions Banner */}
+      {matrix && matrix.suggestions && matrix.suggestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Level Increase Suggestions</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {`${matrix.suggestions.length} team member${matrix.suggestions.length > 1 ? 's have' : ' has'} accumulated enough points for a knowledge level increase`}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {matrix.suggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {suggestion.directReportName}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {suggestion.projectName} - {suggestion.totalPoints} pts accumulated
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Level {suggestion.currentLevel || 0} → {suggestion.suggestedLevel}
+                    </span>
+                    <button
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Increase Level
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Legend Modal */}
       {showLegend && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -884,6 +1057,17 @@ export default function ProjectKnowledgePage() {
                   </div>
                 </div>
               ))}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-2">Points System</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                  Points track contributions and are displayed as: <strong>Manual</strong><span className="text-green-600">+Auto</span>
+                </p>
+                <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1 list-disc list-inside">
+                  <li><strong>Manual points</strong> - Use +/- buttons to add/remove</li>
+                  <li><strong className="text-green-600">Auto points</strong> - Calculated from completed tasks (Story Points or 1 if not set)</li>
+                  <li>When total points reach 21, a level increase is suggested</li>
+                </ul>
+              </div>
             </div>
             <div className="flex justify-end p-6 border-t border-slate-200 dark:border-slate-700">
               <button

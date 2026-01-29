@@ -16,11 +16,16 @@ namespace Hive.Api.Controllers;
 public class ProjectKnowledgeController : ControllerBase
 {
     private readonly IProjectKnowledgeService _service;
+    private readonly IKnowledgePointService _knowledgePointService;
     private readonly ILogger<ProjectKnowledgeController> _logger;
 
-    public ProjectKnowledgeController(IProjectKnowledgeService service, ILogger<ProjectKnowledgeController> logger)
+    public ProjectKnowledgeController(
+        IProjectKnowledgeService service,
+        IKnowledgePointService knowledgePointService,
+        ILogger<ProjectKnowledgeController> logger)
     {
         _service = service;
+        _knowledgePointService = knowledgePointService;
         _logger = logger;
     }
 
@@ -45,6 +50,19 @@ public class ProjectKnowledgeController : ControllerBase
     {
         _logger.LogInformation("Getting project knowledge matrix");
         var matrix = await _service.GetMatrixAsync(cancellationToken);
+        return Ok(matrix);
+    }
+
+    /// <summary>
+    /// Gets the full project knowledge matrix with contribution points data.
+    /// Includes knowledge levels, points (manual + automatic from completed tasks), and level increase suggestions.
+    /// </summary>
+    [HttpGet("matrix-with-points")]
+    [ProducesResponseType(typeof(ProjectKnowledgeMatrixWithPointsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ProjectKnowledgeMatrixWithPointsDto>> GetMatrixWithPoints(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting project knowledge matrix with points");
+        var matrix = await _knowledgePointService.GetMatrixWithPointsAsync(cancellationToken);
         return Ok(matrix);
     }
 

@@ -1284,6 +1284,52 @@ export interface KnowledgeProgressionEntry {
   timestamp: string
 }
 
+// Knowledge Points
+export interface KnowledgePoint {
+  id: string
+  directReportId: string
+  directReportName: string
+  projectId: string
+  projectName: string
+  manualPoints: number
+  automaticPoints: number
+  totalPoints: number
+  currentKnowledgeLevel?: number
+  suggestLevelIncrease: boolean
+  notes?: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateOrUpdateKnowledgePointDto {
+  directReportId: string
+  projectId: string
+  manualPoints: number
+  notes?: string
+}
+
+export interface AddKnowledgePointsDto {
+  directReportId: string
+  projectId: string
+  pointsToAdd: number
+  notes?: string
+}
+
+export interface KnowledgeLevelSuggestion {
+  directReportId: string
+  directReportName: string
+  projectId: string
+  projectName: string
+  totalPoints: number
+  currentLevel?: number
+  suggestedLevel: number
+}
+
+export interface ProjectKnowledgeMatrixWithPoints extends ProjectKnowledgeMatrix {
+  points: KnowledgePoint[]
+  suggestions: KnowledgeLevelSuggestion[]
+}
+
 // Sentiment Analysis
 export interface SentimentStatus {
   isEnabled: boolean

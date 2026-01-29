@@ -80,8 +80,13 @@ import type {
   PagedResult,
   ProjectKnowledge,
   ProjectKnowledgeMatrix,
+  ProjectKnowledgeMatrixWithPoints,
   CreateOrUpdateProjectKnowledgeDto,
   KnowledgeProgressionEntry,
+  KnowledgePoint,
+  CreateOrUpdateKnowledgePointDto,
+  AddKnowledgePointsDto,
+  KnowledgeLevelSuggestion,
   SentimentStatus,
   SentimentAnalysis,
   TeamSentimentOverview,
@@ -508,6 +513,8 @@ export const projectKnowledgeApi = {
     api.get<ProjectKnowledge[]>('/projectknowledge').then(r => r.data),
   getMatrix: () =>
     api.get<ProjectKnowledgeMatrix>('/projectknowledge/matrix').then(r => r.data),
+  getMatrixWithPoints: () =>
+    api.get<ProjectKnowledgeMatrixWithPoints>('/projectknowledge/matrix-with-points').then(r => r.data),
   getById: (id: string) =>
     api.get<ProjectKnowledge>(`/projectknowledge/${id}`).then(r => r.data),
   getByDirectReport: (directReportId: string) =>
@@ -522,6 +529,28 @@ export const projectKnowledgeApi = {
     api.get<KnowledgeProgressionEntry[]>(`/projectknowledge/progression/by-direct-report/${directReportId}`).then(r => r.data),
   getProgressionByProject: (projectId: string) =>
     api.get<KnowledgeProgressionEntry[]>(`/projectknowledge/progression/by-project/${projectId}`).then(r => r.data)
+}
+
+// Knowledge Points
+export const knowledgePointsApi = {
+  getAll: () =>
+    api.get<KnowledgePoint[]>('/knowledgepoints').then(r => r.data),
+  getById: (id: string) =>
+    api.get<KnowledgePoint>(`/knowledgepoints/${id}`).then(r => r.data),
+  getByDirectReport: (directReportId: string) =>
+    api.get<KnowledgePoint[]>(`/knowledgepoints/by-direct-report/${directReportId}`).then(r => r.data),
+  getByProject: (projectId: string) =>
+    api.get<KnowledgePoint[]>(`/knowledgepoints/by-project/${projectId}`).then(r => r.data),
+  createOrUpdate: (data: CreateOrUpdateKnowledgePointDto) =>
+    api.put<KnowledgePoint>('/knowledgepoints', data).then(r => r.data),
+  addPoints: (data: AddKnowledgePointsDto) =>
+    api.post<KnowledgePoint>('/knowledgepoints/add', data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/knowledgepoints/${id}`),
+  getSuggestions: () =>
+    api.get<KnowledgeLevelSuggestion[]>('/knowledgepoints/suggestions').then(r => r.data),
+  getAutomaticPoints: (directReportId: string, projectId: string) =>
+    api.get<number>(`/knowledgepoints/automatic/${directReportId}/${projectId}`).then(r => r.data)
 }
 
 // Checklist Templates
