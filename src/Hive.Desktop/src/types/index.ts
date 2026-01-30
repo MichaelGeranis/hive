@@ -380,18 +380,20 @@ export interface TasksByTypeHours {
 }
 
 export interface SupportDistribution {
-  supportHours: number
-  supportTaskCount: number
-  nonSupportHours: number
-  nonSupportTaskCount: number
+  completedHours: number
+  completedTaskCount: number
+  allHours: number
+  allTaskCount: number
   byAssignee: SupportByAssignee[]
 }
 
 export interface SupportByAssignee {
   assigneeId?: string
   assigneeName: string
-  hours: number
-  taskCount: number
+  completedHours: number
+  completedTaskCount: number
+  allHours: number
+  allTaskCount: number
 }
 
 export interface ProjectsSummary {

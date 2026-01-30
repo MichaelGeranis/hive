@@ -336,10 +336,10 @@ export const handlers = [
         tasksByTypeHours: [],
         tasksByPriority: [],
         supportDistribution: {
-          supportHours: 0,
-          supportTaskCount: 0,
-          nonSupportHours: 0,
-          nonSupportTaskCount: 0,
+          completedHours: 0,
+          completedTaskCount: 0,
+          allHours: 0,
+          allTaskCount: 0,
           byAssignee: [],
         },
         productivity: {

@@ -687,11 +687,12 @@ export default function Dashboard() {
   // Use backend-computed support distribution
   const { supportDistribution } = dashboard.tasks
   const supportByAssigneeData = supportDistribution.byAssignee
-    .map(a => ({ name: a.assigneeName, hours: a.hours, tasks: a.taskCount }))
+    .map(a => ({ name: a.assigneeName, completedHours: a.completedHours, allHours: a.allHours, completedTasks: a.completedTaskCount, allTasks: a.allTaskCount }))
 
   // Support hours data for pie chart
   const supportComparisonData = [
-    { name: 'Support', hours: supportDistribution.supportHours, tasks: supportDistribution.supportTaskCount },
+    { name: 'Completed', hours: supportDistribution.completedHours },
+    { name: 'All Tasks', hours: supportDistribution.allHours },
   ].filter(d => d.hours > 0)
 
   // Calculate total warning count from all sources
@@ -1151,13 +1152,13 @@ export default function Dashboard() {
       </div>
 
       {/* Row 4: Support Distribution */}
-      {widgets.supportDistribution && supportDistribution.supportHours > 0 && (
+      {widgets.supportDistribution && supportDistribution.allHours > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Support Hours */}
           <Card>
             <CardHeader
               title="Support Hours"
-              subtitle={`${supportDistribution.supportHours}h total from ${supportDistribution.supportTaskCount} completed tasks`}
+              subtitle={`${supportDistribution.allTaskCount} support tasks (${supportDistribution.completedTaskCount} completed)`}
             />
             <CardContent className="h-64">
               {supportComparisonData.length > 0 ? (
@@ -1173,6 +1174,7 @@ export default function Dashboard() {
                       dataKey="hours"
                       label={createPieLabel(({ name, hours }) => `${name}: ${hours}h`)}
                     >
+                      <Cell fill="#22c55e" />
                       <Cell fill="#ef4444" />
                     </Pie>
                     <Tooltip
@@ -1188,10 +1190,14 @@ export default function Dashboard() {
               )}
             </CardContent>
             <div className="px-4 pb-4">
-              <div className="text-center">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{supportDistribution.completedHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.completedTaskCount} Completed</p>
+                </div>
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportDistribution.supportHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.supportTaskCount} Support tasks</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportDistribution.allHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.allTaskCount} All tasks</p>
                 </div>
               </div>
             </div>
@@ -1201,7 +1207,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support Hours by Assignee"
-              subtitle={`${supportDistribution.supportHours}h total support work`}
+              subtitle={`${supportDistribution.allHours}h total (${supportDistribution.completedHours}h completed)`}
             />
             <CardContent className="h-64">
               {supportByAssigneeData.length > 0 ? (
@@ -1211,11 +1217,17 @@ export default function Dashboard() {
                     <XAxis type="number" unit="h" />
                     <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
                     <Tooltip
-                      formatter={(value: number) => [`${value}h`, 'Support Hours']}
+                      formatter={(value: number, name: string) => [`${value}h`, name]}
                     />
                     <Bar
-                      dataKey="hours"
-                      name="Hours"
+                      dataKey="completedHours"
+                      name="Completed"
+                      fill="#22c55e"
+                      radius={[0, 4, 4, 0]}
+                    />
+                    <Bar
+                      dataKey="allHours"
+                      name="All Tasks"
                       fill="#ef4444"
                       radius={[0, 4, 4, 0]}
                     />

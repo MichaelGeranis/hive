@@ -513,34 +513,42 @@ public class ReportingService : IReportingService
             .Where(t => t.TotalHours > 0)
             .ToList();
 
-        // Calculate support distribution from completed tasks tagged with 'support'
-        var supportTasks = allTasks
-            .Where(t => t.Status == TaskStatus.Done &&
-                        (t.Labels.Contains("support", StringComparison.OrdinalIgnoreCase) ||
-                         t.Tags.Contains("support", StringComparison.OrdinalIgnoreCase)))
+        // Calculate support distribution from tasks tagged with 'support'
+        var allSupportTasks = allTasks
+            .Where(t => t.Labels.Contains("support", StringComparison.OrdinalIgnoreCase) ||
+                        t.Tags.Contains("support", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var completedSupportTasks = allSupportTasks
+            .Where(t => t.Status == TaskStatus.Done)
             .ToList();
 
-        var supportByAssignee = supportTasks
+        var supportByAssignee = allSupportTasks
             .GroupBy(t => t.AssigneeId)
-            .Select(g => new SupportByAssigneeDto
+            .Select(g =>
             {
-                AssigneeId = g.Key,
-                AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
-                    ? name
-                    : (g.Key.HasValue ? "Unknown" : "Unassigned"),
-                Hours = Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
-                TaskCount = g.Count()
+                var completed = g.Where(t => t.Status == TaskStatus.Done).ToList();
+                return new SupportByAssigneeDto
+                {
+                    AssigneeId = g.Key,
+                    AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
+                        ? name
+                        : (g.Key.HasValue ? "Unknown" : "Unassigned"),
+                    CompletedHours = Math.Round(completed.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    CompletedTaskCount = completed.Count,
+                    AllHours = Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    AllTaskCount = g.Count()
+                };
             })
-            .Where(s => s.Hours > 0)
-            .OrderByDescending(s => s.Hours)
+            .Where(s => s.AllHours > 0 || s.CompletedHours > 0)
+            .OrderByDescending(s => s.AllHours)
             .ToList();
 
         var supportDistribution = new SupportDistributionDto
         {
-            SupportHours = Math.Round(supportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
-            SupportTaskCount = supportTasks.Count,
-            NonSupportHours = 0,
-            NonSupportTaskCount = 0,
+            CompletedHours = Math.Round(completedSupportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            CompletedTaskCount = completedSupportTasks.Count,
+            AllHours = Math.Round(allSupportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            AllTaskCount = allSupportTasks.Count,
             ByAssignee = supportByAssignee
         };
 

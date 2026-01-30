@@ -258,10 +258,10 @@ public record TasksByTypeHoursDto
 /// </summary>
 public record SupportDistributionDto
 {
-    public double SupportHours { get; init; }
-    public int SupportTaskCount { get; init; }
-    public double NonSupportHours { get; init; }
-    public int NonSupportTaskCount { get; init; }
+    public double CompletedHours { get; init; }
+    public int CompletedTaskCount { get; init; }
+    public double AllHours { get; init; }
+    public int AllTaskCount { get; init; }
     public IReadOnlyList<SupportByAssigneeDto> ByAssignee { get; init; } = [];
 }
 
@@ -272,8 +272,10 @@ public record SupportByAssigneeDto
 {
     public Guid? AssigneeId { get; init; }
     public string AssigneeName { get; init; } = string.Empty;
-    public double Hours { get; init; }
-    public int TaskCount { get; init; }
+    public double CompletedHours { get; init; }
+    public int CompletedTaskCount { get; init; }
+    public double AllHours { get; init; }
+    public int AllTaskCount { get; init; }
 }
 
 /// <summary>
