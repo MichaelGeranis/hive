@@ -150,7 +150,7 @@ export default function PlanningMatrix({
 
   if (sprints.length === 0) {
     return (
-      <Card className="h-full">
+      <Card>
         <CardContent>
           <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400">
             <Calendar className="w-12 h-12 mb-4 opacity-50" />
@@ -163,11 +163,11 @@ export default function PlanningMatrix({
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card>
       <CardHeader>
         <h3 className="font-semibold text-slate-800 dark:text-white">Planning Board</h3>
       </CardHeader>
-      <CardContent className="flex-1 overflow-auto">
+      <CardContent>
         <div className="min-w-max">
           <table className="w-full border-collapse">
             <thead>

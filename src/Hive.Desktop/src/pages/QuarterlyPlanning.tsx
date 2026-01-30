@@ -264,7 +264,7 @@ export default function QuarterlyPlanning() {
         <div className="flex flex-1 gap-4 overflow-hidden">
           {/* Left Panel - Initiatives */}
           {leftPanelOpen && (
-            <div className="w-72 flex-shrink-0">
+            <div className="w-72 flex-shrink-0 overflow-auto">
               <InitiativesPanel
                 initiatives={planningBoard?.initiatives || []}
                 quarterId={selectedQuarterId!}
@@ -276,8 +276,8 @@ export default function QuarterlyPlanning() {
             </div>
           )}
 
-          {/* Center - Planning Matrix */}
-          <div className="flex-1 overflow-hidden">
+          {/* Center - Planning Board + Insights */}
+          <div className="flex-1 overflow-auto">
             <PlanningMatrix
               sprints={planningBoard?.sprints || []}
               teamMembers={planningBoard?.teamMembers || []}
@@ -288,14 +288,12 @@ export default function QuarterlyPlanning() {
               quarterId={selectedQuarterId!}
               onAllocationCreated={handleAllocationCreated}
             />
+            {rightPanelOpen && (
+              <div className="mt-4">
+                <InsightsSidebar insights={insights} />
+              </div>
+            )}
           </div>
-
-          {/* Right Panel - Insights */}
-          {rightPanelOpen && (
-            <div className="w-80 flex-shrink-0">
-              <InsightsSidebar insights={insights} />
-            </div>
-          )}
         </div>
       )}
 

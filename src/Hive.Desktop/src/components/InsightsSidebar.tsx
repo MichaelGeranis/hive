@@ -29,7 +29,7 @@ export default function InsightsSidebar({ insights }: InsightsSidebarProps) {
 
   if (!insights) {
     return (
-      <Card className="h-full">
+      <Card>
         <CardHeader>
           <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
             <Lightbulb className="w-4 h-4" />
@@ -102,8 +102,8 @@ export default function InsightsSidebar({ insights }: InsightsSidebarProps) {
   }, {} as Record<InsightType, PlanningInsight[]>)
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0">
+    <Card>
+      <CardHeader>
         <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
           <Lightbulb className="w-4 h-4" />
           Insights
@@ -148,7 +148,7 @@ export default function InsightsSidebar({ insights }: InsightsSidebarProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-auto">
+      <CardContent>
         {insights.insights.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-slate-500 dark:text-slate-400">
             <Target className="w-8 h-8 mb-2 opacity-50" />

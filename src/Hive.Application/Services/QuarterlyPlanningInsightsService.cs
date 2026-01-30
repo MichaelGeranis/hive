@@ -220,21 +220,26 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         var memberNames = directReports.ToDictionary(d => d.Id, d => d.FullName);
         var sprintNames = sprints.ToDictionary(s => s.Id, s => s.Name);
 
-        foreach (var allocation in allocations)
+        // Group allocations by (DirectReportId, SprintId) to avoid duplicate warnings
+        // when a team member has multiple allocations in the same sprint
+        var allocationGroups = allocations
+            .GroupBy(a => (a.DirectReportId, a.SprintId));
+
+        foreach (var group in allocationGroups)
         {
-            var sprint = sprints.FirstOrDefault(s => s.Id == allocation.SprintId);
+            var sprint = sprints.FirstOrDefault(s => s.Id == group.Key.SprintId);
             if (sprint?.StartDate == null || sprint.EndDate == null) continue;
 
             var conflictingLeaves = leaves.Where(l =>
-                l.DirectReportId == allocation.DirectReportId &&
+                l.DirectReportId == group.Key.DirectReportId &&
                 l.Status == LeaveStatus.Active &&
                 l.StartDate <= sprint.EndDate &&
                 l.EndDate >= sprint.StartDate);
 
             foreach (var leave in conflictingLeaves)
             {
-                memberNames.TryGetValue(allocation.DirectReportId, out var memberName);
-                sprintNames.TryGetValue(allocation.SprintId, out var sprintName);
+                memberNames.TryGetValue(group.Key.DirectReportId, out var memberName);
+                sprintNames.TryGetValue(group.Key.SprintId, out var sprintName);
 
                 yield return new PlanningInsightDto
                 {
@@ -242,9 +247,9 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
                     Severity = InsightSeverity.Warning,
                     Title = "Leave Conflict",
                     Message = $"{memberName ?? "Team member"} is on leave during {sprintName ?? "sprint"} ({leave.StartDate:MMM d} - {leave.EndDate:MMM d})",
-                    RelatedDirectReportId = allocation.DirectReportId,
-                    RelatedSprintId = allocation.SprintId,
-                    AffectedCells = new[] { allocation.Id }
+                    RelatedDirectReportId = group.Key.DirectReportId,
+                    RelatedSprintId = group.Key.SprintId,
+                    AffectedCells = group.Select(a => a.Id).ToArray()
                 };
             }
         }
