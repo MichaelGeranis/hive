@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { RefreshCw, AlertCircle, Brain, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Card, CardHeader, CardContent } from './Card'
@@ -15,9 +15,10 @@ interface SentimentInsightsProps {
   directReportId?: string
   directReportName?: string
   showTeamOverview?: boolean
+  badge?: ReactNode
 }
 
-export function SentimentInsights({ directReportId, directReportName, showTeamOverview = false }: SentimentInsightsProps) {
+export function SentimentInsights({ directReportId, directReportName, showTeamOverview = false, badge }: SentimentInsightsProps) {
   const [status, setStatus] = useState<SentimentStatus | null>(null)
   const [analysis, setAnalysis] = useState<SentimentAnalysis | null>(null)
   const [teamOverview, setTeamOverview] = useState<TeamSentimentOverview | null>(null)
@@ -87,7 +88,7 @@ export function SentimentInsights({ directReportId, directReportName, showTeamOv
   if (!status?.isConfigured) {
     return (
       <Card>
-        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" />
+        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" badge={badge} />
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
@@ -106,7 +107,7 @@ export function SentimentInsights({ directReportId, directReportName, showTeamOv
   if (!status?.isEnabled) {
     return (
       <Card>
-        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" />
+        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" badge={badge} />
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
@@ -125,7 +126,7 @@ export function SentimentInsights({ directReportId, directReportName, showTeamOv
   if (error) {
     return (
       <Card>
-        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" />
+        <CardHeader title="Sentiment Analysis" subtitle="AI-powered team morale insights" badge={badge} />
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
@@ -144,7 +145,7 @@ export function SentimentInsights({ directReportId, directReportName, showTeamOv
 
   // Team Overview Mode
   if (showTeamOverview && teamOverview) {
-    return <TeamSentimentWidget overview={teamOverview} />
+    return <TeamSentimentWidget overview={teamOverview} badge={badge} />
   }
 
   // Individual Direct Report Mode
@@ -164,9 +165,10 @@ export function SentimentInsights({ directReportId, directReportName, showTeamOv
 
 interface TeamSentimentWidgetProps {
   overview: TeamSentimentOverview
+  badge?: ReactNode
 }
 
-function TeamSentimentWidget({ overview }: TeamSentimentWidgetProps) {
+function TeamSentimentWidget({ overview, badge }: TeamSentimentWidgetProps) {
   const pieData = [
     { name: 'Positive', value: overview.averagePositive, color: SENTIMENT_COLORS.positive },
     { name: 'Neutral', value: overview.averageNeutral, color: SENTIMENT_COLORS.neutral },
@@ -193,7 +195,7 @@ function TeamSentimentWidget({ overview }: TeamSentimentWidgetProps) {
   if (overview.directReportsAnalyzed === 0) {
     return (
       <Card>
-        <CardHeader title="Team Sentiment" subtitle="AI-powered team morale insights" />
+        <CardHeader title="Team Sentiment" subtitle="AI-powered team morale insights" badge={badge} />
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
@@ -213,6 +215,7 @@ function TeamSentimentWidget({ overview }: TeamSentimentWidgetProps) {
     <Card>
       <CardHeader
         title="Team Sentiment"
+        badge={badge}
         subtitle={`Based on ${overview.totalNotesAnalyzed} notes from ${overview.directReportsAnalyzed} team members`}
         action={
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${

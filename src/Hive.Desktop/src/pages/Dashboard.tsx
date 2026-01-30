@@ -40,6 +40,12 @@ import {
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 
+const ALL_TIME_BADGE = (
+  <span className="text-xs px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-500 text-slate-500 dark:text-slate-400 font-normal">
+    All time
+  </span>
+)
+
 // Task type specific colors
 const TASK_TYPE_COLORS: Record<string, string> = {
   'Spike': '#ef4444',      // Red
@@ -62,24 +68,6 @@ const getInitials = (name: string): string => {
     .split(' ')
     .map(part => part.charAt(0).toUpperCase())
     .join('')
-}
-
-// Custom pie label renderer with smaller font (10% smaller = ~11px from default 12px)
-const RADIAN = Math.PI / 180
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const createPieLabel = (formatter: (props: any) => string) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (props: any) => {
-    const { cx, cy, midAngle, outerRadius, fill } = props
-    const radius = outerRadius * 1.35
-    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-    const y = cy + radius * Math.sin(-midAngle * RADIAN)
-    return (
-      <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>
-        {formatter(props)}
-      </text>
-    )
-  }
 }
 
 const DASHBOARD_WIDGETS_KEY = 'hive-dashboard-widgets'
@@ -153,6 +141,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([])
   const [velocity, setVelocity] = useState<TeamVelocity | null>(null)
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
+  const [includeSupportEstimate, setIncludeSupportEstimate] = useState(false)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
   const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
   const [sprints, setSprints] = useState<Sprint[]>([])
@@ -780,6 +769,7 @@ export default function Dashboard() {
           title="Team Members"
           value={dashboard.team.totalReports}
           icon={<Users className="w-6 h-6" />}
+          badge={ALL_TIME_BADGE}
           color="amber"
           onClick={() => navigate('/team')}
         />
@@ -795,6 +785,7 @@ export default function Dashboard() {
           value={actionItems.length}
           subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
           icon={<ListTodo className="w-6 h-6" />}
+          badge={ALL_TIME_BADGE}
           color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
           onClick={() => setShowActionItemsModal(true)}
         />
@@ -803,6 +794,7 @@ export default function Dashboard() {
           value={priorityNotes.length}
           subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
           icon={<StickyNote className="w-6 h-6" />}
+          badge={ALL_TIME_BADGE}
           color={priorityNotes.some(n => n.priority === 3) ? 'red' : priorityNotes.length > 0 ? 'amber' : 'green'}
           onClick={() => setShowPriorityNotesModal(true)}
         />
@@ -882,6 +874,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Knowledge Level Suggestions"
+            badge={ALL_TIME_BADGE}
             subtitle={`${knowledgeSuggestions.length} team member${knowledgeSuggestions.length > 1 ? 's have' : ' has'} accumulated enough points for a knowledge level increase`}
             action={
               <button
@@ -937,34 +930,48 @@ export default function Dashboard() {
         {widgets.projectsDistribution && (
         <Card>
           <CardHeader title="Projects Distribution" subtitle="How many projects each team member is engaged in" />
-          <CardContent className="h-64">
+          <CardContent>
             {projectDistributionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={projectDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={createPieLabel(({ initials, value }) => `${initials}: ${value}`)}
-                    onClick={(data) => handleMemberClick(data.name)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {projectDistributionData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value} projects`]}
-                    labelFormatter={(_, payload) => payload?.[0]?.payload?.name || ''}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={projectDistributionData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                        onClick={(data) => handleMemberClick(data.name)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {projectDistributionData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [`${value} projects`]}
+                        labelFormatter={(_, payload) => payload?.[0]?.payload?.name || ''}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {projectDistributionData.map((e, i) => ({ ...e, _i: i })).sort((a, b) => b.value - a.value).map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[entry._i % COLORS.length] }} />
+                        <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                      </div>
+                      <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                 No project assignments found
               </div>
             )}
@@ -1048,29 +1055,43 @@ export default function Dashboard() {
         {widgets.tasksDistribution && (
         <Card>
           <CardHeader title="Tasks Distribution" subtitle="By type (count)" />
-          <CardContent className="h-64">
+          <CardContent>
             {taskTypeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taskTypeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={createPieLabel(({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`)}
-                  >
-                    {taskTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={taskTypeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {taskTypeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {[...taskTypeData].sort((a, b) => b.value - a.value).map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getTaskTypeColor(entry.name) }} />
+                        <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                      </div>
+                      <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                 No tasks found
               </div>
             )}
@@ -1082,31 +1103,45 @@ export default function Dashboard() {
         {widgets.tasksDistributionSP && (
         <Card>
           <CardHeader title="Tasks Distribution" subtitle={`By type (SP)`} />
-          <CardContent className="h-64">
+          <CardContent>
             {taskTypeSPChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taskTypeSPChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={createPieLabel(({ name, value, percent }) => `${name}: ${value} SP (${(percent * 100).toFixed(0)}%)`)}
-                  >
-                    {taskTypeSPChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value} SP`, 'Story Points']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={taskTypeSPChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {taskTypeSPChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [`${value} SP`, 'Story Points']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {[...taskTypeSPChartData].sort((a, b) => b.value - a.value).map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getTaskTypeColor(entry.name) }} />
+                        <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                      </div>
+                      <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.value} SP</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                 No story points assigned
               </div>
             )}
@@ -1118,31 +1153,45 @@ export default function Dashboard() {
         {widgets.tasksDistributionHours && (
         <Card>
           <CardHeader title="Tasks Distribution" subtitle={`By type (Hours Logged)`} />
-          <CardContent className="h-64">
+          <CardContent>
             {taskTypeHoursChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taskTypeHoursChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={createPieLabel(({ name, value, percent }) => `${name}: ${value}h (${(percent * 100).toFixed(0)}%)`)}
-                  >
-                    {taskTypeHoursChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value}h`, 'Hours Logged']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={taskTypeHoursChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {taskTypeHoursChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getTaskTypeColor(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [`${value}h`, 'Hours Logged']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {[...taskTypeHoursChartData].sort((a, b) => b.value - a.value).map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getTaskTypeColor(entry.name) }} />
+                        <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                      </div>
+                      <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.value}h</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                 No hours logged
               </div>
             )}
@@ -1160,31 +1209,45 @@ export default function Dashboard() {
               title="Support Hours"
               subtitle={`${supportDistribution.allTaskCount} support tasks (${supportDistribution.completedTaskCount} completed)`}
             />
-            <CardContent className="h-64">
+            <CardContent>
               {supportComparisonData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={supportComparisonData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={5}
-                      dataKey="hours"
-                      label={createPieLabel(({ name, hours }) => `${name}: ${hours}h`)}
-                    >
-                      <Cell fill="#22c55e" />
-                      <Cell fill="#ef4444" />
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number) => [`${value}h`, 'Hours']}
-                      labelFormatter={(name) => name}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={supportComparisonData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={60}
+                          paddingAngle={5}
+                          dataKey="hours"
+                        >
+                          <Cell fill="#22c55e" />
+                          <Cell fill="#ef4444" />
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [`${value}h`, 'Hours']}
+                          labelFormatter={(name) => name}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {[...supportComparisonData].sort((a, b) => b.hours - a.hours).map((entry) => (
+                      <div key={entry.name} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.name === 'Completed' ? '#22c55e' : '#ef4444' }} />
+                          <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                        </div>
+                        <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.hours}h</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                   No support hours logged
                 </div>
               )}
@@ -1282,7 +1345,7 @@ export default function Dashboard() {
 
       {/* Team Sentiment */}
       {widgets.teamSentiment && (
-        <SentimentInsights showTeamOverview={true} />
+        <SentimentInsights showTeamOverview={true} badge={ALL_TIME_BADGE} />
       )}
 
       {/* Capacity Analysis */}
@@ -1489,7 +1552,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Velocity"
-            subtitle={`from completed tasks`}
+            subtitle={`#completed_tasks #with_sp #no_support`}
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -1580,11 +1643,29 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        ) : accuracy && accuracy.sprints.length > 0 ? (
+        ) : accuracy && accuracy.sprints.length > 0 ? (() => {
+          const supportOffset = includeSupportEstimate ? 56 : 0
+          const adjustedEstimated = accuracy.totalEstimatedHours + supportOffset
+          const adjustedVariance = accuracy.totalActualHours - adjustedEstimated
+          const adjustedAccuracy = adjustedEstimated > 0
+            ? Math.max(0, Math.round((100 - Math.abs(adjustedVariance * 100 / adjustedEstimated)) * 10) / 10)
+            : 0
+          return (
         <Card>
           <CardHeader
             title="Estimation Accuracy"
-            subtitle={`from all tasks`}
+            subtitle={`#all_tasks`}
+            action={
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeSupportEstimate}
+                  onChange={(e) => setIncludeSupportEstimate(e.target.checked)}
+                  className="rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500"
+                />
+                <span className="text-sm text-slate-600 dark:text-slate-400">+56h support estimate</span>
+              </label>
+            }
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -1602,7 +1683,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">{accuracy.totalEstimatedHours}h</p>
+                <p className="text-2xl font-bold text-blue-500">{adjustedEstimated}h</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Total Estimated Hours</p>
               </div>
               <div className="text-center">
@@ -1610,14 +1691,14 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">Total Actual Hours</p>
               </div>
               <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.totalVarianceHours <= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {accuracy.totalVarianceHours > 0 ? '+' : ''}{accuracy.totalVarianceHours}h
+                <p className={`text-2xl font-bold ${adjustedVariance <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {adjustedVariance > 0 ? '+' : ''}{adjustedVariance}h
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Variance</p>
               </div>
               <div className="text-center">
-                <p className={`text-2xl font-bold ${accuracy.overallAccuracyPercentage >= 80 ? 'text-green-500' : accuracy.overallAccuracyPercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {accuracy.overallAccuracyPercentage}%
+                <p className={`text-2xl font-bold ${adjustedAccuracy >= 80 ? 'text-green-500' : adjustedAccuracy >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                  {adjustedAccuracy}%
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Accuracy</p>
               </div>
@@ -1635,7 +1716,8 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-        ) : null
+          )
+        })() : null
       )}
    
       {/* Customize Dashboard Modal */}

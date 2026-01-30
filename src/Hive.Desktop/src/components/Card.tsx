@@ -16,12 +16,13 @@ export function Card({ children, className = '' }: CardProps) {
 export interface CardHeaderProps {
   title?: string
   subtitle?: string
+  badge?: ReactNode
   action?: ReactNode
   children?: ReactNode
   className?: string
 }
 
-export function CardHeader({ title, subtitle, action, children, className = '' }: CardHeaderProps) {
+export function CardHeader({ title, subtitle, badge, action, children, className = '' }: CardHeaderProps) {
   return (
     <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-700 ${className}`}>
       {children ? (
@@ -29,7 +30,12 @@ export function CardHeader({ title, subtitle, action, children, className = '' }
       ) : (
         <div className="flex items-center justify-between">
           <div>
-            {title && <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>}
+            {title && (
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+                {badge}
+              </div>
+            )}
             {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           {action && <div>{action}</div>}
@@ -53,6 +59,7 @@ interface StatCardProps {
   value: string | number
   subtitle?: string
   icon?: ReactNode
+  badge?: ReactNode
   trend?: {
     value: number
     isPositive: boolean
@@ -70,7 +77,7 @@ const colorStyles = {
   slate: 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-400',
 }
 
-export function StatCard({ title, value, subtitle, icon, trend, color = 'blue', onClick }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, badge, trend, color = 'blue', onClick }: StatCardProps) {
   const isClickable = !!onClick
 
   return (
@@ -81,7 +88,10 @@ export function StatCard({ title, value, subtitle, icon, trend, color = 'blue', 
       <Card className="h-full">
         <CardContent className="flex items-start justify-between h-full">
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+              {badge}
+            </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{value}</p>
             {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
             {trend && (
