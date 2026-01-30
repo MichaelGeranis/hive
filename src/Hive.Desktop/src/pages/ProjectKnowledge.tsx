@@ -23,6 +23,7 @@ import {
   Legend
 } from 'recharts'
 import KnowledgeProgressionChart from '../components/KnowledgeProgressionChart'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 type TabType = 'matrix' | 'progression'
 type SortOrder = 'asc' | 'desc'
@@ -43,6 +44,7 @@ const getKnowledgeColor = (level: number | undefined): string => {
 }
 
 export default function ProjectKnowledgePage() {
+  const { showError } = useToast()
   const [matrix, setMatrix] = useState<ProjectKnowledgeMatrixWithPoints | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -131,6 +133,7 @@ export default function ProjectKnowledgePage() {
       await loadMatrix()
     } catch (err) {
       console.error('Failed to add point:', err)
+      showError(getErrorMessage(err))
     } finally {
       setUpdatingPoints(null)
     }
@@ -160,6 +163,7 @@ export default function ProjectKnowledgePage() {
       await loadMatrix()
     } catch (err) {
       console.error('Failed to remove point:', err)
+      showError(getErrorMessage(err))
     } finally {
       setUpdatingPoints(null)
     }
@@ -180,6 +184,7 @@ export default function ProjectKnowledgePage() {
       await loadMatrix()
     } catch (err) {
       console.error('Failed to update knowledge level:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -239,6 +244,7 @@ export default function ProjectKnowledgePage() {
       setActiveDropdown(null)
     } catch (err) {
       console.error('Failed to update knowledge assessment:', err)
+      showError(getErrorMessage(err))
     }
   }
 

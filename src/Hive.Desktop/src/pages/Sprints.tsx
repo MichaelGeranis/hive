@@ -3,8 +3,10 @@ import { Calendar, Plus, TrendingUp, Users, Edit2, Trash2, Save, Filter, X } fro
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { sprintsApi, sprintCapacityApi, settingsApi } from '../services/api'
 import type { Sprint, SprintCapacity, AppSettings } from '../types'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function Sprints() {
+  const { showError } = useToast()
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,6 +113,7 @@ export default function Sprints() {
       setEditingSprint(null)
     } catch (err) {
       console.error('Failed to save sprint', err)
+      showError(getErrorMessage(err))
       setSprintError('Failed to save sprint. Please try again.')
     } finally {
       setSprintSaving(false)
@@ -137,6 +140,7 @@ export default function Sprints() {
       setSprintNumber(1)
     } catch (err: any) {
       console.error('Failed to create sprint', err)
+      showError(getErrorMessage(err))
       setError(err.response?.data?.message || err.message || 'Failed to create sprint. Please try again.')
     } finally {
       setLoading(false)
@@ -154,6 +158,7 @@ export default function Sprints() {
       await loadData()
     } catch (err: any) {
       console.error('Failed to delete sprint', err)
+      showError(getErrorMessage(err))
       setError(err.response?.data || 'Failed to delete sprint. Please try again.')
     }
   }
@@ -172,6 +177,7 @@ export default function Sprints() {
       setTeamFilterInput(updatedSettings.sprintTeamFilter || '')
     } catch (err: any) {
       console.error('Failed to save team filter', err)
+      showError(getErrorMessage(err))
       setError(err.response?.data?.message || 'Failed to save team filter. Please try again.')
     } finally {
       setSavingFilter(false)
@@ -191,6 +197,7 @@ export default function Sprints() {
       setTeamFilterInput('')
     } catch (err: any) {
       console.error('Failed to clear team filter', err)
+      showError(getErrorMessage(err))
       setError(err.response?.data?.message || 'Failed to clear team filter. Please try again.')
     } finally {
       setSavingFilter(false)

@@ -17,6 +17,7 @@ import {
 import { notesApi } from '../services/api'
 import type { ManagerNote, CreateManagerNoteDto, UpdateManagerNoteDto, NotePriority } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 const priorityLabels: Record<number, string> = {
   0: 'Low',
@@ -42,6 +43,7 @@ const priorityBorderColors: Record<number, string> = {
 type FilterType = 'all' | 'pending' | 'completed' | 'overdue'
 
 export default function Notes() {
+  const { showError } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
 
@@ -171,6 +173,7 @@ export default function Notes() {
       loadTags()
     } catch (error) {
       console.error('Failed to create note:', error)
+      showError(getErrorMessage(error))
     }
   }
 
@@ -191,6 +194,7 @@ export default function Notes() {
       loadTags()
     } catch (error) {
       console.error('Failed to update note:', error)
+      showError(getErrorMessage(error))
     }
   }
 
@@ -200,6 +204,7 @@ export default function Notes() {
       loadData()
     } catch (error) {
       console.error('Failed to toggle note:', error)
+      showError(getErrorMessage(error))
     }
   }
 
@@ -211,6 +216,7 @@ export default function Notes() {
       loadTags()
     } catch (error) {
       console.error('Failed to delete note:', error)
+      showError(getErrorMessage(error))
     }
   }
 

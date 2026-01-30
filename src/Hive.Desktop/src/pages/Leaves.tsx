@@ -13,6 +13,7 @@ import {
 import { leavesApi, directReportsApi } from '../services/api'
 import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 const leaveTypes = ['Vacation', 'Sick', 'Other']
@@ -41,6 +42,7 @@ interface DayHoverState {
 }
 
 export default function Leaves() {
+  const { showError } = useToast()
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [overview, setOverview] = useState<TeamLeaveOverview | null>(null)
@@ -106,6 +108,7 @@ export default function Leaves() {
       loadData()
     } catch (error) {
       console.error('Failed to create leave:', error)
+      showError(getErrorMessage(error))
     }
   }
 
@@ -124,6 +127,7 @@ export default function Leaves() {
       loadData()
     } catch (error) {
       console.error('Failed to update leave:', error)
+      showError(getErrorMessage(error))
     }
   }
 

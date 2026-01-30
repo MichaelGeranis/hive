@@ -20,6 +20,7 @@ import { SentimentInsights } from '../components/SentimentInsights'
 import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
 import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent, KnowledgeLevelSuggestion } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
   BarChart,
   Bar,
@@ -146,6 +147,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { showError } = useToast()
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null)
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -347,6 +349,7 @@ export default function Dashboard() {
       setActionItems(prev => prev.filter(item => item.id !== noteId))
     } catch (err) {
       console.error('Failed to complete action item:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -357,6 +360,7 @@ export default function Dashboard() {
       setPriorityNotes(prev => prev.filter(item => item.id !== noteId))
     } catch (err) {
       console.error('Failed to complete priority note:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -376,6 +380,7 @@ export default function Dashboard() {
       ))
     } catch (err) {
       console.error('Failed to increase knowledge level:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -1393,20 +1398,7 @@ export default function Dashboard() {
         )
 
         if (suggestionsNeedingAdjustment.length === 0) {
-          return (
-            <Card>
-              <CardHeader
-                title="Sprint Capacity Suggestions"
-                subtitle="Based on upcoming leaves and sprint capacity settings"
-              />
-              <CardContent>
-                <div className="flex items-center justify-center py-6 text-slate-500 dark:text-slate-400">
-                  <Check className="w-5 h-5 mr-2 text-green-500" />
-                  <span>No capacity adjustments needed</span>
-                </div>
-              </CardContent>
-            </Card>
-          )
+          return null
         }
 
         return (

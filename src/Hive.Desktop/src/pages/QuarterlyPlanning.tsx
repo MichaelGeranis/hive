@@ -22,8 +22,11 @@ import type {
 import PlanningMatrix from '../components/PlanningMatrix'
 import InitiativesPanel from '../components/InitiativesPanel'
 import InsightsSidebar from '../components/InsightsSidebar'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function QuarterlyPlanning() {
+  const { showError } = useToast()
+
   // Data state
   const [quarters, setQuarters] = useState<Quarter[]>([])
   const [selectedQuarterId, setSelectedQuarterId] = useState<string | null>(null)
@@ -109,6 +112,7 @@ export default function QuarterlyPlanning() {
       setNewQuarterOkr('')
     } catch (err: any) {
       console.error('Failed to create quarter', err)
+      showError(getErrorMessage(err))
       setError(err.response?.data?.message || 'Failed to create quarter.')
     } finally {
       setCreating(false)

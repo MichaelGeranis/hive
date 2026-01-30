@@ -96,3 +96,34 @@ body {
 .no-transitions * {
   transition: none !important;
 }
+
+/* Toast notification animations */
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+.toast-enter {
+  animation: toast-slide-in 0.3s ease forwards;
+}
+
+.toast-exit {
+  animation: toast-slide-out 0.3s ease forwards;
+}

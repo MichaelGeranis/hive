@@ -4,8 +4,10 @@ import { Card, CardHeader, CardContent } from '../components/Card'
 import { projectsApi } from '../services/api'
 import type { Project } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function Projects() {
+  const { showError } = useToast()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -110,6 +112,7 @@ export default function Projects() {
       loadProjects()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -131,6 +134,7 @@ export default function Projects() {
         loadProjects()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

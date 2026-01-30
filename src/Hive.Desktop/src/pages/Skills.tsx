@@ -31,6 +31,7 @@ import type {
   SkillsSummaryDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
   PieChart,
   Pie,
@@ -59,6 +60,7 @@ const LEVEL_NAMES: Record<ProficiencyLevel, string> = {
 type TabType = 'overview' | 'matrix' | 'profiles' | 'gaps' | 'manage'
 
 export default function Skills() {
+  const { showError } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [skills, setSkills] = useState<Skill[]>([])
   const [skillCategories, setSkillCategories] = useState<SkillCategoryEntity[]>([])
@@ -173,6 +175,7 @@ export default function Skills() {
       resetSkillForm()
     } catch (err) {
       console.error('Failed to create skill:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -186,6 +189,7 @@ export default function Skills() {
       setEditingSkill(null)
     } catch (err) {
       console.error('Failed to update skill:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -196,6 +200,7 @@ export default function Skills() {
       await loadData()
     } catch (err) {
       console.error('Failed to delete skill:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -222,6 +227,7 @@ export default function Skills() {
       })
     } catch (err) {
       console.error('Failed to create assessment:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -248,6 +254,7 @@ export default function Skills() {
       })
     } catch (err) {
       console.error('Failed to update assessment:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -269,6 +276,7 @@ export default function Skills() {
       })
     } catch (err) {
       console.error('Failed to delete assessment:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -280,6 +288,7 @@ export default function Skills() {
       resetCategoryForm()
     } catch (err) {
       console.error('Failed to create category:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -298,6 +307,7 @@ export default function Skills() {
       setEditingCategory(null)
     } catch (err) {
       console.error('Failed to update category:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -308,6 +318,7 @@ export default function Skills() {
       await loadData()
     } catch (err) {
       console.error('Failed to delete category:', err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -321,6 +332,7 @@ export default function Skills() {
       await loadData()
     } catch (err) {
       console.error('Failed to toggle category status:', err)
+      showError(getErrorMessage(err))
     }
   }
 

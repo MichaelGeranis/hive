@@ -14,6 +14,7 @@ import type {
   CreateOnboardingInstanceDto
 } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 const typeLabels: Record<ChecklistType, string> = {
   [ChecklistType.Interview]: 'Interview',
@@ -46,6 +47,7 @@ const instanceStatusColors: Record<ChecklistInstanceStatus, string> = {
 type Tab = 'templates' | 'instances'
 
 export default function Checklists() {
+  const { showError } = useToast()
   const [activeTab, setActiveTab] = useState<Tab>('templates')
   const [loading, setLoading] = useState(true)
 
@@ -214,6 +216,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -229,6 +232,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -239,6 +243,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -252,6 +257,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -266,6 +272,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -276,6 +283,7 @@ export default function Checklists() {
       loadTemplates()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -292,6 +300,7 @@ export default function Checklists() {
       loadInstances()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -304,6 +313,7 @@ export default function Checklists() {
       }
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -317,6 +327,7 @@ export default function Checklists() {
       }
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -327,6 +338,7 @@ export default function Checklists() {
       loadInstances()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -338,6 +350,7 @@ export default function Checklists() {
       loadInstances()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -348,6 +361,7 @@ export default function Checklists() {
       loadInstances()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 

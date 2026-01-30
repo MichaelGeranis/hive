@@ -4,8 +4,10 @@ import { Card, CardHeader, CardContent } from '../components/Card'
 import { parentsApi } from '../services/api'
 import type { Parent } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function Parents() {
+  const { showError } = useToast()
   const [parents, setParents] = useState<Parent[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -105,6 +107,7 @@ export default function Parents() {
       loadParents()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -124,6 +127,7 @@ export default function Parents() {
         loadParents()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

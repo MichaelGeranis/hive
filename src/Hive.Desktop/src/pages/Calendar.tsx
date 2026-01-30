@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, StickyNote, Calendar as CalendarIcon, Check 
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { notesApi, meetingNotesApi } from '../services/api'
 import type { ManagerNote, MeetingNote } from '../types'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 type CalendarEvent = {
   id: string
@@ -38,6 +39,7 @@ export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const { showError } = useToast()
 
   useEffect(() => {
     loadEvents()
@@ -117,6 +119,7 @@ export default function Calendar() {
       setEvents(prev => prev.filter(event => event.id !== eventId))
     } catch (err) {
       console.error('Failed to complete task:', err)
+      showError(getErrorMessage(err))
     }
   }
 

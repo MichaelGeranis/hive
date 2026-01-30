@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent } from '../components/Card'
 import { reviewsApi, directReportsApi } from '../services/api'
 import type { PerformanceReview, DirectReport } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 // Map rating enum values to star counts:
 // NotRated (0) → 0 stars, NeedsImprovement (1) → 2 stars, MeetsExpectations (2) → 3 stars,
@@ -24,6 +25,7 @@ const ratingStars = (rating: number) => {
 }
 
 export default function Reviews() {
+  const { showError } = useToast()
   const [reviews, setReviews] = useState<PerformanceReview[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -150,6 +152,7 @@ export default function Reviews() {
     } catch (err: any) {
       const message = err.response?.data?.message || 'An error occurred while saving the review.'
       setError(message)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -174,6 +177,7 @@ export default function Reviews() {
         loadReviews()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

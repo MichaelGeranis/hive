@@ -5,6 +5,7 @@ import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
 import { NoteCategory, ActionItemStatus } from '../types'
 import type { OneOnOneMeeting, DirectReport, MeetingNote, CreateMeetingNoteDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 const categoryColors: Record<NoteCategory, string> = {
   [NoteCategory.Discussion]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
@@ -44,6 +45,7 @@ const allCategories = [
 ]
 
 export default function Meetings() {
+  const { showError } = useToast()
   const [meetings, setMeetings] = useState<OneOnOneMeeting[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -226,6 +228,7 @@ export default function Meetings() {
       loadMeetings()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -248,6 +251,7 @@ export default function Meetings() {
         loadMeetings()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }
@@ -260,6 +264,7 @@ export default function Meetings() {
       closeNoteModal()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -269,6 +274,7 @@ export default function Meetings() {
       await loadMeetingNotes(meetingId)
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -279,6 +285,7 @@ export default function Meetings() {
         await loadMeetingNotes(meetingId)
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

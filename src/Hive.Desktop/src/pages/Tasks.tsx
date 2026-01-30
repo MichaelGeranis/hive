@@ -6,6 +6,7 @@ import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../servi
 import { TaskStatus, TaskPriority } from '../types'
 import type { TeamTask, DirectReport, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
@@ -29,6 +30,7 @@ const priorityColors: Record<TaskPriority, string> = {
 
 export default function Tasks() {
   const [searchParams] = useSearchParams()
+  const { showError } = useToast()
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -284,6 +286,7 @@ export default function Tasks() {
       loadData()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -294,6 +297,7 @@ export default function Tasks() {
         loadData()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }
@@ -327,6 +331,7 @@ export default function Tasks() {
         loadData()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

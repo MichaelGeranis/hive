@@ -4,8 +4,10 @@ import { Card, CardHeader, CardContent } from '../components/Card'
 import { directReportsApi } from '../services/api'
 import type { DirectReport, CreateDirectReportDto, BulkImportResultDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function DirectReports() {
+  const { showError } = useToast()
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +91,7 @@ export default function DirectReports() {
       loadDirectReports()
     } catch (err) {
       console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -113,6 +116,7 @@ export default function DirectReports() {
         loadDirectReports()
       } catch (err) {
         console.error(err)
+        showError(getErrorMessage(err))
       }
     }
   }

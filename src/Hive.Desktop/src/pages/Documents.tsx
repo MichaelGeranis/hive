@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { Plus, Search, Edit, Trash2, ExternalLink, ChevronDown, ChevronUp, Tag, X } from 'lucide-react'
 import { documentsApi } from '../services/api'
 import type { Document } from '../types'
+import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function Documents() {
+  const { showError } = useToast()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -47,6 +49,7 @@ export default function Documents() {
       loadDocuments()
     } catch (error) {
       console.error('Failed to save document:', error)
+      showError(getErrorMessage(error))
     }
   }
 
@@ -68,6 +71,7 @@ export default function Documents() {
         loadDocuments()
       } catch (error) {
         console.error('Failed to delete document:', error)
+        showError(getErrorMessage(error))
       }
     }
   }

@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { ToastProvider } from './contexts/ToastContext'
 import App from './App'
 import './index.css'
 
@@ -26,7 +27,9 @@ if (rootElement) {
       <React.StrictMode>
         <HashRouter>
           <ThemeProvider>
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </ThemeProvider>
         </HashRouter>
       </React.StrictMode>,
