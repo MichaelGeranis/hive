@@ -777,6 +777,7 @@ export default function Dashboard() {
           title="Projects"
           value={dashboard.tasks.projects.totalProjects}
           icon={<FolderKanban className="w-6 h-6" />}
+          badge={ALL_TIME_BADGE}
           color="purple"
           onClick={() => navigate('/projects?filter=active')}
         />
@@ -929,7 +930,7 @@ export default function Dashboard() {
         {/* Projects Distribution by Member */}
         {widgets.projectsDistribution && (
         <Card>
-          <CardHeader title="Projects Distribution" subtitle="How many projects each team member is engaged in" />
+          <CardHeader title="Projects Distribution" badge={ALL_TIME_BADGE} subtitle="How many projects each team member is engaged in" />
           <CardContent>
             {projectDistributionData.length > 0 ? (
               <>
@@ -999,6 +1000,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Members by Project"
+            badge={ALL_TIME_BADGE}
             subtitle="How many members are engaged per project"
           />
           <CardContent className="h-64">
@@ -1207,6 +1209,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support Hours"
+              badge={ALL_TIME_BADGE}
               subtitle={`${supportDistribution.allTaskCount} support tasks (${supportDistribution.completedTaskCount} completed)`}
             />
             <CardContent>
@@ -1270,6 +1273,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support Hours by Assignee"
+              badge={ALL_TIME_BADGE}
               subtitle={`${supportDistribution.allHours}h total (${supportDistribution.completedHours}h completed)`}
             />
             <CardContent className="h-64">
