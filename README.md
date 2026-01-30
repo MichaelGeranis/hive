@@ -512,6 +512,34 @@ const api = axios.create({
 | `UseInMemoryDatabase` | Set to `true` for in-memory database (appsettings.json) |
 | `ASPNETCORE_ENVIRONMENT` | Set to `Development` for dev mode |
 
+## Dashboard Sprint History Filter
+
+The Dashboard has a "Sprint History" dropdown that filters data to the last N sprints. Some widgets always show all-time data regardless of the selected filter — these are marked with an "All time" badge next to their title.
+
+### Widgets not affected by the filter (all-time data)
+
+- **Team Members** — total count of all direct reports
+- **Projects** — total count of all projects
+- **1:1 Action Items** — all open action items
+- **TODOs** — all pending high/urgent priority notes
+- **Projects Distribution** — project engagement per team member (all tasks)
+- **Members by Project** — team member count per project (all tasks)
+- **Support Hours** — support task hours (all tasks tagged "support")
+- **Support Hours by Assignee** — support hours broken down by assignee
+- **Knowledge Level Suggestions** — accumulated knowledge points
+- **Team Sentiment** — AI-powered sentiment analysis from meeting notes
+
+### Widgets affected by the filter
+
+- **Warnings** — aggregated warning count from filtered data
+- **Sprint & Tasks Overview** — current sprint progress bar
+- **Tasks Distribution** (count, SP, hours) — task type breakdown
+- **Members Workload** — task count per assignee
+- **Capacity Analysis** — sprint capacity utilization
+- **Sprint Capacity Suggestions** — leave-based capacity adjustments
+- **Team Velocity** — story points and completion trends
+- **Estimation Accuracy** — estimated vs actual hours per sprint
+
 ## Future Enhancements
 0. Use or remove Authentication for 
 1. Career Development Plans 🎯

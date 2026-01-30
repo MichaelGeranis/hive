@@ -230,6 +230,52 @@ src/Hive.Desktop/
 └── backend/              # Embedded .NET backend (built output)
 ```
 
+## Dashboard Sprint History Filter
+
+The Dashboard page has a "Sprint History" dropdown filter that limits data to the last N sprints. Not all widgets are affected by this filter. Widgets showing "all time" data are marked with an `ALL_TIME_BADGE` pill in their header (defined in `Dashboard.tsx`).
+
+### Not affected by sprint filter (show all-time data)
+
+| Widget | Data Source | Why Unaffected |
+|--------|-------------|----------------|
+| Team Members (stat) | `dashboard.team.totalReports` | `GetTeamOverviewAsync()` takes no sprint param |
+| Projects (stat) | `dashboard.tasks.projects.totalProjects` | Backend uses `projects.Count` (all projects) |
+| 1:1 Action Items (stat) | `meetingNotesApi.getOpenActionItems()` | Independent API, no sprint param |
+| TODOs (stat) | `notesApi.getPending()` | Independent API, no sprint param |
+| Projects Distribution | Local computation from `tasksApi.getAll()` | `tasksApi.getAll()` fetches all tasks |
+| Members by Project | Local computation from `tasksApi.getAll()` | Same as above |
+| Support Hours | `dashboard.tasks.supportDistribution` | Backend uses `allTasks` (pre-filter variable) |
+| Support Hours by Assignee | `dashboard.tasks.supportDistribution` | Same as above |
+| Knowledge Level Suggestions | `knowledgePointsApi.getSuggestions()` | Independent API, no sprint param |
+| Team Sentiment | `sentimentApi` (own component) | Independent API, no sprint param |
+
+### Affected by sprint filter
+
+| Widget | Data Source |
+|--------|-------------|
+| Warnings (stat) | Mixed — depends on filtered capacity, velocity, accuracy |
+| Sprint & Tasks Overview (bar) | `capacityAnalysis` + `dashboard.tasks.tasks` |
+| Tasks Distribution | `dashboard.tasks.tasksByType` |
+| Tasks Distribution (SP) | `dashboard.tasks.tasksByTypeSP` |
+| Tasks Distribution (Hours) | `dashboard.tasks.tasksByTypeHours` |
+| Members Workload | `dashboard.tasks.tasksByAssignee` |
+| Capacity Analysis | `reportsApi.getCapacityAnalysis(sprintFilter)` |
+| Sprint Capacity Suggestions | Uses `sprintFilter` to limit upcoming sprints shown |
+| Team Velocity | `reportsApi.getTeamVelocity(sprintFilter)` |
+| Estimation Accuracy | `reportsApi.getEstimationAccuracy(sprintFilter)` |
+
+### Key backend detail
+
+In `ReportingService.GetTasksAnalyticsAsync(sprintCount)`:
+- The `tasks` variable is filtered by sprint (lines 352-381)
+- The `projects` variable is **not** filtered — `TotalProjects = projects.Count` uses all projects
+- The `allTasks` variable (pre-filter) is used for support distribution (line 517)
+- The `allSprints`, `directReports`, `parents` variables are never sprint-filtered
+
+### Adding new dashboard widgets
+
+When adding a new widget to the Dashboard, determine whether its data source is affected by the sprint filter. If not, add `badge={ALL_TIME_BADGE}` to its `CardHeader` (or `badge` prop on `StatCard`).
+
 ## Database Configuration
 
 The application supports two database modes:

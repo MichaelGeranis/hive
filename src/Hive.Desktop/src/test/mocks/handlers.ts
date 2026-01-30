@@ -340,6 +340,10 @@ export const handlers = [
           completedTaskCount: 0,
           allHours: 0,
           allTaskCount: 0,
+          maintenanceCompletedHours: 0,
+          maintenanceCompletedTaskCount: 0,
+          maintenanceAllHours: 0,
+          maintenanceAllTaskCount: 0,
           byAssignee: [],
         },
         productivity: {

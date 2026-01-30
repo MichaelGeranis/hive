@@ -522,25 +522,50 @@ public class ReportingService : IReportingService
             .Where(t => t.Status == TaskStatus.Done)
             .ToList();
 
-        var supportByAssignee = allSupportTasks
+        // Calculate maintenance distribution from tasks tagged with 'maintenance'
+        var allMaintenanceTasks = allTasks
+            .Where(t => t.Labels.Contains("maintenance", StringComparison.OrdinalIgnoreCase) ||
+                        t.Tags.Contains("maintenance", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var completedMaintenanceTasks = allMaintenanceTasks
+            .Where(t => t.Status == TaskStatus.Done)
+            .ToList();
+
+        // Group by assignee across both support and maintenance tasks
+        var maintenanceByAssigneeMap = allMaintenanceTasks
             .GroupBy(t => t.AssigneeId)
-            .Select(g =>
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var allAssigneeIds = allSupportTasks.Select(t => t.AssigneeId)
+            .Union(allMaintenanceTasks.Select(t => t.AssigneeId))
+            .Distinct();
+
+        var supportByAssignee = allAssigneeIds
+            .Select(assigneeId =>
             {
-                var completed = g.Where(t => t.Status == TaskStatus.Done).ToList();
+                var supportTasks = allSupportTasks.Where(t => t.AssigneeId == assigneeId).ToList();
+                var supportCompleted = supportTasks.Where(t => t.Status == TaskStatus.Done).ToList();
+                var maintTasks = maintenanceByAssigneeMap.GetValueOrDefault(assigneeId) ?? [];
+                var maintCompleted = maintTasks.Where(t => t.Status == TaskStatus.Done).ToList();
+
                 return new SupportByAssigneeDto
                 {
-                    AssigneeId = g.Key,
-                    AssigneeName = g.Key.HasValue && directReportMap.TryGetValue(g.Key.Value, out var name)
+                    AssigneeId = assigneeId,
+                    AssigneeName = assigneeId.HasValue && directReportMap.TryGetValue(assigneeId.Value, out var name)
                         ? name
-                        : (g.Key.HasValue ? "Unknown" : "Unassigned"),
-                    CompletedHours = Math.Round(completed.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
-                    CompletedTaskCount = completed.Count,
-                    AllHours = Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
-                    AllTaskCount = g.Count()
+                        : (assigneeId.HasValue ? "Unknown" : "Unassigned"),
+                    CompletedHours = Math.Round(supportCompleted.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    CompletedTaskCount = supportCompleted.Count,
+                    AllHours = Math.Round(supportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    AllTaskCount = supportTasks.Count,
+                    MaintenanceCompletedHours = Math.Round(maintCompleted.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    MaintenanceCompletedTaskCount = maintCompleted.Count,
+                    MaintenanceAllHours = Math.Round(maintTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+                    MaintenanceAllTaskCount = maintTasks.Count
                 };
             })
-            .Where(s => s.AllHours > 0 || s.CompletedHours > 0)
-            .OrderByDescending(s => s.AllHours)
+            .Where(s => s.AllHours > 0 || s.CompletedHours > 0 || s.MaintenanceAllHours > 0 || s.MaintenanceCompletedHours > 0)
+            .OrderByDescending(s => s.AllHours + s.MaintenanceAllHours)
             .ToList();
 
         var supportDistribution = new SupportDistributionDto
@@ -549,6 +574,10 @@ public class ReportingService : IReportingService
             CompletedTaskCount = completedSupportTasks.Count,
             AllHours = Math.Round(allSupportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
             AllTaskCount = allSupportTasks.Count,
+            MaintenanceCompletedHours = Math.Round(completedMaintenanceTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            MaintenanceCompletedTaskCount = completedMaintenanceTasks.Count,
+            MaintenanceAllHours = Math.Round(allMaintenanceTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            MaintenanceAllTaskCount = allMaintenanceTasks.Count,
             ByAssignee = supportByAssignee
         };
 

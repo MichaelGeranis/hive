@@ -676,12 +676,20 @@ export default function Dashboard() {
   // Use backend-computed support distribution
   const { supportDistribution } = dashboard.tasks
   const supportByAssigneeData = supportDistribution.byAssignee
-    .map(a => ({ name: a.assigneeName, completedHours: a.completedHours, allHours: a.allHours, completedTasks: a.completedTaskCount, allTasks: a.allTaskCount }))
+    .map(a => ({
+      name: a.assigneeName,
+      completedHours: a.completedHours,
+      allHours: a.allHours,
+      maintCompletedHours: a.maintenanceCompletedHours,
+      maintAllHours: a.maintenanceAllHours,
+    }))
 
-  // Support hours data for pie chart
+  // Support & maintenance hours data for pie chart
   const supportComparisonData = [
-    { name: 'Completed', hours: supportDistribution.completedHours },
-    { name: 'All Tasks', hours: supportDistribution.allHours },
+    { name: 'Support (Completed)', hours: supportDistribution.completedHours, color: '#22c55e' },
+    { name: 'Support (All)', hours: supportDistribution.allHours, color: '#ef4444' },
+    { name: 'Maintenance (Completed)', hours: supportDistribution.maintenanceCompletedHours, color: '#3b82f6' },
+    { name: 'Maintenance (All)', hours: supportDistribution.maintenanceAllHours, color: '#8b5cf6' },
   ].filter(d => d.hours > 0)
 
   // Calculate total warning count from all sources
@@ -1203,14 +1211,14 @@ export default function Dashboard() {
       </div>
 
       {/* Row 4: Support Distribution */}
-      {widgets.supportDistribution && supportDistribution.allHours > 0 && (
+      {widgets.supportDistribution && (supportDistribution.allHours > 0 || supportDistribution.maintenanceAllHours > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Support Hours */}
+          {/* Support & Maintenance Hours */}
           <Card>
             <CardHeader
-              title="Support Hours"
+              title="Support & Maintenance Hours"
               badge={ALL_TIME_BADGE}
-              subtitle={`${supportDistribution.allTaskCount} support tasks (${supportDistribution.completedTaskCount} completed)`}
+              subtitle={`${supportDistribution.allTaskCount} support · ${supportDistribution.maintenanceAllTaskCount} maintenance`}
             />
             <CardContent>
               {supportComparisonData.length > 0 ? (
@@ -1227,8 +1235,9 @@ export default function Dashboard() {
                           paddingAngle={5}
                           dataKey="hours"
                         >
-                          <Cell fill="#22c55e" />
-                          <Cell fill="#ef4444" />
+                          {supportComparisonData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
                         </Pie>
                         <Tooltip
                           formatter={(value: number) => [`${value}h`, 'Hours']}
@@ -1241,7 +1250,7 @@ export default function Dashboard() {
                     {[...supportComparisonData].sort((a, b) => b.hours - a.hours).map((entry) => (
                       <div key={entry.name} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.name === 'Completed' ? '#22c55e' : '#ef4444' }} />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
                           <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
                         </div>
                         <span className="font-medium text-slate-900 dark:text-slate-100 ml-2 flex-shrink-0">{entry.hours}h</span>
@@ -1251,7 +1260,7 @@ export default function Dashboard() {
                 </>
               ) : (
                 <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
-                  No support hours logged
+                  No hours logged
                 </div>
               )}
             </CardContent>
@@ -1259,24 +1268,32 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">{supportDistribution.completedHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.completedTaskCount} Completed</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.completedTaskCount} Support completed</p>
                 </div>
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportDistribution.allHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.allTaskCount} All tasks</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.allTaskCount} Support all</p>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{supportDistribution.maintenanceCompletedHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.maintenanceCompletedTaskCount} Maint. completed</p>
+                </div>
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{supportDistribution.maintenanceAllHours}h</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.maintenanceAllTaskCount} Maint. all</p>
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Support Hours by Assignee */}
+          {/* Support & Maintenance Hours by Assignee */}
           <Card>
             <CardHeader
-              title="Support Hours by Assignee"
+              title="Support & Maintenance by Assignee"
               badge={ALL_TIME_BADGE}
-              subtitle={`${supportDistribution.allHours}h total (${supportDistribution.completedHours}h completed)`}
+              subtitle={`Support: ${supportDistribution.allHours}h · Maintenance: ${supportDistribution.maintenanceAllHours}h`}
             />
-            <CardContent className="h-64">
+            <CardContent className="h-80">
               {supportByAssigneeData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={supportByAssigneeData} layout="vertical">
@@ -1286,23 +1303,36 @@ export default function Dashboard() {
                     <Tooltip
                       formatter={(value: number, name: string) => [`${value}h`, name]}
                     />
+                    <Legend />
                     <Bar
                       dataKey="completedHours"
-                      name="Completed"
+                      name="Support (Completed)"
                       fill="#22c55e"
                       radius={[0, 4, 4, 0]}
                     />
                     <Bar
                       dataKey="allHours"
-                      name="All Tasks"
+                      name="Support (All)"
                       fill="#ef4444"
+                      radius={[0, 4, 4, 0]}
+                    />
+                    <Bar
+                      dataKey="maintCompletedHours"
+                      name="Maint. (Completed)"
+                      fill="#3b82f6"
+                      radius={[0, 4, 4, 0]}
+                    />
+                    <Bar
+                      dataKey="maintAllHours"
+                      name="Maint. (All)"
+                      fill="#8b5cf6"
                       radius={[0, 4, 4, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
-                  No support hours logged
+                  No hours logged
                 </div>
               )}
             </CardContent>

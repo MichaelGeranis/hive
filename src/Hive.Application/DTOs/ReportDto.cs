@@ -262,6 +262,10 @@ public record SupportDistributionDto
     public int CompletedTaskCount { get; init; }
     public double AllHours { get; init; }
     public int AllTaskCount { get; init; }
+    public double MaintenanceCompletedHours { get; init; }
+    public int MaintenanceCompletedTaskCount { get; init; }
+    public double MaintenanceAllHours { get; init; }
+    public int MaintenanceAllTaskCount { get; init; }
     public IReadOnlyList<SupportByAssigneeDto> ByAssignee { get; init; } = [];
 }
 
@@ -276,6 +280,10 @@ public record SupportByAssigneeDto
     public int CompletedTaskCount { get; init; }
     public double AllHours { get; init; }
     public int AllTaskCount { get; init; }
+    public double MaintenanceCompletedHours { get; init; }
+    public int MaintenanceCompletedTaskCount { get; init; }
+    public double MaintenanceAllHours { get; init; }
+    public int MaintenanceAllTaskCount { get; init; }
 }
 
 /// <summary>

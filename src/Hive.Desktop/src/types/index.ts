@@ -384,6 +384,10 @@ export interface SupportDistribution {
   completedTaskCount: number
   allHours: number
   allTaskCount: number
+  maintenanceCompletedHours: number
+  maintenanceCompletedTaskCount: number
+  maintenanceAllHours: number
+  maintenanceAllTaskCount: number
   byAssignee: SupportByAssignee[]
 }
 
@@ -394,6 +398,10 @@ export interface SupportByAssignee {
   completedTaskCount: number
   allHours: number
   allTaskCount: number
+  maintenanceCompletedHours: number
+  maintenanceCompletedTaskCount: number
+  maintenanceAllHours: number
+  maintenanceAllTaskCount: number
 }
 
 export interface ProjectsSummary {
