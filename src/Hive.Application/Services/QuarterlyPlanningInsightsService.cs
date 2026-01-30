@@ -80,7 +80,7 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         insights.AddRange(DetectDependencyRisks(dependencies, allocations, initiatives, sprints));
 
         // 3. Bottleneck Detection
-        insights.AddRange(DetectBottlenecks(allocations, directReports, sprints, initiatives, tshirtMappings));
+        insights.AddRange(DetectBottlenecks(allocations, sprints, initiatives, tshirtMappings));
 
         // 4. Unassigned Work
         insights.AddRange(DetectUnassignedWork(initiatives, allocations));
@@ -302,75 +302,73 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
 
     private static IEnumerable<PlanningInsightDto> DetectBottlenecks(
         IReadOnlyList<Allocation> allocations,
-        IReadOnlyList<DirectReport> directReports,
         IReadOnlyList<Sprint> sprints,
         IReadOnlyList<Initiative> initiatives,
         Dictionary<string, decimal> tshirtMappings)
     {
-        var memberNames = directReports.ToDictionary(d => d.Id, d => d.FullName);
-        var sprintNames = sprints.ToDictionary(s => s.Id, s => s.Name);
+        var sprintDict = sprints.ToDictionary(s => s.Id);
         var initiativeDict = initiatives.ToDictionary(i => i.Id);
 
-        // Group allocations by sprint to calculate initiatives assigned to other members
-        var allocationsBySprint = allocations
-            .GroupBy(a => a.SprintId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        // Group all allocations by initiative
+        var allocationsByInitiative = allocations
+            .GroupBy(a => a.InitiativeId);
 
-        // Calculate bottleneck ratio for each member in each sprint
-        var allocationsByMemberSprint = allocations
-            .GroupBy(a => new { a.DirectReportId, a.SprintId })
-            .Select(g =>
-            {
-                // Get unique initiatives for this member in this sprint
-                var memberInitiativeIds = g.Select(a => a.InitiativeId).Distinct().ToList();
-
-                // Calculate sum of sprint effort from assigned initiatives
-                var totalSprintEffort = memberInitiativeIds
-                    .Sum(initId =>
-                    {
-                        initiativeDict.TryGetValue(initId, out var initiative);
-                        return initiative != null ? GetTshirtEffort(initiative.TshirtSize, tshirtMappings) : 0;
-                    });
-
-                // Count OTHER members assigned to the SAME initiatives in the same sprint
-                var sprintAllocations = allocationsBySprint.GetValueOrDefault(g.Key.SprintId, new List<Allocation>());
-                var otherMembersOnSameInitiatives = sprintAllocations
-                    .Where(a => a.DirectReportId != g.Key.DirectReportId && memberInitiativeIds.Contains(a.InitiativeId))
-                    .Select(a => a.DirectReportId)
-                    .Distinct()
-                    .Count();
-
-                // Calculate bottleneck ratio (avoid division by zero)
-                var bottleneckRatio = otherMembersOnSameInitiatives > 0
-                    ? totalSprintEffort / otherMembersOnSameInitiatives
-                    : totalSprintEffort; // If no other members share these initiatives, the ratio equals the effort
-
-                return new
-                {
-                    g.Key.DirectReportId,
-                    g.Key.SprintId,
-                    TotalSprintEffort = totalSprintEffort,
-                    OtherMembersOnSameInitiatives = otherMembersOnSameInitiatives,
-                    BottleneckRatio = bottleneckRatio
-                };
-            });
-
-        // Flag as bottleneck when ratio >= 1 (person's effort equals or exceeds others' initiative count)
-        foreach (var group in allocationsByMemberSprint.Where(g => g.BottleneckRatio >= 1))
+        foreach (var group in allocationsByInitiative)
         {
-            memberNames.TryGetValue(group.DirectReportId, out var memberName);
-            sprintNames.TryGetValue(group.SprintId, out var sprintName);
+            if (!initiativeDict.TryGetValue(group.Key, out var initiative))
+                continue;
+
+            var totalPersonSprints = group.Count();
+            var estimate = GetTshirtEffort(initiative.TshirtSize, tshirtMappings);
+
+            // Skip if planned is within tolerance of estimate
+            if (Math.Abs(totalPersonSprints - estimate) < 1m)
+                continue;
+
+            // Find the sprint with the most distinct members assigned to this initiative
+            var busiestSprint = group
+                .GroupBy(a => a.SprintId)
+                .OrderByDescending(sg => sg.Select(a => a.DirectReportId).Distinct().Count())
+                .First();
+
+            var busiestSprintId = busiestSprint.Key;
+            var memberCount = busiestSprint.Select(a => a.DirectReportId).Distinct().Count();
+            sprintDict.TryGetValue(busiestSprintId, out var sprint);
+
+            var sizeLabel = GetSizeLabel(initiative.TshirtSize);
+            var estimateLabel = FormatEstimate(initiative.TshirtSize, estimate);
+            var article = sizeLabel.StartsWith("X", StringComparison.OrdinalIgnoreCase) ? "an" : "a";
 
             yield return new PlanningInsightDto
             {
                 Type = InsightType.Bottleneck,
                 Severity = InsightSeverity.Warning,
                 Title = "Potential Bottleneck",
-                Message = $"{memberName ?? "Team member"} has {group.TotalSprintEffort:0.#} sprints of effort with {group.OtherMembersOnSameInitiatives} other member(s) on the same initiatives in {sprintName ?? "sprint"} (ratio: {group.BottleneckRatio:0.##})",
-                RelatedDirectReportId = group.DirectReportId,
-                RelatedSprintId = group.SprintId
+                Message = $"'{initiative.Name}' in {sprint?.Name ?? "sprint"} is assigned to {memberCount} team members. It is {article} {sizeLabel} initiative. You plan to spend {totalPersonSprints} sprint workhours but it is estimated for {estimateLabel} sprints.",
+                RelatedInitiativeId = initiative.Id,
+                RelatedSprintId = busiestSprintId,
+                AffectedCells = group.Select(a => a.Id).ToArray()
             };
         }
+    }
+
+    private static string GetSizeLabel(string tshirtSize)
+    {
+        return (tshirtSize?.ToUpperInvariant()) switch
+        {
+            "S" => "Small",
+            "M" => "Medium",
+            "L" => "Large",
+            "XL" => "XLarge",
+            _ => tshirtSize ?? "Medium"
+        };
+    }
+
+    private static string FormatEstimate(string tshirtSize, decimal estimate)
+    {
+        var key = tshirtSize?.ToUpperInvariant();
+        var formatted = estimate == Math.Floor(estimate) ? estimate.ToString("0") : estimate.ToString("0.#");
+        return key == "XL" ? $"{formatted}+" : formatted;
     }
 
     private static IEnumerable<PlanningInsightDto> DetectUnassignedWork(
