@@ -513,39 +513,14 @@ public class ReportingService : IReportingService
             .Where(t => t.TotalHours > 0)
             .ToList();
 
-        // Calculate support distribution using Parent entities (aggregated stats)
-        // Build a map of Parent names to their linked TeamTask types
-        var parentTaskMap = new Dictionary<string, TaskType>(StringComparer.OrdinalIgnoreCase);
-        foreach (var parent in parents)
-        {
-            if (parent.TeamTaskId.HasValue)
-            {
-                var linkedTask = allTasks.FirstOrDefault(t => t.Id == parent.TeamTaskId.Value);
-                if (linkedTask != null)
-                {
-                    parentTaskMap[parent.Name] = linkedTask.Type;
-                }
-            }
-        }
-
-        // Categorize parents as support or non-support based on their linked task type
-        var supportParents = parents
-            .Where(p => parentTaskMap.TryGetValue(p.Name, out var type) &&
-                        type.ToString().Contains("Support", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var nonSupportParents = parents
-            .Where(p => !parentTaskMap.TryGetValue(p.Name, out var type) ||
-                        !type.ToString().Contains("Support", StringComparison.OrdinalIgnoreCase))
+        // Calculate support distribution from completed tasks tagged with 'support'
+        var supportTasks = allTasks
+            .Where(t => t.Status == TaskStatus.Done &&
+                        (t.Labels.Contains("support", StringComparison.OrdinalIgnoreCase) ||
+                         t.Tags.Contains("support", StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        // For assignee breakdown, get subtasks that belong to support parents
-        // Subtasks reference Parent.Id via TeamTask.ParentId
-        var supportParentIds = supportParents.Select(p => p.Id).ToHashSet();
-        var supportSubtasks = allTasks
-            .Where(t => t.ParentId.HasValue && supportParentIds.Contains(t.ParentId.Value))
-            .ToList();
-
-        var supportByAssignee = supportSubtasks
+        var supportByAssignee = supportTasks
             .GroupBy(t => t.AssigneeId)
             .Select(g => new SupportByAssigneeDto
             {
@@ -562,10 +537,10 @@ public class ReportingService : IReportingService
 
         var supportDistribution = new SupportDistributionDto
         {
-            SupportHours = Math.Round(supportParents.Sum(p => p.TimeSpentMinutes ?? 0) / 60.0, 1),
-            SupportTaskCount = supportParents.Count,
-            NonSupportHours = Math.Round(nonSupportParents.Sum(p => p.TimeSpentMinutes ?? 0) / 60.0, 1),
-            NonSupportTaskCount = nonSupportParents.Count,
+            SupportHours = Math.Round(supportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
+            SupportTaskCount = supportTasks.Count,
+            NonSupportHours = 0,
+            NonSupportTaskCount = 0,
             ByAssignee = supportByAssignee
         };
 

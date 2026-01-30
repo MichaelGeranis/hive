@@ -45,9 +45,12 @@ public class AppSettingsService : IAppSettingsService
         }
         else
         {
-            // Update existing settings
-            entity.UpdateStoryPointMappings(SerializeMappings(dto.StoryPointMappings));
-            await _repository.UpdateAsync(entity, cancellationToken);
+            // Update story point mappings only if provided
+            if (dto.StoryPointMappings.Count > 0)
+            {
+                entity.UpdateStoryPointMappings(SerializeMappings(dto.StoryPointMappings));
+                await _repository.UpdateAsync(entity, cancellationToken);
+            }
         }
 
         // Update T-shirt size mappings if provided

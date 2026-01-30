@@ -689,10 +689,9 @@ export default function Dashboard() {
   const supportByAssigneeData = supportDistribution.byAssignee
     .map(a => ({ name: a.assigneeName, hours: a.hours, tasks: a.taskCount }))
 
-  // Support vs Non-Support comparison data
+  // Support hours data for pie chart
   const supportComparisonData = [
     { name: 'Support', hours: supportDistribution.supportHours, tasks: supportDistribution.supportTaskCount },
-    { name: 'Other Work', hours: supportDistribution.nonSupportHours, tasks: supportDistribution.nonSupportTaskCount }
   ].filter(d => d.hours > 0)
 
   // Calculate total warning count from all sources
@@ -1152,13 +1151,13 @@ export default function Dashboard() {
       </div>
 
       {/* Row 4: Support Distribution */}
-      {widgets.supportDistribution && (supportDistribution.supportHours > 0 || supportDistribution.nonSupportHours > 0) && (
+      {widgets.supportDistribution && supportDistribution.supportHours > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Support vs Other Work */}
+          {/* Support Hours */}
           <Card>
             <CardHeader
-              title="Support vs Other Work"
-              subtitle={`Total: ${supportDistribution.supportHours + supportDistribution.nonSupportHours}h logged`}
+              title="Support Hours"
+              subtitle={`${supportDistribution.supportHours}h total from ${supportDistribution.supportTaskCount} completed tasks`}
             />
             <CardContent className="h-64">
               {supportComparisonData.length > 0 ? (
@@ -1172,10 +1171,9 @@ export default function Dashboard() {
                       outerRadius={70}
                       paddingAngle={5}
                       dataKey="hours"
-                      label={createPieLabel(({ name, hours, percent }) => `${name}: ${hours}h (${(percent * 100).toFixed(0)}%)`)}
+                      label={createPieLabel(({ name, hours }) => `${name}: ${hours}h`)}
                     >
-                      <Cell fill="#ef4444" /> {/* Red for Support */}
-                      <Cell fill="#3b82f6" /> {/* Blue for Other Work */}
+                      <Cell fill="#ef4444" />
                     </Pie>
                     <Tooltip
                       formatter={(value: number) => [`${value}h`, 'Hours']}
@@ -1185,19 +1183,15 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
-                  No hours logged
+                  No support hours logged
                 </div>
               )}
             </CardContent>
             <div className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="text-center">
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-red-600 dark:text-red-400">{supportDistribution.supportHours}h</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.supportTaskCount} Support tasks</p>
-                </div>
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{supportDistribution.nonSupportHours}h</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{supportDistribution.nonSupportTaskCount} Other tasks</p>
                 </div>
               </div>
             </div>
