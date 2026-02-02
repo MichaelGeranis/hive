@@ -55,7 +55,6 @@ public record CreateSprintCapacityDto
 {
     public Guid SprintId { get; init; }
     public int TotalCapacityPoints { get; init; }
-    public int AvailableMembers { get; init; }
 }
 
 /// <summary>
@@ -64,5 +63,4 @@ public record CreateSprintCapacityDto
 public record UpdateSprintCapacityDto
 {
     public int TotalCapacityPoints { get; init; }
-    public int AvailableMembers { get; init; }
 }

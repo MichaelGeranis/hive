@@ -13,11 +13,16 @@ public class SprintService : ISprintService
 {
     private readonly ISprintRepository _sprintRepository;
     private readonly IActivityService _activityService;
+    private readonly ISprintCapacityService _sprintCapacityService;
 
-    public SprintService(ISprintRepository sprintRepository, IActivityService activityService)
+    public SprintService(
+        ISprintRepository sprintRepository,
+        IActivityService activityService,
+        ISprintCapacityService sprintCapacityService)
     {
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
+        _sprintCapacityService = sprintCapacityService ?? throw new ArgumentNullException(nameof(sprintCapacityService));
     }
 
     public async Task<SprintDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -87,6 +92,8 @@ public class SprintService : ISprintService
 
         entity.UpdateDates(dto.StartDate, dto.EndDate);
         await _sprintRepository.UpdateAsync(entity, cancellationToken);
+
+        await _sprintCapacityService.RecalculateAvailableMembersAsync(entity.Id, cancellationToken);
 
         await _activityService.LogActivityAsync(
             ActivityType.Updated,

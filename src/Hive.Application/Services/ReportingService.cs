@@ -1465,65 +1465,6 @@ public class ReportingService : IReportingService
             }).ToList();
         }
 
-        // Compute sprint capacity suggestions for future sprints with leave impact
-        var threeMonthsLater = today.AddMonths(3);
-        var upcomingSprintsForSuggestions = sprints
-            .Where(s =>
-            {
-                var start = s.GetEstimatedStartDate().Date;
-                return start >= today && start <= threeMonthsLater;
-            })
-            .OrderBy(s => s.GetEstimatedStartDate())
-            .ToList();
-
-        if (sprintCount.HasValue && sprintCount.Value > 0)
-        {
-            upcomingSprintsForSuggestions = upcomingSprintsForSuggestions.Take(sprintCount.Value).ToList();
-        }
-
-        var sprintCapacitySuggestions = new List<SprintCapacitySuggestionDto>();
-        foreach (var sprint in upcomingSprintsForSuggestions)
-        {
-            var sprintStart = sprint.GetEstimatedStartDate();
-            var sprintEnd = sprint.GetEstimatedEndDate();
-            var workingDaysInSprint = GetWorkingDays(sprintStart, sprintEnd);
-
-            var affectedMembers = new HashSet<Guid>();
-            var totalLeaveDays = 0;
-            foreach (var leave in activeLeaves)
-            {
-                if (!leave.OverlapsWith(sprintStart, sprintEnd))
-                    continue;
-
-                affectedMembers.Add(leave.DirectReportId);
-                var overlapStart = leave.StartDate > sprintStart ? leave.StartDate : sprintStart;
-                var overlapEnd = leave.EndDate < sprintEnd ? leave.EndDate : sprintEnd;
-                totalLeaveDays += GetWorkingDays(overlapStart, overlapEnd);
-            }
-
-            if (totalLeaveDays <= 0)
-                continue;
-
-            var lostCapacity = workingDaysInSprint > 0
-                ? (double)totalLeaveDays / workingDaysInSprint
-                : 0;
-            var suggestedAvailableMembers = (int)Math.Floor(Math.Max(0, totalTeamSize - lostCapacity));
-
-            capacityMap.TryGetValue(sprint.Id, out var capacity);
-            var currentAvailableMembers = capacity?.AvailableMembers ?? 0;
-
-            sprintCapacitySuggestions.Add(new SprintCapacitySuggestionDto
-            {
-                SprintId = sprint.Id,
-                SprintName = sprint.Name,
-                TotalTeamSize = totalTeamSize,
-                PeopleOnLeave = affectedMembers.Count,
-                CurrentAvailableMembers = currentAvailableMembers,
-                SuggestedAvailableMembers = suggestedAvailableMembers,
-                LeaveDaysInSprint = totalLeaveDays
-            });
-        }
-
         return new CapacityAnalysisDto
         {
             PastSprints = pastSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
@@ -1531,8 +1472,7 @@ public class ReportingService : IReportingService
             FutureSprints = futureSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
             AverageUtilization = averageUtilization,
             TotalCommittedPoints = totalCommitted,
-            TotalCompletedPoints = totalCompleted,
-            SprintCapacitySuggestions = sprintCapacitySuggestions
+            TotalCompletedPoints = totalCompleted
         };
     }
 }

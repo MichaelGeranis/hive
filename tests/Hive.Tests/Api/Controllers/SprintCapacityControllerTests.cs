@@ -134,8 +134,7 @@ public class SprintCapacityControllerTests
         var createDto = new CreateSprintCapacityDto
         {
             SprintId = Guid.NewGuid(),
-            TotalCapacityPoints = 80,
-            AvailableMembers = 5
+            TotalCapacityPoints = 80
         };
         var resultDto = CreateDto(createDto.SprintId);
 
@@ -157,8 +156,7 @@ public class SprintCapacityControllerTests
         var createDto = new CreateSprintCapacityDto
         {
             SprintId = Guid.NewGuid(),
-            TotalCapacityPoints = 80,
-            AvailableMembers = 5
+            TotalCapacityPoints = 80
         };
 
         _serviceMock.Setup(s => s.CreateOrUpdateAsync(createDto, It.IsAny<CancellationToken>()))
@@ -178,8 +176,7 @@ public class SprintCapacityControllerTests
         var createDto = new CreateSprintCapacityDto
         {
             SprintId = Guid.NewGuid(),
-            TotalCapacityPoints = -10,
-            AvailableMembers = 5
+            TotalCapacityPoints = -10
         };
 
         _serviceMock.Setup(s => s.CreateOrUpdateAsync(createDto, It.IsAny<CancellationToken>()))

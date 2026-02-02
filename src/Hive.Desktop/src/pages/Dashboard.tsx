@@ -82,7 +82,6 @@ interface WidgetVisibility {
   supportDistribution: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
-  sprintCapacitySuggestions: boolean
   knowledgeLevelSuggestions: boolean
   estimationAccuracy: boolean
   teamVelocity: boolean
@@ -99,7 +98,6 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   supportDistribution: true,
   teamSentiment: true,
   capacityAnalysis: true,
-  sprintCapacitySuggestions: true,
   knowledgeLevelSuggestions: true,
   estimationAccuracy: true,
   teamVelocity: true,
@@ -116,7 +114,6 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   supportDistribution: 'Support Distribution',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
-  sprintCapacitySuggestions: 'Sprint Capacity Suggestions',
   knowledgeLevelSuggestions: 'Knowledge Level Suggestions',
   estimationAccuracy: 'Estimation Accuracy',
   teamVelocity: 'Team Velocity',
@@ -521,11 +518,6 @@ export default function Dashboard() {
     if (unmatchedTaskCount > 0) count++
     // Low capacity utilization
     if ((capacityAnalysis?.averageUtilization ?? 100) < 75) count++
-    // Sprint capacity suggestions needing adjustment
-    const suggestionsNeedingAdjustment = (capacityAnalysis?.sprintCapacitySuggestions ?? []).filter(s =>
-      s.currentAvailableMembers !== s.suggestedAvailableMembers
-    )
-    count += suggestionsNeedingAdjustment.length
     // Negative velocity trend
     if (velocity && velocity.completionTrend < 0) count++
     // Low estimation accuracy
@@ -1292,83 +1284,6 @@ export default function Dashboard() {
         );
       })() : null
       )}
-
-      {/* Sprint Capacity Suggestions - Shows warnings when they exist */}
-      {widgets.sprintCapacitySuggestions && (() => {
-        const suggestionsNeedingAdjustment = (capacityAnalysis?.sprintCapacitySuggestions ?? []).filter(suggestion =>
-          suggestion.currentAvailableMembers !== suggestion.suggestedAvailableMembers
-        )
-
-        if (suggestionsNeedingAdjustment.length === 0) {
-          return null
-        }
-
-        return (
-          <Card>
-            <CardHeader
-              title="Sprint Capacity Suggestions"
-              subtitle="Based on upcoming leaves, these sprints need capacity adjustments"
-            />
-            <CardContent>
-              <div className="space-y-3">
-                {suggestionsNeedingAdjustment.map(suggestion => (
-                  <div
-                    key={suggestion.sprintId}
-                    className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                            {suggestion.sprintName}
-                          </h3>
-                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-xs font-medium">Needs Adjustment</span>
-                          </div>
-                        </div>
-                        <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400">Team Size:</span>
-                            <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">{suggestion.totalTeamSize}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400">On Leave:</span>
-                            <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">{suggestion.peopleOnLeave}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400">Current Capacity:</span>
-                            <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">
-                              {suggestion.currentAvailableMembers || 'Not set'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400">Suggested:</span>
-                            <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                              {suggestion.suggestedAvailableMembers} people
-                            </span>
-                          </div>
-                        </div>
-                        {suggestion.leaveDaysInSprint > 0 && (
-                          <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-                            Total leave days in sprint: {suggestion.leaveDaysInSprint} days
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => navigate('/sprints')}
-                        className="ml-4 px-3 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
-                      >
-                        Update in Sprints
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })()}
 
       {/* Team Velocity */}
       {widgets.teamVelocity && (

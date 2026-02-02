@@ -13,15 +13,21 @@ public class SprintCapacityService : ISprintCapacityService
 {
     private readonly ISprintCapacityRepository _capacityRepository;
     private readonly ISprintRepository _sprintRepository;
+    private readonly ILeaveRepository _leaveRepository;
+    private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
 
     public SprintCapacityService(
         ISprintCapacityRepository capacityRepository,
         ISprintRepository sprintRepository,
+        ILeaveRepository leaveRepository,
+        IDirectReportRepository directReportRepository,
         IActivityService activityService)
     {
         _capacityRepository = capacityRepository ?? throw new ArgumentNullException(nameof(capacityRepository));
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
+        _leaveRepository = leaveRepository ?? throw new ArgumentNullException(nameof(leaveRepository));
+        _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
     }
 
@@ -61,11 +67,13 @@ public class SprintCapacityService : ISprintCapacityService
             throw new NotFoundException(nameof(Sprint), dto.SprintId);
         }
 
+        var computedAvailableMembers = await ComputeAvailableMembersAsync(sprint, cancellationToken);
+
         // Check if capacity already exists for this sprint
         var existing = await _capacityRepository.GetBySprintIdAsync(dto.SprintId, cancellationToken);
         if (existing is not null)
         {
-            existing.Update(dto.TotalCapacityPoints, dto.AvailableMembers);
+            existing.Update(dto.TotalCapacityPoints, computedAvailableMembers);
             await _capacityRepository.UpdateAsync(existing, cancellationToken);
 
             await _activityService.LogActivityAsync(
@@ -80,7 +88,7 @@ public class SprintCapacityService : ISprintCapacityService
         }
 
         // Create new capacity
-        var entity = new SprintCapacity(dto.SprintId, dto.TotalCapacityPoints, dto.AvailableMembers);
+        var entity = new SprintCapacity(dto.SprintId, dto.TotalCapacityPoints, computedAvailableMembers);
         var created = await _capacityRepository.AddAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -113,6 +121,88 @@ public class SprintCapacityService : ISprintCapacityService
             $"Capacity for '{sprint?.Name ?? "Unknown"}'",
             $"Sprint capacity for '{sprint?.Name ?? "Unknown"}' was deleted",
             cancellationToken);
+    }
+
+    public async Task RecalculateAvailableMembersAsync(Guid sprintId, CancellationToken cancellationToken = default)
+    {
+        var sprint = await _sprintRepository.GetByIdAsync(sprintId, cancellationToken);
+        if (sprint is null) return;
+
+        var computedAvailableMembers = await ComputeAvailableMembersAsync(sprint, cancellationToken);
+
+        var existing = await _capacityRepository.GetBySprintIdAsync(sprintId, cancellationToken);
+        if (existing is not null)
+        {
+            existing.UpdateAvailableMembers(computedAvailableMembers);
+            await _capacityRepository.UpdateAsync(existing, cancellationToken);
+        }
+        else
+        {
+            var entity = new SprintCapacity(sprintId, 0, computedAvailableMembers);
+            await _capacityRepository.AddAsync(entity, cancellationToken);
+        }
+    }
+
+    public async Task RecalculateForDateRangeAsync(DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    {
+        var allSprints = await _sprintRepository.GetAllAsync(cancellationToken);
+
+        foreach (var sprint in allSprints)
+        {
+            var sprintStart = sprint.GetEstimatedStartDate();
+            var sprintEnd = sprint.GetEstimatedEndDate();
+
+            // Check if sprint date range overlaps [start, end]
+            if (sprintStart <= end && sprintEnd >= start)
+            {
+                await RecalculateAvailableMembersAsync(sprint.Id, cancellationToken);
+            }
+        }
+    }
+
+    private async Task<int> ComputeAvailableMembersAsync(Sprint sprint, CancellationToken cancellationToken)
+    {
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var totalTeamSize = directReports.Count(dr => dr.IsDirect);
+
+        if (totalTeamSize == 0) return 0;
+
+        var sprintStart = sprint.GetEstimatedStartDate();
+        var sprintEnd = sprint.GetEstimatedEndDate();
+        var workingDaysInSprint = GetWorkingDays(sprintStart, sprintEnd);
+
+        if (workingDaysInSprint == 0) return totalTeamSize;
+
+        var directReportIds = directReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
+        var allLeaves = await _leaveRepository.GetAllAsync(cancellationToken);
+        var activeLeaves = allLeaves
+            .Where(l => l.Status == LeaveStatus.Active && directReportIds.Contains(l.DirectReportId))
+            .ToList();
+
+        var totalLeaveDays = 0;
+        foreach (var leave in activeLeaves)
+        {
+            if (!leave.OverlapsWith(sprintStart, sprintEnd))
+                continue;
+
+            var overlapStart = leave.StartDate > sprintStart ? leave.StartDate : sprintStart;
+            var overlapEnd = leave.EndDate < sprintEnd ? leave.EndDate : sprintEnd;
+            totalLeaveDays += GetWorkingDays(overlapStart, overlapEnd);
+        }
+
+        var lostCapacity = (double)totalLeaveDays / workingDaysInSprint;
+        return (int)Math.Floor(Math.Max(0, totalTeamSize - lostCapacity));
+    }
+
+    private static int GetWorkingDays(DateTime start, DateTime end)
+    {
+        int count = 0;
+        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+        {
+            if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+                count++;
+        }
+        return count;
     }
 
     private async Task<SprintCapacityDto> MapToDtoAsync(SprintCapacity entity, CancellationToken cancellationToken)

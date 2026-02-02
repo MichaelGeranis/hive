@@ -15,15 +15,18 @@ public class LeaveService : ILeaveService
     private readonly ILeaveRepository _leaveRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
+    private readonly ISprintCapacityService _sprintCapacityService;
 
     public LeaveService(
         ILeaveRepository leaveRepository,
         IDirectReportRepository directReportRepository,
-        IActivityService activityService)
+        IActivityService activityService,
+        ISprintCapacityService sprintCapacityService)
     {
         _leaveRepository = leaveRepository;
         _directReportRepository = directReportRepository;
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
+        _sprintCapacityService = sprintCapacityService ?? throw new ArgumentNullException(nameof(sprintCapacityService));
     }
 
     public async Task<LeaveDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -92,6 +95,8 @@ public class LeaveService : ILeaveService
 
         var created = await _leaveRepository.AddAsync(leave, cancellationToken);
 
+        await _sprintCapacityService.RecalculateForDateRangeAsync(leave.StartDate, leave.EndDate, cancellationToken);
+
         // Log activity
         await _activityService.LogActivityAsync(
             ActivityType.Created,
@@ -126,8 +131,16 @@ public class LeaveService : ILeaveService
             throw new InvalidOperationException("This leave overlaps with an existing leave record.");
         }
 
+        var oldStartDate = leave.StartDate;
+        var oldEndDate = leave.EndDate;
+
         leave.Update(leaveType, dto.StartDate, dto.EndDate, dto.Notes);
         await _leaveRepository.UpdateAsync(leave, cancellationToken);
+
+        // Recalculate for the union of old and new date ranges
+        var rangeStart = oldStartDate < dto.StartDate ? oldStartDate : dto.StartDate;
+        var rangeEnd = oldEndDate > dto.EndDate ? oldEndDate : dto.EndDate;
+        await _sprintCapacityService.RecalculateForDateRangeAsync(rangeStart, rangeEnd, cancellationToken);
 
         await _activityService.LogActivityAsync(
             ActivityType.Updated,
@@ -149,7 +162,12 @@ public class LeaveService : ILeaveService
             throw new KeyNotFoundException($"Leave with ID {id} not found.");
         }
 
+        var leaveStartDate = leave.StartDate;
+        var leaveEndDate = leave.EndDate;
+
         await _leaveRepository.DeleteAsync(id, cancellationToken);
+
+        await _sprintCapacityService.RecalculateForDateRangeAsync(leaveStartDate, leaveEndDate, cancellationToken);
 
         await _activityService.LogActivityAsync(
             ActivityType.Deleted,

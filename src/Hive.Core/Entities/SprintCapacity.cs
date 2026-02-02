@@ -38,6 +38,13 @@ public class SprintCapacity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateAvailableMembers(int availableMembers)
+    {
+        ValidateMembers(availableMembers, nameof(availableMembers));
+        AvailableMembers = availableMembers;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Gets the average capacity per team member.
     /// </summary>

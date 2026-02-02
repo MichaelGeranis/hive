@@ -13,20 +13,22 @@ public class SprintServiceTests
 {
     private readonly Mock<ISprintRepository> _repositoryMock;
     private readonly Mock<IActivityService> _activityServiceMock;
+    private readonly Mock<ISprintCapacityService> _sprintCapacityServiceMock;
     private readonly SprintService _service;
 
     public SprintServiceTests()
     {
         _repositoryMock = new Mock<ISprintRepository>();
         _activityServiceMock = new Mock<IActivityService>();
-        _service = new SprintService(_repositoryMock.Object, _activityServiceMock.Object);
+        _sprintCapacityServiceMock = new Mock<ISprintCapacityService>();
+        _service = new SprintService(_repositoryMock.Object, _activityServiceMock.Object, _sprintCapacityServiceMock.Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SprintService(null!, _activityServiceMock.Object);
+        var act = () => new SprintService(null!, _activityServiceMock.Object, _sprintCapacityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -37,7 +39,7 @@ public class SprintServiceTests
     public void Constructor_WithNullActivityService_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new SprintService(_repositoryMock.Object, null!);
+        var act = () => new SprintService(_repositoryMock.Object, null!, _sprintCapacityServiceMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()

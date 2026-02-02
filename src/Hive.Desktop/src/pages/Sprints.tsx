@@ -96,18 +96,16 @@ export default function Sprints() {
       setSprintSaving(true)
       setSprintError(null)
 
-      // Save dates and capacity in parallel
-      await Promise.all([
-        sprintsApi.update(editingSprint.sprintId, {
-          startDate: editingSprint.startDate || undefined,
-          endDate: editingSprint.endDate || undefined
-        }),
-        sprintCapacityApi.createOrUpdate({
-          sprintId: editingSprint.sprintId,
-          totalCapacityPoints: editingSprint.points,
-          availableMembers: editingSprint.members
-        })
-      ])
+      // Save dates first (triggers backend recalculation of availableMembers)
+      await sprintsApi.update(editingSprint.sprintId, {
+        startDate: editingSprint.startDate || undefined,
+        endDate: editingSprint.endDate || undefined
+      })
+      // Then save committed points only (availableMembers is auto-computed)
+      await sprintCapacityApi.createOrUpdate({
+        sprintId: editingSprint.sprintId,
+        totalCapacityPoints: editingSprint.points
+      })
 
       await loadData()
       setEditingSprint(null)
@@ -477,18 +475,10 @@ export default function Sprints() {
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-slate-400 shrink-0" />
                               <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Team:</label>
-                              <input
-                                type="number"
-                                value={editingSprint.members}
-                                onChange={(e) => setEditingSprint({
-                                  ...editingSprint,
-                                  members: parseInt(e.target.value) || 0
-                                })}
-                                className="w-20 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-amber-500"
-                                min="0"
-                                placeholder="Members"
-                              />
-                              <span className="text-xs text-slate-500 dark:text-slate-400">people</span>
+                              <span className="w-20 px-3 py-2 text-sm bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded">
+                                {editingSprint.members}
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">people (auto)</span>
                             </div>
                           </div>
 

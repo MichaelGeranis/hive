@@ -776,12 +776,10 @@ export interface SprintCapacity {
 export interface CreateSprintCapacityDto {
   sprintId: string
   totalCapacityPoints: number
-  availableMembers: number
 }
 
 export interface UpdateSprintCapacityDto {
   totalCapacityPoints: number
-  availableMembers: number
 }
 
 // Late Tasks Report
@@ -824,16 +822,6 @@ export interface LateTasksByAssignee {
 }
 
 // Capacity Analysis
-export interface SprintCapacitySuggestion {
-  sprintId: string
-  sprintName: string
-  totalTeamSize: number
-  peopleOnLeave: number
-  currentAvailableMembers: number
-  suggestedAvailableMembers: number
-  leaveDaysInSprint: number
-}
-
 export interface CapacityAnalysis {
   pastSprints: SprintCapacityAnalysis[]
   currentSprint?: SprintCapacityAnalysis
@@ -841,7 +829,6 @@ export interface CapacityAnalysis {
   averageUtilization: number
   totalCommittedPoints: number
   totalCompletedPoints: number
-  sprintCapacitySuggestions: SprintCapacitySuggestion[]
 }
 
 export interface SprintCapacityAnalysis {

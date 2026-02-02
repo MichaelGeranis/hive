@@ -17,6 +17,7 @@ public class LeaveServiceTests
     private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
     private readonly Mock<IActivityService> _activityServiceMock;
+    private readonly Mock<ISprintCapacityService> _sprintCapacityServiceMock;
     private readonly LeaveService _service;
 
     private readonly Guid _testDirectReportId = Guid.NewGuid();
@@ -27,10 +28,12 @@ public class LeaveServiceTests
         _leaveRepositoryMock = new Mock<ILeaveRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
         _activityServiceMock = new Mock<IActivityService>();
+        _sprintCapacityServiceMock = new Mock<ISprintCapacityService>();
         _service = new LeaveService(
             _leaveRepositoryMock.Object,
             _directReportRepositoryMock.Object,
-            _activityServiceMock.Object);
+            _activityServiceMock.Object,
+            _sprintCapacityServiceMock.Object);
 
         _testDirectReport = new DirectReport(
             "John",
