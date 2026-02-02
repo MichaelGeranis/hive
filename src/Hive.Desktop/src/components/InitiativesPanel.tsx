@@ -29,11 +29,13 @@ export default function InitiativesPanel({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [tshirtSize, setTshirtSize] = useState('M')
+  const [url, setUrl] = useState('')
 
   const resetForm = () => {
     setName('')
     setDescription('')
     setTshirtSize('M')
+    setUrl('')
     setEditingInitiative(null)
   }
 
@@ -47,6 +49,7 @@ export default function InitiativesPanel({
     setName(initiative.name)
     setDescription(initiative.description || '')
     setTshirtSize(initiative.tshirtSize || 'M')
+    setUrl(initiative.url || '')
     setShowModal(true)
   }
 
@@ -60,14 +63,16 @@ export default function InitiativesPanel({
         await quarterlyPlanningApi.updateInitiative(editingInitiative.id, {
           name,
           description,
-          tshirtSize
+          tshirtSize,
+          url
         })
       } else {
         await quarterlyPlanningApi.createInitiative({
           quarterId,
           name,
           description,
-          tshirtSize
+          tshirtSize,
+          url
         })
       }
 
@@ -236,6 +241,19 @@ export default function InitiativesPanel({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  URL (optional)
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                />
               </div>
 
               {editingInitiative && (

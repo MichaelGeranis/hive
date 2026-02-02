@@ -48,6 +48,7 @@ public record InitiativeDto
     public Guid? ProjectId { get; init; }
     public string? ProjectName { get; init; }
     public string TshirtSize { get; init; } = "M";
+    public string Url { get; init; } = string.Empty;
     public int AllocationCount { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -63,6 +64,7 @@ public record CreateInitiativeDto
     public string? Description { get; init; }
     public Guid? ProjectId { get; init; }
     public string? TshirtSize { get; init; }
+    public string? Url { get; init; }
 }
 
 /// <summary>
@@ -75,6 +77,7 @@ public record UpdateInitiativeDto
     public string? Color { get; init; }
     public Guid? ProjectId { get; init; }
     public string? TshirtSize { get; init; }
+    public string? Url { get; init; }
 }
 
 /// <summary>

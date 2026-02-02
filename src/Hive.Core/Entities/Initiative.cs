@@ -12,6 +12,7 @@ public class Initiative
     public string Color { get; private set; } = string.Empty;
     public Guid? ProjectId { get; private set; }
     public string TshirtSize { get; private set; } = "M";
+    public string Url { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -42,11 +43,13 @@ public class Initiative
         string color,
         string? description = null,
         Guid? projectId = null,
-        string? tshirtSize = null)
+        string? tshirtSize = null,
+        string? url = null)
     {
         ValidateName(name);
         ValidateColor(color);
         ValidateTshirtSize(tshirtSize);
+        ValidateUrl(url);
 
         Id = Guid.NewGuid();
         QuarterId = quarterId;
@@ -55,6 +58,7 @@ public class Initiative
         Color = color.Trim();
         ProjectId = projectId;
         TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? "M" : tshirtSize.Trim().ToUpperInvariant();
+        Url = url?.Trim() ?? string.Empty;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -63,17 +67,20 @@ public class Initiative
         string? description,
         string? color,
         Guid? projectId,
-        string? tshirtSize = null)
+        string? tshirtSize = null,
+        string? url = null)
     {
         ValidateName(name);
         ValidateColor(color);
         ValidateTshirtSize(tshirtSize);
+        ValidateUrl(url);
 
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
         Color = string.IsNullOrWhiteSpace(color) ? Color : color.Trim();
         ProjectId = projectId;
         TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? TshirtSize : tshirtSize.Trim().ToUpperInvariant();
+        Url = url?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -121,6 +128,24 @@ public class Initiative
         if (!ValidTshirtSizes.Contains(size))
         {
             throw new ArgumentException($"T-shirt size must be one of: {string.Join(", ", ValidTshirtSizes)}.", nameof(tshirtSize));
+        }
+    }
+
+    private static void ValidateUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        var trimmed = url.Trim();
+        if (trimmed.Length > 500)
+        {
+            throw new ArgumentException("URL cannot exceed 500 characters.", nameof(url));
+        }
+
+        // Basic URL validation
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException("URL must be a valid HTTP or HTTPS URL.", nameof(url));
         }
     }
 }

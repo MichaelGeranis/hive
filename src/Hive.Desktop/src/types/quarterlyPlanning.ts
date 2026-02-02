@@ -58,6 +58,7 @@ export interface Initiative {
   projectId?: string
   projectName?: string
   tshirtSize: string
+  url: string
   allocationCount: number
   createdAt: string
   updatedAt?: string
@@ -69,6 +70,7 @@ export interface CreateInitiativeDto {
   description?: string
   projectId?: string
   tshirtSize?: string
+  url?: string
 }
 
 export interface UpdateInitiativeDto {
@@ -77,6 +79,7 @@ export interface UpdateInitiativeDto {
   color?: string
   projectId?: string
   tshirtSize?: string
+  url?: string
 }
 
 // Allocation types

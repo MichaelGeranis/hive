@@ -248,7 +248,8 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             color,
             dto.Description,
             dto.ProjectId,
-            dto.TshirtSize);
+            dto.TshirtSize,
+            dto.Url);
 
         var created = await _initiativeRepository.AddAsync(entity, cancellationToken);
 
@@ -298,7 +299,8 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             dto.Description,
             dto.Color,
             dto.ProjectId,
-            dto.TshirtSize);
+            dto.TshirtSize,
+            dto.Url);
 
         await _initiativeRepository.UpdateAsync(entity, cancellationToken);
 
@@ -626,6 +628,7 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         ProjectId = entity.ProjectId,
         ProjectName = projectName,
         TshirtSize = entity.TshirtSize,
+        Url = entity.Url,
         AllocationCount = allocationCount,
         CreatedAt = entity.CreatedAt,
         UpdatedAt = entity.UpdatedAt
@@ -712,8 +715,11 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
 
         int currentRow = 3;
 
+        // Options Section
+        currentRow = AddOptionsSection(worksheet, board, sortedSprints, currentRow);
+
         // Delivery Plan Section
-        currentRow = AddDeliveryPlanSection(worksheet, board, sortedSprints, currentRow);
+        currentRow = AddDeliveryPlanSection(worksheet, board, sortedSprints, currentRow + 2);
 
         // Sprint Goals Section
         currentRow = AddSprintGoalsSection(worksheet, board, sortedSprints, currentRow + 2);
@@ -856,6 +862,66 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         worksheet.Row(currentRow).Height = 100;
 
         currentRow++;
+
+        return currentRow;
+    }
+
+    private int AddOptionsSection(
+        OfficeOpenXml.ExcelWorksheet worksheet,
+        PlanningBoardDto board,
+        List<SprintDto> sortedSprints,
+        int startRow)
+    {
+        int currentRow = startRow;
+
+        // Section header
+        worksheet.Cells[currentRow, 1].Value = "Options";
+        using (var range = worksheet.Cells[currentRow, 1, currentRow, sortedSprints.Count + 1])
+        {
+            range.Merge = true;
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 14;
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+            range.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+        }
+        currentRow++;
+
+        // Add initiatives
+        foreach (var initiative in board.Initiatives.OrderBy(i => i.Name))
+        {
+            var cell = worksheet.Cells[currentRow, 1];
+
+            if (!string.IsNullOrWhiteSpace(initiative.Url))
+            {
+                // Add as hyperlink
+                cell.Hyperlink = new Uri(initiative.Url);
+                cell.Value = initiative.Name;
+                cell.Style.Font.UnderLine = true;
+                cell.Style.Font.Color.SetColor(System.Drawing.Color.Blue);
+            }
+            else
+            {
+                // Add as plain text
+                cell.Value = initiative.Name;
+            }
+
+            cell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+            cell.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+
+            // Add description in adjacent columns if needed
+            if (!string.IsNullOrWhiteSpace(initiative.Description))
+            {
+                var descCell = worksheet.Cells[currentRow, 2, currentRow, sortedSprints.Count + 1];
+                descCell.Merge = true;
+                descCell.Value = initiative.Description;
+                descCell.Style.WrapText = true;
+                descCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+            }
+
+            currentRow++;
+        }
 
         return currentRow;
     }
