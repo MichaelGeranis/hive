@@ -8,7 +8,8 @@ import {
   Briefcase,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react'
 import { leavesApi, directReportsApi } from '../services/api'
 import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview } from '../types'
@@ -128,6 +129,19 @@ export default function Leaves() {
     } catch (error) {
       console.error('Failed to update leave:', error)
       showError(getErrorMessage(error))
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this leave?')) {
+      try {
+        await leavesApi.delete(id)
+        closeModal()
+        loadData()
+      } catch (error) {
+        console.error('Failed to delete leave:', error)
+        showError(getErrorMessage(error))
+      }
     }
   }
 
@@ -605,16 +619,27 @@ export default function Leaves() {
                 />
               </div>
               <div className="flex gap-3 pt-4">
+                {editingLeave && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(editingLeave.id)}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+                <div className="flex-1" />
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                  className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                 >
                   {editingLeave ? 'Save Changes' : 'Add Leave'}
                 </button>
