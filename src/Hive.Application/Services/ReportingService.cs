@@ -1347,11 +1347,14 @@ public class ReportingService : IReportingService
             }
         }
 
-        // Calculate average utilization from past sprints (current sprint may still be in progress)
-        var totalCommitted = pastSprints.Sum(s => s.CommittedPoints);
-        var totalCompleted = pastSprints.Sum(s => s.CompletedPoints);
-        var averageUtilization = pastSprints.Count > 0
-            ? Math.Round(pastSprints.Average(s => s.UtilizationPercentage), 1)
+        // Calculate average utilization from past and current sprints
+        var sprintsForUtilization = currentSprint != null
+            ? pastSprints.Append(currentSprint).ToList()
+            : pastSprints;
+        var totalCommitted = sprintsForUtilization.Sum(s => s.CommittedPoints);
+        var totalCompleted = sprintsForUtilization.Sum(s => s.CompletedPoints);
+        var averageUtilization = sprintsForUtilization.Count > 0
+            ? Math.Round(sprintsForUtilization.Average(s => s.UtilizationPercentage), 1)
             : 0;
 
         // Load leaves and direct reports for predictions and suggestions
@@ -1370,6 +1373,40 @@ public class ReportingService : IReportingService
             var avgCompletedSP = pastSprints.Count > 0
                 ? (int)Math.Round(pastSprints.Average(s => (double)s.CompletedPoints))
                 : (currentSprint?.CompletedPoints ?? 0);
+
+            // Compute average effective availability across past sprints using the same
+            // leave-overlap method we use for future sprints.  This way, if past sprints
+            // also had reduced capacity, the ratio correctly reflects relative change
+            // rather than double-penalizing.
+            // Example: team=5, past avg available=4, completed 40 SP.
+            //   Future sprint with 4 available → ratio=4/4=1 → predicted=40 (correct)
+            //   Future sprint with 3 available → ratio=3/4=0.75 → predicted=30 (correct)
+            var pastAvailabilities = new List<double>();
+            foreach (var ps in pastSprints)
+            {
+                if (!sprintEntityMap.TryGetValue(ps.SprintId, out var psEntity))
+                    continue;
+
+                var psStart = psEntity.GetEstimatedStartDate();
+                var psEnd = psEntity.GetEstimatedEndDate();
+                var psWorkingDays = GetWorkingDays(psStart, psEnd);
+
+                var psLeaveDays = 0;
+                foreach (var leave in activeLeaves)
+                {
+                    if (!leave.OverlapsWith(psStart, psEnd))
+                        continue;
+                    var overlapStart = leave.StartDate > psStart ? leave.StartDate : psStart;
+                    var overlapEnd = leave.EndDate < psEnd ? leave.EndDate : psEnd;
+                    psLeaveDays += GetWorkingDays(overlapStart, overlapEnd);
+                }
+
+                var psLostCapacity = psWorkingDays > 0 ? (double)psLeaveDays / psWorkingDays : 0;
+                pastAvailabilities.Add(Math.Max(0, totalTeamSize - psLostCapacity));
+            }
+            var pastAverageAvailable = pastAvailabilities.Count > 0
+                ? pastAvailabilities.Average()
+                : totalTeamSize;
 
             futureSprints = futureSprints.Select(fs =>
             {
@@ -1395,7 +1432,7 @@ public class ReportingService : IReportingService
                 var lostCapacity = workingDaysInSprint > 0
                     ? (double)totalLeaveDays / workingDaysInSprint
                     : 0;
-                var suggestedAvailable = Math.Max(0, totalTeamSize - lostCapacity);
+                var futureAvailable = Math.Max(0, totalTeamSize - lostCapacity);
 
                 int predictedPoints;
                 if (fs.CommittedPoints > 0 && averageUtilization > 0)
@@ -1405,8 +1442,9 @@ public class ReportingService : IReportingService
                 }
                 else
                 {
-                    // Mode 2: Velocity-based with leave-adjusted availability
-                    var ratio = totalTeamSize > 0 ? suggestedAvailable / totalTeamSize : 1;
+                    // Mode 2: Velocity-based — scale by availability ratio relative to
+                    // what the team actually had during the past sprints that produced avgCompletedSP.
+                    var ratio = pastAverageAvailable > 0 ? futureAvailable / pastAverageAvailable : 1;
                     predictedPoints = (int)Math.Round(avgCompletedSP * ratio);
                 }
 
