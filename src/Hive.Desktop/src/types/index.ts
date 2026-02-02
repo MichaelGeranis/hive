@@ -268,6 +268,7 @@ export interface DashboardInsights {
   workloadWarnings: WorkloadWarning[]
   knowledgeSilos: KnowledgeSilo[]
   unengagedMembers: UnengagedMember[]
+  unmatchedTaskCount: number
 }
 
 export interface WorkloadWarning {
@@ -823,6 +824,16 @@ export interface LateTasksByAssignee {
 }
 
 // Capacity Analysis
+export interface SprintCapacitySuggestion {
+  sprintId: string
+  sprintName: string
+  totalTeamSize: number
+  peopleOnLeave: number
+  currentAvailableMembers: number
+  suggestedAvailableMembers: number
+  leaveDaysInSprint: number
+}
+
 export interface CapacityAnalysis {
   pastSprints: SprintCapacityAnalysis[]
   currentSprint?: SprintCapacityAnalysis
@@ -830,6 +841,7 @@ export interface CapacityAnalysis {
   averageUtilization: number
   totalCommittedPoints: number
   totalCompletedPoints: number
+  sprintCapacitySuggestions: SprintCapacitySuggestion[]
 }
 
 export interface SprintCapacityAnalysis {
@@ -840,7 +852,9 @@ export interface SprintCapacityAnalysis {
   sprintNumber: number
   committedPoints: number
   completedPoints: number
+  totalStoryPoints: number
   utilizationPercentage: number
+  predictedPoints?: number
   status: 'Past' | 'Current' | 'Future'
 }
 

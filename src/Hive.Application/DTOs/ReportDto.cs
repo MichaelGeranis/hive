@@ -23,6 +23,7 @@ public record DashboardInsightsDto
     public IReadOnlyList<WorkloadWarningDto> WorkloadWarnings { get; init; } = [];
     public IReadOnlyList<KnowledgeSiloDto> KnowledgeSilos { get; init; } = [];
     public IReadOnlyList<UnengagedMemberDto> UnengagedMembers { get; init; } = [];
+    public int UnmatchedTaskCount { get; init; }
 }
 
 /// <summary>
@@ -529,6 +530,7 @@ public record CapacityAnalysisDto
     public double AverageUtilization { get; init; }
     public int TotalCommittedPoints { get; init; }
     public int TotalCompletedPoints { get; init; }
+    public IReadOnlyList<SprintCapacitySuggestionDto> SprintCapacitySuggestions { get; init; } = [];
 }
 
 /// <summary>
@@ -544,5 +546,21 @@ public record SprintCapacityAnalysisDto
     public int CommittedPoints { get; init; }
     public int CompletedPoints { get; init; }
     public double UtilizationPercentage { get; init; }
+    public int TotalStoryPoints { get; init; }
+    public int? PredictedPoints { get; init; }
     public string Status { get; init; } = string.Empty; // "Past", "Current", "Future"
+}
+
+/// <summary>
+/// Suggestion for adjusting sprint capacity based on upcoming leaves.
+/// </summary>
+public record SprintCapacitySuggestionDto
+{
+    public Guid SprintId { get; init; }
+    public string SprintName { get; init; } = string.Empty;
+    public int TotalTeamSize { get; init; }
+    public int PeopleOnLeave { get; init; }
+    public int CurrentAvailableMembers { get; init; }
+    public int SuggestedAvailableMembers { get; init; }
+    public int LeaveDaysInSprint { get; init; }
 }

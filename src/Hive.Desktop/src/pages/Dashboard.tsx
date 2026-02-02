@@ -17,8 +17,8 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, leavesApi, meetingNotesApi, notesApi, sprintsApi, sprintCapacityApi, directReportsApi, parentsApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, TeamLeaveOverview, SprintCapacityAnalysis, MeetingNote, ManagerNote, Sprint, SprintCapacity, DirectReport, Parent, KnowledgeLevelSuggestion } from '../types'
+import { reportsApi, tasksApi, projectsApi, meetingNotesApi, notesApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, MeetingNote, ManagerNote, KnowledgeLevelSuggestion } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
@@ -71,16 +71,6 @@ const getInitials = (name: string): string => {
 }
 
 const DASHBOARD_WIDGETS_KEY = 'hive-dashboard-widgets'
-
-interface SprintCapacitySuggestion {
-  sprint: Sprint
-  currentCapacity: SprintCapacity | null
-  peopleOnLeave: number
-  totalTeamSize: number
-  suggestedAvailableMembers: number
-  leaveDaysInSprint: number
-  affectedMembers: Set<string>
-}
 
 interface WidgetVisibility {
   topStats: boolean
@@ -143,12 +133,6 @@ export default function Dashboard() {
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
   const [includeSupportEstimate, setIncludeSupportEstimate] = useState(false)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
-  const [leaveOverview, setLeaveOverview] = useState<TeamLeaveOverview | null>(null)
-  const [sprints, setSprints] = useState<Sprint[]>([])
-  const [sprintCapacities, setSprintCapacities] = useState<SprintCapacity[]>([])
-  const [leaves, setLeaves] = useState<{ id: string; directReportId: string; startDate: string; endDate: string }[]>([])
-  const [directReports, setDirectReports] = useState<DirectReport[]>([])
-  const [parents, setParents] = useState<Parent[]>([])
   const [actionItems, setActionItems] = useState<MeetingNote[]>([])
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
@@ -232,34 +216,17 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, leaveData, actionItemsData, notesData, sprintsData, capacitiesData, leavesData, directReportsData, parentsData, knowledgeSuggestionsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, actionItemsData, notesData, knowledgeSuggestionsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
-        leavesApi.getOverview(),
         meetingNotesApi.getOpenActionItems(),
         notesApi.getPending(),
-        sprintsApi.getAll(),
-        sprintCapacityApi.getAll(),
-        leavesApi.getAll(),
-        directReportsApi.getAll(),
-        parentsApi.getAll(),
         knowledgePointsApi.getSuggestions()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
       setProjects(projectsData)
-      setLeaveOverview(leaveData)
-      const sortedSprints = sprintsData.sort((a: Sprint, b: Sprint) => {
-        const aSort = a.year * 1000 + a.quarter * 100 + a.sprintNumber
-        const bSort = b.year * 1000 + b.quarter * 100 + b.sprintNumber
-        return bSort - aSort
-      })
-      setSprints(sortedSprints)
-      setSprintCapacities(capacitiesData)
-      setLeaves(leavesData)
-      setDirectReports(directReportsData)
-      setParents(parentsData)
       setKnowledgeSuggestions(knowledgeSuggestionsData)
       // Sort action items by due date ascending (earliest first)
       const sortedActionItems = actionItemsData.sort((a, b) => {
@@ -372,146 +339,6 @@ export default function Dashboard() {
       showError(getErrorMessage(err))
     }
   }
-
-  // Helper function to calculate working days between two dates (excluding weekends)
-  const getWorkingDays = (start: Date, end: Date): number => {
-    let count = 0
-    const current = new Date(start)
-    while (current <= end) {
-      const dayOfWeek = current.getDay()
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        count++
-      }
-      current.setDate(current.getDate() + 1)
-    }
-    return count
-  }
-
-  // Month name to number mapping
-  const monthMap: Record<string, number> = {
-    'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
-    'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
-  }
-
-  // Helper to get sprint start date from dates, name parsing, or year/quarter/sprintNumber
-  const getSprintStartDate = (sprint: Sprint): Date => {
-    // 1. Use actual startDate if available
-    if (sprint.startDate) {
-      return new Date(sprint.startDate)
-    }
-
-    // 2. Try to parse from name format like "MAR_1Q26_S1" or "MAR_Q1_26_S1"
-    const nameMatch = sprint.name.match(/^([A-Z]{3})_(\d)?Q(\d{2})_S(\d+)$/i)
-    if (nameMatch) {
-      const monthStr = nameMatch[1].toUpperCase()
-      const year = 2000 + parseInt(nameMatch[3], 10)
-      const sprintNum = parseInt(nameMatch[4], 10)
-      const month = monthMap[monthStr]
-
-      if (month !== undefined) {
-        // Estimate day based on sprint number within the month (each sprint ~2 weeks)
-        const day = 1 + ((sprintNum - 1) % 2) * 14
-        return new Date(year, month, day)
-      }
-    }
-
-    // 3. Fallback: calculate from year, quarter, sprintNumber
-    // Quarter start month: Q1=Jan(0), Q2=Apr(3), Q3=Jul(6), Q4=Oct(9)
-    const quarterStartMonth = (sprint.quarter - 1) * 3
-    // Each sprint is ~2 weeks, so sprint 1 starts day 1, sprint 2 starts day 15, etc.
-    const dayOfQuarter = 1 + (sprint.sprintNumber - 1) * 14
-    return new Date(sprint.year, quarterStartMonth, dayOfQuarter)
-  }
-
-  // Sprint capacity suggestions calculation
-  const calculateSprintSuggestions = (): SprintCapacitySuggestion[] => {
-    if (!dashboard) return []
-
-    const today = new Date()
-    const threeMonthsLater = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
-
-    // Only consider direct reports (not indirect reports)
-    const directReportIds = new Set(
-      directReports.filter(dr => dr.isDirect).map(dr => dr.id)
-    )
-
-    // Filter upcoming sprints, sort chronologically (earliest first), then apply limit
-    let upcomingSprints = sprints
-      .filter(sprint => {
-        const sprintDate = getSprintStartDate(sprint)
-        return sprintDate >= today && sprintDate <= threeMonthsLater
-      })
-      .sort((a, b) => {
-        // Sort by actual date (earliest first)
-        return getSprintStartDate(a).getTime() - getSprintStartDate(b).getTime()
-      })
-
-    // Apply sprint filter limit if set (now correctly gets the nearest N sprints)
-    if (sprintFilter !== undefined) {
-      upcomingSprints = upcomingSprints.slice(0, sprintFilter)
-    }
-
-    return upcomingSprints.map(sprint => {
-      // Determine sprint start and end dates
-      let sprintStart: Date
-      let sprintEnd: Date
-      let workingDaysInSprint: number
-
-      if (sprint.startDate && sprint.endDate) {
-        // Use actual sprint dates
-        sprintStart = new Date(sprint.startDate)
-        sprintEnd = new Date(sprint.endDate)
-        workingDaysInSprint = getWorkingDays(sprintStart, sprintEnd)
-      } else {
-        // Use the same logic as getSprintStartDate for consistency
-        sprintStart = getSprintStartDate(sprint)
-        sprintEnd = new Date(sprintStart)
-        sprintEnd.setDate(sprintEnd.getDate() + 13) // 2 weeks minus 1 day
-        workingDaysInSprint = 9
-      }
-
-      const affectedMembers = new Set<string>()
-      let totalLeaveDays = 0
-
-      // Only count leaves from direct reports, counting only working days
-      leaves.filter(leave => directReportIds.has(leave.directReportId)).forEach(leave => {
-        const leaveStart = new Date(leave.startDate)
-        const leaveEnd = new Date(leave.endDate)
-
-        if (leaveStart <= sprintEnd && leaveEnd >= sprintStart) {
-          affectedMembers.add(leave.directReportId)
-
-          // Calculate overlap period
-          const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
-          const overlapEnd = leaveEnd < sprintEnd ? leaveEnd : sprintEnd
-
-          // Count only working days in the overlap
-          const workingLeaveDays = getWorkingDays(overlapStart, overlapEnd)
-          totalLeaveDays += workingLeaveDays
-        }
-      })
-
-      const currentCapacity = sprintCapacities.find(c => c.sprintId === sprint.id) || null
-      const totalTeamSize = dashboard.team.totalDirectReports
-
-      // Calculate lost capacity based on proportion of leave days
-      // Example: 2 leave days in a 9-day sprint = 2/9 = 0.22 people lost
-      const lostCapacity = workingDaysInSprint > 0 ? totalLeaveDays / workingDaysInSprint : 0
-      const suggestedAvailableMembers = Math.max(0, Math.floor(totalTeamSize - lostCapacity))
-
-      return {
-        sprint,
-        currentCapacity,
-        peopleOnLeave: affectedMembers.size,
-        totalTeamSize,
-        suggestedAvailableMembers,
-        leaveDaysInSprint: totalLeaveDays,
-        affectedMembers
-      }
-    }).filter(suggestion => suggestion.leaveDaysInSprint > 0) // Only show sprints with leave impact
-  }
-
-  const sprintSuggestions = calculateSprintSuggestions()
 
   // Find projects that share at least one label with the task
   const getMatchedProjects = (taskLabels?: string): Project[] => {
@@ -654,24 +481,11 @@ export default function Dashboard() {
     .map(t => ({ name: t.typeName, value: t.totalHours, tasks: t.taskCount }))
     .sort((a, b) => b.value - a.value)
 
-  // Calculate total SP for current sprint from parents involved in the sprint
-  const currentSprintParentIds = capacityAnalysis?.currentSprint
-    ? new Set(
-        tasks
-          .filter(t => t.sprint === capacityAnalysis.currentSprint?.sprintName && t.parentId)
-          .map(t => t.parentId)
-      )
-    : new Set<string>()
-  const currentSprintTotalSP = parents
-    .filter(p => currentSprintParentIds.has(p.id))
-    .reduce((sum, p) => sum + (p.totalStoryPoints ?? 0), 0)
+  // Use backend-computed total story points for current sprint
+  const currentSprintTotalSP = capacityAnalysis?.currentSprint?.totalStoryPoints ?? 0
 
-  // Calculate tasks not matched to any project (no labels or labels don't match any project)
-  const unmatchedTasks = tasks.filter(task => {
-    const matchedProjects = getMatchedProjects(task.labels)
-    return matchedProjects.length === 0
-  })
-  const unmatchedTaskCount = unmatchedTasks.length
+  // Use backend-computed unmatched task count
+  const unmatchedTaskCount = dashboard.insights.unmatchedTaskCount
 
   // Use backend-computed support distribution
   const { supportDistribution } = dashboard.tasks
@@ -708,8 +522,8 @@ export default function Dashboard() {
     // Low capacity utilization
     if ((capacityAnalysis?.averageUtilization ?? 100) < 75) count++
     // Sprint capacity suggestions needing adjustment
-    const suggestionsNeedingAdjustment = sprintSuggestions.filter(s =>
-      s.currentCapacity && s.currentCapacity.availableMembers !== s.suggestedAvailableMembers
+    const suggestionsNeedingAdjustment = (capacityAnalysis?.sprintCapacitySuggestions ?? []).filter(s =>
+      s.currentAvailableMembers !== s.suggestedAvailableMembers
     )
     count += suggestionsNeedingAdjustment.length
     // Negative velocity trend
@@ -1393,47 +1207,32 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        ) : capacityAnalysis && dashboard && leaveOverview && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) ? (() => {
-        // Calculate average completed SP from past sprints
+        ) : capacityAnalysis && dashboard && (capacityAnalysis.pastSprints.length > 0 || capacityAnalysis.currentSprint || capacityAnalysis.futureSprints.length > 0) ? (() => {
+        // Calculate average completed SP from past sprints, falling back to current sprint if no history
         const avgCompletedSP = capacityAnalysis.pastSprints.length > 0
           ? Math.round(capacityAnalysis.pastSprints.reduce((sum, sprint) => sum + (sprint.completedPoints ?? 0), 0) / capacityAnalysis.pastSprints.length)
+          : (capacityAnalysis.currentSprint?.completedPoints ?? 0);
+
+        const totalMembers = dashboard.team.totalDirectReports;
+        const avgUtilization = capacityAnalysis.averageUtilization ?? 0;
+
+        // Predicted capacity stat = first future sprint's prediction from backend
+        const predictedCapacity = capacityAnalysis.futureSprints.length > 0
+          ? (capacityAnalysis.futureSprints[0].predictedPoints ?? 0)
           : 0;
 
-        // Calculate available team members (total - on leave today)
-        const totalMembers = dashboard.team.totalDirectReports;
-        const membersOnLeave = leaveOverview.teamMembersOnLeaveToday;
-        const availableMembers = totalMembers - membersOnLeave;
-        const availabilityRatio = totalMembers > 0 ? availableMembers / totalMembers : 1;
-
-        // Calculate predicted capacity for next sprint
-        const predictedCapacity = Math.round(avgCompletedSP * availabilityRatio);
-
-        // Create a predicted future sprint
-        const predictedSprint: SprintCapacityAnalysis = {
-          sprintId: 'predicted',
-          sprintName: 'Next Sprint (Predicted)',
-          year: new Date().getFullYear(),
-          quarter: Math.floor(new Date().getMonth() / 3) + 1,
-          sprintNumber: 99,
-          committedPoints: 0,
-          completedPoints: predictedCapacity,
-          utilizationPercentage: 0,
-          status: 'Future'
-        };
-
-        // Prepare chart data with color coding
+        // Prepare chart data — predictions come from the backend on future sprints
         const chartData = [
-          ...capacityAnalysis.pastSprints.map(s => ({ ...s, name: s.sprintName, isPast: true, isCurrent: false, isFuture: false, isPredicted: false })),
-          ...(capacityAnalysis.currentSprint ? [{ ...capacityAnalysis.currentSprint, name: capacityAnalysis.currentSprint.sprintName, isPast: false, isCurrent: true, isFuture: false, isPredicted: false }] : []),
+          ...capacityAnalysis.pastSprints.map(s => ({ ...s, name: s.sprintName, predictedPoints: undefined as number | undefined, isPast: true, isCurrent: false, isFuture: false, isPredicted: false })),
+          ...(capacityAnalysis.currentSprint ? [{ ...capacityAnalysis.currentSprint, name: capacityAnalysis.currentSprint.sprintName, predictedPoints: undefined as number | undefined, isPast: false, isCurrent: true, isFuture: false, isPredicted: false }] : []),
           ...capacityAnalysis.futureSprints.map(s => ({ ...s, name: s.sprintName, isPast: false, isCurrent: false, isFuture: true, isPredicted: false })),
-          { ...predictedSprint, name: predictedSprint.sprintName, isPast: false, isCurrent: false, isFuture: false, isPredicted: true }
         ];
 
         return (
           <Card>
             <CardHeader
               title="Capacity"
-              subtitle={`Average Utilization: ${capacityAnalysis.averageUtilization ?? 0}%. Average Completed SP: ${avgCompletedSP}. Available Members: ${availableMembers}/${totalMembers} (${membersOnLeave} on leave).`}
+              subtitle={`Average Utilization: ${avgUtilization}%. Average Completed SP: ${avgCompletedSP}. Team Size: ${totalMembers}.`}
             />
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -1456,6 +1255,7 @@ export default function Dashboard() {
                   />
                   <Line type="monotone" dataKey="committedPoints" stroke="#3b82f6" strokeWidth={2} name="Committed SP" dot={{ fill: '#3b82f6' }} />
                   <Line type="monotone" dataKey="completedPoints" stroke="#10b981" strokeWidth={2} name="Completed SP" dot={{ fill: '#10b981' }} />
+                  <Line type="monotone" dataKey="predictedPoints" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 5" name="Predicted SP" dot={{ fill: '#8b5cf6' }} connectNulls={false} />
                 </LineChart>
               </ResponsiveContainer>
               <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
@@ -1495,9 +1295,8 @@ export default function Dashboard() {
 
       {/* Sprint Capacity Suggestions - Shows warnings when they exist */}
       {widgets.sprintCapacitySuggestions && (() => {
-        const suggestionsNeedingAdjustment = sprintSuggestions.filter(suggestion =>
-          suggestion.currentCapacity &&
-          suggestion.currentCapacity.availableMembers !== suggestion.suggestedAvailableMembers
+        const suggestionsNeedingAdjustment = (capacityAnalysis?.sprintCapacitySuggestions ?? []).filter(suggestion =>
+          suggestion.currentAvailableMembers !== suggestion.suggestedAvailableMembers
         )
 
         if (suggestionsNeedingAdjustment.length === 0) {
@@ -1514,14 +1313,14 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {suggestionsNeedingAdjustment.map(suggestion => (
                   <div
-                    key={suggestion.sprint.id}
+                    key={suggestion.sprintId}
                     className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                            {suggestion.sprint.name}
+                            {suggestion.sprintName}
                           </h3>
                           <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                             <AlertTriangle className="w-4 h-4" />
@@ -1540,7 +1339,7 @@ export default function Dashboard() {
                           <div>
                             <span className="text-slate-500 dark:text-slate-400">Current Capacity:</span>
                             <span className="ml-2 font-medium text-slate-900 dark:text-slate-100">
-                              {suggestion.currentCapacity?.availableMembers || 'Not set'}
+                              {suggestion.currentAvailableMembers || 'Not set'}
                             </span>
                           </div>
                           <div>

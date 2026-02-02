@@ -231,11 +231,24 @@ public class ReportingService : IReportingService
             .Where(u => !u.IsOnLeave) // Exclude those on leave from the warning
             .ToList();
 
+        // 4. Unmatched task count (tasks not matching any project by labels)
+        var unmatchedTaskCount = tasks.Count(task =>
+        {
+            if (string.IsNullOrWhiteSpace(task.Labels))
+                return true;
+
+            var taskLabels = task.Labels.Split(',').Select(l => l.Trim().ToLowerInvariant()).ToHashSet();
+            return !projects.Any(p =>
+                projectLabelsMap.TryGetValue(p.Id, out var projectLabels) &&
+                taskLabels.Overlaps(projectLabels));
+        });
+
         return new DashboardInsightsDto
         {
             WorkloadWarnings = workloadWarnings,
             KnowledgeSilos = knowledgeSilos,
-            UnengagedMembers = unengagedMembers
+            UnengagedMembers = unengagedMembers,
+            UnmatchedTaskCount = unmatchedTaskCount
         };
     }
 
@@ -815,6 +828,20 @@ public class ReportingService : IReportingService
         return assignedTasks;
     }
 
+    /// <summary>
+    /// Counts weekday-only days in a date range (inclusive).
+    /// </summary>
+    private static int GetWorkingDays(DateTime start, DateTime end)
+    {
+        int count = 0;
+        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+        {
+            if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+                count++;
+        }
+        return count;
+    }
+
     private static int CalculateTenureMonths(DateTime hireDate)
     {
         var now = DateTime.UtcNow;
@@ -1201,6 +1228,16 @@ public class ReportingService : IReportingService
             .GroupBy(x => x.LatestSprint)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
+        // Pre-compute parent total story points: for each parent, sum SP from all its child tasks
+        var parentSPMap = new Dictionary<Guid, int>();
+        var tasksByParentId = tasks
+            .Where(t => t.ParentId.HasValue)
+            .GroupBy(t => t.ParentId!.Value);
+        foreach (var group in tasksByParentId)
+        {
+            parentSPMap[group.Key] = group.Sum(t => t.StoryPoints ?? 0);
+        }
+
         // Determine current sprint based on today's date (sprint that contains today)
         var today = DateTime.UtcNow.Date;
         var currentSprintEntity = sprints
@@ -1255,6 +1292,14 @@ public class ReportingService : IReportingService
                 .Where(t => t.Status == TaskStatus.Done)
                 .Sum(t => t.StoryPoints ?? 0);
 
+            // Compute total story points from parents involved in this sprint
+            var sprintParentIds = sprintTasks
+                .Where(t => t.ParentId.HasValue)
+                .Select(t => t.ParentId!.Value)
+                .Distinct();
+            var totalStoryPoints = sprintParentIds
+                .Sum(pid => parentSPMap.GetValueOrDefault(pid, 0));
+
             var committedPoints = capacity?.TotalCapacityPoints ?? 0;
             var utilization = committedPoints > 0
                 ? Math.Round((double)completedPoints / committedPoints * 100, 1)
@@ -1283,6 +1328,7 @@ public class ReportingService : IReportingService
                 SprintNumber = sprint.SprintNumber,
                 CommittedPoints = committedPoints,
                 CompletedPoints = completedPoints,
+                TotalStoryPoints = totalStoryPoints,
                 UtilizationPercentage = utilization,
                 Status = status
             };
@@ -1308,6 +1354,138 @@ public class ReportingService : IReportingService
             ? Math.Round(pastSprints.Average(s => s.UtilizationPercentage), 1)
             : 0;
 
+        // Load leaves and direct reports for predictions and suggestions
+        var allLeaves = await _leaveRepository.GetAllAsync(cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var directReportIds = directReports.Where(dr => dr.IsDirect).Select(dr => dr.Id).ToHashSet();
+        var activeLeaves = allLeaves
+            .Where(l => l.Status == LeaveStatus.Active && directReportIds.Contains(l.DirectReportId))
+            .ToList();
+        var totalTeamSize = directReports.Count(dr => dr.IsDirect);
+        var sprintEntityMap = sprints.ToDictionary(s => s.Id);
+
+        // Compute predicted points for future sprints
+        if (futureSprints.Count > 0)
+        {
+            var avgCompletedSP = pastSprints.Count > 0
+                ? (int)Math.Round(pastSprints.Average(s => (double)s.CompletedPoints))
+                : (currentSprint?.CompletedPoints ?? 0);
+
+            futureSprints = futureSprints.Select(fs =>
+            {
+                if (!sprintEntityMap.TryGetValue(fs.SprintId, out var sprintEntity))
+                    return fs;
+
+                var sprintStart = sprintEntity.GetEstimatedStartDate();
+                var sprintEnd = sprintEntity.GetEstimatedEndDate();
+                var workingDaysInSprint = GetWorkingDays(sprintStart, sprintEnd);
+
+                // Calculate total leave working days overlapping this sprint
+                var totalLeaveDays = 0;
+                foreach (var leave in activeLeaves)
+                {
+                    if (!leave.OverlapsWith(sprintStart, sprintEnd))
+                        continue;
+
+                    var overlapStart = leave.StartDate > sprintStart ? leave.StartDate : sprintStart;
+                    var overlapEnd = leave.EndDate < sprintEnd ? leave.EndDate : sprintEnd;
+                    totalLeaveDays += GetWorkingDays(overlapStart, overlapEnd);
+                }
+
+                var lostCapacity = workingDaysInSprint > 0
+                    ? (double)totalLeaveDays / workingDaysInSprint
+                    : 0;
+                var suggestedAvailable = Math.Max(0, totalTeamSize - lostCapacity);
+
+                int predictedPoints;
+                if (fs.CommittedPoints > 0 && averageUtilization > 0)
+                {
+                    // Mode 1: Commitment-based
+                    predictedPoints = (int)Math.Round(fs.CommittedPoints * averageUtilization / 100);
+                }
+                else
+                {
+                    // Mode 2: Velocity-based with leave-adjusted availability
+                    var ratio = totalTeamSize > 0 ? suggestedAvailable / totalTeamSize : 1;
+                    predictedPoints = (int)Math.Round(avgCompletedSP * ratio);
+                }
+
+                return new SprintCapacityAnalysisDto
+                {
+                    SprintId = fs.SprintId,
+                    SprintName = fs.SprintName,
+                    Year = fs.Year,
+                    Quarter = fs.Quarter,
+                    SprintNumber = fs.SprintNumber,
+                    CommittedPoints = fs.CommittedPoints,
+                    CompletedPoints = fs.CompletedPoints,
+                    TotalStoryPoints = fs.TotalStoryPoints,
+                    UtilizationPercentage = fs.UtilizationPercentage,
+                    PredictedPoints = predictedPoints,
+                    Status = fs.Status
+                };
+            }).ToList();
+        }
+
+        // Compute sprint capacity suggestions for future sprints with leave impact
+        var threeMonthsLater = today.AddMonths(3);
+        var upcomingSprintsForSuggestions = sprints
+            .Where(s =>
+            {
+                var start = s.GetEstimatedStartDate().Date;
+                return start >= today && start <= threeMonthsLater;
+            })
+            .OrderBy(s => s.GetEstimatedStartDate())
+            .ToList();
+
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            upcomingSprintsForSuggestions = upcomingSprintsForSuggestions.Take(sprintCount.Value).ToList();
+        }
+
+        var sprintCapacitySuggestions = new List<SprintCapacitySuggestionDto>();
+        foreach (var sprint in upcomingSprintsForSuggestions)
+        {
+            var sprintStart = sprint.GetEstimatedStartDate();
+            var sprintEnd = sprint.GetEstimatedEndDate();
+            var workingDaysInSprint = GetWorkingDays(sprintStart, sprintEnd);
+
+            var affectedMembers = new HashSet<Guid>();
+            var totalLeaveDays = 0;
+            foreach (var leave in activeLeaves)
+            {
+                if (!leave.OverlapsWith(sprintStart, sprintEnd))
+                    continue;
+
+                affectedMembers.Add(leave.DirectReportId);
+                var overlapStart = leave.StartDate > sprintStart ? leave.StartDate : sprintStart;
+                var overlapEnd = leave.EndDate < sprintEnd ? leave.EndDate : sprintEnd;
+                totalLeaveDays += GetWorkingDays(overlapStart, overlapEnd);
+            }
+
+            if (totalLeaveDays <= 0)
+                continue;
+
+            var lostCapacity = workingDaysInSprint > 0
+                ? (double)totalLeaveDays / workingDaysInSprint
+                : 0;
+            var suggestedAvailableMembers = (int)Math.Floor(Math.Max(0, totalTeamSize - lostCapacity));
+
+            capacityMap.TryGetValue(sprint.Id, out var capacity);
+            var currentAvailableMembers = capacity?.AvailableMembers ?? 0;
+
+            sprintCapacitySuggestions.Add(new SprintCapacitySuggestionDto
+            {
+                SprintId = sprint.Id,
+                SprintName = sprint.Name,
+                TotalTeamSize = totalTeamSize,
+                PeopleOnLeave = affectedMembers.Count,
+                CurrentAvailableMembers = currentAvailableMembers,
+                SuggestedAvailableMembers = suggestedAvailableMembers,
+                LeaveDaysInSprint = totalLeaveDays
+            });
+        }
+
         return new CapacityAnalysisDto
         {
             PastSprints = pastSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
@@ -1315,7 +1493,8 @@ public class ReportingService : IReportingService
             FutureSprints = futureSprints.OrderBy(s => s.Year).ThenBy(s => s.Quarter).ThenBy(s => s.SprintNumber).ToList(),
             AverageUtilization = averageUtilization,
             TotalCommittedPoints = totalCommitted,
-            TotalCompletedPoints = totalCompleted
+            TotalCompletedPoints = totalCompleted,
+            SprintCapacitySuggestions = sprintCapacitySuggestions
         };
     }
 }
