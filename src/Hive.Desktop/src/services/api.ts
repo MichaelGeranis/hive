@@ -720,7 +720,13 @@ export const quarterlyPlanningApi = {
   getPlanningBoard: (quarterId: string) =>
     api.get<PlanningBoard>(`/quarterly-planning/quarters/${quarterId}/board`).then(r => r.data),
   getInsights: (quarterId: string) =>
-    api.get<PlanningInsights>(`/quarterly-planning/quarters/${quarterId}/insights`).then(r => r.data)
+    api.get<PlanningInsights>(`/quarterly-planning/quarters/${quarterId}/insights`).then(r => r.data),
+
+  // Export
+  exportPlanningBoardToExcel: (quarterId: string) =>
+    api.get(`/quarterly-planning/quarters/${quarterId}/export`, {
+      responseType: 'blob'
+    }).then(r => r.data)
 }
 
 export default api

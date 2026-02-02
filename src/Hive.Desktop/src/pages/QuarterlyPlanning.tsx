@@ -10,7 +10,8 @@ import {
   RefreshCw,
   PanelLeftClose,
   PanelRightClose,
-  Check
+  Check,
+  Download
 } from 'lucide-react'
 import { Card, CardContent } from '../components/Card'
 import { quarterlyPlanningApi } from '../services/api'
@@ -45,8 +46,9 @@ export default function QuarterlyPlanning() {
   const [newQuarterNumber, setNewQuarterNumber] = useState(Math.ceil((new Date().getMonth() + 1) / 3))
   const [newQuarterOkr, setNewQuarterOkr] = useState('')
   const [creating, setCreating] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  
+
   // Load quarters on mount
   useEffect(() => {
     loadQuarters()
@@ -137,6 +139,36 @@ export default function QuarterlyPlanning() {
     }
   }
 
+  const handleExport = async () => {
+    if (!selectedQuarterId) return
+
+    try {
+      setExporting(true)
+      const blob = await quarterlyPlanningApi.exportPlanningBoardToExcel(selectedQuarterId)
+
+      // Create a download link
+      const url = window.URL.createObjectURL(blob as Blob)
+      const link = document.createElement('a')
+      link.href = url
+
+      const quarter = quarters.find(q => q.id === selectedQuarterId)
+      const fileName = `${quarter?.name.replace(' ', '-')}_Plan-Catalogue.xlsx`
+      link.download = fileName
+
+      document.body.appendChild(link)
+      link.click()
+
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      console.error('Failed to export', err)
+      showError(getErrorMessage(err))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const navigateQuarter = (direction: 'prev' | 'next') => {
     const currentIndex = quarters.findIndex(q => q.id === selectedQuarterId)
     if (direction === 'prev' && currentIndex > 0) {
@@ -206,6 +238,15 @@ export default function QuarterlyPlanning() {
             title="Refresh"
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exporting || !selectedQuarterId}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export to Excel"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Export
           </button>
           <button
             onClick={() => setLeftPanelOpen(!leftPanelOpen)}

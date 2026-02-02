@@ -3,6 +3,7 @@ using Hive.Application.Interfaces;
 using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Hive.Core.Interfaces;
+using System.Drawing;
 
 namespace Hive.Application.Services;
 
@@ -674,6 +675,197 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         Notes = entity.Notes,
         CreatedAt = entity.CreatedAt
     };
+
+    #endregion
+
+    #region Export Operations
+
+    public async Task<byte[]> ExportPlanningBoardToExcelAsync(Guid quarterId, CancellationToken cancellationToken = default)
+    {
+        var board = await GetPlanningBoardAsync(quarterId, cancellationToken);
+
+        OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+
+        using var package = new OfficeOpenXml.ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add($"{board.Quarter.Name} Plan-Catalogue");
+
+        // Sort sprints by their order
+        var sortedSprints = board.Sprints.OrderBy(s => s.Name).ToList();
+
+        // Header Row 1: Sprint columns
+        worksheet.Cells[1, 1].Value = "Sprint";
+        for (int i = 0; i < sortedSprints.Count; i++)
+        {
+            worksheet.Cells[1, i + 2].Value = sortedSprints[i].Name;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, sortedSprints.Count + 1])
+        {
+            range.Style.Font.Bold = true;
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+            range.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+            range.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+        }
+
+        int currentRow = 3;
+
+        // Delivery Plan Section
+        currentRow = AddDeliveryPlanSection(worksheet, board, sortedSprints, currentRow);
+
+        // Sprint Goals Section
+        currentRow = AddSprintGoalsSection(worksheet, board, sortedSprints, currentRow + 2);
+
+        // Auto-fit columns
+        for (int col = 1; col <= sortedSprints.Count + 1; col++)
+        {
+            worksheet.Column(col).Width = 30;
+        }
+
+        // Row height for better readability
+        worksheet.Row(1).Height = 30;
+
+        return await Task.FromResult(package.GetAsByteArray());
+    }
+
+    private int AddDeliveryPlanSection(
+        OfficeOpenXml.ExcelWorksheet worksheet,
+        PlanningBoardDto board,
+        List<SprintDto> sortedSprints,
+        int startRow)
+    {
+        int currentRow = startRow;
+
+        // Section header
+        worksheet.Cells[currentRow, 1].Value = "Delivery Plan";
+        using (var range = worksheet.Cells[currentRow, 1, currentRow, sortedSprints.Count + 1])
+        {
+            range.Merge = true;
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 14;
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+            range.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+        }
+        currentRow++;
+
+        // Group allocations by team member
+        var allocationsByMember = board.Allocations
+            .GroupBy(a => a.DirectReportId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Add team member rows
+        foreach (var member in board.TeamMembers.OrderBy(m => m.FullName))
+        {
+            worksheet.Cells[currentRow, 1].Value = member.FullName;
+            worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+
+            // For each sprint, show allocated initiatives
+            for (int i = 0; i < sortedSprints.Count; i++)
+            {
+                var sprint = sortedSprints[i];
+                var memberAllocations = allocationsByMember.ContainsKey(member.Id)
+                    ? allocationsByMember[member.Id].Where(a => a.SprintId == sprint.Id).ToList()
+                    : new List<AllocationDto>();
+
+                if (memberAllocations.Any())
+                {
+                    var initiativeNames = memberAllocations
+                        .Select(a => board.Initiatives.FirstOrDefault(init => init.Id == a.InitiativeId))
+                        .Where(init => init != null)
+                        .Select(init => init!.Name)
+                        .Distinct();
+
+                    var cell = worksheet.Cells[currentRow, i + 2];
+                    cell.Value = string.Join("\n", initiativeNames);
+                    cell.Style.WrapText = true;
+
+                    // Apply color from first initiative
+                    var firstInitiative = board.Initiatives.FirstOrDefault(init => init.Id == memberAllocations[0].InitiativeId);
+                    if (firstInitiative != null && !string.IsNullOrEmpty(firstInitiative.Color))
+                    {
+                        var color = ColorTranslator.FromHtml(firstInitiative.Color);
+                        cell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        cell.Style.Fill.BackgroundColor.SetColor(color);
+
+                        // Adjust font color for readability
+                        if (IsColorDark(color))
+                        {
+                            cell.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                        }
+                    }
+                }
+                else
+                {
+                    worksheet.Cells[currentRow, i + 2].Value = "";
+                }
+
+                // Add borders
+                worksheet.Cells[currentRow, i + 2].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+            }
+
+            // Border for team member name cell
+            worksheet.Cells[currentRow, 1].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+            currentRow++;
+        }
+
+        return currentRow;
+    }
+
+    private int AddSprintGoalsSection(
+        OfficeOpenXml.ExcelWorksheet worksheet,
+        PlanningBoardDto board,
+        List<SprintDto> sortedSprints,
+        int startRow)
+    {
+        int currentRow = startRow;
+
+        // Section header
+        worksheet.Cells[currentRow, 1].Value = "Sprint Goals Prioritized (Describing the Increments)";
+        using (var range = worksheet.Cells[currentRow, 1, currentRow, sortedSprints.Count + 1])
+        {
+            range.Merge = true;
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 14;
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+            range.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+        }
+        currentRow++;
+
+        // Add sprint goals
+        for (int i = 0; i < sortedSprints.Count; i++)
+        {
+            var sprint = sortedSprints[i];
+            var goal = board.SprintGoals.FirstOrDefault(g => g.SprintId == sprint.Id);
+
+            var cell = worksheet.Cells[currentRow, i + 2];
+            cell.Value = goal?.Goal ?? "";
+            cell.Style.WrapText = true;
+            cell.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+            cell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+        }
+
+        worksheet.Cells[currentRow, 1].Value = "Goals";
+        worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+        worksheet.Cells[currentRow, 1].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+        worksheet.Row(currentRow).Height = 100;
+
+        currentRow++;
+
+        return currentRow;
+    }
+
+    private static bool IsColorDark(System.Drawing.Color color)
+    {
+        // Calculate perceived brightness
+        double brightness = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255;
+        return brightness < 0.5;
+    }
 
     #endregion
 }

@@ -542,4 +542,34 @@ public class QuarterlyPlanningController : ControllerBase
     }
 
     #endregion
+
+    #region Export Endpoints
+
+    /// <summary>
+    /// Exports the planning board to Excel format.
+    /// </summary>
+    [HttpGet("quarters/{quarterId:guid}/export")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportPlanningBoardToExcel(Guid quarterId, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Exporting planning board for quarter: {QuarterId}", quarterId);
+        try
+        {
+            var excelBytes = await _planningService.ExportPlanningBoardToExcelAsync(quarterId, cancellationToken);
+            var quarter = await _planningService.GetQuarterByIdAsync(quarterId, cancellationToken);
+            var fileName = $"{quarter?.Name.Replace(" ", "-")}_Plan-Catalogue.xlsx";
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    #endregion
 }

@@ -167,7 +167,7 @@ export default function PlanningMatrix({
       <CardHeader>
         <h3 className="font-semibold text-slate-800 dark:text-white">Planning Board</h3>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <div className="min-w-max">
           <table className="w-full border-collapse">
             <thead>
@@ -232,9 +232,12 @@ export default function PlanningMatrix({
                       ) : (
                         <div
                           onClick={() => handleEditGoal(sprint.id)}
-                          className="min-h-[40px] p-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
+                          className="min-h-[40px] max-h-[60px] p-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors overflow-hidden"
+                          title={goal?.goal}
                         >
-                          {goal?.goal || <span className="text-slate-400 dark:text-slate-500 italic">Click to add goal...</span>}
+                          <div className="line-clamp-3">
+                            {goal?.goal || <span className="text-slate-400 dark:text-slate-500 italic">Click to add goal...</span>}
+                          </div>
                         </div>
                       )}
                     </td>

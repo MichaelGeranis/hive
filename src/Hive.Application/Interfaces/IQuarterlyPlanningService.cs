@@ -42,4 +42,7 @@ public interface IQuarterlyPlanningService
 
     // Board operations
     Task<PlanningBoardDto> GetPlanningBoardAsync(Guid quarterId, CancellationToken cancellationToken = default);
+
+    // Export operations
+    Task<byte[]> ExportPlanningBoardToExcelAsync(Guid quarterId, CancellationToken cancellationToken = default);
 }
