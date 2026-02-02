@@ -874,24 +874,20 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
     {
         int currentRow = startRow;
 
-        // Section header
+        // Section header row
         worksheet.Cells[currentRow, 1].Value = "Options";
-        using (var range = worksheet.Cells[currentRow, 1, currentRow, sortedSprints.Count + 1])
-        {
-            range.Merge = true;
-            range.Style.Font.Bold = true;
-            range.Style.Font.Size = 14;
-            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
-            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
-            range.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
-        }
-        currentRow++;
+        worksheet.Cells[currentRow, 1].Style.Font.Bold = true;
+        worksheet.Cells[currentRow, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+        worksheet.Cells[currentRow, 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        worksheet.Cells[currentRow, 1].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
 
-        // Add initiatives
-        foreach (var initiative in board.Initiatives.OrderBy(i => i.Name))
+        // Add initiatives horizontally across columns (no limit)
+        var initiatives = board.Initiatives.OrderBy(i => i.Name).ToList();
+        int colIndex = 2;
+
+        foreach (var initiative in initiatives)
         {
-            var cell = worksheet.Cells[currentRow, 1];
+            var cell = worksheet.Cells[currentRow, colIndex];
 
             if (!string.IsNullOrWhiteSpace(initiative.Url))
             {
@@ -907,22 +903,14 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
                 cell.Value = initiative.Name;
             }
 
+            cell.Style.WrapText = true;
+            cell.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
             cell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-            cell.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
 
-            // Add description in adjacent columns if needed
-            if (!string.IsNullOrWhiteSpace(initiative.Description))
-            {
-                var descCell = worksheet.Cells[currentRow, 2, currentRow, sortedSprints.Count + 1];
-                descCell.Merge = true;
-                descCell.Value = initiative.Description;
-                descCell.Style.WrapText = true;
-                descCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-            }
-
-            currentRow++;
+            colIndex++;
         }
 
+        currentRow++;
         return currentRow;
     }
 
