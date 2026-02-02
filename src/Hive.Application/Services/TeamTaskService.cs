@@ -352,6 +352,69 @@ public class TeamTaskService : ITeamTaskService
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
+    public async Task<TeamTaskDto> OverrideFieldsAsync(Guid id, OverrideTeamTaskFieldsDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        if (dto.HasAssigneeOverride)
+        {
+            if (dto.AssigneeId.HasValue)
+            {
+                var assignee = await _directReportRepository.GetByIdAsync(dto.AssigneeId.Value, cancellationToken);
+                if (assignee is null)
+                {
+                    throw new NotFoundException(nameof(DirectReport), dto.AssigneeId.Value);
+                }
+            }
+            entity.OverrideAssignee(dto.AssigneeId);
+        }
+
+        if (dto.HasEstimationOverride)
+        {
+            var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
+            entity.OverrideEstimation(dto.StoryPoints, estimatedHours);
+        }
+
+        if (dto.HasTimeSpentOverride)
+        {
+            entity.OverrideTimeSpent(dto.TimeSpentMinutes);
+        }
+
+        await _taskRepository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Task,
+            entity.Id,
+            entity.Title,
+            $"Task '{entity.Title}' fields were overridden",
+            cancellationToken);
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
+    public async Task<TeamTaskDto> ClearOverridesAsync(Guid id, ClearTeamTaskOverridesDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        foreach (var field in dto.Fields)
+        {
+            entity.ClearOverride(field);
+        }
+
+        await _taskRepository.UpdateAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Updated,
+            EntityType.Task,
+            entity.Id,
+            entity.Title,
+            $"Task '{entity.Title}' overrides were cleared for: {string.Join(", ", dto.Fields)}",
+            cancellationToken);
+
+        return await MapToDtoAsync(entity, cancellationToken);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await _taskRepository.GetByIdAsync(id, cancellationToken);
@@ -449,6 +512,7 @@ public class TeamTaskService : ITeamTaskService
             Labels = entity.Labels,
             Sprint = entity.Sprint,
             TimeSpentMinutes = entity.TimeSpentMinutes,
+            OverriddenFields = entity.OverriddenFields,
             IsOverdue = entity.IsOverdue(),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt

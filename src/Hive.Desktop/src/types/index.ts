@@ -219,7 +219,21 @@ export interface TeamTask {
   labels: string
   sprint: string
   timeSpentMinutes?: number
+  overriddenFields: string
   isOverdue: boolean
+}
+
+export interface OverrideTeamTaskFieldsDto {
+  assigneeId?: string | null
+  hasAssigneeOverride: boolean
+  storyPoints?: number | null
+  hasEstimationOverride: boolean
+  timeSpentMinutes?: number | null
+  hasTimeSpentOverride: boolean
+}
+
+export interface ClearTeamTaskOverridesDto {
+  fields: string[]
 }
 
 export interface TaskSummaryDto {

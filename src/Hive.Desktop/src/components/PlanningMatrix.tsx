@@ -199,6 +199,9 @@ export default function PlanningMatrix({
                 </td>
                 {sprints.map(sprint => {
                   const goal = sprintGoalMap.get(sprint.id)
+                  const displayGoal = goal?.goal ?
+                    (goal.goal.length > 100 ? goal.goal.substring(0, 100) + '...' : goal.goal)
+                    : null
                   return (
                     <td
                       key={sprint.id}
@@ -232,12 +235,10 @@ export default function PlanningMatrix({
                       ) : (
                         <div
                           onClick={() => handleEditGoal(sprint.id)}
-                          className="min-h-[40px] max-h-[60px] p-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors overflow-hidden"
+                          className="min-h-[40px] p-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
                           title={goal?.goal}
                         >
-                          <div className="line-clamp-3">
-                            {goal?.goal || <span className="text-slate-400 dark:text-slate-500 italic">Click to add goal...</span>}
-                          </div>
+                          {displayGoal || <span className="text-slate-400 dark:text-slate-500 italic">Click to add goal...</span>}
                         </div>
                       )}
                     </td>

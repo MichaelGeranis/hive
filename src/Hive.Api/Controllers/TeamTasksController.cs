@@ -446,6 +446,61 @@ public class TeamTasksController : ControllerBase
     */
 
     /// <summary>
+    /// Overrides specific fields on a task, pinning them so Jira re-import preserves these values.
+    /// </summary>
+    /// <param name="id">The task ID.</param>
+    /// <param name="dto">The fields to override.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated task.</returns>
+    [HttpPatch("{id:guid}/overrides")]
+    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TeamTaskDto>> OverrideFields(Guid id, [FromBody] OverrideTeamTaskFieldsDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Overriding fields on task {Id}", id);
+
+        try
+        {
+            var updated = await _service.OverrideFieldsAsync(id, dto, cancellationToken);
+            return Ok(updated);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Clears overrides on specific fields, allowing Jira re-import to update them again.
+    /// </summary>
+    /// <param name="id">The task ID.</param>
+    /// <param name="dto">The fields to clear overrides for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated task.</returns>
+    [HttpPost("{id:guid}/clear-overrides")]
+    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TeamTaskDto>> ClearOverrides(Guid id, [FromBody] ClearTeamTaskOverridesDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Clearing overrides on task {Id} for fields: {Fields}", id, string.Join(", ", dto.Fields));
+
+        try
+        {
+            var updated = await _service.ClearOverridesAsync(id, dto, cancellationToken);
+            return Ok(updated);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Deletes a task.
     /// </summary>
     /// <param name="id">The task ID.</param>

@@ -31,6 +31,7 @@ public record TeamTaskDto
     public string Labels { get; init; } = string.Empty;
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
+    public string OverriddenFields { get; init; } = string.Empty;
     public bool IsOverdue { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -82,6 +83,27 @@ public record UpdateTeamTaskDto
 public record AssignTaskDto
 {
     public Guid? AssigneeId { get; init; }
+}
+
+/// <summary>
+/// DTO for overriding specific task fields (preserves values during Jira re-import).
+/// </summary>
+public record OverrideTeamTaskFieldsDto
+{
+    public Guid? AssigneeId { get; init; }
+    public bool HasAssigneeOverride { get; init; }
+    public int? StoryPoints { get; init; }
+    public bool HasEstimationOverride { get; init; }
+    public int? TimeSpentMinutes { get; init; }
+    public bool HasTimeSpentOverride { get; init; }
+}
+
+/// <summary>
+/// DTO for clearing overrides on specific task fields.
+/// </summary>
+public record ClearTeamTaskOverridesDto
+{
+    public List<string> Fields { get; init; } = new();
 }
 
 /// <summary>

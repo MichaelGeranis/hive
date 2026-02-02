@@ -21,6 +21,7 @@ public class TeamTask
     public string Sprint { get; private set; } = string.Empty;
     public int? TimeSpentMinutes { get; private set; }
     public Guid? ParentId { get; private set; }
+    public string OverriddenFields { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -231,6 +232,65 @@ public class TeamTask
         return Status != TaskStatus.Done
                && Status != TaskStatus.Cancelled
                && DueDate.Value < DateTime.UtcNow;
+    }
+
+    public bool IsFieldOverridden(string fieldName)
+    {
+        if (string.IsNullOrEmpty(OverriddenFields))
+            return false;
+
+        return OverriddenFields.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Any(f => f.Trim().Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void SetOverride(string fieldName)
+    {
+        if (IsFieldOverridden(fieldName))
+            return;
+
+        OverriddenFields = string.IsNullOrEmpty(OverriddenFields)
+            ? fieldName
+            : $"{OverriddenFields},{fieldName}";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearOverride(string fieldName)
+    {
+        if (string.IsNullOrEmpty(OverriddenFields))
+            return;
+
+        var fields = OverriddenFields.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim())
+            .Where(f => !f.Equals(fieldName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        OverriddenFields = string.Join(",", fields);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearAllOverrides()
+    {
+        OverriddenFields = string.Empty;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void OverrideAssignee(Guid? assigneeId)
+    {
+        AssigneeId = assigneeId;
+        SetOverride("AssigneeId");
+    }
+
+    public void OverrideEstimation(int? storyPoints, int? estimatedHours)
+    {
+        StoryPoints = storyPoints;
+        EstimatedHours = estimatedHours;
+        SetOverride("StoryPoints");
+    }
+
+    public void OverrideTimeSpent(int? timeSpentMinutes)
+    {
+        TimeSpentMinutes = timeSpentMinutes;
+        SetOverride("TimeSpentMinutes");
     }
 
     private static void ValidateTitle(string title)

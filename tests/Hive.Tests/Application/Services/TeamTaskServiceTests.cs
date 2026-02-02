@@ -470,4 +470,158 @@ public class TeamTaskServiceTests
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    #region Override Tests
+
+    [Fact]
+    public async Task OverrideFieldsAsync_WithAssignee_ValidatesAndSetsOverride()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        var dto = new OverrideTeamTaskFieldsDto
+        {
+            AssigneeId = _testDirectReport.Id,
+            HasAssigneeOverride = true,
+            HasEstimationOverride = false,
+            HasTimeSpentOverride = false
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
+        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReport.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDirectReport);
+
+        // Act
+        var result = await _service.OverrideFieldsAsync(task.Id, dto);
+
+        // Assert
+        result.AssigneeId.Should().Be(_testDirectReport.Id);
+        result.OverriddenFields.Should().Contain("AssigneeId");
+        _taskRepositoryMock.Verify(r => r.UpdateAsync(task, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task OverrideFieldsAsync_WithInvalidAssignee_ThrowsNotFoundException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        var invalidId = Guid.NewGuid();
+        var dto = new OverrideTeamTaskFieldsDto
+        {
+            AssigneeId = invalidId,
+            HasAssigneeOverride = true,
+            HasEstimationOverride = false,
+            HasTimeSpentOverride = false
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
+        _directReportRepositoryMock.Setup(r => r.GetByIdAsync(invalidId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DirectReport?)null);
+
+        // Act
+        var act = () => _service.OverrideFieldsAsync(task.Id, dto);
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task OverrideFieldsAsync_WithEstimation_CalculatesHoursAndSetsOverride()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        var dto = new OverrideTeamTaskFieldsDto
+        {
+            StoryPoints = 5,
+            HasEstimationOverride = true,
+            HasAssigneeOverride = false,
+            HasTimeSpentOverride = false
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
+
+        // Act
+        var result = await _service.OverrideFieldsAsync(task.Id, dto);
+
+        // Assert
+        result.StoryPoints.Should().Be(5);
+        result.OverriddenFields.Should().Contain("StoryPoints");
+    }
+
+    [Fact]
+    public async Task OverrideFieldsAsync_WithTimeSpent_SetsOverride()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        var dto = new OverrideTeamTaskFieldsDto
+        {
+            TimeSpentMinutes = 120,
+            HasTimeSpentOverride = true,
+            HasAssigneeOverride = false,
+            HasEstimationOverride = false
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
+
+        // Act
+        var result = await _service.OverrideFieldsAsync(task.Id, dto);
+
+        // Assert
+        result.TimeSpentMinutes.Should().Be(120);
+        result.OverriddenFields.Should().Contain("TimeSpentMinutes");
+    }
+
+    [Fact]
+    public async Task OverrideFieldsAsync_WhenNotExists_ThrowsNotFoundException()
+    {
+        // Arrange
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TeamTask?)null);
+
+        // Act
+        var act = () => _service.OverrideFieldsAsync(Guid.NewGuid(), new OverrideTeamTaskFieldsDto { HasAssigneeOverride = true });
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task ClearOverridesAsync_ClearsSpecifiedFields()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.OverrideAssignee(Guid.NewGuid());
+        task.OverrideTimeSpent(120);
+        var dto = new ClearTeamTaskOverridesDto { Fields = new List<string> { "AssigneeId" } };
+
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(task.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(task);
+
+        // Act
+        var result = await _service.ClearOverridesAsync(task.Id, dto);
+
+        // Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeFalse();
+        task.IsFieldOverridden("TimeSpentMinutes").Should().BeTrue();
+        _taskRepositoryMock.Verify(r => r.UpdateAsync(task, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ClearOverridesAsync_WhenNotExists_ThrowsNotFoundException()
+    {
+        // Arrange
+        _taskRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TeamTask?)null);
+
+        // Act
+        var act = () => _service.ClearOverridesAsync(Guid.NewGuid(), new ClearTeamTaskOverridesDto { Fields = new List<string> { "AssigneeId" } });
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    #endregion
 }

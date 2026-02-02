@@ -396,6 +396,76 @@ public class TeamTasksControllerTests
         result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+    #region Override Tests
+
+    [Fact]
+    public async Task OverrideFields_WhenExists_ReturnsOk()
+    {
+        // Arrange
+        var dto = new OverrideTeamTaskFieldsDto { HasTimeSpentOverride = true, TimeSpentMinutes = 120 };
+        var taskDto = CreateDto();
+        var taskId = taskDto.Id;
+        _serviceMock.Setup(s => s.OverrideFieldsAsync(taskId, dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(taskDto);
+
+        // Act
+        var result = await _controller.OverrideFields(taskId, dto, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeOfType<TeamTaskDto>();
+    }
+
+    [Fact]
+    public async Task OverrideFields_WhenNotExists_ReturnsNotFound()
+    {
+        // Arrange
+        var dto = new OverrideTeamTaskFieldsDto { HasTimeSpentOverride = true, TimeSpentMinutes = 120 };
+        _serviceMock.Setup(s => s.OverrideFieldsAsync(It.IsAny<Guid>(), dto, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("TeamTask", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.OverrideFields(Guid.NewGuid(), dto, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task ClearOverrides_WhenExists_ReturnsOk()
+    {
+        // Arrange
+        var dto = new ClearTeamTaskOverridesDto { Fields = new List<string> { "AssigneeId" } };
+        var taskDto = CreateDto();
+        var taskId = taskDto.Id;
+        _serviceMock.Setup(s => s.ClearOverridesAsync(taskId, dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(taskDto);
+
+        // Act
+        var result = await _controller.ClearOverrides(taskId, dto, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeOfType<TeamTaskDto>();
+    }
+
+    [Fact]
+    public async Task ClearOverrides_WhenNotExists_ReturnsNotFound()
+    {
+        // Arrange
+        var dto = new ClearTeamTaskOverridesDto { Fields = new List<string> { "AssigneeId" } };
+        _serviceMock.Setup(s => s.ClearOverridesAsync(It.IsAny<Guid>(), dto, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("TeamTask", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.ClearOverrides(Guid.NewGuid(), dto, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    #endregion
+
     private static TeamTaskDto CreateDto(string title = "Test Task")
     {
         return new TeamTaskDto

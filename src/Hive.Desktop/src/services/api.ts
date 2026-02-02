@@ -91,7 +91,9 @@ import type {
   SentimentAnalysis,
   TeamSentimentOverview,
   ApiKeyValidationResult,
-  TaskSummaryDto
+  TaskSummaryDto,
+  OverrideTeamTaskFieldsDto,
+  ClearTeamTaskOverridesDto
 } from '../types'
 
 const API_BASE_URL = 'http://localhost:5002/api'
@@ -285,6 +287,10 @@ export const tasksApi = {
   complete: (id: string, actualHours?: number) =>
     api.post<TeamTask>(`/teamtasks/${id}/complete`, { actualHours }).then(r => r.data),
   reopen: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/reopen`).then(r => r.data),
+  overrideFields: (id: string, data: OverrideTeamTaskFieldsDto) =>
+    api.patch<TeamTask>(`/teamtasks/${id}/overrides`, data).then(r => r.data),
+  clearOverrides: (id: string, data: ClearTeamTaskOverridesDto) =>
+    api.post<TeamTask>(`/teamtasks/${id}/clear-overrides`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/teamtasks/${id}`),
   bulkDelete: (ids: string[]) => api.post('/teamtasks/bulk-delete', ids)
 }

@@ -466,4 +466,191 @@ public class TeamTaskTests
         // Assert
         task.Priority.Should().Be(priority);
     }
+
+    #region Override Tests
+
+    [Fact]
+    public void Constructor_OverriddenFields_DefaultsToEmpty()
+    {
+        // Act
+        var task = new TeamTask("Task");
+
+        // Assert
+        task.OverriddenFields.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void IsFieldOverridden_WhenEmpty_ReturnsFalse()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act & Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetOverride_MarksFieldAsOverridden()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act
+        task.SetOverride("AssigneeId");
+
+        // Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeTrue();
+        task.OverriddenFields.Should().Be("AssigneeId");
+    }
+
+    [Fact]
+    public void SetOverride_MultipleFields_CommaSeparated()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act
+        task.SetOverride("AssigneeId");
+        task.SetOverride("StoryPoints");
+
+        // Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeTrue();
+        task.IsFieldOverridden("StoryPoints").Should().BeTrue();
+        task.OverriddenFields.Should().Be("AssigneeId,StoryPoints");
+    }
+
+    [Fact]
+    public void SetOverride_DuplicateField_DoesNotAddTwice()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act
+        task.SetOverride("AssigneeId");
+        task.SetOverride("AssigneeId");
+
+        // Assert
+        task.OverriddenFields.Should().Be("AssigneeId");
+    }
+
+    [Fact]
+    public void ClearOverride_RemovesField()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.SetOverride("AssigneeId");
+        task.SetOverride("StoryPoints");
+
+        // Act
+        task.ClearOverride("AssigneeId");
+
+        // Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeFalse();
+        task.IsFieldOverridden("StoryPoints").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ClearOverride_NonExistentField_DoesNothing()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.SetOverride("AssigneeId");
+
+        // Act
+        task.ClearOverride("StoryPoints");
+
+        // Assert
+        task.IsFieldOverridden("AssigneeId").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ClearAllOverrides_RemovesAllFields()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.SetOverride("AssigneeId");
+        task.SetOverride("StoryPoints");
+        task.SetOverride("TimeSpentMinutes");
+
+        // Act
+        task.ClearAllOverrides();
+
+        // Assert
+        task.OverriddenFields.Should().BeEmpty();
+        task.IsFieldOverridden("AssigneeId").Should().BeFalse();
+        task.IsFieldOverridden("StoryPoints").Should().BeFalse();
+        task.IsFieldOverridden("TimeSpentMinutes").Should().BeFalse();
+    }
+
+    [Fact]
+    public void OverrideAssignee_SetsValueAndMarksField()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        var assigneeId = Guid.NewGuid();
+
+        // Act
+        task.OverrideAssignee(assigneeId);
+
+        // Assert
+        task.AssigneeId.Should().Be(assigneeId);
+        task.IsFieldOverridden("AssigneeId").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OverrideAssignee_WithNull_SetsNullAndMarksField()
+    {
+        // Arrange
+        var task = new TeamTask("Task", assigneeId: Guid.NewGuid());
+
+        // Act
+        task.OverrideAssignee(null);
+
+        // Assert
+        task.AssigneeId.Should().BeNull();
+        task.IsFieldOverridden("AssigneeId").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OverrideEstimation_SetsValuesAndMarksField()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act
+        task.OverrideEstimation(5, 24);
+
+        // Assert
+        task.StoryPoints.Should().Be(5);
+        task.EstimatedHours.Should().Be(24);
+        task.IsFieldOverridden("StoryPoints").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OverrideTimeSpent_SetsValueAndMarksField()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+
+        // Act
+        task.OverrideTimeSpent(120);
+
+        // Assert
+        task.TimeSpentMinutes.Should().Be(120);
+        task.IsFieldOverridden("TimeSpentMinutes").Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsFieldOverridden_CaseInsensitive()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.SetOverride("AssigneeId");
+
+        // Act & Assert
+        task.IsFieldOverridden("assigneeid").Should().BeTrue();
+        task.IsFieldOverridden("ASSIGNEEID").Should().BeTrue();
+    }
+
+    #endregion
 }

@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
-import type { TeamTask, DirectReport, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto } from '../types'
+import type { TeamTask, DirectReport, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto, OverrideTeamTaskFieldsDto, ClearTeamTaskOverridesDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
@@ -87,6 +87,17 @@ export default function Tasks() {
   const [matchField, setMatchField] = useState<'IssueKey' | 'Title'>('IssueKey')
   const [importError, setImportError] = useState<string | null>(null)
 
+  // Override Modal State
+  const [showOverrideModal, setShowOverrideModal] = useState(false)
+  const [overrideTask, setOverrideTask] = useState<TeamTask | null>(null)
+  const [overrideAssigneeEnabled, setOverrideAssigneeEnabled] = useState(false)
+  const [overrideAssigneeId, setOverrideAssigneeId] = useState<string>('')
+  const [overrideEstimationEnabled, setOverrideEstimationEnabled] = useState(false)
+  const [overrideStoryPoints, setOverrideStoryPoints] = useState<string>('')
+  const [overrideTimeSpentEnabled, setOverrideTimeSpentEnabled] = useState(false)
+  const [overrideTimeSpentMinutes, setOverrideTimeSpentMinutes] = useState<string>('')
+  const [overrideSaving, setOverrideSaving] = useState(false)
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -120,8 +131,68 @@ export default function Tasks() {
     resetImportForm()
   }, [])
 
+  const openOverrideModal = useCallback((task: TeamTask) => {
+    setOverrideTask(task)
+    const overridden = task.overriddenFields || ''
+    const isAssigneeOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('assigneeid')
+    const isEstimationOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('storypoints')
+    const isTimeSpentOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('timespentminutes')
+    setOverrideAssigneeEnabled(isAssigneeOverridden)
+    setOverrideAssigneeId(task.assigneeId || '')
+    setOverrideEstimationEnabled(isEstimationOverridden)
+    setOverrideStoryPoints(task.storyPoints?.toString() || '')
+    setOverrideTimeSpentEnabled(isTimeSpentOverridden)
+    setOverrideTimeSpentMinutes(task.timeSpentMinutes?.toString() || '')
+    setShowOverrideModal(true)
+  }, [])
+
+  const closeOverrideModal = useCallback(() => {
+    setShowOverrideModal(false)
+    setOverrideTask(null)
+  }, [])
+
+  const handleOverrideSave = async () => {
+    if (!overrideTask) return
+    try {
+      setOverrideSaving(true)
+      const dto: OverrideTeamTaskFieldsDto = {
+        assigneeId: overrideAssigneeEnabled ? (overrideAssigneeId || null) : null,
+        hasAssigneeOverride: overrideAssigneeEnabled,
+        storyPoints: overrideEstimationEnabled ? (overrideStoryPoints ? parseInt(overrideStoryPoints) : null) : null,
+        hasEstimationOverride: overrideEstimationEnabled,
+        timeSpentMinutes: overrideTimeSpentEnabled ? (overrideTimeSpentMinutes ? parseInt(overrideTimeSpentMinutes) : null) : null,
+        hasTimeSpentOverride: overrideTimeSpentEnabled,
+      }
+      await tasksApi.overrideFields(overrideTask.id, dto)
+      closeOverrideModal()
+      loadData()
+    } catch (err) {
+      console.error(err)
+      showError(getErrorMessage(err))
+    } finally {
+      setOverrideSaving(false)
+    }
+  }
+
+  const handleClearOverride = async (taskId: string, field: string) => {
+    try {
+      const dto: ClearTeamTaskOverridesDto = { fields: [field] }
+      await tasksApi.clearOverrides(taskId, dto)
+      loadData()
+      // Update the modal if it's open for this task
+      if (overrideTask?.id === taskId) {
+        const updated = await tasksApi.getById(taskId)
+        openOverrideModal(updated)
+      }
+    } catch (err) {
+      console.error(err)
+      showError(getErrorMessage(err))
+    }
+  }
+
   useEscapeKey(closeModal, showForm)
   useEscapeKey(closeImportModal, showImportModal)
+  useEscapeKey(closeOverrideModal, showOverrideModal)
 
   // Build current filters object
   const buildFilters = useCallback((): TaskFilters => {
@@ -417,6 +488,11 @@ export default function Tasks() {
     if (hours > 0 && mins > 0) return `${hours}h ${mins}m`
     if (hours > 0) return `${hours}h`
     return `${mins}m`
+  }
+
+  const isFieldOverridden = (task: TeamTask, fieldName: string) => {
+    if (!task.overriddenFields) return false
+    return task.overriddenFields.split(',').map(f => f.trim().toLowerCase()).includes(fieldName.toLowerCase())
   }
 
   // Note: matchedProjectNames and estimatedHours are now provided by the backend
@@ -927,6 +1003,151 @@ export default function Tasks() {
         </div>
       )}
 
+      {/* Override Fields Modal */}
+      {showOverrideModal && overrideTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader title="Override Task Fields" subtitle={`Pin field values to preserve them during Jira re-import: ${overrideTask.title}`} />
+            <CardContent>
+              <div className="space-y-5">
+                {/* Assignee Override */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={overrideAssigneeEnabled}
+                        onChange={(e) => setOverrideAssigneeEnabled(e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assignee</span>
+                      {isFieldOverridden(overrideTask, 'AssigneeId') && (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <Pin className="w-3 h-3" /> Pinned
+                        </span>
+                      )}
+                    </label>
+                    {isFieldOverridden(overrideTask, 'AssigneeId') && (
+                      <button
+                        onClick={() => handleClearOverride(overrideTask.id, 'AssigneeId')}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Override
+                      </button>
+                    )}
+                  </div>
+                  {overrideAssigneeEnabled && (
+                    <select
+                      value={overrideAssigneeId}
+                      onChange={(e) => setOverrideAssigneeId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="">Unassigned</option>
+                      {directReports.map(dr => (
+                        <option key={dr.id} value={dr.id}>{dr.fullName}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Story Points Override */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={overrideEstimationEnabled}
+                        onChange={(e) => setOverrideEstimationEnabled(e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Story Points + Estimated Hours</span>
+                      {isFieldOverridden(overrideTask, 'StoryPoints') && (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <Pin className="w-3 h-3" /> Pinned
+                        </span>
+                      )}
+                    </label>
+                    {isFieldOverridden(overrideTask, 'StoryPoints') && (
+                      <button
+                        onClick={() => handleClearOverride(overrideTask.id, 'StoryPoints')}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Override
+                      </button>
+                    )}
+                  </div>
+                  {overrideEstimationEnabled && (
+                    <input
+                      type="number"
+                      value={overrideStoryPoints}
+                      onChange={(e) => setOverrideStoryPoints(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                      min="0"
+                      placeholder="Story points (estimated hours auto-calculated)"
+                    />
+                  )}
+                </div>
+
+                {/* Time Spent Override */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={overrideTimeSpentEnabled}
+                        onChange={(e) => setOverrideTimeSpentEnabled(e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Time Spent</span>
+                      {isFieldOverridden(overrideTask, 'TimeSpentMinutes') && (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <Pin className="w-3 h-3" /> Pinned
+                        </span>
+                      )}
+                    </label>
+                    {isFieldOverridden(overrideTask, 'TimeSpentMinutes') && (
+                      <button
+                        onClick={() => handleClearOverride(overrideTask.id, 'TimeSpentMinutes')}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Override
+                      </button>
+                    )}
+                  </div>
+                  {overrideTimeSpentEnabled && (
+                    <input
+                      type="number"
+                      value={overrideTimeSpentMinutes}
+                      onChange={(e) => setOverrideTimeSpentMinutes(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                      min="0"
+                      placeholder="Time spent in minutes"
+                    />
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={closeOverrideModal}
+                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleOverrideSave}
+                    disabled={overrideSaving || (!overrideAssigneeEnabled && !overrideEstimationEnabled && !overrideTimeSpentEnabled)}
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {overrideSaving ? 'Saving...' : 'Save Overrides'}
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Overdue Alert */}
       {overdueCount > 0 && (
         <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
@@ -1094,6 +1315,7 @@ export default function Tasks() {
                             {task.assigneeName.split(' ').map(n => n[0]).join('')}
                           </div>
                           {task.assigneeName}
+                          {isFieldOverridden(task, 'AssigneeId') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
                         </span>
                       )}
                       {task.projectName && (
@@ -1125,12 +1347,16 @@ export default function Tasks() {
                         <span>{task.estimatedHours}h estimated</span>
                       )}
                       {task.storyPoints && (
-                        <span className="font-semibold text-amber-600 dark:text-amber-400">{task.storyPoints} SP</span>
+                        <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                          {task.storyPoints} SP
+                          {isFieldOverridden(task, 'StoryPoints') && <Pin className="w-3 h-3" title="Overridden - preserved during import" />}
+                        </span>
                       )}
                       {task.timeSpentMinutes && (
                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                           <Timer className="w-4 h-4" />
                           {formatTimeSpent(task.timeSpentMinutes)} logged
+                          {isFieldOverridden(task, 'TimeSpentMinutes') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
                         </span>
                       )}
                       {task.sprint && (
@@ -1152,7 +1378,13 @@ export default function Tasks() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Status change buttons disabled - tasks are read-only */}
+                    <button
+                      onClick={() => openOverrideModal(task)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit
+                    </button>
                     <button
                       onClick={() => handleDelete(task.id)}
                       className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"

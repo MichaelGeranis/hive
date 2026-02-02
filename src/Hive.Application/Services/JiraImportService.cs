@@ -300,22 +300,28 @@ public class JiraImportService : IJiraImportService
                 Guid taskId;
                 if (existingTask != null)
                 {
-                    // Update existing task
+                    // Capture override state before updating
+                    var overriddenEstimation = existingTask.IsFieldOverridden("StoryPoints");
+                    var overriddenTimeSpent = existingTask.IsFieldOverridden("TimeSpentMinutes");
+                    var overriddenAssignee = existingTask.IsFieldOverridden("AssigneeId");
+
+                    // Update existing task, preserving overridden field values
                     existingTask.Update(
                         taskData.Title,
                         taskData.Description,
                         taskData.Type,
                         taskData.Priority,
                         taskData.DueDate,
-                        taskData.EstimatedHours,
-                        taskData.StoryPoints,
+                        overriddenEstimation ? existingTask.EstimatedHours : taskData.EstimatedHours,
+                        overriddenEstimation ? existingTask.StoryPoints : taskData.StoryPoints,
                         taskData.Tags,
                         taskData.Labels,
                         taskData.Sprint,
-                        taskData.TimeSpentMinutes,
+                        overriddenTimeSpent ? existingTask.TimeSpentMinutes : taskData.TimeSpentMinutes,
                         parentId);
 
-                    if (taskData.AssigneeId != existingTask.AssigneeId)
+                    // Only update assignee if NOT overridden
+                    if (!overriddenAssignee && taskData.AssigneeId != existingTask.AssigneeId)
                     {
                         existingTask.AssignTo(taskData.AssigneeId);
                     }

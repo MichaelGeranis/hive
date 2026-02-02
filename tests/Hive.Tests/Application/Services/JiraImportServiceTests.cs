@@ -851,4 +851,259 @@ PROJ-123,Test Task,{jiraPriority},LP_1Q25_S1";
     }
 
     #endregion
+
+    #region Override Preservation Tests
+
+    [Fact]
+    public async Task ImportAsync_WithOverriddenAssignee_PreservesAssigneeDuringUpdate()
+    {
+        // Arrange
+        var originalAssigneeId = Guid.NewGuid();
+        var existingTask = new TeamTask(
+            "Test Task",
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            originalAssigneeId,
+            null,
+            null,
+            null,
+            null,
+            "jira:PROJ-123",
+            "",
+            "",
+            null,
+            null);
+        existingTask.OverrideAssignee(originalAssigneeId);
+
+        var csvContent = @"Issue key,Summary,Assignee,Status
+PROJ-123,Test Task,Jane Smith,Done";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = true,
+            MatchField = "IssueKey"
+        };
+
+        var newAssignee = new DirectReport("Jane", "Smith", "jane@test.com", "Engineer", "Eng", DateTime.UtcNow);
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { existingTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport> { newAssignee });
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAppSettings);
+
+        // Act
+        var result = await _service.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+        // Assignee should remain as original since it's overridden
+        existingTask.AssigneeId.Should().Be(originalAssigneeId);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithOverriddenStoryPoints_PreservesEstimationDuringUpdate()
+    {
+        // Arrange
+        var existingTask = new TeamTask(
+            "Test Task",
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "jira:PROJ-123",
+            "",
+            "",
+            null,
+            null);
+        existingTask.OverrideEstimation(8, 40);
+
+        var csvContent = @"Issue key,Summary,Story Points,Status
+PROJ-123,Test Task,3,Done";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = true,
+            MatchField = "IssueKey"
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { existingTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAppSettings);
+
+        // Act
+        var result = await _service.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+        // Story points should remain as overridden value
+        existingTask.StoryPoints.Should().Be(8);
+        existingTask.EstimatedHours.Should().Be(40);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithOverriddenTimeSpent_PreservesTimeSpentDuringUpdate()
+    {
+        // Arrange
+        var existingTask = new TeamTask(
+            "Test Task",
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "jira:PROJ-123",
+            "",
+            "",
+            null,
+            null);
+        existingTask.OverrideTimeSpent(999);
+
+        var csvContent = @"Issue key,Summary,Σ Time Spent,Status
+PROJ-123,Test Task,3600,Done";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = true,
+            MatchField = "IssueKey"
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { existingTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAppSettings);
+
+        // Act
+        var result = await _service.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+        // Time spent should remain as overridden value
+        existingTask.TimeSpentMinutes.Should().Be(999);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithNoOverrides_UpdatesAllFieldsNormally()
+    {
+        // Arrange
+        var existingTask = new TeamTask(
+            "Test Task",
+            "Old Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            5,
+            "jira:PROJ-123",
+            "",
+            "",
+            120,
+            null);
+
+        var csvContent = @"Issue key,Summary,Story Points,Σ Time Spent,Status
+PROJ-123,Test Task,3,3600,Done";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = true,
+            MatchField = "IssueKey"
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { existingTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAppSettings);
+
+        // Act
+        var result = await _service.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+        // All fields should be updated from CSV since no overrides
+        existingTask.StoryPoints.Should().Be(3);
+        existingTask.TimeSpentMinutes.Should().Be(60); // 3600 seconds = 60 minutes
+    }
+
+    [Fact]
+    public async Task ImportAsync_AfterClearingOverride_UpdatesFieldFromCsv()
+    {
+        // Arrange
+        var existingTask = new TeamTask(
+            "Test Task",
+            "Description",
+            TaskType.Task,
+            TaskPriority.Medium,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "jira:PROJ-123",
+            "",
+            "",
+            null,
+            null);
+        // Set override then clear it
+        existingTask.OverrideTimeSpent(999);
+        existingTask.ClearOverride("TimeSpentMinutes");
+
+        var csvContent = @"Issue key,Summary,Σ Time Spent,Status
+PROJ-123,Test Task,3600,Done";
+
+        var request = new JiraImportRequestDto
+        {
+            CsvContent = csvContent,
+            UpdateExisting = true,
+            MatchField = "IssueKey"
+        };
+
+        _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TeamTask> { existingTask });
+        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DirectReport>());
+        _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
+        _appSettingsServiceMock.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAppSettings);
+
+        // Act
+        var result = await _service.ImportAsync(request);
+
+        // Assert
+        result.SuccessCount.Should().Be(1);
+        // After clearing override, time spent should be updated from CSV
+        existingTask.TimeSpentMinutes.Should().Be(60); // 3600 seconds = 60 minutes
+    }
+
+    #endregion
 }
