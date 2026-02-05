@@ -21,17 +21,10 @@ public class MeetingNoteRepository : IMeetingNoteRepository
         return Task.FromResult(entity);
     }
 
-    public Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, bool includePrivate = true, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, CancellationToken cancellationToken = default)
     {
-        var query = _context.MeetingNotes.Values
-            .Where(x => x.MeetingId == meetingId);
-
-        if (!includePrivate)
-        {
-            query = query.Where(x => !x.IsPrivate);
-        }
-
-        var entities = query
+        var entities = _context.MeetingNotes.Values
+            .Where(x => x.MeetingId == meetingId)
             .OrderBy(x => x.CreatedAt)
             .ToList();
 

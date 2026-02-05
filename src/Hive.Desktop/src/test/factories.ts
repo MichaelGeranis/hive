@@ -145,7 +145,6 @@ export function createMeetingNote(overrides?: Partial<MeetingNote>): MeetingNote
     content: 'Test note content',
     category: 0 as NoteCategory,
     categoryName: 'Discussion',
-    isPrivate: false,
     isOverdue: false,
     createdAt: new Date().toISOString(),
     ...overrides,

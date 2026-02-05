@@ -301,7 +301,7 @@ public class InMemoryDbContext
                 "Project check-in");
             OneOnOneMeetings.TryAdd(meeting4.Id, meeting4);
 
-            var note5 = new MeetingNote(meeting4.Id, "Discussed .NET Core learning path", NoteCategory.CareerDevelopment);
+            var note5 = new MeetingNote(meeting4.Id, "Discussed .NET Core learning path", NoteCategory.Discussion);
             var note6 = new MeetingNote(meeting4.Id, "Complete Pluralsight course on .NET Core", NoteCategory.ActionItem);
             note6.SetActionDetails(DateTime.UtcNow.AddDays(-5), "Bob");
             MeetingNotes.TryAdd(note5.Id, note5);

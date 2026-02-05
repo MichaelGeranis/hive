@@ -101,7 +101,6 @@ public record MeetingNoteBackup
     public Guid MeetingId { get; init; }
     public string Content { get; init; } = string.Empty;
     public int Category { get; init; }
-    public bool IsPrivate { get; init; }
     public int? ActionStatus { get; init; }
     public DateTime? ActionDueDate { get; init; }
     public string? ActionAssignee { get; init; }

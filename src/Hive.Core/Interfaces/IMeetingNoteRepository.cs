@@ -8,7 +8,7 @@ namespace Hive.Core.Interfaces;
 public interface IMeetingNoteRepository
 {
     Task<MeetingNote?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, bool includePrivate = true, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MeetingNote>> GetActionItemsAsync(Guid? directReportId = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MeetingNote>> GetOpenActionItemsAsync(Guid? directReportId = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MeetingNote>> GetOverdueActionItemsAsync(CancellationToken cancellationToken = default);

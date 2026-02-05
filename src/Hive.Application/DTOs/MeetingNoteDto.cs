@@ -14,7 +14,6 @@ public record MeetingNoteDto
     public string Content { get; init; } = string.Empty;
     public NoteCategory Category { get; init; }
     public string CategoryName { get; init; } = string.Empty;
-    public bool IsPrivate { get; init; }
     public ActionItemStatus? ActionStatus { get; init; }
     public string? ActionStatusName { get; init; }
     public DateTime? ActionDueDate { get; init; }
@@ -32,7 +31,6 @@ public record CreateMeetingNoteDto
     public Guid MeetingId { get; init; }
     public string Content { get; init; } = string.Empty;
     public NoteCategory Category { get; init; }
-    public bool IsPrivate { get; init; }
     public DateTime? ActionDueDate { get; init; }
     public string? ActionAssignee { get; init; }
 }
@@ -44,7 +42,6 @@ public record UpdateMeetingNoteDto
 {
     public string Content { get; init; } = string.Empty;
     public NoteCategory Category { get; init; }
-    public bool IsPrivate { get; init; }
     public DateTime? ActionDueDate { get; init; }
     public string? ActionAssignee { get; init; }
 }

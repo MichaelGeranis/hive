@@ -18,16 +18,10 @@ public class SqliteMeetingNoteRepository : IMeetingNoteRepository
         return await _context.MeetingNotes.FindAsync([id], cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, bool includePrivate = true, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MeetingNote>> GetByMeetingIdAsync(Guid meetingId, CancellationToken cancellationToken = default)
     {
-        var query = _context.MeetingNotes.Where(x => x.MeetingId == meetingId);
-
-        if (!includePrivate)
-        {
-            query = query.Where(x => !x.IsPrivate);
-        }
-
-        return await query
+        return await _context.MeetingNotes
+            .Where(x => x.MeetingId == meetingId)
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }

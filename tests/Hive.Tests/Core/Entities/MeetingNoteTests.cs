@@ -17,7 +17,6 @@ public class MeetingNoteTests
         note.MeetingId.Should().Be(_validMeetingId);
         note.Content.Should().Be("Discussion point");
         note.Category.Should().Be(NoteCategory.Discussion);
-        note.IsPrivate.Should().BeFalse();
         note.ActionStatus.Should().BeNull();
         note.ActionDueDate.Should().BeNull();
         note.ActionAssignee.Should().BeNull();
@@ -35,15 +34,6 @@ public class MeetingNoteTests
         note.ActionStatus.Should().Be(ActionItemStatus.Open);
     }
 
-    [Fact]
-    public void Constructor_WithPrivateFlag_SetsIsPrivate()
-    {
-        // Act
-        var note = new MeetingNote(_validMeetingId, "Private note", NoteCategory.Personal, isPrivate: true);
-
-        // Assert
-        note.IsPrivate.Should().BeTrue();
-    }
 
     [Fact]
     public void Constructor_WithEmptyMeetingId_ThrowsArgumentException()
@@ -91,12 +81,11 @@ public class MeetingNoteTests
         var note = new MeetingNote(_validMeetingId, "Original", NoteCategory.Discussion);
 
         // Act
-        note.UpdateContent("Updated content", NoteCategory.Feedback, true);
+        note.UpdateContent("Updated content", NoteCategory.Feedback);
 
         // Assert
         note.Content.Should().Be("Updated content");
         note.Category.Should().Be(NoteCategory.Feedback);
-        note.IsPrivate.Should().BeTrue();
         note.UpdatedAt.Should().NotBeNull();
     }
 
@@ -107,7 +96,7 @@ public class MeetingNoteTests
         var note = new MeetingNote(_validMeetingId, "Original", NoteCategory.Discussion);
 
         // Act
-        note.UpdateContent("New action", NoteCategory.ActionItem, false);
+        note.UpdateContent("New action", NoteCategory.ActionItem);
 
         // Assert
         note.ActionStatus.Should().Be(ActionItemStatus.Open);
@@ -121,7 +110,7 @@ public class MeetingNoteTests
         note.SetActionDetails(DateTime.UtcNow.AddDays(7), "John");
 
         // Act
-        note.UpdateContent("Discussion now", NoteCategory.Discussion, false);
+        note.UpdateContent("Discussion now", NoteCategory.Discussion);
 
         // Assert
         note.ActionStatus.Should().BeNull();
@@ -136,7 +125,7 @@ public class MeetingNoteTests
         var note = new MeetingNote(_validMeetingId, "Original", NoteCategory.Discussion);
 
         // Act
-        var act = () => note.UpdateContent("", NoteCategory.Discussion, false);
+        var act = () => note.UpdateContent("", NoteCategory.Discussion);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -299,11 +288,7 @@ public class MeetingNoteTests
     [InlineData(NoteCategory.Discussion)]
     [InlineData(NoteCategory.ActionItem)]
     [InlineData(NoteCategory.Feedback)]
-    [InlineData(NoteCategory.CareerDevelopment)]
-    [InlineData(NoteCategory.Blocker)]
     [InlineData(NoteCategory.Achievement)]
-    [InlineData(NoteCategory.Personal)]
-    [InlineData(NoteCategory.FollowUp)]
     public void Constructor_AcceptsAllCategories(NoteCategory category)
     {
         // Act

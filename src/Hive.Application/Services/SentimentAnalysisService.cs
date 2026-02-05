@@ -263,7 +263,7 @@ public class SentimentAnalysisService : ISentimentAnalysisService
 
         foreach (var meeting in recentMeetings)
         {
-            var meetingNotes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, includePrivate: false, cancellationToken);
+            var meetingNotes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, cancellationToken);
 
             foreach (var note in meetingNotes)
             {

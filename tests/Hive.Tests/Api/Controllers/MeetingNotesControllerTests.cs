@@ -70,11 +70,11 @@ public class MeetingNotesControllerTests
         var meetingId = Guid.NewGuid();
         var notes = new List<MeetingNoteDto> { CreateDto(), CreateDto() };
 
-        _serviceMock.Setup(s => s.GetByMeetingIdAsync(meetingId, true, It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetByMeetingIdAsync(meetingId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(notes);
 
         // Act
-        var result = await _controller.GetByMeeting(meetingId, true, CancellationToken.None);
+        var result = await _controller.GetByMeeting(meetingId, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -84,17 +84,17 @@ public class MeetingNotesControllerTests
     }
 
     [Fact]
-    public async Task GetByMeeting_WithIncludePrivateFalse_ExcludesPrivateNotes()
+    public async Task GetByMeeting_CallsServiceCorrectly()
     {
         // Arrange
         var meetingId = Guid.NewGuid();
         var notes = new List<MeetingNoteDto> { CreateDto() };
 
-        _serviceMock.Setup(s => s.GetByMeetingIdAsync(meetingId, false, It.IsAny<CancellationToken>()))
+        _serviceMock.Setup(s => s.GetByMeetingIdAsync(meetingId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(notes);
 
         // Act
-        var result = await _controller.GetByMeeting(meetingId, false, CancellationToken.None);
+        var result = await _controller.GetByMeeting(meetingId, CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
@@ -470,7 +470,6 @@ public class MeetingNotesControllerTests
             MeetingId = Guid.NewGuid(),
             Content = "Note content",
             Category = category,
-            IsPrivate = false,
             ActionStatus = actionStatus,
             ActionDueDate = actionDueDate,
             ActionAssignee = null,

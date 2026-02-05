@@ -95,34 +95,6 @@ public class MeetingNoteRepositoryTests
         result[2].Id.Should().Be(note3.Id);
     }
 
-    [Fact]
-    public async Task GetByMeetingIdAsync_WithIncludePrivateFalse_ExcludesPrivateNotes()
-    {
-        // Arrange
-        CreateAndAddNote("Public note", isPrivate: false);
-        CreateAndAddNote("Private note", isPrivate: true);
-
-        // Act
-        var result = await _repository.GetByMeetingIdAsync(_meetingId, includePrivate: false);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result[0].IsPrivate.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task GetByMeetingIdAsync_WithIncludePrivateTrue_IncludesAllNotes()
-    {
-        // Arrange
-        CreateAndAddNote("Public note", isPrivate: false);
-        CreateAndAddNote("Private note", isPrivate: true);
-
-        // Act
-        var result = await _repository.GetByMeetingIdAsync(_meetingId, includePrivate: true);
-
-        // Assert
-        result.Should().HaveCount(2);
-    }
 
     [Fact]
     public async Task GetActionItemsAsync_ReturnsOnlyActionItems()
@@ -351,7 +323,7 @@ public class MeetingNoteRepositoryTests
     {
         // Arrange
         var note = CreateAndAddNote();
-        note.UpdateContent("Updated content", NoteCategory.Feedback, false);
+        note.UpdateContent("Updated content", NoteCategory.Feedback);
 
         // Act
         await _repository.UpdateAsync(note);
@@ -425,14 +397,12 @@ public class MeetingNoteRepositoryTests
     private MeetingNote CreateAndAddNote(
         string content = "Test note",
         Guid? meetingId = null,
-        NoteCategory category = NoteCategory.Discussion,
-        bool isPrivate = false)
+        NoteCategory category = NoteCategory.Discussion)
     {
         var note = new MeetingNote(
             meetingId ?? _meetingId,
             content,
-            category,
-            isPrivate);
+            category);
         _context.MeetingNotes.TryAdd(note.Id, note);
         return note;
     }

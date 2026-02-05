@@ -70,7 +70,7 @@ public class BackupService : IBackupService
         var meetingNotes = new List<MeetingNote>();
         foreach (var meeting in meetings)
         {
-            var notes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, true, cancellationToken);
+            var notes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, cancellationToken);
             meetingNotes.AddRange(notes);
         }
         var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
@@ -293,7 +293,7 @@ public class BackupService : IBackupService
                     var existing = await _meetingNoteRepository.GetByIdAsync(n.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new MeetingNote(n.MeetingId, n.Content, (NoteCategory)n.Category, n.IsPrivate);
+                        var entity = new MeetingNote(n.MeetingId, n.Content, (NoteCategory)n.Category);
                         SetEntityId(entity, n.Id);
                         await _meetingNoteRepository.AddAsync(entity, cancellationToken);
                         meetingNotesRestored++;
@@ -603,7 +603,6 @@ public class BackupService : IBackupService
         MeetingId = n.MeetingId,
         Content = n.Content,
         Category = (int)n.Category,
-        IsPrivate = n.IsPrivate,
         ActionStatus = n.ActionStatus.HasValue ? (int?)n.ActionStatus.Value : null,
         ActionDueDate = n.ActionDueDate,
         ActionAssignee = n.ActionAssignee,

@@ -110,7 +110,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(meeting);
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
         // Act
@@ -151,7 +151,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(meeting);
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote> { note });
 
         // Act
@@ -194,7 +194,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(meetings);
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
         // Act
@@ -235,7 +235,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(meetings);
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
         // Act
@@ -265,7 +265,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(_testDirectReport);
         _meetingRepositoryMock.Setup(r => r.AddAsync(It.IsAny<OneOnOneMeeting>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((OneOnOneMeeting m, CancellationToken ct) => m);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
         // Act
@@ -318,7 +318,7 @@ public class OneOnOneMeetingServiceTests
             .ReturnsAsync(meeting);
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
-        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+        _noteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote>());
 
         // Act

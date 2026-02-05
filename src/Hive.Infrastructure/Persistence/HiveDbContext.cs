@@ -458,7 +458,7 @@ public class HiveDbContext : DbContext
         MeetingNotes.AddRange(
             new MeetingNote(meetings[0].Id, "Discussed project timeline", NoteCategory.Discussion),
             new MeetingNote(meetings[0].Id, "Review PR #123 by Friday", NoteCategory.ActionItem),
-            new MeetingNote(meetings[2].Id, "Career growth discussion", NoteCategory.CareerDevelopment),
+            new MeetingNote(meetings[2].Id, "Career growth discussion", NoteCategory.Feedback),
             new MeetingNote(meetings[4].Id, "Completed major milestone", NoteCategory.Achievement)
         );
         SaveChanges();

@@ -36,9 +36,9 @@ public class MeetingNoteService : IMeetingNoteService
         return await MapToDtoAsync(entity, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MeetingNoteDto>> GetByMeetingIdAsync(Guid meetingId, bool includePrivate = true, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MeetingNoteDto>> GetByMeetingIdAsync(Guid meetingId, CancellationToken cancellationToken = default)
     {
-        var notes = await _noteRepository.GetByMeetingIdAsync(meetingId, includePrivate, cancellationToken);
+        var notes = await _noteRepository.GetByMeetingIdAsync(meetingId, cancellationToken);
         return await MapToDtosAsync(notes, cancellationToken);
     }
 
@@ -68,7 +68,7 @@ public class MeetingNoteService : IMeetingNoteService
             throw new NotFoundException(nameof(OneOnOneMeeting), dto.MeetingId);
         }
 
-        var entity = new MeetingNote(dto.MeetingId, dto.Content, dto.Category, dto.IsPrivate);
+        var entity = new MeetingNote(dto.MeetingId, dto.Content, dto.Category);
 
         if (dto.Category == NoteCategory.ActionItem)
         {
@@ -93,7 +93,7 @@ public class MeetingNoteService : IMeetingNoteService
     {
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
-        entity.UpdateContent(dto.Content, dto.Category, dto.IsPrivate);
+        entity.UpdateContent(dto.Content, dto.Category);
 
         if (dto.Category == NoteCategory.ActionItem)
         {
@@ -189,7 +189,6 @@ public class MeetingNoteService : IMeetingNoteService
             Content = entity.Content,
             Category = entity.Category,
             CategoryName = GetCategoryName(entity.Category),
-            IsPrivate = entity.IsPrivate,
             ActionStatus = entity.ActionStatus,
             ActionStatusName = entity.ActionStatus.HasValue ? GetActionStatusName(entity.ActionStatus.Value) : null,
             ActionDueDate = entity.ActionDueDate,
@@ -215,12 +214,7 @@ public class MeetingNoteService : IMeetingNoteService
         NoteCategory.Discussion => "Discussion",
         NoteCategory.ActionItem => "Action Item",
         NoteCategory.Feedback => "Feedback",
-        NoteCategory.CareerDevelopment => "Career Development",
-        NoteCategory.Blocker => "Blocker",
         NoteCategory.Achievement => "Achievement",
-        NoteCategory.Personal => "Personal",
-        NoteCategory.FollowUp => "Follow Up",
-        NoteCategory.Agenda => "Agenda",
         _ => "Unknown"
     };
 

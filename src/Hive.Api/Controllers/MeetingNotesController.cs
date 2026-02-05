@@ -50,11 +50,10 @@ public class MeetingNotesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MeetingNoteDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<MeetingNoteDto>>> GetByMeeting(
         Guid meetingId,
-        [FromQuery] bool includePrivate = true,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting notes for meeting: {MeetingId}", meetingId);
-        var notes = await _service.GetByMeetingIdAsync(meetingId, includePrivate, cancellationToken);
+        var notes = await _service.GetByMeetingIdAsync(meetingId, cancellationToken);
         return Ok(notes);
     }
 

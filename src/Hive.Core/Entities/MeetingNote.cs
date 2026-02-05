@@ -10,7 +10,6 @@ public class MeetingNote
     public Guid MeetingId { get; private set; }
     public string Content { get; private set; } = string.Empty;
     public NoteCategory Category { get; private set; }
-    public bool IsPrivate { get; private set; }
     public ActionItemStatus? ActionStatus { get; private set; }
     public DateTime? ActionDueDate { get; private set; }
     public string? ActionAssignee { get; private set; }
@@ -22,8 +21,7 @@ public class MeetingNote
     public MeetingNote(
         Guid meetingId,
         string content,
-        NoteCategory category,
-        bool isPrivate = false)
+        NoteCategory category)
     {
         ValidateMeetingId(meetingId);
         ValidateContent(content);
@@ -32,7 +30,6 @@ public class MeetingNote
         MeetingId = meetingId;
         Content = content.Trim();
         Category = category;
-        IsPrivate = isPrivate;
         CreatedAt = DateTime.UtcNow;
 
         // If it's an action item, set initial status
@@ -42,13 +39,12 @@ public class MeetingNote
         }
     }
 
-    public void UpdateContent(string content, NoteCategory category, bool isPrivate)
+    public void UpdateContent(string content, NoteCategory category)
     {
         ValidateContent(content);
 
         Content = content.Trim();
         Category = category;
-        IsPrivate = isPrivate;
         UpdatedAt = DateTime.UtcNow;
 
         // Update action status based on category change

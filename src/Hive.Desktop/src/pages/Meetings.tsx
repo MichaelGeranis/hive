@@ -11,24 +11,14 @@ const categoryColors: Record<NoteCategory, string> = {
   [NoteCategory.Discussion]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
   [NoteCategory.ActionItem]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   [NoteCategory.Feedback]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  [NoteCategory.CareerDevelopment]: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-  [NoteCategory.Blocker]: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   [NoteCategory.Achievement]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  [NoteCategory.Personal]: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-  [NoteCategory.FollowUp]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  [NoteCategory.Agenda]: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
 }
 
 const categoryLabels: Record<NoteCategory, string> = {
   [NoteCategory.Discussion]: 'Discussion',
   [NoteCategory.ActionItem]: 'Action Item',
   [NoteCategory.Feedback]: 'Feedback',
-  [NoteCategory.CareerDevelopment]: 'Career',
-  [NoteCategory.Blocker]: 'Blocker',
   [NoteCategory.Achievement]: 'Achievement',
-  [NoteCategory.Personal]: 'Personal',
-  [NoteCategory.FollowUp]: 'Follow Up',
-  [NoteCategory.Agenda]: 'Agenda',
 }
 
 // All categories available for notes
@@ -36,12 +26,7 @@ const allCategories = [
   NoteCategory.Discussion,
   NoteCategory.ActionItem,
   NoteCategory.Feedback,
-  NoteCategory.CareerDevelopment,
-  NoteCategory.Blocker,
   NoteCategory.Achievement,
-  NoteCategory.Personal,
-  NoteCategory.FollowUp,
-  NoteCategory.Agenda,
 ]
 
 export default function Meetings() {
@@ -66,8 +51,7 @@ export default function Meetings() {
   const [noteFormData, setNoteFormData] = useState<CreateMeetingNoteDto>({
     meetingId: '',
     content: '',
-    category: NoteCategory.Discussion,
-    isPrivate: false
+    category: NoteCategory.Discussion
   })
 
   const resetForm = () => {
@@ -82,8 +66,7 @@ export default function Meetings() {
     setNoteFormData({
       meetingId: '',
       content: '',
-      category: NoteCategory.Discussion,
-      isPrivate: false
+      category: NoteCategory.Discussion
     })
   }
 
@@ -283,8 +266,7 @@ export default function Meetings() {
     setNoteFormData({
       meetingId,
       content: '',
-      category: NoteCategory.Discussion,
-      isPrivate: false
+      category: NoteCategory.Discussion
     })
     setShowNoteForm(true)
   }
@@ -455,18 +437,6 @@ export default function Meetings() {
                     </div>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isPrivate"
-                    checked={noteFormData.isPrivate}
-                    onChange={(e) => setNoteFormData({ ...noteFormData, isPrivate: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300"
-                  />
-                  <label htmlFor="isPrivate" className="text-sm text-slate-700 dark:text-slate-300">
-                    Private note (only visible to you)
-                  </label>
-                </div>
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -690,11 +660,6 @@ export default function Meetings() {
                                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
                                         {note.categoryName}
                                       </span>
-                                      {note.isPrivate && (
-                                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
-                                          Private
-                                        </span>
-                                      )}
                                       {note.actionStatusName && (
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                           note.actionStatus === ActionItemStatus.Completed
