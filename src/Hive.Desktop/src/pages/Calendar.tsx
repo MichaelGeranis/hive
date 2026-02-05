@@ -34,6 +34,23 @@ const EVENT_ICONS = {
   'action-item': CalendarIcon,
 }
 
+// Adjust display date to Friday if it falls on a weekend
+const adjustForWeekend = (date: Date): Date => {
+  const dayOfWeek = date.getDay()
+  if (dayOfWeek === 6) {
+    // Saturday -> move to Friday (subtract 1 day)
+    const adjusted = new Date(date)
+    adjusted.setDate(adjusted.getDate() - 1)
+    return adjusted
+  } else if (dayOfWeek === 0) {
+    // Sunday -> move to Friday (subtract 2 days)
+    const adjusted = new Date(date)
+    adjusted.setDate(adjusted.getDate() - 2)
+    return adjusted
+  }
+  return date
+}
+
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -55,12 +72,13 @@ export default function Calendar() {
 
       const calendarEvents: CalendarEvent[] = []
 
-      // Add TODOs with due dates (show 1 day before due)
+      // Add TODOs with due dates (show 1 day before due, adjusted for weekends)
       todosResponse.forEach((todo: ManagerNote) => {
         if (todo.dueDate) {
           const dueDate = new Date(todo.dueDate)
-          const displayDate = new Date(dueDate)
+          let displayDate = new Date(dueDate)
           displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
+          displayDate = adjustForWeekend(displayDate)  // Move to Friday if on weekend
 
           calendarEvents.push({
             id: `todo-${todo.id}`,
@@ -76,12 +94,13 @@ export default function Calendar() {
         }
       })
 
-      // Add Action Items with due dates (show 1 day before due)
+      // Add Action Items with due dates (show 1 day before due, adjusted for weekends)
       actionItems.forEach((actionItem: MeetingNote) => {
         if (actionItem.actionDueDate) {
           const dueDate = new Date(actionItem.actionDueDate)
-          const displayDate = new Date(dueDate)
+          let displayDate = new Date(dueDate)
           displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
+          displayDate = adjustForWeekend(displayDate)  // Move to Friday if on weekend
 
           calendarEvents.push({
             id: `action-${actionItem.id}`,
@@ -132,7 +151,19 @@ export default function Calendar() {
   const getFirstDayOfMonth = (date: Date) => {
     const year = date.getFullYear()
     const month = date.getMonth()
-    return new Date(year, month, 1).getDay()
+    const dayOfWeek = new Date(year, month, 1).getDay()
+    // Convert to Monday-based (0=Monday, 4=Friday, skip weekends)
+    // Sunday (0) -> would be before Monday, so we don't show it
+    // Monday (1) -> 0, Tuesday (2) -> 1, ..., Friday (5) -> 4
+    return dayOfWeek === 0 ? 0 : dayOfWeek - 1  // Sunday becomes Monday's position
+  }
+
+  // Check if a day is a weekend (Saturday=6, Sunday=0)
+  const isWeekend = (day: number) => {
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    const dayOfWeek = new Date(year, month, day).getDay()
+    return dayOfWeek === 0 || dayOfWeek === 6
   }
 
   const getEventsForDate = (day: number) => {
@@ -166,8 +197,23 @@ export default function Calendar() {
 
   const daysInMonth = getDaysInMonth(currentDate)
   const firstDay = getFirstDayOfMonth(currentDate)
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  const paddingDays = Array.from({ length: firstDay }, (_, i) => i)
+  // Filter out weekend days
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1).filter(day => !isWeekend(day))
+  // Calculate padding for Monday-based week (only need padding for weekdays)
+  const firstWeekdayOfMonth = (() => {
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    // Find the first weekday of the month
+    for (let day = 1; day <= 7; day++) {
+      const dayOfWeek = new Date(year, month, day).getDay()
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Return Monday-based index (Mon=0, Tue=1, ..., Fri=4)
+        return dayOfWeek - 1
+      }
+    }
+    return 0
+  })()
+  const paddingDays = Array.from({ length: firstWeekdayOfMonth }, (_, i) => i)
 
   const todayDate = new Date()
   todayDate.setHours(0, 0, 0, 0)
@@ -234,9 +280,9 @@ export default function Calendar() {
       {/* Calendar Grid */}
       <Card>
         <CardContent>
-          <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-            {/* Weekday Headers */}
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div className="grid grid-cols-5 gap-px bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            {/* Weekday Headers (Mon-Fri only) */}
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
               <div
                 key={day}
                 className="bg-slate-50 dark:bg-slate-800 p-2 text-center text-sm font-medium text-slate-700 dark:text-slate-300"
