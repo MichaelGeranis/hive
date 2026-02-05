@@ -149,7 +149,7 @@ public class OneOnOneMeetingRepositoryTests
         // Arrange
         var meeting = CreateAndAddMeeting();
         var newDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
-        meeting.Update(_directReportId, newDate, "New location", "New agenda");
+        meeting.Update(_directReportId, newDate, "New agenda");
 
         // Act
         await _repository.UpdateAsync(meeting);
@@ -157,7 +157,6 @@ public class OneOnOneMeetingRepositoryTests
         // Assert
         var stored = _context.OneOnOneMeetings[meeting.Id];
         stored.MeetingDate.Should().Be(newDate);
-        stored.Location.Should().Be("New location");
         stored.Agenda.Should().Be("New agenda");
     }
 
@@ -228,7 +227,6 @@ public class OneOnOneMeetingRepositoryTests
         var meeting = new OneOnOneMeeting(
             directReportId ?? _directReportId,
             meetingDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
-            "Office",
             "Weekly sync");
         _context.OneOnOneMeetings.TryAdd(meeting.Id, meeting);
         return meeting;

@@ -53,7 +53,6 @@ public class MeetingNoteServiceTests
         _testMeeting = new OneOnOneMeeting(
             _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-            null,
             "Test Agenda");
 
         var meetingIdProperty = typeof(OneOnOneMeeting).GetProperty("Id");

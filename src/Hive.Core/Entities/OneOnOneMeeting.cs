@@ -9,7 +9,6 @@ public class OneOnOneMeeting
     public Guid Id { get; private set; }
     public Guid DirectReportId { get; private set; }
     public DateOnly MeetingDate { get; private set; }
-    public string Location { get; private set; } = string.Empty;
     public string Agenda { get; private set; } = string.Empty;
     public bool IsSyncedFromCalendar { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -20,7 +19,6 @@ public class OneOnOneMeeting
     public OneOnOneMeeting(
         Guid directReportId,
         DateOnly meetingDate,
-        string? location = null,
         string? agenda = null)
     {
         ValidateDirectReportId(directReportId);
@@ -28,7 +26,6 @@ public class OneOnOneMeeting
         Id = Guid.NewGuid();
         DirectReportId = directReportId;
         MeetingDate = meetingDate;
-        Location = location?.Trim() ?? string.Empty;
         Agenda = agenda?.Trim() ?? string.Empty;
         CreatedAt = DateTime.UtcNow;
     }
@@ -36,24 +33,19 @@ public class OneOnOneMeeting
     public void Update(
         Guid directReportId,
         DateOnly meetingDate,
-        string? location,
         string? agenda)
     {
         ValidateDirectReportId(directReportId);
 
         DirectReportId = directReportId;
         MeetingDate = meetingDate;
-        Location = location?.Trim() ?? string.Empty;
         Agenda = agenda?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateFromCalendarSync(
-        DateOnly meetingDate,
-        string? location)
+    public void UpdateFromCalendarSync(DateOnly meetingDate)
     {
         MeetingDate = meetingDate;
-        Location = location?.Trim() ?? string.Empty;
         UpdatedAt = DateTime.UtcNow;
     }
 

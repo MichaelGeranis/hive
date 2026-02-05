@@ -10,7 +10,6 @@ public record OneOnOneMeetingDto
     public Guid DirectReportId { get; init; }
     public string DirectReportName { get; init; } = string.Empty;
     public DateOnly MeetingDate { get; init; }
-    public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -25,7 +24,6 @@ public record CreateOneOnOneMeetingDto
 {
     public Guid DirectReportId { get; init; }
     public DateOnly MeetingDate { get; init; }
-    public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
 }
 
@@ -36,7 +34,6 @@ public record UpdateOneOnOneMeetingDto
 {
     public Guid DirectReportId { get; init; }
     public DateOnly MeetingDate { get; init; }
-    public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
 }
 

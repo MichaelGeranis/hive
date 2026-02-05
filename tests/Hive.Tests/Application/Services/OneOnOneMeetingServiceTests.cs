@@ -258,7 +258,6 @@ public class OneOnOneMeetingServiceTests
         {
             DirectReportId = _testDirectReportId,
             MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-            Location = "Conference Room",
             Agenda = "Weekly check-in"
         };
 
@@ -275,7 +274,6 @@ public class OneOnOneMeetingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.DirectReportId.Should().Be(_testDirectReportId);
-        result.Location.Should().Be("Conference Room");
         result.Agenda.Should().Be("Weekly check-in");
     }
 
@@ -313,7 +311,6 @@ public class OneOnOneMeetingServiceTests
         {
             DirectReportId = _testDirectReportId,
             MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)),
-            Location = "Updated Location",
             Agenda = "Updated Agenda"
         };
 
@@ -330,7 +327,6 @@ public class OneOnOneMeetingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.DirectReportId.Should().Be(_testDirectReportId);
-        result.Location.Should().Be("Updated Location");
         result.Agenda.Should().Be("Updated Agenda");
         _meetingRepositoryMock.Verify(r => r.UpdateAsync(meeting, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -409,7 +405,6 @@ public class OneOnOneMeetingServiceTests
         return new OneOnOneMeeting(
             _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-            "Conference Room",
             "Weekly check-in");
     }
 

@@ -127,7 +127,6 @@ export function createMeeting(overrides?: Partial<OneOnOneMeeting>): OneOnOneMee
     directReportId: '1',
     directReportName: 'John Doe',
     meetingDate: new Date().toISOString().split('T')[0],
-    location: 'Office',
     agenda: 'Weekly sync',
     noteCount: 0,
     openActionItemCount: 0,

@@ -82,7 +82,6 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         var entity = new OneOnOneMeeting(
             dto.DirectReportId,
             dto.MeetingDate,
-            dto.Location,
             dto.Agenda);
 
         var created = await _meetingRepository.AddAsync(entity, cancellationToken);
@@ -109,7 +108,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             throw new NotFoundException(nameof(DirectReport), dto.DirectReportId);
         }
 
-        entity.Update(dto.DirectReportId, dto.MeetingDate, dto.Location, dto.Agenda);
+        entity.Update(dto.DirectReportId, dto.MeetingDate, dto.Agenda);
         await _meetingRepository.UpdateAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -168,7 +167,6 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             DirectReportId = entity.DirectReportId,
             DirectReportName = directReport?.FullName ?? "Unknown",
             MeetingDate = entity.MeetingDate,
-            Location = entity.Location,
             Agenda = entity.Agenda,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,

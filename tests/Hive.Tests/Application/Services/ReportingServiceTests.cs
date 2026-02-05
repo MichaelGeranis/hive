@@ -222,13 +222,11 @@ public class ReportingServiceTests
         var pastMeeting = new OneOnOneMeeting(
             _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-            null,
             "Past meeting");
 
         var futureMeeting = new OneOnOneMeeting(
             _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
-            null,
             "Future meeting");
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -440,7 +438,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_ReturnsFrequencyForAllDirectReports()
     {
         // Arrange
-        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), null, "Past");
+        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), "Past");
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
@@ -461,7 +459,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_CalculatesFrequencyStatus()
     {
         // Arrange
-        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), null, "Recent");
+        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Recent");
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });

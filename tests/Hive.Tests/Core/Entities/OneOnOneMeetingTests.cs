@@ -11,17 +11,15 @@ public class OneOnOneMeetingTests
     {
         // Arrange
         var meetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
-        var location = "Zoom";
         var agenda = "Weekly sync";
 
         // Act
-        var meeting = new OneOnOneMeeting(_validDirectReportId, meetingDate, location, agenda);
+        var meeting = new OneOnOneMeeting(_validDirectReportId, meetingDate, agenda);
 
         // Assert
         meeting.Id.Should().NotBeEmpty();
         meeting.DirectReportId.Should().Be(_validDirectReportId);
         meeting.MeetingDate.Should().Be(meetingDate);
-        meeting.Location.Should().Be(location);
         meeting.Agenda.Should().Be(agenda);
         meeting.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
@@ -33,7 +31,6 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)));
 
         // Assert
-        meeting.Location.Should().BeEmpty();
         meeting.Agenda.Should().BeEmpty();
     }
 
@@ -57,37 +54,23 @@ public class OneOnOneMeetingTests
         var newDirectReportId = Guid.NewGuid();
 
         // Act
-        meeting.Update(newDirectReportId, newDate, "Conference Room", "New agenda");
+        meeting.Update(newDirectReportId, newDate, "New agenda");
 
         // Assert
         meeting.DirectReportId.Should().Be(newDirectReportId);
         meeting.MeetingDate.Should().Be(newDate);
-        meeting.Location.Should().Be("Conference Room");
         meeting.Agenda.Should().Be("New agenda");
         meeting.UpdatedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Update_WithNullLocation_SetsEmptyString()
-    {
-        // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "Initial Location");
-
-        // Act
-        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), null, null);
-
-        // Assert
-        meeting.Location.Should().BeEmpty();
     }
 
     [Fact]
     public void Update_WithNullAgenda_SetsEmptyString()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), null, "Initial Agenda");
+        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "Initial Agenda");
 
         // Act
-        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), null, null);
+        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), null);
 
         // Assert
         meeting.Agenda.Should().BeEmpty();
@@ -100,10 +83,9 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow));
 
         // Act
-        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "  Conference Room  ", "  Weekly sync  ");
+        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "  Weekly sync  ");
 
         // Assert
-        meeting.Location.Should().Be("Conference Room");
         meeting.Agenda.Should().Be("Weekly sync");
     }
 
@@ -114,11 +96,9 @@ public class OneOnOneMeetingTests
         var meeting = new OneOnOneMeeting(
             _validDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow),
-            "  Conference Room  ",
             "  Weekly sync  ");
 
         // Assert
-        meeting.Location.Should().Be("Conference Room");
         meeting.Agenda.Should().Be("Weekly sync");
     }
 }

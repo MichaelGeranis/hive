@@ -649,7 +649,6 @@ public class BackupServiceTests
                     Id = meetingId,
                     DirectReportId = directReportId,
                     MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                    Location = "Office",
                     Agenda = "Check-in"
                 }
             },
@@ -897,7 +896,7 @@ public class BackupServiceTests
         new(directReportId ?? Guid.NewGuid(), "2024-Q1", DateTime.UtcNow);
 
     private static OneOnOneMeeting CreateMeeting(Guid? directReportId = null) =>
-        new(directReportId ?? Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow), "Office", "Check-in");
+        new(directReportId ?? Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow), "Check-in");
 
     private static MeetingNote CreateMeetingNote(Guid meetingId) =>
         new(meetingId, "Note content", NoteCategory.Discussion, false);

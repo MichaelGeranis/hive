@@ -481,6 +481,23 @@ export default function Dashboard() {
   // Use backend-computed total story points for current sprint
   const currentSprintTotalSP = capacityAnalysis?.currentSprint?.totalStoryPoints ?? 0
 
+  // Calculate current sprint task counts from unfiltered tasks array
+  // This ensures the widget always shows current sprint data regardless of sprint filter
+  const currentSprintName = capacityAnalysis?.currentSprint?.sprintName
+  const currentSprintTasks = currentSprintName
+    ? tasks.filter(t => {
+        if (!t.sprint) return false
+        // Sprint field can be comma-separated (e.g., "LP_4Q25_S5,LP_4Q25_S6")
+        const taskSprints = t.sprint.split(',').map(s => s.trim())
+        return taskSprints.includes(currentSprintName)
+      })
+    : []
+  const currentSprintDoneTasks = currentSprintTasks.filter(t => t.status === TaskStatus.Done).length
+  const currentSprintTotalTasks = currentSprintTasks.length
+  const currentSprintCompletionRate = currentSprintTotalTasks > 0
+    ? Math.round(currentSprintDoneTasks / currentSprintTotalTasks * 100)
+    : 0
+
   // Use backend-computed unmatched task count
   const unmatchedTaskCount = dashboard.insights.unmatchedTaskCount
 
@@ -662,8 +679,8 @@ export default function Dashboard() {
                 <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
                 {/* Tasks Count */}
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{dashboard.tasks.tasks.doneTasks}/{dashboard.tasks.tasks.totalTasks}</span>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">Tasks {dashboard.tasks.tasks.completionRate}%</span>
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{currentSprintDoneTasks}/{currentSprintTotalTasks}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Tasks {currentSprintCompletionRate}%</span>
                 </div>
                 {/* Warnings indicators */}
                 {(capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0) && (

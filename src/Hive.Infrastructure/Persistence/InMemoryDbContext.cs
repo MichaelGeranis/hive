@@ -261,7 +261,6 @@ public class InMemoryDbContext
         var meeting1 = new OneOnOneMeeting(
             directReportIds[0],
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-            "Zoom",
             "Weekly sync - project updates, blockers");
         OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
 
@@ -283,7 +282,6 @@ public class InMemoryDbContext
         var meeting2 = new OneOnOneMeeting(
             directReportIds[0],
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)),
-            "Conference Room A",
             "Weekly sync - follow up on action items");
         OneOnOneMeetings.TryAdd(meeting2.Id, meeting2);
 
@@ -293,7 +291,6 @@ public class InMemoryDbContext
             var meeting3 = new OneOnOneMeeting(
                 directReportIds[1],
                 DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-                "Zoom",
                 "Career development discussion");
             OneOnOneMeetings.TryAdd(meeting3.Id, meeting3);
 
@@ -301,7 +298,6 @@ public class InMemoryDbContext
             var meeting4 = new OneOnOneMeeting(
                 directReportIds[1],
                 DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)),
-                "Zoom",
                 "Project check-in");
             OneOnOneMeetings.TryAdd(meeting4.Id, meeting4);
 
@@ -318,7 +314,6 @@ public class InMemoryDbContext
             var meeting5 = new OneOnOneMeeting(
                 directReportIds[2],
                 DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)),
-                "Coffee Shop",
                 "Quarterly check-in");
             OneOnOneMeetings.TryAdd(meeting5.Id, meeting5);
         }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Calendar, MapPin, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
+import { Plus, Calendar, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
 import { NoteCategory, ActionItemStatus } from '../types'
@@ -55,7 +55,6 @@ export default function Meetings() {
   const [formData, setFormData] = useState({
     directReportId: '',
     meetingDate: '',
-    location: '',
     agenda: ''
   })
 
@@ -75,7 +74,6 @@ export default function Meetings() {
     setFormData({
       directReportId: '',
       meetingDate: '',
-      location: '',
       agenda: ''
     })
   }
@@ -188,7 +186,6 @@ export default function Meetings() {
       const query = searchQuery.toLowerCase()
       result = result.filter(m =>
         m.directReportName.toLowerCase().includes(query) ||
-        m.location?.toLowerCase().includes(query) ||
         m.agenda?.toLowerCase().includes(query)
       )
     }
@@ -230,7 +227,6 @@ export default function Meetings() {
     setFormData({
       directReportId: meeting.directReportId,
       meetingDate: meeting.meetingDate.slice(0, 10),
-      location: meeting.location || '',
       agenda: meeting.agenda || ''
     })
     setEditingId(meeting.id)
@@ -373,16 +369,6 @@ export default function Meetings() {
                     onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                     required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    placeholder="e.g., Conference Room A, Zoom, etc."
                   />
                 </div>
                 <div>
@@ -595,12 +581,6 @@ export default function Meetings() {
                           <Calendar className="w-4 h-4" />
                           {formatDate(meeting.meetingDate)}
                         </span>
-                        {meeting.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {meeting.location}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>

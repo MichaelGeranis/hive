@@ -105,7 +105,6 @@ public class HiveDbContext : DbContext
         modelBuilder.Entity<OneOnOneMeeting>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Location).HasMaxLength(500);
             entity.Property(e => e.Agenda).HasMaxLength(4000);
             entity.HasIndex(e => e.DirectReportId);
             entity.HasIndex(e => e.MeetingDate);
@@ -445,11 +444,11 @@ public class HiveDbContext : DbContext
         // Create 1:1 meetings (simplified - no status workflow)
         var meetings = new[]
         {
-            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)), "Conference Room A", "Weekly sync"),
-            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), "Conference Room A", "Weekly sync"),
-            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Virtual", "Bi-weekly check-in"),
-            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)), "Virtual", "Bi-weekly check-in"),
-            new OneOnOneMeeting(carol.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-21)), "Office", "Monthly review")
+            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)), "Weekly sync"),
+            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), "Weekly sync"),
+            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Bi-weekly check-in"),
+            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)), "Bi-weekly check-in"),
+            new OneOnOneMeeting(carol.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-21)), "Monthly review")
         };
 
         OneOnOneMeetings.AddRange(meetings);

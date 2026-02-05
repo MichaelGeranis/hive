@@ -90,7 +90,6 @@ public record OneOnOneMeetingBackup
     public Guid Id { get; init; }
     public Guid DirectReportId { get; init; }
     public DateOnly MeetingDate { get; init; }
-    public string Location { get; init; } = string.Empty;
     public string Agenda { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }

@@ -286,7 +286,6 @@ public class OneOnOneMeetingsControllerTests
             DirectReportName = "John Doe",
             MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Agenda = "Weekly check-in",
-            Location = "Conference Room A",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null,
             NoteCount = 0,

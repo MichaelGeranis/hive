@@ -269,7 +269,7 @@ public class BackupService : IBackupService
                     var existing = await _meetingRepository.GetByIdAsync(m.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new OneOnOneMeeting(m.DirectReportId, m.MeetingDate, m.Location, m.Agenda);
+                        var entity = new OneOnOneMeeting(m.DirectReportId, m.MeetingDate, m.Agenda);
                         SetEntityId(entity, m.Id);
                         await _meetingRepository.AddAsync(entity, cancellationToken);
                         meetingsRestored++;
@@ -592,7 +592,6 @@ public class BackupService : IBackupService
         Id = m.Id,
         DirectReportId = m.DirectReportId,
         MeetingDate = m.MeetingDate,
-        Location = m.Location,
         Agenda = m.Agenda,
         CreatedAt = m.CreatedAt,
         UpdatedAt = m.UpdatedAt
