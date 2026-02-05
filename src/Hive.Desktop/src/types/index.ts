@@ -209,6 +209,8 @@ export interface TeamTask {
   labels: string
   sprint: string
   timeSpentMinutes?: number
+  previousSprintsStoryPoints?: number | null
+  newSprintsStoryPoints?: number | null
   overriddenFields: string
   isOverdue: boolean
 }
@@ -220,6 +222,8 @@ export interface OverrideTeamTaskFieldsDto {
   hasEstimationOverride: boolean
   timeSpentMinutes?: number | null
   hasTimeSpentOverride: boolean
+  previousSprintsStoryPoints?: number | null
+  hasPreviousSprintsStoryPointsOverride: boolean
 }
 
 export interface ClearTeamTaskOverridesDto {
@@ -480,6 +484,8 @@ export interface SprintVelocity {
   startDate: string
   endDate: string
   storyPointsCompleted: number
+  newStoryPointsCompleted: number
+  carriedOverStoryPoints: number
   tasksCompleted: number
   totalTimeSpentMinutes: number
   totalEstimatedHours: number
@@ -829,6 +835,8 @@ export interface SprintCapacityAnalysis {
   sprintNumber: number
   committedPoints: number
   completedPoints: number
+  newCompletedPoints: number
+  carriedOverCompletedPoints: number
   totalStoryPoints: number
   utilizationPercentage: number
   predictedPoints?: number

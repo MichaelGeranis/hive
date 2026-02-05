@@ -20,6 +20,7 @@ public class TeamTask
     public string Labels { get; private set; } = string.Empty;
     public string Sprint { get; private set; } = string.Empty;
     public int? TimeSpentMinutes { get; private set; }
+    public int? PreviousSprintsStoryPoints { get; private set; }
     public Guid? ParentId { get; private set; }
     public string OverriddenFields { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
@@ -291,6 +292,17 @@ public class TeamTask
     {
         TimeSpentMinutes = timeSpentMinutes;
         SetOverride("TimeSpentMinutes");
+    }
+
+    public void OverridePreviousSprintsStoryPoints(int? previousSprintsStoryPoints)
+    {
+        if (previousSprintsStoryPoints.HasValue && StoryPoints.HasValue &&
+            previousSprintsStoryPoints.Value > StoryPoints.Value)
+        {
+            throw new ArgumentException("Previous sprints story points cannot exceed total story points.");
+        }
+        PreviousSprintsStoryPoints = previousSprintsStoryPoints;
+        SetOverride("PreviousSprintsStoryPoints");
     }
 
     private static void ValidateTitle(string title)

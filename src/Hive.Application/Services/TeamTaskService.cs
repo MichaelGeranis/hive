@@ -380,6 +380,11 @@ public class TeamTaskService : ITeamTaskService
             entity.OverrideTimeSpent(dto.TimeSpentMinutes);
         }
 
+        if (dto.HasPreviousSprintsStoryPointsOverride)
+        {
+            entity.OverridePreviousSprintsStoryPoints(dto.PreviousSprintsStoryPoints);
+        }
+
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -487,6 +492,20 @@ public class TeamTaskService : ITeamTaskService
         // Calculate matched projects based on shared labels
         var matchedProjectNames = GetMatchedProjectNames(entity.Labels, allProjects);
 
+        // Calculate new sprints story points
+        int? newSprintsStoryPoints = null;
+        if (entity.StoryPoints.HasValue)
+        {
+            if (entity.PreviousSprintsStoryPoints.HasValue)
+            {
+                newSprintsStoryPoints = Math.Max(0, entity.StoryPoints.Value - entity.PreviousSprintsStoryPoints.Value);
+            }
+            else
+            {
+                newSprintsStoryPoints = entity.StoryPoints.Value;
+            }
+        }
+
         return new TeamTaskDto
         {
             Id = entity.Id,
@@ -512,6 +531,8 @@ public class TeamTaskService : ITeamTaskService
             Labels = entity.Labels,
             Sprint = entity.Sprint,
             TimeSpentMinutes = entity.TimeSpentMinutes,
+            PreviousSprintsStoryPoints = entity.PreviousSprintsStoryPoints,
+            NewSprintsStoryPoints = newSprintsStoryPoints,
             OverriddenFields = entity.OverriddenFields,
             IsOverdue = entity.IsOverdue(),
             CreatedAt = entity.CreatedAt,

@@ -96,6 +96,8 @@ export default function Tasks() {
   const [overrideStoryPoints, setOverrideStoryPoints] = useState<string>('')
   const [overrideTimeSpentEnabled, setOverrideTimeSpentEnabled] = useState(false)
   const [overrideTimeSpentMinutes, setOverrideTimeSpentMinutes] = useState<string>('')
+  const [overridePreviousSPEnabled, setOverridePreviousSPEnabled] = useState(false)
+  const [overridePreviousSP, setOverridePreviousSP] = useState<string>('')
   const [overrideSaving, setOverrideSaving] = useState(false)
 
   const resetForm = () => {
@@ -134,15 +136,19 @@ export default function Tasks() {
   const openOverrideModal = useCallback((task: TeamTask) => {
     setOverrideTask(task)
     const overridden = task.overriddenFields || ''
-    const isAssigneeOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('assigneeid')
-    const isEstimationOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('storypoints')
-    const isTimeSpentOverridden = overridden.split(',').map(f => f.trim().toLowerCase()).includes('timespentminutes')
+    const overriddenFields = overridden.split(',').map(f => f.trim().toLowerCase())
+    const isAssigneeOverridden = overriddenFields.includes('assigneeid')
+    const isEstimationOverridden = overriddenFields.includes('storypoints')
+    const isTimeSpentOverridden = overriddenFields.includes('timespentminutes')
+    const isPreviousSPOverridden = overriddenFields.includes('previoussprintsstorypoints')
     setOverrideAssigneeEnabled(isAssigneeOverridden)
     setOverrideAssigneeId(task.assigneeId || '')
     setOverrideEstimationEnabled(isEstimationOverridden)
     setOverrideStoryPoints(task.storyPoints?.toString() || '')
     setOverrideTimeSpentEnabled(isTimeSpentOverridden)
     setOverrideTimeSpentMinutes(task.timeSpentMinutes?.toString() || '')
+    setOverridePreviousSPEnabled(isPreviousSPOverridden)
+    setOverridePreviousSP(task.previousSprintsStoryPoints?.toString() || '')
     setShowOverrideModal(true)
   }, [])
 
@@ -162,6 +168,8 @@ export default function Tasks() {
         hasEstimationOverride: overrideEstimationEnabled,
         timeSpentMinutes: overrideTimeSpentEnabled ? (overrideTimeSpentMinutes ? parseInt(overrideTimeSpentMinutes) : null) : null,
         hasTimeSpentOverride: overrideTimeSpentEnabled,
+        previousSprintsStoryPoints: overridePreviousSPEnabled ? (overridePreviousSP ? parseInt(overridePreviousSP) : null) : null,
+        hasPreviousSprintsStoryPointsOverride: overridePreviousSPEnabled,
       }
       await tasksApi.overrideFields(overrideTask.id, dto)
       closeOverrideModal()
@@ -1126,6 +1134,54 @@ export default function Tasks() {
                   )}
                 </div>
 
+                {/* Previous Sprints Story Points Override - only show for multi-sprint tasks */}
+                {overrideTask.sprint?.includes(',') && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={overridePreviousSPEnabled}
+                          onChange={(e) => setOverridePreviousSPEnabled(e.target.checked)}
+                          className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                        />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Previous Sprints SP</span>
+                        {isFieldOverridden(overrideTask, 'PreviousSprintsStoryPoints') && (
+                          <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                            <Pin className="w-3 h-3" /> Pinned
+                          </span>
+                        )}
+                      </label>
+                      {isFieldOverridden(overrideTask, 'PreviousSprintsStoryPoints') && (
+                        <button
+                          onClick={() => handleClearOverride(overrideTask.id, 'PreviousSprintsStoryPoints')}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Clear Override
+                        </button>
+                      )}
+                    </div>
+                    {overridePreviousSPEnabled && (
+                      <div className="space-y-2">
+                        <input
+                          type="number"
+                          value={overridePreviousSP}
+                          onChange={(e) => setOverridePreviousSP(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                          min="0"
+                          max={overrideTask.storyPoints || undefined}
+                          placeholder="SP completed in previous sprints"
+                        />
+                        {overrideTask.storyPoints && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            New SP = Total ({overrideTask.storyPoints}) - Previous ({overridePreviousSP || 0}) = {Math.max(0, overrideTask.storyPoints - (parseInt(overridePreviousSP) || 0))}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4 border-t dark:border-slate-700">
                   <button
                     type="button"
@@ -1136,7 +1192,7 @@ export default function Tasks() {
                   </button>
                   <button
                     onClick={handleOverrideSave}
-                    disabled={overrideSaving || (!overrideAssigneeEnabled && !overrideEstimationEnabled && !overrideTimeSpentEnabled)}
+                    disabled={overrideSaving || (!overrideAssigneeEnabled && !overrideEstimationEnabled && !overrideTimeSpentEnabled && !overridePreviousSPEnabled)}
                     className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {overrideSaving ? 'Saving...' : 'Save Overrides'}

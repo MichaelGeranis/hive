@@ -1331,7 +1331,7 @@ export default function Dashboard() {
           />
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={velocity.sprints.map(s => ({
+              <BarChart data={velocity.sprints.map(s => ({
                 ...s,
                 actualHours: Math.round(s.totalTimeSpentMinutes / 60 * 10) / 10,
                 estimatedHours: s.totalEstimatedHours
@@ -1342,32 +1342,35 @@ export default function Dashboard() {
                 <YAxis yAxisId="right" orientation="right" label={{ value: 'Hours', angle: 90, position: 'insideRight' }} />
                 <Tooltip />
                 <Legend />
-                <Line
+                <Bar
                   yAxisId="left"
-                  type="monotone"
-                  dataKey="storyPointsCompleted"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Story Points"
+                  dataKey="newStoryPointsCompleted"
+                  stackId="sp"
+                  fill="#3b82f6"
+                  name="New SP"
                 />
-                <Line
+                <Bar
+                  yAxisId="left"
+                  dataKey="carriedOverStoryPoints"
+                  stackId="sp"
+                  fill="#94a3b8"
+                  name="Carried Over SP"
+                />
+                <Bar
                   yAxisId="right"
-                  type="monotone"
                   dataKey="estimatedHours"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
+                  fill="#10b981"
                   name="Estimated Hours"
+                  opacity={0.7}
                 />
-                <Line
+                <Bar
                   yAxisId="right"
-                  type="monotone"
                   dataKey="actualHours"
-                  stroke="#10b981"
-                  strokeWidth={2}
+                  fill="#f59e0b"
                   name="Actual Hours"
+                  opacity={0.7}
                 />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t dark:border-slate-700">
               <div className="text-center">

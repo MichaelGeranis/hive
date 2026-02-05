@@ -911,10 +911,21 @@ public class ReportingService : IReportingService
                 var sprintTasks = tasksByLatestSprint[sprint.Name];
                 var estimatedHours = sprintTasks.Sum(t => t.EstimatedHours ?? 0);
 
+                // Calculate new vs carried over story points
+                var newSP = sprintTasks.Sum(t =>
+                {
+                    if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                        return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                    return t.StoryPoints ?? 0;
+                });
+                var carriedOverSP = sprintTasks.Sum(t => t.PreviousSprintsStoryPoints ?? 0);
+
                 return new SprintVelocityDto
                 {
                     SprintName = sprint.Name,
-                    StoryPointsCompleted = sprintTasks.Sum(t => t.StoryPoints ?? 0),
+                    StoryPointsCompleted = newSP + carriedOverSP, // Total for backward compatibility
+                    NewStoryPointsCompleted = newSP,
+                    CarriedOverStoryPoints = carriedOverSP,
                     TasksCompleted = sprintTasks.Count,
                     TotalTimeSpentMinutes = sprintTasks.Sum(t => t.TimeSpentMinutes ?? 0),
                     TotalEstimatedHours = estimatedHours
@@ -1282,9 +1293,17 @@ public class ReportingService : IReportingService
             var sprintTasks = tasksBySprint.TryGetValue(sprint.Name, out var st) ? st : new List<TeamTask>();
             capacityMap.TryGetValue(sprint.Id, out var capacity);
 
-            var completedPoints = sprintTasks
-                .Where(t => t.Status == TaskStatus.Done)
-                .Sum(t => t.StoryPoints ?? 0);
+            var completedTasks = sprintTasks.Where(t => t.Status == TaskStatus.Done).ToList();
+
+            // Calculate new vs carried over completed points
+            var newCompletedPoints = completedTasks.Sum(t =>
+            {
+                if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                    return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                return t.StoryPoints ?? 0;
+            });
+            var carriedOverCompletedPoints = completedTasks.Sum(t => t.PreviousSprintsStoryPoints ?? 0);
+            var completedPoints = newCompletedPoints + carriedOverCompletedPoints;
 
             // Compute total story points from parents involved in this sprint
             var sprintParentIds = sprintTasks
@@ -1322,6 +1341,8 @@ public class ReportingService : IReportingService
                 SprintNumber = sprint.SprintNumber,
                 CommittedPoints = committedPoints,
                 CompletedPoints = completedPoints,
+                NewCompletedPoints = newCompletedPoints,
+                CarriedOverCompletedPoints = carriedOverCompletedPoints,
                 TotalStoryPoints = totalStoryPoints,
                 UtilizationPercentage = utilization,
                 Status = status

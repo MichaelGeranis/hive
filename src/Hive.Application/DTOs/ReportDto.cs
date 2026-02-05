@@ -404,6 +404,8 @@ public record SprintVelocityDto
 {
     public string SprintName { get; init; } = string.Empty;
     public int StoryPointsCompleted { get; init; }
+    public int NewStoryPointsCompleted { get; init; }
+    public int CarriedOverStoryPoints { get; init; }
     public int TasksCompleted { get; init; }
     public int TotalTimeSpentMinutes { get; init; }
     public int TotalEstimatedHours { get; init; }
@@ -541,6 +543,8 @@ public record SprintCapacityAnalysisDto
     public int SprintNumber { get; init; }
     public int CommittedPoints { get; init; }
     public int CompletedPoints { get; init; }
+    public int NewCompletedPoints { get; init; }
+    public int CarriedOverCompletedPoints { get; init; }
     public double UtilizationPercentage { get; init; }
     public int TotalStoryPoints { get; init; }
     public int? PredictedPoints { get; init; }

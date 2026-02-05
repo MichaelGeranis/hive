@@ -304,6 +304,8 @@ public class JiraImportService : IJiraImportService
                     var overriddenEstimation = existingTask.IsFieldOverridden("StoryPoints");
                     var overriddenTimeSpent = existingTask.IsFieldOverridden("TimeSpentMinutes");
                     var overriddenAssignee = existingTask.IsFieldOverridden("AssigneeId");
+                    var overriddenPreviousSP = existingTask.IsFieldOverridden("PreviousSprintsStoryPoints");
+                    var existingPreviousSP = existingTask.PreviousSprintsStoryPoints;
 
                     // Update existing task, preserving overridden field values
                     existingTask.Update(
@@ -333,6 +335,13 @@ public class JiraImportService : IJiraImportService
 
                     // Update status
                     UpdateTaskStatus(existingTask, taskData.Status);
+
+                    // Re-apply PreviousSprintsStoryPoints override if it was set
+                    // (This is a Hive-only field, not from Jira, so always preserve it)
+                    if (overriddenPreviousSP)
+                    {
+                        existingTask.OverridePreviousSprintsStoryPoints(existingPreviousSP);
+                    }
 
                     await _taskRepository.UpdateAsync(existingTask, cancellationToken);
                     taskId = existingTask.Id;

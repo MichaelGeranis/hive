@@ -31,6 +31,8 @@ public record TeamTaskDto
     public string Labels { get; init; } = string.Empty;
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
+    public int? PreviousSprintsStoryPoints { get; init; }
+    public int? NewSprintsStoryPoints { get; init; }
     public string OverriddenFields { get; init; } = string.Empty;
     public bool IsOverdue { get; init; }
     public DateTime CreatedAt { get; init; }
@@ -96,6 +98,8 @@ public record OverrideTeamTaskFieldsDto
     public bool HasEstimationOverride { get; init; }
     public int? TimeSpentMinutes { get; init; }
     public bool HasTimeSpentOverride { get; init; }
+    public int? PreviousSprintsStoryPoints { get; init; }
+    public bool HasPreviousSprintsStoryPointsOverride { get; init; }
 }
 
 /// <summary>
