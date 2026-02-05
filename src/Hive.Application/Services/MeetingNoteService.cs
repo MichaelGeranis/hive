@@ -184,7 +184,7 @@ public class MeetingNoteService : IMeetingNoteService
         {
             Id = entity.Id,
             MeetingId = entity.MeetingId,
-            MeetingDate = meeting?.MeetingDate ?? DateTime.MinValue,
+            MeetingDate = meeting?.MeetingDate ?? DateOnly.MinValue,
             DirectReportName = directReport?.FullName ?? "Unknown",
             Content = entity.Content,
             Category = entity.Category,

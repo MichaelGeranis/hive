@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Calendar, Clock, MapPin, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
+import { Plus, Calendar, MapPin, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
 import { NoteCategory, ActionItemStatus } from '../types'
@@ -55,7 +55,6 @@ export default function Meetings() {
   const [formData, setFormData] = useState({
     directReportId: '',
     meetingDate: '',
-    durationMinutes: '60',
     location: '',
     agenda: ''
   })
@@ -76,7 +75,6 @@ export default function Meetings() {
     setFormData({
       directReportId: '',
       meetingDate: '',
-      durationMinutes: '30',
       location: '',
       agenda: ''
     })
@@ -213,14 +211,10 @@ export default function Meetings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const meetingData = {
-        ...formData,
-        durationMinutes: parseInt(formData.durationMinutes)
-      }
       if (editingId) {
-        await meetingsApi.update(editingId, meetingData)
+        await meetingsApi.update(editingId, formData)
       } else {
-        await meetingsApi.create(meetingData)
+        await meetingsApi.create(formData)
       }
       setShowForm(false)
       setEditingId(null)
@@ -235,8 +229,7 @@ export default function Meetings() {
   const handleEdit = (meeting: OneOnOneMeeting) => {
     setFormData({
       directReportId: meeting.directReportId,
-      meetingDate: meeting.meetingDate.slice(0, 16),
-      durationMinutes: meeting.durationMinutes.toString(),
+      meetingDate: meeting.meetingDate.slice(0, 10),
       location: meeting.location || '',
       agenda: meeting.agenda || ''
     })
@@ -306,9 +299,7 @@ export default function Meetings() {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     })
   }
 
@@ -374,30 +365,15 @@ export default function Meetings() {
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      value={formData.meetingDate}
-                      onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Duration (minutes)</label>
-                    <select
-                      value={formData.durationMinutes}
-                      onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="15">15 minutes</option>
-                      <option value="30">30 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">60 minutes</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={formData.meetingDate}
+                    onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Location</label>
@@ -618,10 +594,6 @@ export default function Meetings() {
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           {formatDate(meeting.meetingDate)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {meeting.durationMinutes} min
                         </span>
                         {meeting.location && (
                           <span className="flex items-center gap-1">

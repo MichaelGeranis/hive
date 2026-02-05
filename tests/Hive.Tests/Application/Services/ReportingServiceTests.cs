@@ -213,7 +213,6 @@ public class ReportingServiceTests
         result.TotalMeetings.Should().Be(0);
         result.CompletedMeetings.Should().Be(0);
         result.ScheduledMeetings.Should().Be(0);
-        result.AverageMeetingDuration.Should().Be(0);
     }
 
     [Fact]
@@ -222,14 +221,14 @@ public class ReportingServiceTests
         // Arrange
         var pastMeeting = new OneOnOneMeeting(
             _testDirectReportId,
-            DateTime.UtcNow.AddDays(-7),
-            60,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
+            null,
             "Past meeting");
 
         var futureMeeting = new OneOnOneMeeting(
             _testDirectReportId,
-            DateTime.UtcNow.AddDays(7),
-            60,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+            null,
             "Future meeting");
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -250,29 +249,6 @@ public class ReportingServiceTests
         result.ScheduledMeetings.Should().Be(1); // Future meeting
     }
 
-    [Fact]
-    public async Task GetOneOnOnesAnalyticsAsync_CalculatesAverageDuration()
-    {
-        // Arrange
-        var meeting1 = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-7), 60, "M1");
-        var meeting2 = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-14), 90, "M2");
-
-        _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OneOnOneMeeting> { meeting1, meeting2 });
-        _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OneOnOneMeeting> { meeting1, meeting2 });
-        _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<DirectReport> { _testDirectReport });
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
-
-        // Act
-        var result = await _service.GetOneOnOnesAnalyticsAsync();
-
-        // Assert
-        result.AverageMeetingDuration.Should().Be(75); // (60 + 90) / 2
-        result.TotalMeetingMinutes.Should().Be(150);
-    }
 
     #endregion
 
@@ -464,7 +440,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_ReturnsFrequencyForAllDirectReports()
     {
         // Arrange
-        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-10), 60, "Past");
+        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), null, "Past");
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
@@ -485,7 +461,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_CalculatesFrequencyStatus()
     {
         // Arrange
-        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateTime.UtcNow.AddDays(-7), 60, "Recent");
+        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), null, "Recent");
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });

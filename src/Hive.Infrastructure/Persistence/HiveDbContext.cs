@@ -445,11 +445,11 @@ public class HiveDbContext : DbContext
         // Create 1:1 meetings (simplified - no status workflow)
         var meetings = new[]
         {
-            new OneOnOneMeeting(alice.Id, DateTime.UtcNow.AddDays(-14), 30, "Conference Room A", "Weekly sync"),
-            new OneOnOneMeeting(alice.Id, DateTime.UtcNow.AddDays(7), 30, "Conference Room A", "Weekly sync"),
-            new OneOnOneMeeting(bob.Id, DateTime.UtcNow.AddDays(-7), 30, "Virtual", "Bi-weekly check-in"),
-            new OneOnOneMeeting(bob.Id, DateTime.UtcNow.AddDays(14), 30, "Virtual", "Bi-weekly check-in"),
-            new OneOnOneMeeting(carol.Id, DateTime.UtcNow.AddDays(-21), 45, "Office", "Monthly review")
+            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)), "Conference Room A", "Weekly sync"),
+            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), "Conference Room A", "Weekly sync"),
+            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Virtual", "Bi-weekly check-in"),
+            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)), "Virtual", "Bi-weekly check-in"),
+            new OneOnOneMeeting(carol.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-21)), "Office", "Monthly review")
         };
 
         OneOnOneMeetings.AddRange(meetings);

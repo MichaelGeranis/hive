@@ -153,8 +153,7 @@ public class OneOnOneMeetingsControllerTests
         var createDto = new CreateOneOnOneMeetingDto
         {
             DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = 30,
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Agenda = "Discuss progress"
         };
         var resultDto = CreateDto();
@@ -171,35 +170,13 @@ public class OneOnOneMeetingsControllerTests
     }
 
     [Fact]
-    public async Task Create_WithInvalidDto_ReturnsBadRequest()
-    {
-        // Arrange
-        var createDto = new CreateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = -10
-        };
-
-        _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ArgumentException("Duration must be positive"));
-
-        // Act
-        var result = await _controller.Create(createDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
     public async Task Create_WhenDirectReportNotFound_ReturnsNotFound()
     {
         // Arrange
         var createDto = new CreateOneOnOneMeetingDto
         {
             DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = 30
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
         _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
@@ -224,8 +201,7 @@ public class OneOnOneMeetingsControllerTests
         var updateDto = new UpdateOneOnOneMeetingDto
         {
             DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = 45,
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Agenda = "Updated agenda"
         };
         var resultDto = CreateDto();
@@ -248,8 +224,7 @@ public class OneOnOneMeetingsControllerTests
         var updateDto = new UpdateOneOnOneMeetingDto
         {
             DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = 30
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
         _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
@@ -260,28 +235,6 @@ public class OneOnOneMeetingsControllerTests
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    [Fact]
-    public async Task Update_WithInvalidDto_ReturnsBadRequest()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = -5
-        };
-
-        _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ArgumentException("Duration must be positive"));
-
-        // Act
-        var result = await _controller.Update(id, updateDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     #endregion
@@ -331,8 +284,7 @@ public class OneOnOneMeetingsControllerTests
             Id = Guid.NewGuid(),
             DirectReportId = Guid.NewGuid(),
             DirectReportName = "John Doe",
-            MeetingDate = DateTime.UtcNow,
-            DurationMinutes = 30,
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Agenda = "Weekly check-in",
             Location = "Conference Room A",
             CreatedAt = DateTime.UtcNow,

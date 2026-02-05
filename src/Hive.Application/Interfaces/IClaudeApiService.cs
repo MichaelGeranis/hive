@@ -24,7 +24,7 @@ public interface IClaudeApiService
 public record MeetingNoteForAnalysis(
     string Content,
     string Category,
-    DateTime MeetingDate
+    DateOnly MeetingDate
 );
 
 /// <summary>

@@ -257,8 +257,7 @@ public class OneOnOneMeetingServiceTests
         var dto = new CreateOneOnOneMeetingDto
         {
             DirectReportId = _testDirectReportId,
-            MeetingDate = DateTime.UtcNow.AddDays(1),
-            DurationMinutes = 30,
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
             Location = "Conference Room",
             Agenda = "Weekly check-in"
         };
@@ -276,7 +275,6 @@ public class OneOnOneMeetingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.DirectReportId.Should().Be(_testDirectReportId);
-        result.DurationMinutes.Should().Be(30);
         result.Location.Should().Be("Conference Room");
         result.Agenda.Should().Be("Weekly check-in");
     }
@@ -288,7 +286,7 @@ public class OneOnOneMeetingServiceTests
         var dto = new CreateOneOnOneMeetingDto
         {
             DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateTime.UtcNow.AddDays(1)
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1))
         };
 
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(dto.DirectReportId, It.IsAny<CancellationToken>()))
@@ -314,8 +312,7 @@ public class OneOnOneMeetingServiceTests
         var dto = new UpdateOneOnOneMeetingDto
         {
             DirectReportId = _testDirectReportId,
-            MeetingDate = DateTime.UtcNow.AddDays(2),
-            DurationMinutes = 60,
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)),
             Location = "Updated Location",
             Agenda = "Updated Agenda"
         };
@@ -333,7 +330,6 @@ public class OneOnOneMeetingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.DirectReportId.Should().Be(_testDirectReportId);
-        result.DurationMinutes.Should().Be(60);
         result.Location.Should().Be("Updated Location");
         result.Agenda.Should().Be("Updated Agenda");
         _meetingRepositoryMock.Verify(r => r.UpdateAsync(meeting, It.IsAny<CancellationToken>()), Times.Once);
@@ -347,8 +343,7 @@ public class OneOnOneMeetingServiceTests
         var dto = new UpdateOneOnOneMeetingDto
         {
             DirectReportId = _testDirectReportId,
-            MeetingDate = DateTime.UtcNow.AddDays(1),
-            DurationMinutes = 30
+            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1))
         };
 
         _meetingRepositoryMock.Setup(r => r.GetByIdAsync(meetingId, It.IsAny<CancellationToken>()))
@@ -413,8 +408,7 @@ public class OneOnOneMeetingServiceTests
     {
         return new OneOnOneMeeting(
             _testDirectReportId,
-            DateTime.UtcNow.AddDays(1),
-            30,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
             "Conference Room",
             "Weekly check-in");
     }

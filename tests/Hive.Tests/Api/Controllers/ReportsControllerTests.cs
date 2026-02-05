@@ -244,8 +244,6 @@ public class ReportsControllerTests
             CancelledMeetings = 0,
             RescheduledMeetings = 0,
             CompletionRate = 80,
-            TotalMeetingMinutes = 600,
-            AverageMeetingDuration = 30,
             FrequencyByDirectReport = new List<OneOnOneFrequencyDto>(),
             ActionItemsSummary = new List<ActionItemsSummaryDto>()
         };

@@ -19,7 +19,7 @@ public class MeetingNoteRepositoryTests
         _directReportId = Guid.NewGuid();
 
         // Add a meeting to the context for testing
-        var meeting = new OneOnOneMeeting(_directReportId, DateTime.UtcNow);
+        var meeting = new OneOnOneMeeting(_directReportId, DateOnly.FromDateTime(DateTime.UtcNow));
         _context.OneOnOneMeetings.TryAdd(meeting.Id, meeting);
         _meetingId = meeting.Id;
     }
@@ -167,8 +167,8 @@ public class MeetingNoteRepositoryTests
         var directReport1 = Guid.NewGuid();
         var directReport2 = Guid.NewGuid();
 
-        var meeting1 = new OneOnOneMeeting(directReport1, DateTime.UtcNow);
-        var meeting2 = new OneOnOneMeeting(directReport2, DateTime.UtcNow);
+        var meeting1 = new OneOnOneMeeting(directReport1, DateOnly.FromDateTime(DateTime.UtcNow));
+        var meeting2 = new OneOnOneMeeting(directReport2, DateOnly.FromDateTime(DateTime.UtcNow));
         _context.OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
         _context.OneOnOneMeetings.TryAdd(meeting2.Id, meeting2);
 
@@ -245,8 +245,8 @@ public class MeetingNoteRepositoryTests
         var directReport1 = Guid.NewGuid();
         var directReport2 = Guid.NewGuid();
 
-        var meeting1 = new OneOnOneMeeting(directReport1, DateTime.UtcNow);
-        var meeting2 = new OneOnOneMeeting(directReport2, DateTime.UtcNow);
+        var meeting1 = new OneOnOneMeeting(directReport1, DateOnly.FromDateTime(DateTime.UtcNow));
+        var meeting2 = new OneOnOneMeeting(directReport2, DateOnly.FromDateTime(DateTime.UtcNow));
         _context.OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
         _context.OneOnOneMeetings.TryAdd(meeting2.Id, meeting2);
 

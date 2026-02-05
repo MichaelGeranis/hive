@@ -82,7 +82,6 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         var entity = new OneOnOneMeeting(
             dto.DirectReportId,
             dto.MeetingDate,
-            dto.DurationMinutes,
             dto.Location,
             dto.Agenda);
 
@@ -110,7 +109,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             throw new NotFoundException(nameof(DirectReport), dto.DirectReportId);
         }
 
-        entity.Update(dto.DirectReportId, dto.MeetingDate, dto.DurationMinutes, dto.Location, dto.Agenda);
+        entity.Update(dto.DirectReportId, dto.MeetingDate, dto.Location, dto.Agenda);
         await _meetingRepository.UpdateAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -169,7 +168,6 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
             DirectReportId = entity.DirectReportId,
             DirectReportName = directReport?.FullName ?? "Unknown",
             MeetingDate = entity.MeetingDate,
-            DurationMinutes = entity.DurationMinutes,
             Location = entity.Location,
             Agenda = entity.Agenda,
             CreatedAt = entity.CreatedAt,
@@ -189,7 +187,7 @@ public class OneOnOneMeetingService : IOneOnOneMeetingService
         return result;
     }
 
-    private static MeetingNoteDto MapNoteToDto(MeetingNote note, DateTime meetingDate, string directReportName) => new()
+    private static MeetingNoteDto MapNoteToDto(MeetingNote note, DateOnly meetingDate, string directReportName) => new()
     {
         Id = note.Id,
         MeetingId = note.MeetingId,

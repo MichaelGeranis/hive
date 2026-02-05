@@ -9,7 +9,7 @@ public record MeetingNoteDto
 {
     public Guid Id { get; init; }
     public Guid MeetingId { get; init; }
-    public DateTime MeetingDate { get; init; }
+    public DateOnly MeetingDate { get; init; }
     public string DirectReportName { get; init; } = string.Empty;
     public string Content { get; init; } = string.Empty;
     public NoteCategory Category { get; init; }

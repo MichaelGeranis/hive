@@ -125,8 +125,6 @@ public record OneOnOnesOverviewDto
     public int CancelledMeetings { get; init; }
     public int RescheduledMeetings { get; init; }
     public double CompletionRate { get; init; }
-    public int TotalMeetingMinutes { get; init; }
-    public double AverageMeetingDuration { get; init; }
     public IReadOnlyList<OneOnOneFrequencyDto> FrequencyByDirectReport { get; init; } = [];
     public IReadOnlyList<ActionItemsSummaryDto> ActionItemsSummary { get; init; } = [];
 }
@@ -140,8 +138,8 @@ public record OneOnOneFrequencyDto
     public string DirectReportName { get; init; } = string.Empty;
     public int TotalMeetings { get; init; }
     public int CompletedMeetings { get; init; }
-    public DateTime? LastMeetingDate { get; init; }
-    public DateTime? NextScheduledDate { get; init; }
+    public DateOnly? LastMeetingDate { get; init; }
+    public DateOnly? NextScheduledDate { get; init; }
     public int DaysSinceLastMeeting { get; init; }
     public double AverageFrequencyDays { get; init; }
     public string FrequencyStatus { get; init; } = string.Empty; // "On Track", "Overdue", "At Risk"
@@ -355,11 +353,10 @@ public record OneOnOneAnalyticsDto
 {
     public int TotalMeetings { get; init; }
     public int CompletedMeetings { get; init; }
-    public DateTime? LastMeetingDate { get; init; }
-    public DateTime? NextScheduledDate { get; init; }
+    public DateOnly? LastMeetingDate { get; init; }
+    public DateOnly? NextScheduledDate { get; init; }
     public int DaysSinceLastMeeting { get; init; }
     public double AverageMeetingFrequencyDays { get; init; }
-    public int TotalMeetingMinutes { get; init; }
     public int OpenActionItems { get; init; }
     public int OverdueActionItems { get; init; }
 }

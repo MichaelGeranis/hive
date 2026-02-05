@@ -56,8 +56,8 @@ public class OneOnOneMeetingRepositoryTests
     public async Task GetAllAsync_ReturnsAllMeetings()
     {
         // Arrange
-        CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-10));
-        CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-5));
+        CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
+        CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
 
         // Act
         var result = await _repository.GetAllAsync();
@@ -70,9 +70,9 @@ public class OneOnOneMeetingRepositoryTests
     public async Task GetAllAsync_OrdersByMeetingDateDescending()
     {
         // Arrange
-        var meeting1 = CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-10));
-        var meeting2 = CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-5));
-        var meeting3 = CreateAndAddMeeting(meetingDate: DateTime.UtcNow);
+        var meeting1 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
+        var meeting2 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
+        var meeting3 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow));
 
         // Act
         var result = await _repository.GetAllAsync();
@@ -104,8 +104,8 @@ public class OneOnOneMeetingRepositoryTests
     public async Task GetByDirectReportIdAsync_OrdersByMeetingDateDescending()
     {
         // Arrange
-        var meeting1 = CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-10));
-        var meeting2 = CreateAndAddMeeting(meetingDate: DateTime.UtcNow.AddDays(-5));
+        var meeting1 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
+        var meeting2 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
 
         // Act
         var result = await _repository.GetByDirectReportIdAsync(_directReportId);
@@ -119,7 +119,7 @@ public class OneOnOneMeetingRepositoryTests
     public async Task AddAsync_AddsMeetingToContext()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_directReportId, DateTime.UtcNow);
+        var meeting = new OneOnOneMeeting(_directReportId, DateOnly.FromDateTime(DateTime.UtcNow));
 
         // Act
         var result = await _repository.AddAsync(meeting);
@@ -148,8 +148,8 @@ public class OneOnOneMeetingRepositoryTests
     {
         // Arrange
         var meeting = CreateAndAddMeeting();
-        var newDate = DateTime.UtcNow.AddDays(7);
-        meeting.Update(_directReportId, newDate, 60, "New location", "New agenda");
+        var newDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+        meeting.Update(_directReportId, newDate, "New location", "New agenda");
 
         // Act
         await _repository.UpdateAsync(meeting);
@@ -157,7 +157,6 @@ public class OneOnOneMeetingRepositoryTests
         // Assert
         var stored = _context.OneOnOneMeetings[meeting.Id];
         stored.MeetingDate.Should().Be(newDate);
-        stored.DurationMinutes.Should().Be(60);
         stored.Location.Should().Be("New location");
         stored.Agenda.Should().Be("New agenda");
     }
@@ -166,7 +165,7 @@ public class OneOnOneMeetingRepositoryTests
     public async Task UpdateAsync_WithNonExistentMeeting_ThrowsInvalidOperationException()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_directReportId, DateTime.UtcNow);
+        var meeting = new OneOnOneMeeting(_directReportId, DateOnly.FromDateTime(DateTime.UtcNow));
 
         // Act
         var act = () => _repository.UpdateAsync(meeting);
@@ -224,12 +223,11 @@ public class OneOnOneMeetingRepositoryTests
 
     private OneOnOneMeeting CreateAndAddMeeting(
         Guid? directReportId = null,
-        DateTime? meetingDate = null)
+        DateOnly? meetingDate = null)
     {
         var meeting = new OneOnOneMeeting(
             directReportId ?? _directReportId,
-            meetingDate ?? DateTime.UtcNow,
-            30,
+            meetingDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             "Office",
             "Weekly sync");
         _context.OneOnOneMeetings.TryAdd(meeting.Id, meeting);

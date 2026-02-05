@@ -106,7 +106,6 @@ export interface OneOnOneMeeting {
   directReportId: string
   directReportName: string
   meetingDate: string
-  durationMinutes: number
   location: string
   agenda: string
   noteCount: number

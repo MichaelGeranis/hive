@@ -94,12 +94,13 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         }
 
         var latestNoteDate = notesWithContext.Max(n => n.MeetingDate);
+        var latestNoteDateAsDateTime = latestNoteDate.ToDateTime(TimeOnly.MinValue);
 
         // Check cache
         if (!forceRefresh)
         {
             var cached = await _cacheRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
-            if (cached is not null && !cached.IsStale(latestNoteDate))
+            if (cached is not null && !cached.IsStale(latestNoteDateAsDateTime))
             {
                 return MapCacheToDto(cached, directReport.FullName);
             }
@@ -127,7 +128,7 @@ public class SentimentAnalysisService : ISentimentAnalysisService
                     trendDataJson,
                     notesWithContext.Count,
                     settings.SentimentAnalysisDays,
-                    latestNoteDate
+                    latestNoteDateAsDateTime
                 );
                 await _cacheRepository.AddAsync(cache, cancellationToken);
             }
@@ -142,7 +143,7 @@ public class SentimentAnalysisService : ISentimentAnalysisService
                     trendDataJson,
                     notesWithContext.Count,
                     settings.SentimentAnalysisDays,
-                    latestNoteDate
+                    latestNoteDateAsDateTime
                 );
                 await _cacheRepository.UpdateAsync(cache, cancellationToken);
             }
@@ -255,7 +256,8 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         CancellationToken cancellationToken)
     {
         var meetings = await _meetingRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
-        var recentMeetings = meetings.Where(m => m.MeetingDate >= cutoffDate).ToList();
+        var cutoffDateOnly = DateOnly.FromDateTime(cutoffDate);
+        var recentMeetings = meetings.Where(m => m.MeetingDate >= cutoffDateOnly).ToList();
 
         var notes = new List<MeetingNoteForAnalysis>();
 
