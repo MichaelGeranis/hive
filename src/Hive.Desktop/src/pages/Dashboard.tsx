@@ -41,9 +41,15 @@ import {
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444']
 
-const ALL_TIME_BADGE = (
+const ALL_SPRINTS_BADGE = (
   <span className="text-xs px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-500 text-slate-500 dark:text-slate-400 font-normal">
-    All time
+    All sprints
+  </span>
+)
+
+const CURRENT_SPRINT_BADGE = (
+  <span className="text-xs px-2 py-0.5 rounded-full border border-blue-300 dark:border-blue-500 text-blue-500 dark:text-blue-400 font-normal">
+    Current
   </span>
 )
 
@@ -601,7 +607,7 @@ export default function Dashboard() {
           title="Team Members"
           value={dashboard.team.totalReports}
           icon={<Users className="w-6 h-6" />}
-          badge={ALL_TIME_BADGE}
+          badge={ALL_SPRINTS_BADGE}
           color="amber"
           onClick={() => navigate('/team')}
         />
@@ -609,7 +615,7 @@ export default function Dashboard() {
           title="Projects"
           value={dashboard.tasks.projects.totalProjects}
           icon={<FolderKanban className="w-6 h-6" />}
-          badge={ALL_TIME_BADGE}
+          badge={ALL_SPRINTS_BADGE}
           color="purple"
           onClick={() => navigate('/projects?filter=active')}
         />
@@ -618,7 +624,7 @@ export default function Dashboard() {
           value={actionItems.length}
           subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
           icon={<ListTodo className="w-6 h-6" />}
-          badge={ALL_TIME_BADGE}
+          badge={ALL_SPRINTS_BADGE}
           color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
           onClick={() => setShowActionItemsModal(true)}
         />
@@ -627,7 +633,7 @@ export default function Dashboard() {
           value={priorityNotes.length}
           subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
           icon={<StickyNote className="w-6 h-6" />}
-          badge={ALL_TIME_BADGE}
+          badge={ALL_SPRINTS_BADGE}
           color={priorityNotes.some(n => n.priority === 3) ? 'red' : priorityNotes.length > 0 ? 'amber' : 'green'}
           onClick={() => setShowPriorityNotesModal(true)}
         />
@@ -668,9 +674,12 @@ export default function Dashboard() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardContent className="py-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {capacityAnalysis?.currentSprint?.sprintName || 'Current Sprint'}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {capacityAnalysis?.currentSprint?.sprintName || 'Current Sprint'}
+                </p>
+                {CURRENT_SPRINT_BADGE}
+              </div>
               <div className="flex flex-wrap items-center gap-6">
                 {/* SP Progress */}
                 <div className="flex items-center gap-2">
@@ -707,7 +716,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Knowledge Level Suggestions"
-            badge={ALL_TIME_BADGE}
+            badge={ALL_SPRINTS_BADGE}
             subtitle={`${knowledgeSuggestions.length} team member${knowledgeSuggestions.length > 1 ? 's have' : ' has'} accumulated enough points for a knowledge level increase`}
             action={
               <button
@@ -762,7 +771,7 @@ export default function Dashboard() {
         {/* Projects Distribution by Member */}
         {widgets.projectsDistribution && (
         <Card>
-          <CardHeader title="Projects Distribution" badge={ALL_TIME_BADGE} subtitle="How many projects each team member is engaged in" />
+          <CardHeader title="Projects Distribution" badge={ALL_SPRINTS_BADGE} subtitle="How many projects each team member is engaged in" />
           <CardContent>
             {projectDistributionData.length > 0 ? (
               <>
@@ -832,7 +841,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Members by Project"
-            badge={ALL_TIME_BADGE}
+            badge={ALL_SPRINTS_BADGE}
             subtitle="How many members are engaged per project"
           />
           <CardContent className="h-64">
@@ -1041,7 +1050,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support & Maintenance Hours"
-              badge={ALL_TIME_BADGE}
+              badge={ALL_SPRINTS_BADGE}
               subtitle={`${supportDistribution.allTaskCount} support · ${supportDistribution.maintenanceAllTaskCount} maintenance`}
             />
             <CardContent>
@@ -1114,7 +1123,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support & Maintenance by Assignee"
-              badge={ALL_TIME_BADGE}
+              badge={ALL_SPRINTS_BADGE}
               subtitle={`Support: ${supportDistribution.allHours}h · Maintenance: ${supportDistribution.maintenanceAllHours}h`}
             />
             <CardContent className="h-80">
@@ -1203,7 +1212,7 @@ export default function Dashboard() {
 
       {/* Team Sentiment */}
       {widgets.teamSentiment && (
-        <SentimentInsights showTeamOverview={true} badge={ALL_TIME_BADGE} />
+        <SentimentInsights showTeamOverview={true} badge={ALL_SPRINTS_BADGE} />
       )}
 
       {/* Capacity Analysis */}
