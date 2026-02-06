@@ -1324,23 +1324,22 @@ public class ReportingService : IReportingService
 
             var completedTasks = sprintTasks.Where(t => t.Status == TaskStatus.Done).ToList();
 
-            // Calculate new vs carried over completed points
+            // Calculate completed points (total SP from done tasks)
+            var completedPoints = completedTasks.Sum(t => t.StoryPoints ?? 0);
+
+            // Calculate new completed points (excluding carried over)
             var newCompletedPoints = completedTasks.Sum(t =>
             {
                 if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
                     return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
                 return t.StoryPoints ?? 0;
             });
-            var carriedOverCompletedPoints = completedTasks.Sum(t => t.PreviousSprintsStoryPoints ?? 0);
-            var completedPoints = newCompletedPoints + carriedOverCompletedPoints;
 
-            // Compute total story points for this sprint (new points only, excluding carried over)
-            var totalStoryPoints = sprintTasks.Sum(t =>
-            {
-                if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
-                    return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
-                return t.StoryPoints ?? 0;
-            });
+            // Compute total story points for this sprint (including carried over)
+            var totalStoryPoints = sprintTasks.Sum(t => t.StoryPoints ?? 0);
+
+            // Calculate carried over points for all tasks (not just completed)
+            var carriedOverPoints = sprintTasks.Sum(t => t.PreviousSprintsStoryPoints ?? 0);
 
             var committedPoints = capacity?.TotalCapacityPoints ?? 0;
             var utilization = committedPoints > 0
@@ -1371,7 +1370,7 @@ public class ReportingService : IReportingService
                 CommittedPoints = committedPoints,
                 CompletedPoints = completedPoints,
                 NewCompletedPoints = newCompletedPoints,
-                CarriedOverCompletedPoints = carriedOverCompletedPoints,
+                CarriedOverPoints = carriedOverPoints,
                 TotalStoryPoints = totalStoryPoints,
                 UtilizationPercentage = utilization,
                 Status = status
@@ -1845,7 +1844,7 @@ public class ReportingService : IReportingService
             worksheet.Cells[row, 3].Value = sprint.CommittedPoints;
             worksheet.Cells[row, 4].Value = sprint.CompletedPoints;
             worksheet.Cells[row, 5].Value = sprint.NewCompletedPoints;
-            worksheet.Cells[row, 6].Value = sprint.CarriedOverCompletedPoints;
+            worksheet.Cells[row, 6].Value = sprint.CarriedOverPoints;
             worksheet.Cells[row, 7].Value = sprint.PredictedPoints;
             worksheet.Cells[row, 8].Value = sprint.UtilizationPercentage;
             row++;

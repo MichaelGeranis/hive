@@ -855,7 +855,7 @@ export interface SprintCapacityAnalysis {
   committedPoints: number
   completedPoints: number
   newCompletedPoints: number
-  carriedOverCompletedPoints: number
+  carriedOverPoints: number
   totalStoryPoints: number
   utilizationPercentage: number
   predictedPoints?: number

@@ -804,10 +804,10 @@ public class ReportingServiceTests
     #region GetCapacityAnalysisAsync — TotalStoryPoints Tests
 
     [Fact]
-    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_SumsNewSPFromTasksInSprint()
+    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_SumsAllSPFromTasksInSprint()
     {
         // Create a current sprint with tasks.
-        // TotalStoryPoints should be the sum of new SP from tasks in the sprint (excluding carried over).
+        // TotalStoryPoints should be the sum of all SP from tasks in the sprint (including carried over).
         var currentSprint = new Sprint("LP_1Q25_S1");
         currentSprint.UpdateDates(
             DateTime.UtcNow.Date.AddDays(-7),
@@ -844,19 +844,20 @@ public class ReportingServiceTests
         // Assert
         result.CurrentSprint.Should().NotBeNull();
         result.CurrentSprint!.TotalStoryPoints.Should().Be(13,
-            "sum of new SP from tasks in this sprint (5 + 8)");
+            "sum of all SP from tasks in this sprint (5 + 8)");
     }
 
     [Fact]
-    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_ExcludesCarriedOverPoints()
+    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_IncludesCarriedOverPoints()
     {
-        // Task with carried over points should only count new SP in TotalStoryPoints.
+        // Task with carried over points should include all SP in TotalStoryPoints,
+        // and separately track CarriedOverPoints.
         var currentSprint = new Sprint("LP_1Q25_S1");
         currentSprint.UpdateDates(
             DateTime.UtcNow.Date.AddDays(-7),
             DateTime.UtcNow.Date.AddDays(7));
 
-        // Task with 8 total SP, but 3 were from previous sprints → only 5 new SP
+        // Task with 8 total SP, but 3 were from previous sprints
         var task = new TeamTask("T1", sprint: currentSprint.Name, storyPoints: 8);
         task.OverridePreviousSprintsStoryPoints(3);
 
@@ -880,8 +881,10 @@ public class ReportingServiceTests
 
         // Assert
         result.CurrentSprint.Should().NotBeNull();
-        result.CurrentSprint!.TotalStoryPoints.Should().Be(5,
-            "only new SP should be counted (8 total - 3 carried over = 5)");
+        result.CurrentSprint!.TotalStoryPoints.Should().Be(8,
+            "all SP should be counted including carried over");
+        result.CurrentSprint!.CarriedOverPoints.Should().Be(3,
+            "carried over points should be tracked separately");
     }
 
     #endregion

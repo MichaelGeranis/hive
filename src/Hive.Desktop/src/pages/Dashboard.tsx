@@ -746,10 +746,10 @@ export default function Dashboard() {
                 {CURRENT_SPRINT_BADGE}
               </div>
               <div className="flex flex-wrap items-center gap-6">
-                {/* SP Progress */}
+                {/* SP Progress - New SP only */}
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.completedPoints ?? 0}/{currentSprintTotalSP}</span>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.completedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</span>
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0}/{currentSprintTotalSP}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</span>
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
                 {/* Tasks Count */}
@@ -758,6 +758,12 @@ export default function Dashboard() {
                   <span className="text-sm text-slate-500 dark:text-slate-400">Tasks {currentSprintCompletionRate}%</span>
                 </div>
                 {/* Warnings indicators */}
+                {(capacityAnalysis?.currentSprint?.carriedOverPoints ?? 0) > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400" title={`${capacityAnalysis?.currentSprint?.carriedOverPoints} SP carried over from previous sprints`}>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs font-medium">+{capacityAnalysis?.currentSprint?.carriedOverPoints} SP carried</span>
+                  </div>
+                )}
                 {(capacityAnalysis?.currentSprint && currentSprintTotalSP > (capacityAnalysis.currentSprint.committedPoints ?? 0) && (capacityAnalysis.currentSprint.committedPoints ?? 0) > 0) && (
                   <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600 dark:text-amber-400" title={`Scope creep: ${currentSprintTotalSP} SP vs ${capacityAnalysis.currentSprint.committedPoints} committed`}>
                     <AlertTriangle className="w-4 h-4" />

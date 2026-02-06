@@ -558,7 +558,7 @@ public record SprintCapacityAnalysisDto
     public int CommittedPoints { get; init; }
     public int CompletedPoints { get; init; }
     public int NewCompletedPoints { get; init; }
-    public int CarriedOverCompletedPoints { get; init; }
+    public int CarriedOverPoints { get; init; }
     public double UtilizationPercentage { get; init; }
     public int TotalStoryPoints { get; init; }
     public int? PredictedPoints { get; init; }
