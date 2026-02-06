@@ -42,7 +42,7 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
         return (items, totalCount);
     }
 
-    public async Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetFilteredPagedAsync(
+    public async Task<(IReadOnlyList<TeamTask> Items, int TotalCount, int TotalStoryPoints, int TotalEstimatedHours, int TotalTimeSpentMinutes)> GetFilteredPagedAsync(
         int skip,
         int take,
         TaskStatus? status = null,
@@ -50,9 +50,20 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
         string? searchTerm = null,
         string? label = null,
         string? sprint = null,
+        IEnumerable<string>? excludeTaskTitles = null,
         CancellationToken cancellationToken = default)
     {
         IQueryable<TeamTask> query = _context.TeamTasks;
+
+        // Apply parent task exclusion
+        if (excludeTaskTitles != null)
+        {
+            var excludeList = excludeTaskTitles.ToList();
+            if (excludeList.Count > 0)
+            {
+                query = query.Where(x => !excludeList.Contains(x.Title));
+            }
+        }
 
         // Apply status filter
         if (status.HasValue)
@@ -88,11 +99,8 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
             query = query.Where(x => x.Sprint != null && x.Sprint.Trim() == sprint.Trim());
         }
 
-        // Get total count before pagination
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        // Apply label filter (needs to be done after count for efficiency with in-memory filtering)
-        List<TeamTask> items;
+        // Apply label filter and compute aggregates
+        List<TeamTask> filteredList;
         if (!string.IsNullOrWhiteSpace(label))
         {
             var labelLower = label.Trim().ToLowerInvariant();
@@ -104,30 +112,30 @@ public class SqliteTeamTaskRepository : ITeamTaskRepository
                 .ThenBy(x => x.CreatedAt)
                 .ToListAsync(cancellationToken);
 
-            var filtered = allItems
+            filteredList = allItems
                 .Where(x => !string.IsNullOrEmpty(x.Labels) &&
                             x.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
                                 .Select(l => l.Trim().ToLowerInvariant())
                                 .Contains(labelLower))
                 .ToList();
-
-            totalCount = filtered.Count;
-            items = filtered.Skip(skip).Take(take).ToList();
         }
         else
         {
-            // Order and paginate
-            items = await query
+            filteredList = await query
                 .OrderByDescending(x => x.Sprint)
                 .ThenByDescending(x => x.Priority)
                 .ThenBy(x => x.DueDate)
                 .ThenBy(x => x.CreatedAt)
-                .Skip(skip)
-                .Take(take)
                 .ToListAsync(cancellationToken);
         }
 
-        return (items, totalCount);
+        var totalCount = filteredList.Count;
+        var totalStoryPoints = filteredList.Sum(x => x.StoryPoints ?? 0);
+        var totalEstimatedHours = filteredList.Sum(x => x.EstimatedHours ?? 0);
+        var totalTimeSpentMinutes = filteredList.Sum(x => x.TimeSpentMinutes ?? 0);
+        var items = filteredList.Skip(skip).Take(take).ToList();
+
+        return (items, totalCount, totalStoryPoints, totalEstimatedHours, totalTimeSpentMinutes);
     }
 
     public async Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)

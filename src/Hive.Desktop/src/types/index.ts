@@ -213,6 +213,13 @@ export interface TeamTask {
   newSprintsStoryPoints?: number | null
   overriddenFields: string
   isOverdue: boolean
+  isParentTask: boolean
+}
+
+export interface TaskPagedResult extends PagedResult<TeamTask> {
+  totalStoryPoints: number
+  totalEstimatedHours: number
+  totalTimeSpentMinutes: number
 }
 
 export interface OverrideTeamTaskFieldsDto {
@@ -372,6 +379,7 @@ export interface TasksOverview {
   tasksByTypeSP: TasksByTypeSP[]
   tasksByTypeHours: TasksByTypeHours[]
   tasksByPriority: TasksByPriority[]
+  tasksByLabel: TasksByLabel[]
   supportDistribution: SupportDistribution
   productivity: ProductivityMetrics
 }
@@ -388,6 +396,15 @@ export interface TasksByTypeHours {
   typeName: string
   totalHours: number
   taskCount: number
+}
+
+export interface TasksByLabel {
+  label: string
+  totalTasks: number
+  completedTasks: number
+  totalStoryPoints: number
+  completedStoryPoints: number
+  percentageOfTotal: number
 }
 
 export interface SupportDistribution {

@@ -589,6 +589,44 @@ public class ReportingService : IReportingService
             ByAssignee = supportByAssignee
         };
 
+        // Calculate tasks by label (filtered by sprint)
+        var totalTaskCount = tasks.Count;
+        var tasksByLabel = tasks
+            .Where(t => !string.IsNullOrEmpty(t.Labels))
+            .SelectMany(t => t.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(label => new { Task = t, Label = label.Trim() }))
+            .GroupBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var labelTasks = g.Select(x => x.Task).Distinct().ToList();
+                var completedLabelTasks = labelTasks.Where(t => t.Status == TaskStatus.Done).ToList();
+                var totalSP = labelTasks.Sum(t =>
+                {
+                    if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                        return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                    return t.StoryPoints ?? 0;
+                });
+                var completedSP = completedLabelTasks.Sum(t =>
+                {
+                    if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                        return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                    return t.StoryPoints ?? 0;
+                });
+                return new TasksByLabelDto
+                {
+                    Label = g.Key,
+                    TotalTasks = labelTasks.Count,
+                    CompletedTasks = completedLabelTasks.Count,
+                    TotalStoryPoints = totalSP,
+                    CompletedStoryPoints = completedSP,
+                    PercentageOfTotal = totalTaskCount > 0
+                        ? Math.Round((double)labelTasks.Count / totalTaskCount * 100, 1)
+                        : 0
+                };
+            })
+            .OrderByDescending(l => l.TotalTasks)
+            .ToList();
+
         return new TasksOverviewDto
         {
             Projects = projectsSummary,
@@ -598,6 +636,7 @@ public class ReportingService : IReportingService
             TasksByTypeSP = tasksByTypeSP,
             TasksByTypeHours = tasksByTypeHours,
             TasksByPriority = tasksByPriority,
+            TasksByLabel = tasksByLabel,
             SupportDistribution = supportDistribution,
             Productivity = productivity
         };

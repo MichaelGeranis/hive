@@ -70,6 +70,13 @@ const getTaskTypeColor = (typeName: string): string => {
   return TASK_TYPE_COLORS[typeName] || COLORS[Object.keys(TASK_TYPE_COLORS).length % COLORS.length]
 }
 
+// Extended color palette for labels
+const LABEL_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
+
+const getLabelColor = (index: number): string => {
+  return LABEL_COLORS[index % LABEL_COLORS.length]
+}
+
 // Get initials from a full name (e.g., "John Doe" -> "JD")
 const getInitials = (name: string): string => {
   return name
@@ -87,6 +94,7 @@ interface WidgetVisibility {
   tasksDistribution: boolean
   tasksDistributionSP: boolean
   tasksDistributionHours: boolean
+  tasksDistributionLabel: boolean
   supportDistribution: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
@@ -103,6 +111,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   tasksDistribution: true,
   tasksDistributionSP: true,
   tasksDistributionHours: true,
+  tasksDistributionLabel: true,
   supportDistribution: true,
   teamSentiment: true,
   capacityAnalysis: true,
@@ -119,6 +128,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   tasksDistribution: 'Tasks Distribution',
   tasksDistributionSP: 'Tasks Distribution (SP)',
   tasksDistributionHours: 'Tasks Distribution (Hours)',
+  tasksDistributionLabel: 'Tasks Distribution (Label)',
   supportDistribution: 'Support Distribution',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
@@ -519,6 +529,11 @@ export default function Dashboard() {
   // Use backend-computed hours distribution by task type
   const taskTypeHoursChartData = dashboard.tasks.tasksByTypeHours
     .map(t => ({ name: t.typeName, value: t.totalHours, tasks: t.taskCount }))
+    .sort((a, b) => b.value - a.value)
+
+  // Use backend-computed label distribution
+  const taskLabelChartData = (dashboard.tasks.tasksByLabel || [])
+    .map(l => ({ name: l.label, value: l.totalTasks, completed: l.completedTasks, sp: l.totalStoryPoints, completedSP: l.completedStoryPoints, pct: l.percentageOfTotal }))
     .sort((a, b) => b.value - a.value)
 
   // Use backend-computed total story points for current sprint
@@ -1086,6 +1101,62 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                 No hours logged
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Task Distribution by Label */}
+        {widgets.tasksDistributionLabel && (
+        <Card>
+          <CardHeader title="Tasks Distribution" subtitle="By label" />
+          <CardContent>
+            {taskLabelChartData.length > 0 ? (
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={taskLabelChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {taskLabelChartData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={getLabelColor(index)} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number, _name, props) => {
+                          const payload = props.payload as typeof taskLabelChartData[0]
+                          return [`${value} tasks (${payload.sp} SP)`, 'Total']
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {taskLabelChartData.map((entry, index) => (
+                    <div key={entry.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getLabelColor(index) }} />
+                        <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{entry.value}</span>
+                        <span className="text-slate-400">({entry.pct}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
+                No labels assigned
               </div>
             )}
           </CardContent>

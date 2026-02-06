@@ -36,11 +36,12 @@ public class TeamTasksController : ControllerBase
     /// <param name="search">Optional search term.</param>
     /// <param name="label">Optional label filter.</param>
     /// <param name="sprint">Optional sprint filter.</param>
+    /// <param name="excludeParents">When true, excludes tasks whose title matches a Parent entity name.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paginated list of tasks ordered by Sprint desc, Priority desc, DueDate asc.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<TeamTaskDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<TeamTaskDto>>> GetAll(
+    [ProducesResponseType(typeof(TaskPagedResult), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TaskPagedResult>> GetAll(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] TaskStatus? status = null,
@@ -48,10 +49,11 @@ public class TeamTasksController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] string? label = null,
         [FromQuery] string? sprint = null,
+        [FromQuery] bool excludeParents = false,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting tasks page {PageNumber} with size {PageSize}, status={Status}, filter={Filter}, search={Search}, label={Label}, sprint={Sprint}",
-            pageNumber, pageSize, status, filter, search, label, sprint);
+        _logger.LogInformation("Getting tasks page {PageNumber} with size {PageSize}, status={Status}, filter={Filter}, search={Search}, label={Label}, sprint={Sprint}, excludeParents={ExcludeParents}",
+            pageNumber, pageSize, status, filter, search, label, sprint, excludeParents);
 
         var taskFilter = filter?.ToLowerInvariant() == "overdue" ? TaskFilter.Overdue : TaskFilter.All;
 
@@ -63,7 +65,8 @@ public class TeamTasksController : ControllerBase
             Filter = taskFilter,
             SearchTerm = search,
             Label = label,
-            Sprint = sprint
+            Sprint = sprint,
+            ExcludeParents = excludeParents
         };
 
         var tasks = await _service.GetFilteredPagedAsync(pagination, cancellationToken);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin, Copy } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin, Copy, Users } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -50,9 +50,15 @@ export default function Tasks() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+  const [excludeParents, setExcludeParents] = useState(false)
 
   // Summary state (from server)
   const [summary, setSummary] = useState<TaskSummaryDto | null>(null)
+
+  // Aggregate state (from filtered paged response)
+  const [totalStoryPoints, setTotalStoryPoints] = useState(0)
+  const [totalEstimatedHours, setTotalEstimatedHours] = useState(0)
+  const [totalTimeSpentMinutes, setTotalTimeSpentMinutes] = useState(0)
 
   // Pagination state
   const [pageNumber, setPageNumber] = useState(1)
@@ -226,8 +232,11 @@ export default function Tasks() {
     if (selectedSprint) {
       filters.sprint = selectedSprint
     }
+    if (excludeParents) {
+      filters.excludeParents = true
+    }
     return filters
-  }, [filter, searchQuery, selectedLabel, selectedSprint])
+  }, [filter, searchQuery, selectedLabel, selectedSprint, excludeParents])
 
   const loadData = useCallback(async (page = 1, currentFilters?: TaskFilters) => {
     try {
@@ -242,6 +251,9 @@ export default function Tasks() {
       setTotalCount(tasksResult.totalCount)
       setTotalPages(tasksResult.totalPages)
       setPageNumber(tasksResult.pageNumber)
+      setTotalStoryPoints(tasksResult.totalStoryPoints ?? 0)
+      setTotalEstimatedHours(tasksResult.totalEstimatedHours ?? 0)
+      setTotalTimeSpentMinutes(tasksResult.totalTimeSpentMinutes ?? 0)
       setSummary(summaryData)
       setDirectReports(drData)
     } catch (err) {
@@ -261,6 +273,9 @@ export default function Tasks() {
       setTotalCount(tasksResult.totalCount)
       setTotalPages(tasksResult.totalPages)
       setPageNumber(tasksResult.pageNumber)
+      setTotalStoryPoints(tasksResult.totalStoryPoints ?? 0)
+      setTotalEstimatedHours(tasksResult.totalEstimatedHours ?? 0)
+      setTotalTimeSpentMinutes(tasksResult.totalTimeSpentMinutes ?? 0)
     } catch (err) {
       console.error(err)
     } finally {
@@ -288,6 +303,9 @@ export default function Tasks() {
     setTotalCount(result.totalCount)
     setTotalPages(result.totalPages)
     setPageNumber(result.pageNumber)
+    setTotalStoryPoints(result.totalStoryPoints ?? 0)
+    setTotalEstimatedHours(result.totalEstimatedHours ?? 0)
+    setTotalTimeSpentMinutes(result.totalTimeSpentMinutes ?? 0)
   }
 
   // Labels and sprints come from summary (all tasks, not just current page)
@@ -299,6 +317,7 @@ export default function Tasks() {
     setSelectedLabel(null)
     setSelectedSprint(null)
     setFilter('all')
+    setExcludeParents(false)
     // Reload with no filters
     loadData(1, {})
   }, [loadData])
@@ -341,7 +360,7 @@ export default function Tasks() {
     if (!isInitialLoadDone.current) return
     loadFilteredTasks(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, selectedLabel, selectedSprint])
+  }, [filter, selectedLabel, selectedSprint, excludeParents])
 
   // Mark initial load as done when loading finishes
   useEffect(() => {
@@ -1295,7 +1314,7 @@ export default function Tasks() {
             onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedLabel || selectedSprint || filter !== 'all') && (
+          {(searchQuery || selectedLabel || selectedSprint || filter !== 'all' || excludeParents) && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -1345,6 +1364,21 @@ export default function Tasks() {
           </div>
         )}
 
+        {/* Exclude Parents Toggle */}
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-slate-400" />
+          <button
+            onClick={() => setExcludeParents(!excludeParents)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              excludeParents
+                ? 'bg-amber-500 text-white'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
+          >
+            Exclude Parents
+          </button>
+        </div>
+
         {/* Status Filter */}
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
@@ -1379,6 +1413,31 @@ export default function Tasks() {
           </div>
         </div>
       </div>
+
+      {/* Aggregates Summary Bar */}
+      {(totalStoryPoints > 0 || totalEstimatedHours > 0 || totalTimeSpentMinutes > 0) && (
+        <div className="flex items-center gap-6 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Totals:</span>
+          {totalStoryPoints > 0 && (
+            <span className="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
+              <Zap className="w-4 h-4" />
+              {totalStoryPoints} SP
+            </span>
+          )}
+          {totalEstimatedHours > 0 && (
+            <span className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
+              <Clock className="w-4 h-4" />
+              {totalEstimatedHours}h estimated
+            </span>
+          )}
+          {totalTimeSpentMinutes > 0 && (
+            <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+              <Timer className="w-4 h-4" />
+              {Math.round(totalTimeSpentMinutes / 60 * 10) / 10}h logged
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Select All */}
       {tasks.length > 0 && (
@@ -1421,6 +1480,11 @@ export default function Tasks() {
                       {task.isOverdue && (
                         <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded">
                           Overdue
+                        </span>
+                      )}
+                      {task.isParentTask && (
+                        <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-medium rounded">
+                          Parent
                         </span>
                       )}
                     </div>

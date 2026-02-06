@@ -35,6 +35,7 @@ public record TeamTaskDto
     public int? NewSprintsStoryPoints { get; init; }
     public string OverriddenFields { get; init; } = string.Empty;
     public bool IsOverdue { get; init; }
+    public bool IsParentTask { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

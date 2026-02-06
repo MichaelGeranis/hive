@@ -92,6 +92,7 @@ import type {
   TeamSentimentOverview,
   ApiKeyValidationResult,
   TaskSummaryDto,
+  TaskPagedResult,
   OverrideTeamTaskFieldsDto,
   ClearTeamTaskOverridesDto
 } from '../types'
@@ -257,6 +258,7 @@ export interface TaskFilters {
   search?: string
   label?: string
   sprint?: string
+  excludeParents?: boolean
 }
 
 export const tasksApi = {
@@ -269,7 +271,8 @@ export const tasksApi = {
     if (filters?.search) params.append('search', filters.search)
     if (filters?.label) params.append('label', filters.label)
     if (filters?.sprint) params.append('sprint', filters.sprint)
-    return api.get<PagedResult<TeamTask>>(`/teamtasks?${params.toString()}`).then(r => r.data)
+    if (filters?.excludeParents) params.append('excludeParents', 'true')
+    return api.get<TaskPagedResult>(`/teamtasks?${params.toString()}`).then(r => r.data)
   },
   getSummary: (projectId?: string) => {
     const params = projectId ? `?projectId=${projectId}` : ''

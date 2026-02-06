@@ -51,6 +51,7 @@ public record TaskPaginationParams : PaginationParams
     public string? SearchTerm { get; init; }
     public string? Label { get; init; }
     public string? Sprint { get; init; }
+    public bool ExcludeParents { get; init; }
 }
 
 /// <summary>
@@ -103,4 +104,14 @@ public record PagedResult<T>
             PageSize = pagination.PageSize
         };
     }
+}
+
+/// <summary>
+/// Paged result with aggregate totals for task queries.
+/// </summary>
+public record TaskPagedResult : PagedResult<TeamTaskDto>
+{
+    public int TotalStoryPoints { get; init; }
+    public int TotalEstimatedHours { get; init; }
+    public int TotalTimeSpentMinutes { get; init; }
 }

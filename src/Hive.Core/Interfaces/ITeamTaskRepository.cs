@@ -11,7 +11,7 @@ public interface ITeamTaskRepository
     Task<TeamTask?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetAllPagedAsync(int skip, int take, CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetFilteredPagedAsync(
+    Task<(IReadOnlyList<TeamTask> Items, int TotalCount, int TotalStoryPoints, int TotalEstimatedHours, int TotalTimeSpentMinutes)> GetFilteredPagedAsync(
         int skip,
         int take,
         TaskStatus? status = null,
@@ -19,6 +19,7 @@ public interface ITeamTaskRepository
         string? searchTerm = null,
         string? label = null,
         string? sprint = null,
+        IEnumerable<string>? excludeTaskTitles = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TeamTask>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);

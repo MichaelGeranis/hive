@@ -46,7 +46,7 @@ public class TeamTaskRepository : ITeamTaskRepository
         return Task.FromResult<(IReadOnlyList<TeamTask>, int)>((items, totalCount));
     }
 
-    public Task<(IReadOnlyList<TeamTask> Items, int TotalCount)> GetFilteredPagedAsync(
+    public Task<(IReadOnlyList<TeamTask> Items, int TotalCount, int TotalStoryPoints, int TotalEstimatedHours, int TotalTimeSpentMinutes)> GetFilteredPagedAsync(
         int skip,
         int take,
         TaskStatus? status = null,
@@ -54,9 +54,17 @@ public class TeamTaskRepository : ITeamTaskRepository
         string? searchTerm = null,
         string? label = null,
         string? sprint = null,
+        IEnumerable<string>? excludeTaskTitles = null,
         CancellationToken cancellationToken = default)
     {
         IEnumerable<TeamTask> query = _context.TeamTasks.Values;
+
+        // Apply parent task exclusion
+        if (excludeTaskTitles != null)
+        {
+            var excludeSet = new HashSet<string>(excludeTaskTitles, StringComparer.OrdinalIgnoreCase);
+            query = query.Where(x => !excludeSet.Contains(x.Title));
+        }
 
         // Apply status filter
         if (status.HasValue)
@@ -106,10 +114,15 @@ public class TeamTaskRepository : ITeamTaskRepository
             .ThenBy(x => x.DueDate)
             .ThenBy(x => x.CreatedAt);
 
-        var totalCount = orderedQuery.Count();
-        var items = orderedQuery.Skip(skip).Take(take).ToList();
+        // Materialize filtered list for aggregates
+        var filteredList = orderedQuery.ToList();
+        var totalCount = filteredList.Count;
+        var totalStoryPoints = filteredList.Sum(x => x.StoryPoints ?? 0);
+        var totalEstimatedHours = filteredList.Sum(x => x.EstimatedHours ?? 0);
+        var totalTimeSpentMinutes = filteredList.Sum(x => x.TimeSpentMinutes ?? 0);
+        var items = filteredList.Skip(skip).Take(take).ToList();
 
-        return Task.FromResult<(IReadOnlyList<TeamTask>, int)>((items, totalCount));
+        return Task.FromResult<(IReadOnlyList<TeamTask>, int, int, int, int)>((items, totalCount, totalStoryPoints, totalEstimatedHours, totalTimeSpentMinutes));
     }
 
     public Task<IReadOnlyList<TeamTask>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)

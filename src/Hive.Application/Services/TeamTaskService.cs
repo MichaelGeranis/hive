@@ -57,9 +57,19 @@ public class TeamTaskService : ITeamTaskService
         return PagedResult<TeamTaskDto>.Create(dtos, totalCount, pagination);
     }
 
-    public async Task<PagedResult<TeamTaskDto>> GetFilteredPagedAsync(TaskPaginationParams pagination, CancellationToken cancellationToken = default)
+    public async Task<TaskPagedResult> GetFilteredPagedAsync(TaskPaginationParams pagination, CancellationToken cancellationToken = default)
     {
-        var (entities, totalCount) = await _taskRepository.GetFilteredPagedAsync(
+        // Load parent names for exclusion if requested
+        IEnumerable<string>? excludeTaskTitles = null;
+        HashSet<string>? parentNames = null;
+        if (pagination.ExcludeParents)
+        {
+            var parents = await _parentRepository.GetAllAsync(cancellationToken);
+            parentNames = new HashSet<string>(parents.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+            excludeTaskTitles = parentNames;
+        }
+
+        var (entities, totalCount, totalStoryPoints, totalEstimatedHours, totalTimeSpentMinutes) = await _taskRepository.GetFilteredPagedAsync(
             pagination.Skip,
             pagination.PageSize,
             pagination.Status,
@@ -67,9 +77,19 @@ public class TeamTaskService : ITeamTaskService
             pagination.SearchTerm,
             pagination.Label,
             pagination.Sprint,
+            excludeTaskTitles,
             cancellationToken);
-        var dtos = await MapToDtosAsync(entities, cancellationToken);
-        return PagedResult<TeamTaskDto>.Create(dtos, totalCount, pagination);
+        var dtos = await MapToDtosAsync(entities, cancellationToken, parentNames);
+        return new TaskPagedResult
+        {
+            Items = dtos,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalStoryPoints = totalStoryPoints,
+            TotalEstimatedHours = totalEstimatedHours,
+            TotalTimeSpentMinutes = totalTimeSpentMinutes
+        };
     }
 
     public async Task<IReadOnlyList<TeamTaskDto>> GetByAssigneeIdAsync(Guid assigneeId, CancellationToken cancellationToken = default)
@@ -504,7 +524,7 @@ public class TeamTaskService : ITeamTaskService
         return entity;
     }
 
-    private async Task<TeamTaskDto> MapToDtoAsync(TeamTask entity, CancellationToken cancellationToken, IReadOnlyList<Project>? allProjects = null)
+    private async Task<TeamTaskDto> MapToDtoAsync(TeamTask entity, CancellationToken cancellationToken, IReadOnlyList<Project>? allProjects = null, IReadOnlySet<string>? parentNames = null)
     {
         string? assigneeName = null;
         string? projectName = null;
@@ -574,20 +594,31 @@ public class TeamTaskService : ITeamTaskService
             NewSprintsStoryPoints = newSprintsStoryPoints,
             OverriddenFields = entity.OverriddenFields,
             IsOverdue = entity.IsOverdue(),
+            IsParentTask = parentNames?.Contains(entity.Title) ?? false,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
     }
 
-    private async Task<IReadOnlyList<TeamTaskDto>> MapToDtosAsync(IReadOnlyList<TeamTask> entities, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<TeamTaskDto>> MapToDtosAsync(IReadOnlyList<TeamTask> entities, CancellationToken cancellationToken, HashSet<string>? preloadedParentNames = null)
     {
         // Load all projects once for efficient matched project calculation
         var allProjects = await _projectRepository.GetAllAsync(cancellationToken);
 
+        // Load parent names for IsParentTask flag
+        var parentNames = preloadedParentNames;
+        if (parentNames == null)
+        {
+            var parents = await _parentRepository.GetAllAsync(cancellationToken);
+            parentNames = parents != null
+                ? new HashSet<string>(parents.Select(p => p.Name), StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
         var result = new List<TeamTaskDto>();
         foreach (var entity in entities)
         {
-            result.Add(await MapToDtoAsync(entity, cancellationToken, allProjects));
+            result.Add(await MapToDtoAsync(entity, cancellationToken, allProjects, parentNames));
         }
         return result;
     }
