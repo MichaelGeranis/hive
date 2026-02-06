@@ -1490,4 +1490,559 @@ public class ReportingService : IReportingService
             TotalCompletedPoints = totalCompleted
         };
     }
+
+    public async Task<byte[]> ExportDashboardToExcelAsync(int? sprintCount = null, CancellationToken cancellationToken = default)
+    {
+        // Gather all dashboard data
+        var dashboard = await GetDashboardOverviewAsync(sprintCount, cancellationToken);
+        var velocity = await GetTeamVelocityAsync(sprintCount, cancellationToken);
+        var accuracy = await GetEstimationAccuracyAsync(sprintCount, cancellationToken);
+        var capacity = await GetCapacityAnalysisAsync(sprintCount, cancellationToken);
+
+        OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+
+        using var package = new OfficeOpenXml.ExcelPackage();
+
+        // 1. Summary Sheet
+        AddSummarySheet(package, dashboard, velocity, accuracy, capacity, sprintCount);
+
+        // 2. Team Overview Sheet
+        AddTeamOverviewSheet(package, dashboard);
+
+        // 3. Tasks Distribution Sheet
+        AddTasksDistributionSheet(package, dashboard);
+
+        // 4. Members Workload Sheet
+        AddMembersWorkloadSheet(package, dashboard);
+
+        // 5. Team Velocity Sheet
+        AddTeamVelocitySheet(package, velocity);
+
+        // 6. Capacity Analysis Sheet
+        AddCapacityAnalysisSheet(package, capacity);
+
+        // 7. Estimation Accuracy Sheet
+        AddEstimationAccuracySheet(package, accuracy);
+
+        // 8. Insights Sheet
+        AddInsightsSheet(package, dashboard);
+
+        return await Task.FromResult(package.GetAsByteArray());
+    }
+
+    private static void AddSummarySheet(
+        OfficeOpenXml.ExcelPackage package,
+        DashboardOverviewDto dashboard,
+        TeamVelocityDto velocity,
+        EstimationAccuracyDto accuracy,
+        CapacityAnalysisDto capacity,
+        int? sprintCount)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Summary");
+
+        // Title
+        worksheet.Cells[1, 1].Value = "Dashboard Report";
+        worksheet.Cells[1, 1].Style.Font.Bold = true;
+        worksheet.Cells[1, 1].Style.Font.Size = 16;
+
+        // Report metadata
+        worksheet.Cells[3, 1].Value = "Generated At:";
+        worksheet.Cells[3, 2].Value = dashboard.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss UTC");
+
+        worksheet.Cells[4, 1].Value = "Sprint Filter:";
+        worksheet.Cells[4, 2].Value = sprintCount.HasValue ? $"Last {sprintCount} sprints" : "All sprints";
+
+        // Key Metrics Section
+        worksheet.Cells[6, 1].Value = "Key Metrics";
+        worksheet.Cells[6, 1].Style.Font.Bold = true;
+        worksheet.Cells[6, 1].Style.Font.Size = 14;
+
+        var metricsRow = 7;
+        var metrics = new (string Label, object Value)[]
+        {
+            ("Team Members", dashboard.Team.TotalReports),
+            ("Direct Reports", dashboard.Team.TotalDirectReports),
+            ("Total Projects", dashboard.Tasks.Projects.TotalProjects),
+            ("Total Tasks", dashboard.Tasks.Tasks.TotalTasks),
+            ("Completed Tasks", dashboard.Tasks.Tasks.DoneTasks),
+            ("Completion Rate", $"{dashboard.Tasks.Tasks.CompletionRate}%"),
+            ("Average Velocity (SP)", velocity.AverageVelocity),
+            ("Total Story Points Completed", velocity.TotalStoryPointsCompleted),
+            ("Velocity Trend", $"{velocity.CompletionTrend}%"),
+            ("Average Utilization", $"{capacity.AverageUtilization}%"),
+            ("Total Committed Points", capacity.TotalCommittedPoints),
+            ("Total Completed Points", capacity.TotalCompletedPoints),
+            ("Estimation Accuracy", $"{accuracy.OverallAccuracyPercentage}%"),
+            ("Total Estimated Hours", accuracy.TotalEstimatedHours),
+            ("Total Actual Hours", accuracy.TotalActualHours),
+            ("Variance Hours", accuracy.TotalVarianceHours)
+        };
+
+        foreach (var (label, value) in metrics)
+        {
+            worksheet.Cells[metricsRow, 1].Value = label;
+            worksheet.Cells[metricsRow, 2].Value = value;
+            metricsRow++;
+        }
+
+        // Style the header row
+        using (var range = worksheet.Cells[6, 1, 6, 2])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        worksheet.Column(1).Width = 30;
+        worksheet.Column(2).Width = 25;
+    }
+
+    private static void AddTeamOverviewSheet(OfficeOpenXml.ExcelPackage package, DashboardOverviewDto dashboard)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Team Overview");
+
+        // Headers
+        var headers = new[] { "Name", "Job Title", "Department", "Hire Date", "Tenure (Months)" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        // Data rows
+        var row = 2;
+        foreach (var member in dashboard.Team.DirectReports)
+        {
+            worksheet.Cells[row, 1].Value = member.FullName;
+            worksheet.Cells[row, 2].Value = member.JobTitle;
+            worksheet.Cells[row, 3].Value = member.Department;
+            worksheet.Cells[row, 4].Value = member.HireDate.ToString("yyyy-MM-dd");
+            worksheet.Cells[row, 5].Value = member.TenureMonths;
+            row++;
+        }
+
+        // Auto-fit columns
+        for (int i = 1; i <= headers.Length; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddTasksDistributionSheet(OfficeOpenXml.ExcelPackage package, DashboardOverviewDto dashboard)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Tasks Distribution");
+
+        // Headers
+        var headers = new[] { "Type", "Total Tasks", "Completed", "Story Points", "Hours", "Completion Rate" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        // Data rows
+        var row = 2;
+        foreach (var taskType in dashboard.Tasks.TasksByType)
+        {
+            var spData = dashboard.Tasks.TasksByTypeSP.FirstOrDefault(t => t.Type == taskType.Type);
+            var hoursData = dashboard.Tasks.TasksByTypeHours.FirstOrDefault(t => t.Type == taskType.Type);
+
+            worksheet.Cells[row, 1].Value = taskType.TypeName;
+            worksheet.Cells[row, 2].Value = taskType.TotalTasks;
+            worksheet.Cells[row, 3].Value = taskType.CompletedTasks;
+            worksheet.Cells[row, 4].Value = spData?.TotalStoryPoints ?? 0;
+            worksheet.Cells[row, 5].Value = hoursData?.TotalHours ?? 0;
+            worksheet.Cells[row, 6].Value = $"{taskType.CompletionRate}%";
+            row++;
+        }
+
+        // Total row
+        worksheet.Cells[row, 1].Value = "Total";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 2].Value = dashboard.Tasks.Tasks.TotalTasks;
+        worksheet.Cells[row, 3].Value = dashboard.Tasks.Tasks.DoneTasks;
+        worksheet.Cells[row, 4].Value = dashboard.Tasks.TasksByTypeSP.Sum(t => t.TotalStoryPoints);
+        worksheet.Cells[row, 5].Value = dashboard.Tasks.TasksByTypeHours.Sum(t => t.TotalHours);
+        worksheet.Cells[row, 6].Value = $"{dashboard.Tasks.Tasks.CompletionRate}%";
+
+        // Auto-fit columns
+        for (int i = 1; i <= headers.Length; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddMembersWorkloadSheet(OfficeOpenXml.ExcelPackage package, DashboardOverviewDto dashboard)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Members Workload");
+
+        // Headers
+        var headers = new[] { "Member", "Total Tasks", "Completed", "In Progress", "Blocked", "In Review", "Overdue", "Completion Rate", "Estimated Hours", "Actual Hours" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        // Data rows
+        var row = 2;
+        foreach (var assignee in dashboard.Tasks.TasksByAssignee)
+        {
+            worksheet.Cells[row, 1].Value = assignee.AssigneeName;
+            worksheet.Cells[row, 2].Value = assignee.TotalTasks;
+            worksheet.Cells[row, 3].Value = assignee.CompletedTasks;
+            worksheet.Cells[row, 4].Value = assignee.InProgressTasks;
+            worksheet.Cells[row, 5].Value = assignee.BlockedTasks;
+            worksheet.Cells[row, 6].Value = assignee.InReviewTasks;
+            worksheet.Cells[row, 7].Value = assignee.OverdueTasks;
+            worksheet.Cells[row, 8].Value = $"{assignee.CompletionRate}%";
+            worksheet.Cells[row, 9].Value = assignee.TotalEstimatedHours;
+            worksheet.Cells[row, 10].Value = assignee.TotalActualHours;
+            row++;
+        }
+
+        // Auto-fit columns
+        for (int i = 1; i <= headers.Length; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddTeamVelocitySheet(OfficeOpenXml.ExcelPackage package, TeamVelocityDto velocity)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Team Velocity");
+
+        // Headers
+        var headers = new[] { "Sprint", "Story Points Completed", "New SP", "Carried Over SP", "Tasks Completed", "Time Spent (Minutes)", "Estimated Hours" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        // Data rows
+        var row = 2;
+        foreach (var sprint in velocity.Sprints)
+        {
+            worksheet.Cells[row, 1].Value = sprint.SprintName;
+            worksheet.Cells[row, 2].Value = sprint.StoryPointsCompleted;
+            worksheet.Cells[row, 3].Value = sprint.NewStoryPointsCompleted;
+            worksheet.Cells[row, 4].Value = sprint.CarriedOverStoryPoints;
+            worksheet.Cells[row, 5].Value = sprint.TasksCompleted;
+            worksheet.Cells[row, 6].Value = sprint.TotalTimeSpentMinutes;
+            worksheet.Cells[row, 7].Value = sprint.TotalEstimatedHours;
+            row++;
+        }
+
+        // Summary row
+        row++;
+        worksheet.Cells[row, 1].Value = "Summary";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        row++;
+        worksheet.Cells[row, 1].Value = "Average Velocity";
+        worksheet.Cells[row, 2].Value = velocity.AverageVelocity;
+        row++;
+        worksheet.Cells[row, 1].Value = "Total Story Points";
+        worksheet.Cells[row, 2].Value = velocity.TotalStoryPointsCompleted;
+        row++;
+        worksheet.Cells[row, 1].Value = "Completion Trend";
+        worksheet.Cells[row, 2].Value = $"{velocity.CompletionTrend}%";
+
+        // Auto-fit columns
+        for (int i = 1; i <= headers.Length; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddCapacityAnalysisSheet(OfficeOpenXml.ExcelPackage package, CapacityAnalysisDto capacity)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Capacity Analysis");
+
+        // Headers
+        var headers = new[] { "Sprint", "Status", "Committed Points", "Completed Points", "New Completed", "Carried Over", "Predicted Points", "Utilization %" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        }
+
+        // Style header row
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        // Combine all sprints in order
+        var allSprints = capacity.PastSprints
+            .Concat(capacity.CurrentSprint != null ? new[] { capacity.CurrentSprint } : Array.Empty<SprintCapacityAnalysisDto>())
+            .Concat(capacity.FutureSprints)
+            .ToList();
+
+        // Data rows
+        var row = 2;
+        foreach (var sprint in allSprints)
+        {
+            worksheet.Cells[row, 1].Value = sprint.SprintName;
+            worksheet.Cells[row, 2].Value = sprint.Status;
+            worksheet.Cells[row, 3].Value = sprint.CommittedPoints;
+            worksheet.Cells[row, 4].Value = sprint.CompletedPoints;
+            worksheet.Cells[row, 5].Value = sprint.NewCompletedPoints;
+            worksheet.Cells[row, 6].Value = sprint.CarriedOverCompletedPoints;
+            worksheet.Cells[row, 7].Value = sprint.PredictedPoints;
+            worksheet.Cells[row, 8].Value = sprint.UtilizationPercentage;
+            row++;
+        }
+
+        // Summary row
+        row++;
+        worksheet.Cells[row, 1].Value = "Summary";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        row++;
+        worksheet.Cells[row, 1].Value = "Average Utilization";
+        worksheet.Cells[row, 2].Value = $"{capacity.AverageUtilization}%";
+        row++;
+        worksheet.Cells[row, 1].Value = "Total Committed Points";
+        worksheet.Cells[row, 2].Value = capacity.TotalCommittedPoints;
+        row++;
+        worksheet.Cells[row, 1].Value = "Total Completed Points";
+        worksheet.Cells[row, 2].Value = capacity.TotalCompletedPoints;
+
+        // Auto-fit columns
+        for (int i = 1; i <= headers.Length; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddEstimationAccuracySheet(OfficeOpenXml.ExcelPackage package, EstimationAccuracyDto accuracy)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Estimation Accuracy");
+
+        // Section 1: By Sprint
+        worksheet.Cells[1, 1].Value = "Accuracy by Sprint";
+        worksheet.Cells[1, 1].Style.Font.Bold = true;
+        worksheet.Cells[1, 1].Style.Font.Size = 14;
+
+        var sprintHeaders = new[] { "Sprint", "Tasks Completed", "Story Points", "Estimated Hours", "Actual Hours", "Variance", "Accuracy %" };
+        for (int i = 0; i < sprintHeaders.Length; i++)
+        {
+            worksheet.Cells[2, i + 1].Value = sprintHeaders[i];
+            worksheet.Cells[2, i + 1].Style.Font.Bold = true;
+        }
+
+        using (var range = worksheet.Cells[2, 1, 2, sprintHeaders.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        var row = 3;
+        foreach (var sprint in accuracy.Sprints)
+        {
+            worksheet.Cells[row, 1].Value = sprint.SprintName;
+            worksheet.Cells[row, 2].Value = sprint.TasksCompleted;
+            worksheet.Cells[row, 3].Value = sprint.StoryPointsCompleted;
+            worksheet.Cells[row, 4].Value = sprint.EstimatedHours;
+            worksheet.Cells[row, 5].Value = sprint.ActualHours;
+            worksheet.Cells[row, 6].Value = sprint.VarianceHours;
+            worksheet.Cells[row, 7].Value = sprint.AccuracyPercentage;
+            row++;
+        }
+
+        // Section 2: By Assignee
+        row += 2;
+        worksheet.Cells[row, 1].Value = "Accuracy by Assignee";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 1].Style.Font.Size = 14;
+        row++;
+
+        var assigneeHeaders = new[] { "Assignee", "Tasks Completed", "Estimated Hours", "Actual Hours", "Variance", "Accuracy %" };
+        for (int i = 0; i < assigneeHeaders.Length; i++)
+        {
+            worksheet.Cells[row, i + 1].Value = assigneeHeaders[i];
+            worksheet.Cells[row, i + 1].Style.Font.Bold = true;
+        }
+
+        using (var range = worksheet.Cells[row, 1, row, assigneeHeaders.Length])
+        {
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(198, 224, 240));
+        }
+
+        row++;
+        foreach (var assignee in accuracy.ByAssignee)
+        {
+            worksheet.Cells[row, 1].Value = assignee.AssigneeName;
+            worksheet.Cells[row, 2].Value = assignee.TasksCompleted;
+            worksheet.Cells[row, 3].Value = assignee.EstimatedHours;
+            worksheet.Cells[row, 4].Value = assignee.ActualHours;
+            worksheet.Cells[row, 5].Value = assignee.VarianceHours;
+            worksheet.Cells[row, 6].Value = assignee.AccuracyPercentage;
+            row++;
+        }
+
+        // Auto-fit columns
+        for (int i = 1; i <= 7; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
+
+    private static void AddInsightsSheet(OfficeOpenXml.ExcelPackage package, DashboardOverviewDto dashboard)
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Insights");
+
+        var row = 1;
+
+        // Section 1: Workload Warnings
+        worksheet.Cells[row, 1].Value = "Workload Warnings";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 1].Style.Font.Size = 14;
+        row++;
+
+        if (dashboard.Insights.WorkloadWarnings.Count > 0)
+        {
+            var warnHeaders = new[] { "Team Member", "In Progress", "Blocked", "In Review", "Issues" };
+            for (int i = 0; i < warnHeaders.Length; i++)
+            {
+                worksheet.Cells[row, i + 1].Value = warnHeaders[i];
+                worksheet.Cells[row, i + 1].Style.Font.Bold = true;
+            }
+
+            using (var range = worksheet.Cells[row, 1, row, warnHeaders.Length])
+            {
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(255, 200, 200));
+            }
+
+            row++;
+            foreach (var warning in dashboard.Insights.WorkloadWarnings)
+            {
+                worksheet.Cells[row, 1].Value = warning.AssigneeName;
+                worksheet.Cells[row, 2].Value = warning.InProgressTasks;
+                worksheet.Cells[row, 3].Value = warning.BlockedTasks;
+                worksheet.Cells[row, 4].Value = warning.InReviewTasks;
+                worksheet.Cells[row, 5].Value = string.Join(", ", warning.Issues);
+                row++;
+            }
+        }
+        else
+        {
+            worksheet.Cells[row, 1].Value = "No workload warnings";
+            row++;
+        }
+
+        // Section 2: Knowledge Silos
+        row += 2;
+        worksheet.Cells[row, 1].Value = "Knowledge Silos";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 1].Style.Font.Size = 14;
+        row++;
+
+        if (dashboard.Insights.KnowledgeSilos.Count > 0)
+        {
+            var siloHeaders = new[] { "Project", "Member Count", "Members" };
+            for (int i = 0; i < siloHeaders.Length; i++)
+            {
+                worksheet.Cells[row, i + 1].Value = siloHeaders[i];
+                worksheet.Cells[row, i + 1].Style.Font.Bold = true;
+            }
+
+            using (var range = worksheet.Cells[row, 1, row, siloHeaders.Length])
+            {
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(255, 235, 200));
+            }
+
+            row++;
+            foreach (var silo in dashboard.Insights.KnowledgeSilos)
+            {
+                worksheet.Cells[row, 1].Value = silo.ProjectName;
+                worksheet.Cells[row, 2].Value = silo.MemberCount;
+                worksheet.Cells[row, 3].Value = string.Join(", ", silo.MemberNames);
+                row++;
+            }
+        }
+        else
+        {
+            worksheet.Cells[row, 1].Value = "No knowledge silos detected";
+            row++;
+        }
+
+        // Section 3: Unengaged Members
+        row += 2;
+        worksheet.Cells[row, 1].Value = "Unengaged Members";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 1].Style.Font.Size = 14;
+        row++;
+
+        if (dashboard.Insights.UnengagedMembers.Count > 0)
+        {
+            worksheet.Cells[row, 1].Value = "Member";
+            worksheet.Cells[row, 1].Style.Font.Bold = true;
+
+            using (var range = worksheet.Cells[row, 1, row, 1])
+            {
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(200, 200, 255));
+            }
+
+            row++;
+            foreach (var member in dashboard.Insights.UnengagedMembers)
+            {
+                worksheet.Cells[row, 1].Value = member.FullName;
+                row++;
+            }
+        }
+        else
+        {
+            worksheet.Cells[row, 1].Value = "All team members are engaged in projects";
+            row++;
+        }
+
+        // Section 4: Additional Stats
+        row += 2;
+        worksheet.Cells[row, 1].Value = "Additional Statistics";
+        worksheet.Cells[row, 1].Style.Font.Bold = true;
+        worksheet.Cells[row, 1].Style.Font.Size = 14;
+        row++;
+
+        worksheet.Cells[row, 1].Value = "Unmatched Tasks (not linked to any project)";
+        worksheet.Cells[row, 2].Value = dashboard.Insights.UnmatchedTaskCount;
+
+        // Auto-fit columns
+        for (int i = 1; i <= 5; i++)
+        {
+            worksheet.Column(i).AutoFit();
+        }
+    }
 }

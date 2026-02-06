@@ -199,4 +199,21 @@ public class ReportsController : ControllerBase
         var analysis = await _service.GetCapacityAnalysisAsync(sprintCount, cancellationToken);
         return Ok(analysis);
     }
+
+    /// <summary>
+    /// Exports the dashboard data to an Excel file.
+    /// </summary>
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Excel file containing dashboard data.</returns>
+    [HttpGet("dashboard/export")]
+    [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportDashboard([FromQuery] int? sprintCount = null, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Exporting dashboard to Excel with sprintCount={SprintCount}", sprintCount);
+        var excelBytes = await _service.ExportDashboardToExcelAsync(sprintCount, cancellationToken);
+        var fileName = $"Dashboard-Report_{DateTime.UtcNow:yyyy-MM-dd}.xlsx";
+        return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
 }

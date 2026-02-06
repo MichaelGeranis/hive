@@ -13,7 +13,8 @@ import {
   StickyNote,
   Check,
   Star,
-  TrendingUp
+  TrendingUp,
+  Download
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
@@ -142,6 +143,7 @@ export default function Dashboard() {
   const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
   const [showPriorityNotesModal, setShowPriorityNotesModal] = useState(false)
   const [knowledgeSuggestions, setKnowledgeSuggestions] = useState<KnowledgeLevelSuggestion[]>([])
+  const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
@@ -341,6 +343,33 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Failed to increase knowledge level:', err)
       showError(getErrorMessage(err))
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      setExporting(true)
+      const blob = await reportsApi.exportDashboardToExcel(sprintFilter)
+
+      // Create a download link
+      const url = window.URL.createObjectURL(blob as Blob)
+      const link = document.createElement('a')
+      link.href = url
+
+      const fileName = `Dashboard-Report_${new Date().toISOString().split('T')[0]}.xlsx`
+      link.download = fileName
+
+      document.body.appendChild(link)
+      link.click()
+
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to export dashboard:', err)
+      showError(getErrorMessage(err))
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -566,13 +595,27 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
           <p className="text-slate-500 dark:text-slate-400">Overview team performance</p>
         </div>
-        <button
-          onClick={() => setShowCustomize(true)}
-          className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-        >
-          <Settings2 className="w-4 h-4" />
-          Customize
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-500"></div>
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Export
+          </button>
+          <button
+            onClick={() => setShowCustomize(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Settings2 className="w-4 h-4" />
+            Customize
+          </button>
+        </div>
       </div>
 
       {/* Sprint Filter */}

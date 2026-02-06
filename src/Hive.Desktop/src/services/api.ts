@@ -320,6 +320,12 @@ export const reportsApi = {
   getCapacityAnalysis: (sprintCount?: number) => {
     const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
     return api.get<CapacityAnalysis>(`/reports/capacity-analysis${params}`).then(r => r.data);
+  },
+  exportDashboardToExcel: (sprintCount?: number) => {
+    const params = sprintCount ? `?sprintCount=${sprintCount}` : '';
+    return api.get(`/reports/dashboard/export${params}`, {
+      responseType: 'blob'
+    }).then(r => r.data);
   }
 }
 

@@ -71,4 +71,10 @@ public interface IReportingService
     /// </summary>
     /// <param name="sprintCount">Optional number of recent past sprints to include. If null, returns all sprints.</param>
     Task<CapacityAnalysisDto> GetCapacityAnalysisAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exports dashboard data to an Excel file.
+    /// </summary>
+    /// <param name="sprintCount">Optional number of recent sprints to include. If null, returns all sprints.</param>
+    Task<byte[]> ExportDashboardToExcelAsync(int? sprintCount = null, CancellationToken cancellationToken = default);
 }
