@@ -1404,8 +1404,15 @@ export default function Tasks() {
                       )}
                       {task.storyPoints && (
                         <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                          {task.storyPoints} SP
+                          {task.previousSprintsStoryPoints && task.previousSprintsStoryPoints > 0 ? (
+                            <span title={`${task.storyPoints - task.previousSprintsStoryPoints} new + ${task.previousSprintsStoryPoints} carried over`}>
+                              {task.storyPoints - task.previousSprintsStoryPoints}+<span className="text-slate-400">{task.previousSprintsStoryPoints}</span> SP
+                            </span>
+                          ) : (
+                            <>{task.storyPoints} SP</>
+                          )}
                           {isFieldOverridden(task, 'StoryPoints') && <Pin className="w-3 h-3" title="Overridden - preserved during import" />}
+                          {isFieldOverridden(task, 'PreviousSprintsStoryPoints') && <Pin className="w-3 h-3" title="Previous SP overridden" />}
                         </span>
                       )}
                       {task.timeSpentMinutes && (

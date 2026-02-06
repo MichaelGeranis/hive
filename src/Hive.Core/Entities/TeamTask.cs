@@ -266,6 +266,13 @@ public class TeamTask
             .ToList();
 
         OverriddenFields = string.Join(",", fields);
+
+        // Reset Hive-only fields to null when clearing override (no Jira source to restore)
+        if (fieldName.Equals("PreviousSprintsStoryPoints", StringComparison.OrdinalIgnoreCase))
+        {
+            PreviousSprintsStoryPoints = null;
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 
