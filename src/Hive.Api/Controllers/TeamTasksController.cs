@@ -224,14 +224,17 @@ public class TeamTasksController : ControllerBase
         }
     }
 
-    // DISABLED: Tasks are read-only data imported from Jira. Only deletion is allowed.
-    // Uncomment if manual task editing is needed in the future.
-
-    /*
     /// <summary>
     /// Updates an existing task.
     /// </summary>
+    /// <param name="id">The task ID.</param>
+    /// <param name="dto">The task data to update.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated task.</returns>
     [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TeamTaskDto>> Update(Guid id, [FromBody] UpdateTeamTaskDto dto, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating task with ID: {Id}", id);
@@ -251,199 +254,27 @@ public class TeamTasksController : ControllerBase
     }
 
     /// <summary>
-    /// Assigns a task to a team member.
+    /// Duplicates an existing task.
     /// </summary>
-    [HttpPost("{id:guid}/assign")]
-    public async Task<ActionResult<TeamTaskDto>> Assign(Guid id, [FromBody] AssignTaskDto dto, CancellationToken cancellationToken)
+    /// <param name="id">The task ID to duplicate.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The duplicated task.</returns>
+    [HttpPost("{id:guid}/duplicate")]
+    [ProducesResponseType(typeof(TeamTaskDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TeamTaskDto>> Duplicate(Guid id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Assigning task {Id} to {AssigneeId}", id, dto.AssigneeId);
+        _logger.LogInformation("Duplicating task with ID: {Id}", id);
         try
         {
-            var updated = await _service.AssignAsync(id, dto, cancellationToken);
-            return Ok(updated);
+            var duplicated = await _service.DuplicateAsync(id, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = duplicated.Id }, duplicated);
         }
         catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
     }
-
-    /// <summary>
-    /// Moves a task to backlog.
-    /// </summary>
-    [HttpPost("{id:guid}/backlog")]
-    public async Task<ActionResult<TeamTaskDto>> MoveToBacklog(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Moving task {Id} to backlog", id);
-        try
-        {
-            var updated = await _service.MoveToBacklogAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Moves a task to todo.
-    /// </summary>
-    [HttpPost("{id:guid}/todo")]
-    public async Task<ActionResult<TeamTaskDto>> MoveToTodo(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Moving task {Id} to todo", id);
-        try
-        {
-            var updated = await _service.MoveToTodoAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Starts work on a task.
-    /// </summary>
-    [HttpPost("{id:guid}/start")]
-    public async Task<ActionResult<TeamTaskDto>> Start(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Starting task {Id}", id);
-        try
-        {
-            var updated = await _service.StartAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Moves a task to review.
-    /// </summary>
-    [HttpPost("{id:guid}/review")]
-    public async Task<ActionResult<TeamTaskDto>> MoveToReview(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Moving task {Id} to review", id);
-        try
-        {
-            var updated = await _service.MoveToReviewAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Completes a task.
-    /// </summary>
-    [HttpPost("{id:guid}/complete")]
-    public async Task<ActionResult<TeamTaskDto>> Complete(Guid id, [FromBody] CompleteTaskDto? dto, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Completing task {Id}", id);
-        try
-        {
-            var updated = await _service.CompleteAsync(id, dto, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Cancels a task.
-    /// </summary>
-    [HttpPost("{id:guid}/cancel")]
-    public async Task<ActionResult<TeamTaskDto>> Cancel(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Cancelling task {Id}", id);
-        try
-        {
-            var updated = await _service.CancelAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Reopens a completed or cancelled task.
-    /// </summary>
-    [HttpPost("{id:guid}/reopen")]
-    public async Task<ActionResult<TeamTaskDto>> Reopen(Guid id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Reopening task {Id}", id);
-        try
-        {
-            var updated = await _service.ReopenAsync(id, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Logs hours worked on a task.
-    /// </summary>
-    [HttpPost("{id:guid}/log-hours")]
-    public async Task<ActionResult<TeamTaskDto>> LogHours(Guid id, [FromBody] LogHoursDto dto, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Logging {Hours} hours on task {Id}", dto.Hours, id);
-        try
-        {
-            var updated = await _service.LogHoursAsync(id, dto, cancellationToken);
-            return Ok(updated);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-    */
 
     /// <summary>
     /// Overrides specific fields on a task, pinning them so Jira re-import preserves these values.

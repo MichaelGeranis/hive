@@ -312,6 +312,12 @@ public class TeamTask
         SetOverride("PreviousSprintsStoryPoints");
     }
 
+    public void OverrideSprint(string? sprint)
+    {
+        Sprint = sprint?.Trim() ?? string.Empty;
+        SetOverride("Sprint");
+    }
+
     private static void ValidateTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))

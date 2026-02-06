@@ -32,6 +32,7 @@ public interface ITeamTaskService
     Task<TeamTaskDto> ReopenAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> OverrideFieldsAsync(Guid id, OverrideTeamTaskFieldsDto dto, CancellationToken cancellationToken = default);
     Task<TeamTaskDto> ClearOverridesAsync(Guid id, ClearTeamTaskOverridesDto dto, CancellationToken cancellationToken = default);
+    Task<TeamTaskDto> DuplicateAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }

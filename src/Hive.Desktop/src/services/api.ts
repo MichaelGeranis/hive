@@ -281,6 +281,7 @@ export const tasksApi = {
   getOverdue: () => api.get<TeamTask[]>('/teamtasks/overdue').then(r => r.data),
   create: (data: any) => api.post<TeamTask>('/teamtasks', data).then(r => r.data),
   update: (id: string, data: any) => api.put<TeamTask>(`/teamtasks/${id}`, data).then(r => r.data),
+  duplicate: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/duplicate`).then(r => r.data),
   assign: (id: string, assigneeId: string | null) =>
     api.post<TeamTask>(`/teamtasks/${id}/assign`, { assigneeId }).then(r => r.data),
   start: (id: string) => api.post<TeamTask>(`/teamtasks/${id}/start`).then(r => r.data),

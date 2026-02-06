@@ -100,6 +100,8 @@ public record OverrideTeamTaskFieldsDto
     public bool HasTimeSpentOverride { get; init; }
     public int? PreviousSprintsStoryPoints { get; init; }
     public bool HasPreviousSprintsStoryPointsOverride { get; init; }
+    public string? Sprint { get; init; }
+    public bool HasSprintOverride { get; init; }
 }
 
 /// <summary>

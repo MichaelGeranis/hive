@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin, Copy } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
@@ -98,6 +98,8 @@ export default function Tasks() {
   const [overrideTimeSpentMinutes, setOverrideTimeSpentMinutes] = useState<string>('')
   const [overridePreviousSPEnabled, setOverridePreviousSPEnabled] = useState(false)
   const [overridePreviousSP, setOverridePreviousSP] = useState<string>('')
+  const [overrideSprintEnabled, setOverrideSprintEnabled] = useState(false)
+  const [overrideSprint, setOverrideSprint] = useState<string>('')
   const [overrideSaving, setOverrideSaving] = useState(false)
 
   const resetForm = () => {
@@ -141,6 +143,7 @@ export default function Tasks() {
     const isEstimationOverridden = overriddenFields.includes('storypoints')
     const isTimeSpentOverridden = overriddenFields.includes('timespentminutes')
     const isPreviousSPOverridden = overriddenFields.includes('previoussprintsstorypoints')
+    const isSprintOverridden = overriddenFields.includes('sprint')
     setOverrideAssigneeEnabled(isAssigneeOverridden)
     setOverrideAssigneeId(task.assigneeId || '')
     setOverrideEstimationEnabled(isEstimationOverridden)
@@ -149,6 +152,8 @@ export default function Tasks() {
     setOverrideTimeSpentMinutes(task.timeSpentMinutes?.toString() || '')
     setOverridePreviousSPEnabled(isPreviousSPOverridden)
     setOverridePreviousSP(task.previousSprintsStoryPoints?.toString() || '')
+    setOverrideSprintEnabled(isSprintOverridden)
+    setOverrideSprint(task.sprint || '')
     setShowOverrideModal(true)
   }, [])
 
@@ -170,6 +175,8 @@ export default function Tasks() {
         hasTimeSpentOverride: overrideTimeSpentEnabled,
         previousSprintsStoryPoints: overridePreviousSPEnabled ? (overridePreviousSP ? parseInt(overridePreviousSP) : null) : null,
         hasPreviousSprintsStoryPointsOverride: overridePreviousSPEnabled,
+        sprint: overrideSprintEnabled ? (overrideSprint || null) : null,
+        hasSprintOverride: overrideSprintEnabled,
       }
       await tasksApi.overrideFields(overrideTask.id, dto)
       closeOverrideModal()
@@ -412,6 +419,33 @@ export default function Tasks() {
         console.error(err)
         showError(getErrorMessage(err))
       }
+    }
+  }
+
+  const handleEdit = (task: TeamTask) => {
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      type: task.type,
+      priority: task.priority,
+      assigneeId: task.assigneeId || '',
+      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+      storyPoints: task.storyPoints?.toString() || '',
+      labels: task.labels || '',
+      sprint: task.sprint || '',
+      timeSpentMinutes: task.timeSpentMinutes?.toString() || ''
+    })
+    setEditingId(task.id)
+    setShowForm(true)
+  }
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      await tasksApi.duplicate(id)
+      loadData()
+    } catch (err) {
+      console.error(err)
+      showError(getErrorMessage(err))
     }
   }
 
@@ -1182,6 +1216,43 @@ export default function Tasks() {
                   </div>
                 )}
 
+                {/* Sprint Override */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={overrideSprintEnabled}
+                        onChange={(e) => setOverrideSprintEnabled(e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Sprint</span>
+                      {isFieldOverridden(overrideTask, 'Sprint') && (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <Pin className="w-3 h-3" /> Pinned
+                        </span>
+                      )}
+                    </label>
+                    {isFieldOverridden(overrideTask, 'Sprint') && (
+                      <button
+                        onClick={() => handleClearOverride(overrideTask.id, 'Sprint')}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Override
+                      </button>
+                    )}
+                  </div>
+                  {overrideSprintEnabled && (
+                    <input
+                      type="text"
+                      value={overrideSprint}
+                      onChange={(e) => setOverrideSprint(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                      placeholder="Sprint name (e.g., Sprint 42)"
+                    />
+                  )}
+                </div>
+
                 <div className="flex gap-3 pt-4 border-t dark:border-slate-700">
                   <button
                     type="button"
@@ -1192,7 +1263,7 @@ export default function Tasks() {
                   </button>
                   <button
                     onClick={handleOverrideSave}
-                    disabled={overrideSaving || (!overrideAssigneeEnabled && !overrideEstimationEnabled && !overrideTimeSpentEnabled && !overridePreviousSPEnabled)}
+                    disabled={overrideSaving || (!overrideAssigneeEnabled && !overrideEstimationEnabled && !overrideTimeSpentEnabled && !overridePreviousSPEnabled && !overrideSprintEnabled)}
                     className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {overrideSaving ? 'Saving...' : 'Save Overrides'}
@@ -1426,6 +1497,7 @@ export default function Tasks() {
                         <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                           <Zap className="w-4 h-4" />
                           {task.sprint}
+                          {isFieldOverridden(task, 'Sprint') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
                         </span>
                       )}
                     </div>
@@ -1442,15 +1514,33 @@ export default function Tasks() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => openOverrideModal(task)}
+                      onClick={() => handleEdit(task)}
                       className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                      title="Edit task"
                     >
                       <Pencil className="w-4 h-4" />
                       Edit
                     </button>
                     <button
+                      onClick={() => handleDuplicate(task.id)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                      title="Duplicate task"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Duplicate
+                    </button>
+                    <button
+                      onClick={() => openOverrideModal(task)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                      title="Pin fields to preserve during Jira import"
+                    >
+                      <Pin className="w-4 h-4" />
+                      Pin
+                    </button>
+                    <button
                       onClick={() => handleDelete(task.id)}
                       className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="Delete task"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete

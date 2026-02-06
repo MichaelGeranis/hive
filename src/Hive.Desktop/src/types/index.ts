@@ -224,6 +224,8 @@ export interface OverrideTeamTaskFieldsDto {
   hasTimeSpentOverride: boolean
   previousSprintsStoryPoints?: number | null
   hasPreviousSprintsStoryPointsOverride: boolean
+  sprint?: string | null
+  hasSprintOverride: boolean
 }
 
 export interface ClearTeamTaskOverridesDto {

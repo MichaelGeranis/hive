@@ -385,6 +385,11 @@ public class TeamTaskService : ITeamTaskService
             entity.OverridePreviousSprintsStoryPoints(dto.PreviousSprintsStoryPoints);
         }
 
+        if (dto.HasSprintOverride)
+        {
+            entity.OverrideSprint(dto.Sprint);
+        }
+
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -418,6 +423,40 @@ public class TeamTaskService : ITeamTaskService
             cancellationToken);
 
         return await MapToDtoAsync(entity, cancellationToken);
+    }
+
+    public async Task<TeamTaskDto> DuplicateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var source = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        // Create a new task with the same properties (excluding ID and overrides)
+        var duplicated = new TeamTask(
+            $"{source.Title} (Copy)",
+            source.Description,
+            source.Type,
+            source.Priority,
+            source.AssigneeId,
+            source.ProjectId,
+            source.DueDate,
+            source.EstimatedHours,
+            source.StoryPoints,
+            source.Tags,
+            source.Labels,
+            source.Sprint,
+            source.TimeSpentMinutes,
+            source.ParentId);
+
+        var created = await _taskRepository.AddAsync(duplicated, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Task,
+            created.Id,
+            $"Task - {created.Title}",
+            $"Task duplicated from '{source.Title}'",
+            cancellationToken);
+
+        return await MapToDtoAsync(created, cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
