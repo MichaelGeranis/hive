@@ -305,7 +305,9 @@ public class JiraImportService : IJiraImportService
                     var overriddenTimeSpent = existingTask.IsFieldOverridden("TimeSpentMinutes");
                     var overriddenAssignee = existingTask.IsFieldOverridden("AssigneeId");
                     var overriddenPreviousSP = existingTask.IsFieldOverridden("PreviousSprintsStoryPoints");
+                    var overriddenSprint = existingTask.IsFieldOverridden("Sprint");
                     var existingPreviousSP = existingTask.PreviousSprintsStoryPoints;
+                    var existingSprint = existingTask.Sprint;
 
                     // Update existing task, preserving overridden field values
                     existingTask.Update(
@@ -318,7 +320,7 @@ public class JiraImportService : IJiraImportService
                         overriddenEstimation ? existingTask.StoryPoints : taskData.StoryPoints,
                         taskData.Tags,
                         taskData.Labels,
-                        taskData.Sprint,
+                        overriddenSprint ? existingSprint : taskData.Sprint,
                         overriddenTimeSpent ? existingTask.TimeSpentMinutes : taskData.TimeSpentMinutes,
                         parentId);
 
@@ -336,11 +338,14 @@ public class JiraImportService : IJiraImportService
                     // Update status
                     UpdateTaskStatus(existingTask, taskData.Status);
 
-                    // Re-apply PreviousSprintsStoryPoints override if it was set
-                    // (This is a Hive-only field, not from Jira, so always preserve it)
+                    // Re-apply overrides for Hive-only fields
                     if (overriddenPreviousSP)
                     {
                         existingTask.OverridePreviousSprintsStoryPoints(existingPreviousSP);
+                    }
+                    if (overriddenSprint)
+                    {
+                        existingTask.OverrideSprint(existingSprint);
                     }
 
                     await _taskRepository.UpdateAsync(existingTask, cancellationToken);
