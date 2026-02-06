@@ -191,7 +191,7 @@ public class SprintCapacityService : ISprintCapacityService
         }
 
         var lostCapacity = (double)totalLeaveDays / workingDaysInSprint;
-        return (int)Math.Floor(Math.Max(0, totalTeamSize - lostCapacity));
+        return (int)Math.Round(Math.Max(0, totalTeamSize - lostCapacity));
     }
 
     private static int GetWorkingDays(DateTime start, DateTime end)
