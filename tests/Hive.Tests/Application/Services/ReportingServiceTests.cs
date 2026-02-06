@@ -804,10 +804,10 @@ public class ReportingServiceTests
     #region GetCapacityAnalysisAsync — TotalStoryPoints Tests
 
     [Fact]
-    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_SumsParentSPForCurrentSprint()
+    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_SumsNewSPFromTasksInSprint()
     {
-        // Create a current sprint with tasks linked to parents.
-        // TotalStoryPoints should be the sum of SP from parent child tasks.
+        // Create a current sprint with tasks.
+        // TotalStoryPoints should be the sum of new SP from tasks in the sprint (excluding carried over).
         var currentSprint = new Sprint("LP_1Q25_S1");
         currentSprint.UpdateDates(
             DateTime.UtcNow.Date.AddDays(-7),
@@ -817,7 +817,7 @@ public class ReportingServiceTests
         var parent = new Parent("Epic A");
         typeof(Parent).GetProperty("Id")!.SetValue(parent, parentId);
 
-        // Two tasks in this sprint, both under the same parent
+        // Two tasks in this sprint
         var task1 = new TeamTask("T1", sprint: currentSprint.Name, storyPoints: 5, parentId: parentId);
         task1.Start();
         task1.Complete();
@@ -844,19 +844,21 @@ public class ReportingServiceTests
         // Assert
         result.CurrentSprint.Should().NotBeNull();
         result.CurrentSprint!.TotalStoryPoints.Should().Be(13,
-            "sum of child task SP (5 + 8) for the parent in this sprint");
+            "sum of new SP from tasks in this sprint (5 + 8)");
     }
 
     [Fact]
-    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_ZeroWhenNoParentTasks()
+    public async Task GetCapacityAnalysisAsync_TotalStoryPoints_ExcludesCarriedOverPoints()
     {
-        // Sprint tasks with no parent → TotalStoryPoints should be 0.
+        // Task with carried over points should only count new SP in TotalStoryPoints.
         var currentSprint = new Sprint("LP_1Q25_S1");
         currentSprint.UpdateDates(
             DateTime.UtcNow.Date.AddDays(-7),
             DateTime.UtcNow.Date.AddDays(7));
 
-        var task = new TeamTask("T1", sprint: currentSprint.Name, storyPoints: 5);
+        // Task with 8 total SP, but 3 were from previous sprints → only 5 new SP
+        var task = new TeamTask("T1", sprint: currentSprint.Name, storyPoints: 8);
+        task.OverridePreviousSprintsStoryPoints(3);
 
         var directReports = CreateDirectReports(3);
 
@@ -878,7 +880,8 @@ public class ReportingServiceTests
 
         // Assert
         result.CurrentSprint.Should().NotBeNull();
-        result.CurrentSprint!.TotalStoryPoints.Should().Be(0);
+        result.CurrentSprint!.TotalStoryPoints.Should().Be(5,
+            "only new SP should be counted (8 total - 3 carried over = 5)");
     }
 
     #endregion

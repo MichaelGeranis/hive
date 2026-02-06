@@ -1233,16 +1233,6 @@ public class ReportingService : IReportingService
             .GroupBy(x => x.LatestSprint)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
-        // Pre-compute parent total story points: for each parent, sum SP from all its child tasks
-        var parentSPMap = new Dictionary<Guid, int>();
-        var tasksByParentId = tasks
-            .Where(t => t.ParentId.HasValue)
-            .GroupBy(t => t.ParentId!.Value);
-        foreach (var group in tasksByParentId)
-        {
-            parentSPMap[group.Key] = group.Sum(t => t.StoryPoints ?? 0);
-        }
-
         // Determine current sprint based on today's date (sprint that contains today)
         var today = DateTime.UtcNow.Date;
         var currentSprintEntity = sprints
@@ -1305,13 +1295,13 @@ public class ReportingService : IReportingService
             var carriedOverCompletedPoints = completedTasks.Sum(t => t.PreviousSprintsStoryPoints ?? 0);
             var completedPoints = newCompletedPoints + carriedOverCompletedPoints;
 
-            // Compute total story points from parents involved in this sprint
-            var sprintParentIds = sprintTasks
-                .Where(t => t.ParentId.HasValue)
-                .Select(t => t.ParentId!.Value)
-                .Distinct();
-            var totalStoryPoints = sprintParentIds
-                .Sum(pid => parentSPMap.GetValueOrDefault(pid, 0));
+            // Compute total story points for this sprint (new points only, excluding carried over)
+            var totalStoryPoints = sprintTasks.Sum(t =>
+            {
+                if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                    return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                return t.StoryPoints ?? 0;
+            });
 
             var committedPoints = capacity?.TotalCapacityPoints ?? 0;
             var utilization = committedPoints > 0
