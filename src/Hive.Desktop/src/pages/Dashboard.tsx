@@ -198,26 +198,33 @@ export default function Dashboard() {
     loadCoreData()
   }, [sprintFilter])
 
-  // Lazy load velocity data when widget becomes visible
+  // Clear lazy-loaded data when sprint filter changes so it reloads
+  useEffect(() => {
+    setVelocity(null)
+    setAccuracy(null)
+    setCapacityAnalysis(null)
+  }, [sprintFilter])
+
+  // Lazy load velocity data when widget becomes visible or filter changes
   useEffect(() => {
     if (widgets.teamVelocity && !velocity && !loadingStates.velocity) {
       loadVelocityData()
     }
-  }, [widgets.teamVelocity, sprintFilter])
+  }, [widgets.teamVelocity, velocity])
 
-  // Lazy load accuracy data when widget becomes visible
+  // Lazy load accuracy data when widget becomes visible or filter changes
   useEffect(() => {
     if (widgets.estimationAccuracy && !accuracy && !loadingStates.accuracy) {
       loadAccuracyData()
     }
-  }, [widgets.estimationAccuracy, sprintFilter])
+  }, [widgets.estimationAccuracy, accuracy])
 
-  // Lazy load capacity data when widget becomes visible
+  // Lazy load capacity data when widget becomes visible or filter changes
   useEffect(() => {
     if (widgets.capacityAnalysis && !capacityAnalysis && !loadingStates.capacity) {
       loadCapacityData()
     }
-  }, [widgets.capacityAnalysis, sprintFilter])
+  }, [widgets.capacityAnalysis, capacityAnalysis])
 
   const loadCoreData = async () => {
     try {
