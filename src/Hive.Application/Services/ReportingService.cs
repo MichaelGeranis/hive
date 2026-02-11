@@ -541,7 +541,7 @@ public class ReportingService : IReportingService
 
         // Group by assignee across both support and maintenance tasks
         var maintenanceByAssigneeMap = allMaintenanceTasks
-            .GroupBy(t => t.AssigneeId)
+            .GroupBy(t => t.AssigneeId ?? Guid.Empty)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var allAssigneeIds = allSupportTasks.Select(t => t.AssigneeId)
@@ -551,9 +551,10 @@ public class ReportingService : IReportingService
         var supportByAssignee = allAssigneeIds
             .Select(assigneeId =>
             {
-                var supportTasks = allSupportTasks.Where(t => t.AssigneeId == assigneeId).ToList();
+                var key = assigneeId ?? Guid.Empty;
+                var supportTasks = allSupportTasks.Where(t => (t.AssigneeId ?? Guid.Empty) == key).ToList();
                 var supportCompleted = supportTasks.Where(t => t.Status == TaskStatus.Done).ToList();
-                var maintTasks = maintenanceByAssigneeMap.GetValueOrDefault(assigneeId) ?? [];
+                var maintTasks = maintenanceByAssigneeMap.GetValueOrDefault(key) ?? [];
                 var maintCompleted = maintTasks.Where(t => t.Status == TaskStatus.Done).ToList();
 
                 return new SupportByAssigneeDto
@@ -561,7 +562,7 @@ public class ReportingService : IReportingService
                     AssigneeId = assigneeId,
                     AssigneeName = assigneeId.HasValue && directReportMap.TryGetValue(assigneeId.Value, out var name)
                         ? name
-                        : (assigneeId.HasValue ? "Unknown" : "Unassigned"),
+                        : (!assigneeId.HasValue || assigneeId.Value == Guid.Empty ? "Unassigned" : "Unknown"),
                     CompletedHours = Math.Round(supportCompleted.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
                     CompletedTaskCount = supportCompleted.Count,
                     AllHours = Math.Round(supportTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1),
