@@ -523,8 +523,8 @@ public class ReportingService : IReportingService
             .Where(t => t.TotalHours > 0)
             .ToList();
 
-        // Calculate support distribution from tasks tagged with 'support'
-        var allSupportTasks = allTasks
+        // Calculate support distribution from tasks tagged with 'support' (respects sprint filter)
+        var allSupportTasks = tasks
             .Where(t => t.Labels.Contains("support", StringComparison.OrdinalIgnoreCase) ||
                         t.Tags.Contains("support", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -532,8 +532,8 @@ public class ReportingService : IReportingService
             .Where(t => t.Status == TaskStatus.Done)
             .ToList();
 
-        // Calculate maintenance distribution from tasks tagged with 'maintenance'
-        var allMaintenanceTasks = allTasks
+        // Calculate maintenance distribution from tasks tagged with 'maintenance' (respects sprint filter)
+        var allMaintenanceTasks = tasks
             .Where(t => t.Labels.Contains("maintenance", StringComparison.OrdinalIgnoreCase) ||
                         t.Tags.Contains("maintenance", StringComparison.OrdinalIgnoreCase))
             .ToList();

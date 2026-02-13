@@ -1177,7 +1177,6 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support & Maintenance Hours"
-              badge={ALL_SPRINTS_BADGE}
               subtitle={`${supportDistribution.allTaskCount} support · ${supportDistribution.maintenanceAllTaskCount} maintenance`}
             />
             <CardContent>
@@ -1250,7 +1249,6 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               title="Support & Maintenance by Assignee"
-              badge={ALL_SPRINTS_BADGE}
               subtitle={`Support: ${supportDistribution.allHours}h · Maintenance: ${supportDistribution.maintenanceAllHours}h`}
             />
             <CardContent className="h-80">

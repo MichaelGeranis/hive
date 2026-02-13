@@ -244,8 +244,6 @@ The Dashboard page has a "Sprint History" dropdown filter that limits data to th
 | TODOs (stat) | `notesApi.getPending()` | Independent API, no sprint param |
 | Projects Distribution | Local computation from `tasksApi.getAll()` | `tasksApi.getAll()` fetches all tasks |
 | Members by Project | Local computation from `tasksApi.getAll()` | Same as above |
-| Support Hours | `dashboard.tasks.supportDistribution` | Backend uses `allTasks` (pre-filter variable) |
-| Support Hours by Assignee | `dashboard.tasks.supportDistribution` | Same as above |
 | Knowledge Level Suggestions | `knowledgePointsApi.getSuggestions()` | Independent API, no sprint param |
 | Team Sentiment | `sentimentApi` (own component) | Independent API, no sprint param |
 
@@ -263,13 +261,15 @@ The Dashboard page has a "Sprint History" dropdown filter that limits data to th
 | Sprint Capacity Suggestions | Uses `sprintFilter` to limit upcoming sprints shown |
 | Team Velocity | `reportsApi.getTeamVelocity(sprintFilter)` |
 | Estimation Accuracy | `reportsApi.getEstimationAccuracy(sprintFilter)` |
+| Support Hours | `dashboard.tasks.supportDistribution` |
+| Support Hours by Assignee | `dashboard.tasks.supportDistribution` |
 
 ### Key backend detail
 
 In `ReportingService.GetTasksAnalyticsAsync(sprintCount)`:
-- The `tasks` variable is filtered by sprint (lines 352-381)
+- The `tasks` variable is filtered by sprint (lines 362-389)
 - The `projects` variable is **not** filtered — `TotalProjects = projects.Count` uses all projects
-- The `allTasks` variable (pre-filter) is used for support distribution (line 517)
+- Support and maintenance distribution now use filtered `tasks` variable (respects sprint filter)
 - The `allSprints`, `directReports`, `parents` variables are never sprint-filtered
 
 ### Adding new dashboard widgets
