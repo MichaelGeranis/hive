@@ -96,6 +96,20 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update support labels if provided
+        if (dto.SupportLabels is not null)
+        {
+            entity.UpdateSupportLabels(SerializeLabels(dto.SupportLabels));
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
+        // Update maintenance labels if provided
+        if (dto.MaintenanceLabels is not null)
+        {
+            entity.UpdateMaintenanceLabels(SerializeLabels(dto.MaintenanceLabels));
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         return MapToDto(entity);
     }
 
@@ -103,6 +117,8 @@ public class AppSettingsService : IAppSettingsService
     {
         var mappings = DeserializeMappings(entity.StoryPointMappings);
         var tshirtMappings = DeserializeTshirtSizeMappings(entity.TshirtSizeMappings);
+        var supportLabels = DeserializeLabels(entity.SupportLabels);
+        var maintenanceLabels = DeserializeLabels(entity.MaintenanceLabels);
 
         return new AppSettingsDto
         {
@@ -118,7 +134,9 @@ public class AppSettingsService : IAppSettingsService
             MaxInProgressTasks = entity.MaxInProgressTasks,
             MaxBlockedTasks = entity.MaxBlockedTasks,
             MaxInReviewTasks = entity.MaxInReviewTasks,
-            MinProjectMembers = entity.MinProjectMembers
+            MinProjectMembers = entity.MinProjectMembers,
+            SupportLabels = supportLabels,
+            MaintenanceLabels = maintenanceLabels
         };
     }
 
@@ -183,6 +201,28 @@ public class AppSettingsService : IAppSettingsService
         catch
         {
             return GetDefaultTshirtSizeMappings();
+        }
+    }
+
+    private static string SerializeLabels(List<string> labels)
+    {
+        return JsonSerializer.Serialize(labels);
+    }
+
+    private static List<string> DeserializeLabels(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
         }
     }
 }

@@ -27,6 +27,11 @@ public class AppSettings
     public int MaxInReviewTasks { get; private set; } = 1;
     public int MinProjectMembers { get; private set; } = 2;
 
+    // Support & Maintenance label configuration
+    // JSON array of strings, e.g., ["support", "bug", "hotfix"]
+    public string SupportLabels { get; private set; } = "[\"support\"]";
+    public string MaintenanceLabels { get; private set; } = "[\"maintenance\"]";
+
     // Private constructor for EF Core / serialization
     private AppSettings() { }
 
@@ -76,6 +81,18 @@ public class AppSettings
         MaxBlockedTasks = maxBlocked > 0 ? maxBlocked : 1;
         MaxInReviewTasks = maxInReview > 0 ? maxInReview : 1;
         MinProjectMembers = minProjectMembers > 0 ? minProjectMembers : 2;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateSupportLabels(string supportLabels)
+    {
+        SupportLabels = supportLabels ?? "[\"support\"]";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateMaintenanceLabels(string maintenanceLabels)
+    {
+        MaintenanceLabels = maintenanceLabels ?? "[\"maintenance\"]";
         UpdatedAt = DateTime.UtcNow;
     }
 }

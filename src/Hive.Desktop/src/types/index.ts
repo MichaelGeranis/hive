@@ -649,6 +649,8 @@ export interface AppSettings {
   maxBlockedTasks: number
   maxInReviewTasks: number
   minProjectMembers: number
+  supportLabels: string[]
+  maintenanceLabels: string[]
   createdAt: string
   updatedAt?: string
 }
@@ -665,6 +667,8 @@ export interface UpdateAppSettings {
   maxBlockedTasks?: number
   maxInReviewTasks?: number
   minProjectMembers?: number
+  supportLabels?: string[]
+  maintenanceLabels?: string[]
 }
 
 // Jira Import

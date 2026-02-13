@@ -353,6 +353,7 @@ public class ReportingService : IReportingService
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var parents = await _parentRepository.GetAllAsync(cancellationToken);
+        var appSettings = await _appSettingsRepository.GetAsync(cancellationToken);
 
         // Exclude tasks that are also parents from counts and estimations
         var filteredTasks = ExcludeParentTasks(allTasks, parents);
@@ -523,19 +524,21 @@ public class ReportingService : IReportingService
             .Where(t => t.TotalHours > 0)
             .ToList();
 
-        // Calculate support distribution from tasks tagged with 'support' (respects sprint filter)
+        // Get configured support and maintenance labels from settings
+        var supportLabels = DeserializeLabels(appSettings?.SupportLabels);
+        var maintenanceLabels = DeserializeLabels(appSettings?.MaintenanceLabels);
+
+        // Calculate support distribution from tasks matching configured support labels (respects sprint filter)
         var allSupportTasks = tasks
-            .Where(t => t.Labels.Contains("support", StringComparison.OrdinalIgnoreCase) ||
-                        t.Tags.Contains("support", StringComparison.OrdinalIgnoreCase))
+            .Where(t => ContainsAnyLabel(t, supportLabels))
             .ToList();
         var completedSupportTasks = allSupportTasks
             .Where(t => t.Status == TaskStatus.Done)
             .ToList();
 
-        // Calculate maintenance distribution from tasks tagged with 'maintenance' (respects sprint filter)
+        // Calculate maintenance distribution from tasks matching configured maintenance labels (respects sprint filter)
         var allMaintenanceTasks = tasks
-            .Where(t => t.Labels.Contains("maintenance", StringComparison.OrdinalIgnoreCase) ||
-                        t.Tags.Contains("maintenance", StringComparison.OrdinalIgnoreCase))
+            .Where(t => ContainsAnyLabel(t, maintenanceLabels))
             .ToList();
         var completedMaintenanceTasks = allMaintenanceTasks
             .Where(t => t.Status == TaskStatus.Done)
@@ -2084,5 +2087,47 @@ public class ReportingService : IReportingService
         {
             worksheet.Column(i).AutoFit();
         }
+    }
+
+    /// <summary>
+    /// Deserializes a JSON string into a list of labels.
+    /// </summary>
+    private static List<string> DeserializeLabels(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// Checks if a task contains any of the specified labels in its Labels or Tags fields.
+    /// </summary>
+    private static bool ContainsAnyLabel(TeamTask task, List<string> labels)
+    {
+        if (labels.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var label in labels)
+        {
+            if (task.Labels.Contains(label, StringComparison.OrdinalIgnoreCase) ||
+                task.Tags.Contains(label, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

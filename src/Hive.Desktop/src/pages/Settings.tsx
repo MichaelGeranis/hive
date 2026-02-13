@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt, Gauge } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt, Gauge, Tag, X, Plus } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi, backupApi, sentimentApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
@@ -63,6 +63,15 @@ export default function Settings() {
   const [thresholdsSaved, setThresholdsSaved] = useState(false)
   const [thresholdsError, setThresholdsError] = useState<string | null>(null)
 
+  // Support & Maintenance Labels state
+  const [supportLabels, setSupportLabels] = useState<string[]>(['support'])
+  const [maintenanceLabels, setMaintenanceLabels] = useState<string[]>(['maintenance'])
+  const [supportLabelInput, setSupportLabelInput] = useState('')
+  const [maintenanceLabelInput, setMaintenanceLabelInput] = useState('')
+  const [savingLabels, setSavingLabels] = useState(false)
+  const [labelsSaved, setLabelsSaved] = useState(false)
+  const [labelsError, setLabelsError] = useState<string | null>(null)
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -83,6 +92,9 @@ export default function Settings() {
       setMaxBlockedTasks(settings.maxBlockedTasks ?? 1)
       setMaxInReviewTasks(settings.maxInReviewTasks ?? 1)
       setMinProjectMembers(settings.minProjectMembers ?? 2)
+      // Load support & maintenance labels
+      setSupportLabels(settings.supportLabels ?? ['support'])
+      setMaintenanceLabels(settings.maintenanceLabels ?? ['maintenance'])
     } catch (err) {
       console.error('Failed to load settings', err)
       setError('Failed to load settings. Using default values.')
@@ -311,6 +323,49 @@ export default function Settings() {
       setThresholdsError('Failed to reset threshold settings. Please try again.')
     } finally {
       setSavingThresholds(false)
+    }
+  }
+
+  // Support & Maintenance Labels handlers
+  const handleAddSupportLabel = () => {
+    const label = supportLabelInput.trim()
+    if (label && !supportLabels.includes(label.toLowerCase())) {
+      setSupportLabels([...supportLabels, label.toLowerCase()])
+      setSupportLabelInput('')
+    }
+  }
+
+  const handleRemoveSupportLabel = (label: string) => {
+    setSupportLabels(supportLabels.filter(l => l !== label))
+  }
+
+  const handleAddMaintenanceLabel = () => {
+    const label = maintenanceLabelInput.trim()
+    if (label && !maintenanceLabels.includes(label.toLowerCase())) {
+      setMaintenanceLabels([...maintenanceLabels, label.toLowerCase()])
+      setMaintenanceLabelInput('')
+    }
+  }
+
+  const handleRemoveMaintenanceLabel = (label: string) => {
+    setMaintenanceLabels(maintenanceLabels.filter(l => l !== label))
+  }
+
+  const handleSaveLabels = async () => {
+    try {
+      setSavingLabels(true)
+      setLabelsError(null)
+      await settingsApi.update({
+        supportLabels,
+        maintenanceLabels
+      })
+      setLabelsSaved(true)
+      setTimeout(() => setLabelsSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to save label settings', err)
+      setLabelsError('Failed to save label settings. Please try again.')
+    } finally {
+      setSavingLabels(false)
     }
   }
 
@@ -964,6 +1019,137 @@ export default function Settings() {
             {thresholdsSaved && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 Dashboard threshold settings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Support & Maintenance Labels */}
+      <Card>
+        <CardHeader
+          title="Support & Maintenance Labels"
+          subtitle="Configure which labels identify support and maintenance work"
+          action={<Tag className="w-5 h-5 text-purple-500" />}
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Define which labels/tags should be counted as "support" vs "maintenance" work in the Dashboard widgets.
+            </p>
+
+            {/* Support Labels */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Support Labels</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Tasks with these labels/tags will be counted in the Support Hours widgets
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                {supportLabels.map(label => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-sm"
+                  >
+                    {label}
+                    <button
+                      onClick={() => handleRemoveSupportLabel(label)}
+                      className="ml-1 hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5"
+                      disabled={savingLabels}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={supportLabelInput}
+                  onChange={(e) => setSupportLabelInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSupportLabel()}
+                  placeholder="e.g., bug, hotfix, incident"
+                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  disabled={savingLabels}
+                />
+                <button
+                  onClick={handleAddSupportLabel}
+                  disabled={savingLabels || !supportLabelInput.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Maintenance Labels */}
+            <div className="pt-4 border-t dark:border-slate-700 space-y-3">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Maintenance Labels</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Tasks with these labels/tags will be counted in the Maintenance Hours widgets
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                {maintenanceLabels.map(label => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm"
+                  >
+                    {label}
+                    <button
+                      onClick={() => handleRemoveMaintenanceLabel(label)}
+                      className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+                      disabled={savingLabels}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={maintenanceLabelInput}
+                  onChange={(e) => setMaintenanceLabelInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddMaintenanceLabel()}
+                  placeholder="e.g., tech-debt, refactor, chore"
+                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  disabled={savingLabels}
+                />
+                <button
+                  onClick={handleAddMaintenanceLabel}
+                  disabled={savingLabels || !maintenanceLabelInput.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {labelsError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {labelsError}
+              </div>
+            )}
+
+            <div className="pt-4 border-t dark:border-slate-700 flex gap-3">
+              <button
+                onClick={handleSaveLabels}
+                disabled={savingLabels}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-5 h-5" />
+                {savingLabels ? 'Saving...' : labelsSaved ? 'Saved!' : 'Save Changes'}
+              </button>
+            </div>
+
+            {labelsSaved && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
+                Label settings saved successfully!
               </div>
             )}
           </div>

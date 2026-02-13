@@ -24,6 +24,10 @@ public record AppSettingsDto
     public int MaxBlockedTasks { get; init; }
     public int MaxInReviewTasks { get; init; }
     public int MinProjectMembers { get; init; }
+
+    // Support & Maintenance label configuration
+    public List<string> SupportLabels { get; init; } = new();
+    public List<string> MaintenanceLabels { get; init; } = new();
 }
 
 public record StoryPointMapping
@@ -64,4 +68,8 @@ public record UpdateAppSettingsDto
     public int? MaxBlockedTasks { get; init; }
     public int? MaxInReviewTasks { get; init; }
     public int? MinProjectMembers { get; init; }
+
+    // Support & Maintenance label configuration
+    public List<string>? SupportLabels { get; init; }
+    public List<string>? MaintenanceLabels { get; init; }
 }
