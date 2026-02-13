@@ -1052,7 +1052,7 @@ public class ReportingService : IReportingService
                 var estimated = tasks.Sum(t => t.EstimatedHours ?? 0);
                 var actual = (int)Math.Round(tasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
-                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+                var accuracy = estimated > 0 ? Math.Round(Math.Min(estimated, actual) / (double)Math.Max(estimated, actual) * 100, 1) : 0;
 
                 return new SprintAccuracyDto
                 {
@@ -1095,7 +1095,7 @@ public class ReportingService : IReportingService
                 var estimated = g.Sum(t => t.EstimatedHours ?? 0);
                 var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
-                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+                var accuracy = estimated > 0 ? Math.Round(Math.Min(estimated, actual) / (double)Math.Max(estimated, actual) * 100, 1) : 0;
 
                 return new AssigneeAccuracyDto
                 {
@@ -1122,7 +1122,7 @@ public class ReportingService : IReportingService
                 var estimated = g.Sum(t => t.EstimatedHours ?? 0);
                 var actual = (int)Math.Round(g.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0);
                 var variance = actual - estimated;
-                var accuracy = estimated > 0 ? Math.Max(0, Math.Round(100 - Math.Abs(variance * 100.0 / estimated), 1)) : 0;
+                var accuracy = estimated > 0 ? Math.Round(Math.Min(estimated, actual) / (double)Math.Max(estimated, actual) * 100, 1) : 0;
 
                 return new ProjectAccuracyDto
                 {
