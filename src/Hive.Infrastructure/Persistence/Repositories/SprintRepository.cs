@@ -31,7 +31,7 @@ public class SprintRepository : ISprintRepository
     public Task<IReadOnlyList<Sprint>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = _context.Sprints.Values
-            .OrderByDescending(x => x.GetSortOrder())
+            .OrderByDescending(x => x.GetOrderingKey())
             .ToList();
         return Task.FromResult<IReadOnlyList<Sprint>>(entities);
     }
@@ -40,7 +40,7 @@ public class SprintRepository : ISprintRepository
     {
         var entities = _context.Sprints.Values
             .Where(x => x.TeamName.Equals(teamName.Trim(), StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.GetSortOrder())
+            .OrderByDescending(x => x.GetOrderingKey())
             .ToList();
         return Task.FromResult<IReadOnlyList<Sprint>>(entities);
     }

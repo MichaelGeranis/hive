@@ -135,7 +135,7 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
 
         var workloads = new List<SprintWorkloadSummaryDto>();
 
-        foreach (var sprint in sprints.OrderBy(s => s.GetSortOrder()))
+        foreach (var sprint in sprints.OrderBy(s => s.GetOrderingKey()))
         {
             var sprintAllocations = allocations.Where(a => a.SprintId == sprint.Id).ToList();
 
@@ -262,20 +262,20 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
         IReadOnlyList<Sprint> sprints)
     {
         var initiativeNames = initiatives.ToDictionary(i => i.Id, i => i.Name);
-        var sprintOrder = sprints.ToDictionary(s => s.Id, s => s.GetSortOrder());
+        var sprintDates = sprints.ToDictionary(s => s.Id, s => s.GetEstimatedStartDate());
 
         // Group allocations by initiative to find earliest sprint
         var earliestSprintByInitiative = allocations
             .GroupBy(a => a.InitiativeId)
             .ToDictionary(
                 g => g.Key,
-                g => g.Min(a => sprintOrder.GetValueOrDefault(a.SprintId, int.MaxValue)));
+                g => g.Min(a => sprintDates.GetValueOrDefault(a.SprintId, DateTime.MaxValue)));
 
         var latestSprintByInitiative = allocations
             .GroupBy(a => a.InitiativeId)
             .ToDictionary(
                 g => g.Key,
-                g => g.Max(a => sprintOrder.GetValueOrDefault(a.SprintId, 0)));
+                g => g.Max(a => sprintDates.GetValueOrDefault(a.SprintId, DateTime.MinValue)));
 
         foreach (var dependency in dependencies.Where(d => d.Type == DependencyType.FinishToStart))
         {
@@ -283,7 +283,7 @@ public class QuarterlyPlanningInsightsService : IQuarterlyPlanningInsightsServic
             latestSprintByInitiative.TryGetValue(dependency.DependencyInitiativeId, out var dependencyEnd);
 
             // If dependent starts before/same time as dependency ends, there's a risk
-            if (dependentStart > 0 && dependencyEnd > 0 && dependentStart <= dependencyEnd)
+            if (dependentStart != DateTime.MaxValue && dependencyEnd != DateTime.MinValue && dependentStart <= dependencyEnd)
             {
                 initiativeNames.TryGetValue(dependency.DependentInitiativeId, out var dependentName);
                 initiativeNames.TryGetValue(dependency.DependencyInitiativeId, out var dependencyName);

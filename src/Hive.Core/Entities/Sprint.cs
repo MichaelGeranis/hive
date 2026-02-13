@@ -82,6 +82,7 @@ public class Sprint
     /// <summary>
     /// Gets the sort order for this sprint based on year, quarter, and sprint number.
     /// Higher values are more recent sprints.
+    /// This is a fallback for sprints without dates.
     /// </summary>
     public int GetSortOrder()
     {
@@ -90,29 +91,69 @@ public class Sprint
     }
 
     /// <summary>
-    /// Determines if this sprint is before another sprint based on year, quarter, and sprint number.
+    /// Gets a comparable key for ordering sprints.
+    /// Returns a tuple where actual dates take precedence over calculated dates.
+    /// </summary>
+    public (int Priority, DateTime Date) GetOrderingKey()
+    {
+        if (StartDate.HasValue)
+            return (2, StartDate.Value); // Highest priority: actual dates
+
+        if (Year > 0)
+            return (1, GetEstimatedStartDate()); // Medium priority: calculated from standard name
+
+        return (0, DateTime.MinValue); // Lowest priority: non-standard names
+    }
+
+    /// <summary>
+    /// Determines if this sprint is before another sprint.
+    /// Prioritizes actual start dates, falls back to sort order for non-standard sprint names.
     /// </summary>
     public bool IsBefore(Sprint other)
     {
+        // If both sprints have actual start dates, use those
+        if (StartDate.HasValue && other.StartDate.HasValue)
+            return StartDate.Value < other.StartDate.Value;
+
+        // If both are standard sprints (Year > 0), use estimated dates
+        if (Year > 0 && other.Year > 0)
+            return GetEstimatedStartDate() < other.GetEstimatedStartDate();
+
+        // Fall back to sort order comparison for non-standard names
         return GetSortOrder() < other.GetSortOrder();
     }
 
     /// <summary>
-    /// Determines if this sprint is after another sprint based on year, quarter, and sprint number.
+    /// Determines if this sprint is after another sprint.
+    /// Prioritizes actual start dates, falls back to sort order for non-standard sprint names.
     /// </summary>
     public bool IsAfter(Sprint other)
     {
+        // If both sprints have actual start dates, use those
+        if (StartDate.HasValue && other.StartDate.HasValue)
+            return StartDate.Value > other.StartDate.Value;
+
+        // If both are standard sprints (Year > 0), use estimated dates
+        if (Year > 0 && other.Year > 0)
+            return GetEstimatedStartDate() > other.GetEstimatedStartDate();
+
+        // Fall back to sort order comparison for non-standard names
         return GetSortOrder() > other.GetSortOrder();
     }
 
     /// <summary>
     /// Gets the estimated start date for this sprint.
     /// Uses actual StartDate if available, otherwise calculates from year, quarter, and sprint number.
+    /// Returns DateTime.MinValue for non-standard sprint names (Year=0).
     /// </summary>
     public DateTime GetEstimatedStartDate()
     {
         if (StartDate.HasValue)
             return StartDate.Value;
+
+        // Non-standard sprint names (Year=0) get DateTime.MinValue
+        if (Year == 0)
+            return DateTime.MinValue;
 
         // Calculate based on year, quarter, and sprint number
         // Quarter start month: Q1=Jan(0), Q2=Apr(3), Q3=Jul(6), Q4=Oct(9)
@@ -126,13 +167,18 @@ public class Sprint
     /// <summary>
     /// Gets the estimated end date for this sprint.
     /// Uses actual EndDate if available, otherwise calculates as 13 days after start (2-week sprint).
+    /// Returns DateTime.MinValue for non-standard sprint names (Year=0).
     /// </summary>
     public DateTime GetEstimatedEndDate()
     {
         if (EndDate.HasValue)
             return EndDate.Value;
 
-        return GetEstimatedStartDate().AddDays(13);
+        var startDate = GetEstimatedStartDate();
+        if (startDate == DateTime.MinValue)
+            return DateTime.MinValue;
+
+        return startDate.AddDays(13);
     }
 
     /// <summary>

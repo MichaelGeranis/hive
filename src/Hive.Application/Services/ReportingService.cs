@@ -96,7 +96,7 @@ public class ReportingService : IReportingService
         if (sprints.Count == 0)
             return sprintNames[0]; // Fallback to first if none could be parsed
 
-        var latestSprint = sprints.OrderByDescending(s => s!.GetSortOrder()).First();
+        var latestSprint = sprints.OrderByDescending(s => s!.GetOrderingKey()).First();
         return latestSprint!.Name;
     }
 
@@ -371,10 +371,12 @@ public class ReportingService : IReportingService
                 .Distinct()
                 .ToHashSet();
 
-            // Get sprint entities for proper ordering and take the last N
+            // Get sprint entities for proper ordering and take the last N (excluding future sprints)
+            var today = DateTime.UtcNow.Date;
             var sprintNames = allSprints
                 .Where(s => uniqueSprintNames.Contains(s.Name))
-                .OrderBy(s => s.GetSortOrder())
+                .Where(s => !s.IsFuture(today)) // Only current and past sprints
+                .OrderBy(s => s.GetOrderingKey())
                 .TakeLast(sprintCount.Value)
                 .Select(s => s.Name)
                 .ToHashSet();
@@ -942,8 +944,18 @@ public class ReportingService : IReportingService
         // Get sprint entities for the sprints that have completed tasks
         var sprintEntities = allSprints
             .Where(s => tasksByLatestSprint.ContainsKey(s.Name))
-            .OrderBy(s => s.GetSortOrder())
+            .OrderBy(s => s.GetOrderingKey())
             .ToList();
+
+        // Filter by sprint count if requested (excluding future sprints)
+        if (sprintCount.HasValue && sprintCount.Value > 0)
+        {
+            var today = DateTime.UtcNow.Date;
+            sprintEntities = sprintEntities
+                .Where(sprint => !sprint.IsFuture(today))
+                .TakeLast(sprintCount.Value)
+                .ToList();
+        }
 
         var sprints = sprintEntities
             .Select(sprint =>
@@ -972,12 +984,6 @@ public class ReportingService : IReportingService
                 };
             })
             .ToList();
-
-        // Filter by sprint count if requested
-        if (sprintCount.HasValue && sprintCount.Value > 0)
-        {
-            sprints = sprints.TakeLast(sprintCount.Value).ToList();
-        }
 
         var totalStoryPoints = sprints.Sum(s => s.StoryPointsCompleted);
         var averageVelocity = sprints.Count > 0 ? Math.Round((double)totalStoryPoints / sprints.Count, 1) : 0;
@@ -1042,10 +1048,10 @@ public class ReportingService : IReportingService
             .GroupBy(x => x.LatestSprint)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Task).ToList());
 
-        // Order sprints by GetSortOrder() for proper chronological ordering
+        // Order sprints by GetOrderingKey() for proper chronological ordering (prioritizes actual dates over calculated dates)
         var sprintGroups = allSprints
             .Where(s => tasksByLatestSprint.ContainsKey(s.Name))
-            .OrderBy(s => s.GetSortOrder())
+            .OrderBy(s => s.GetOrderingKey())
             .Select(sprint =>
             {
                 var tasks = tasksByLatestSprint[sprint.Name];
@@ -1067,10 +1073,17 @@ public class ReportingService : IReportingService
             })
             .ToList();
 
-        // Filter by sprint count if requested
+        // Filter by sprint count if requested (excluding future sprints)
         if (sprintCount.HasValue && sprintCount.Value > 0)
         {
-            sprintGroups = sprintGroups.TakeLast(sprintCount.Value).ToList();
+            var today = DateTime.UtcNow.Date;
+            sprintGroups = sprintGroups
+                .Where(s => {
+                    var sprint = allSprints.FirstOrDefault(sp => sp.Name == s.SprintName);
+                    return sprint != null && !sprint.IsFuture(today);
+                })
+                .TakeLast(sprintCount.Value)
+                .ToList();
         }
 
         // Get the filtered sprint names for filtering tasks
@@ -1277,7 +1290,7 @@ public class ReportingService : IReportingService
         var today = DateTime.UtcNow.Date;
         var currentSprintEntity = sprints
             .Where(s => s.ContainsDate(today))
-            .OrderByDescending(s => s.GetSortOrder())
+            .OrderByDescending(s => s.GetOrderingKey())
             .FirstOrDefault();
 
         // If no sprint contains today, find the nearest upcoming sprint
@@ -1285,7 +1298,7 @@ public class ReportingService : IReportingService
         {
             currentSprintEntity = sprints
                 .Where(s => s.GetEstimatedStartDate().Date >= today)
-                .OrderBy(s => s.GetEstimatedStartDate())
+                .OrderBy(s => s.GetOrderingKey())
                 .FirstOrDefault();
         }
 
@@ -1294,11 +1307,9 @@ public class ReportingService : IReportingService
         {
             currentSprintEntity = sprints
                 .Where(s => s.GetEstimatedEndDate().Date < today)
-                .OrderByDescending(s => s.GetSortOrder())
+                .OrderByDescending(s => s.GetOrderingKey())
                 .FirstOrDefault();
         }
-
-        var currentSortOrder = currentSprintEntity?.GetSortOrder() ?? 0;
 
         // Filter sprints to show: if sprintCount specified, take last N sprints (including current)
         var sprintsToShow = sprints;
@@ -1307,7 +1318,7 @@ public class ReportingService : IReportingService
             // Get current and past sprints only (exclude future)
             var currentAndPastSprints = sprints
                 .Where(s => !s.IsFuture(today))
-                .OrderByDescending(s => s.GetSortOrder())
+                .OrderByDescending(s => s.GetOrderingKey())
                 .Take(sprintCount.Value)
                 .ToList();
 
@@ -1318,7 +1329,7 @@ public class ReportingService : IReportingService
         var futureSprints = new List<SprintCapacityAnalysisDto>();
         SprintCapacityAnalysisDto? currentSprint = null;
 
-        foreach (var sprint in sprintsToShow.OrderByDescending(s => s.GetSortOrder()))
+        foreach (var sprint in sprintsToShow.OrderByDescending(s => s.GetOrderingKey()))
         {
             var sprintTasks = tasksBySprint.TryGetValue(sprint.Name, out var st) ? st : new List<TeamTask>();
             capacityMap.TryGetValue(sprint.Id, out var capacity);
