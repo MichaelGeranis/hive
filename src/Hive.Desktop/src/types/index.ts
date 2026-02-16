@@ -1327,6 +1327,9 @@ export interface KnowledgeProgressionEntry {
   oldLevel: number
   newLevel: number
   change: number
+  manualPoints?: number
+  automaticPoints?: number
+  totalPoints?: number
   timestamp: string
 }
 

@@ -19,7 +19,7 @@ interface KnowledgeProgressionChartProps {
 interface ChartDataPoint {
   timestamp: string
   displayDate: string
-  [key: string]: number | string
+  [key: string]: number | string | undefined
 }
 
 const COLORS = [
@@ -51,9 +51,10 @@ export default function KnowledgeProgressionChart({
       data.map(d => [d[entityKey], d[entityNameKey]])
     ).entries()].map(([id, name]) => ({ id, name: name as string }))
 
-    // Build chart data: each entry is a data point with levels for each entity
-    // We need to track the "current" level as we process entries chronologically
+    // Build chart data: each entry is a data point with levels and points for each entity
+    // We need to track the "current" level and points as we process entries chronologically
     const levelTracker: Record<string, number> = {}
+    const pointsTracker: Record<string, number | undefined> = {}
 
     // Sort by timestamp
     const sortedData = [...data].sort(
@@ -66,8 +67,9 @@ export default function KnowledgeProgressionChart({
     for (const entry of sortedData) {
       const entityName = entry[entityNameKey] as string
 
-      // Update tracker with new level
+      // Update trackers with new level and points
       levelTracker[entityName] = entry.newLevel
+      pointsTracker[entityName + '_points'] = entry.totalPoints
 
       // Create data point
       const timestamp = new Date(entry.timestamp)
@@ -80,7 +82,8 @@ export default function KnowledgeProgressionChart({
       const point: ChartDataPoint = {
         timestamp: entry.timestamp,
         displayDate,
-        ...levelTracker
+        ...levelTracker,
+        ...pointsTracker
       }
 
       points.push(point)
@@ -102,7 +105,7 @@ export default function KnowledgeProgressionChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          margin={{ top: 5, right: 50, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
           <XAxis
@@ -110,7 +113,9 @@ export default function KnowledgeProgressionChart({
             tick={{ fontSize: 11, fill: 'currentColor' }}
             className="text-slate-600 dark:text-slate-400"
           />
+          {/* Left Y-axis for Knowledge Levels */}
           <YAxis
+            yAxisId="level"
             domain={[0, 5]}
             ticks={[1, 2, 3, 4, 5]}
             tick={{ fontSize: 11, fill: 'currentColor' }}
@@ -122,6 +127,19 @@ export default function KnowledgeProgressionChart({
               style: { textAnchor: 'middle', fontSize: 12 }
             }}
           />
+          {/* Right Y-axis for Points */}
+          <YAxis
+            yAxisId="points"
+            orientation="right"
+            tick={{ fontSize: 11, fill: 'currentColor' }}
+            className="text-slate-600 dark:text-slate-400"
+            label={{
+              value: 'Total Points',
+              angle: 90,
+              position: 'insideRight',
+              style: { textAnchor: 'middle', fontSize: 12 }
+            }}
+          />
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--tooltip-bg, #fff)',
@@ -129,21 +147,43 @@ export default function KnowledgeProgressionChart({
               borderRadius: '8px'
             }}
             formatter={(value: number, name: string) => {
+              if (name.endsWith('(Points)')) {
+                return [`${value} pts`, name]
+              }
               const levelLabel = getLevelLabel(value)
               return [`${value} - ${levelLabel}`, name]
             }}
             labelFormatter={(label) => `Date: ${label}`}
           />
           <Legend />
+          {/* Knowledge Level Lines */}
           {entities.map((entity, index) => (
             <Line
               key={entity.id}
+              yAxisId="level"
               type="monotone"
               dataKey={entity.name}
+              name={`${entity.name} (Level)`}
               stroke={COLORS[index % COLORS.length]}
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}
+              connectNulls
+            />
+          ))}
+          {/* Points Lines */}
+          {entities.map((entity, index) => (
+            <Line
+              key={`${entity.id}_points`}
+              yAxisId="points"
+              type="monotone"
+              dataKey={`${entity.name}_points`}
+              name={`${entity.name} (Points)`}
+              stroke={COLORS[index % COLORS.length]}
+              strokeWidth={1}
+              strokeDasharray="5 5"
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
               connectNulls
             />
           ))}

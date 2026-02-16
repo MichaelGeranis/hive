@@ -66,5 +66,8 @@ public record KnowledgeProgressionEntryDto
     public int OldLevel { get; init; }
     public int NewLevel { get; init; }
     public int Change { get; init; }
+    public int? ManualPoints { get; init; }
+    public int? AutomaticPoints { get; init; }
+    public int? TotalPoints { get; init; }
     public DateTime Timestamp { get; init; }
 }

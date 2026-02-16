@@ -17,6 +17,8 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IActivityService _activityService;
     private readonly IActivityRepository _activityRepository;
+    private readonly IKnowledgePointRepository _knowledgePointRepository;
+    private readonly ITeamTaskRepository _teamTaskRepository;
 
     [GeneratedRegex(@"from level (\d) to level (\d)")]
     private static partial Regex LevelChangeRegex();
@@ -26,13 +28,17 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
         IProjectRepository projectRepository,
         IDirectReportRepository directReportRepository,
         IActivityService activityService,
-        IActivityRepository activityRepository)
+        IActivityRepository activityRepository,
+        IKnowledgePointRepository knowledgePointRepository,
+        ITeamTaskRepository teamTaskRepository)
     {
         _knowledgeRepository = knowledgeRepository ?? throw new ArgumentNullException(nameof(knowledgeRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
         _activityRepository = activityRepository ?? throw new ArgumentNullException(nameof(activityRepository));
+        _knowledgePointRepository = knowledgePointRepository ?? throw new ArgumentNullException(nameof(knowledgePointRepository));
+        _teamTaskRepository = teamTaskRepository ?? throw new ArgumentNullException(nameof(teamTaskRepository));
     }
 
     public async Task<ProjectKnowledgeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -205,6 +211,7 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
         var knowledgeRecords = await _knowledgeRepository.GetAllAsync(cancellationToken);
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
+        var knowledgePoints = await _knowledgePointRepository.GetAllAsync(cancellationToken);
 
         var knowledgeLookup = knowledgeRecords.ToDictionary(k => k.Id);
         var drLookup = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
@@ -230,6 +237,28 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
                 continue;
             }
 
+            // Get current points for this combination (we'll show current state as we don't track historical points)
+            var pointsRecord = knowledgePoints.FirstOrDefault(kp =>
+                kp.DirectReportId == knowledge.DirectReportId &&
+                kp.ProjectId == knowledge.ProjectId);
+
+            int? manualPoints = pointsRecord?.ManualPoints;
+            int? automaticPoints = null;
+            int? totalPoints = null;
+
+            if (pointsRecord != null)
+            {
+                // Calculate automatic points from completed tasks
+                var completedTasks = await _teamTaskRepository.GetByAssigneeIdAsync(knowledge.DirectReportId, cancellationToken);
+                var projectTasks = completedTasks
+                    .Where(t => t.ProjectId == knowledge.ProjectId &&
+                               t.Status == Core.Entities.TaskStatus.Done)
+                    .ToList();
+
+                automaticPoints = projectTasks.Sum(t => t.StoryPoints ?? 1);
+                totalPoints = manualPoints + automaticPoints;
+            }
+
             result.Add(new KnowledgeProgressionEntryDto
             {
                 Id = activity.Id,
@@ -240,6 +269,9 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
                 OldLevel = oldLevel,
                 NewLevel = newLevel,
                 Change = newLevel - oldLevel,
+                ManualPoints = manualPoints,
+                AutomaticPoints = automaticPoints,
+                TotalPoints = totalPoints,
                 Timestamp = activity.Timestamp
             });
         }

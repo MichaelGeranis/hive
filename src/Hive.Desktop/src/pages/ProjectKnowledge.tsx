@@ -943,7 +943,8 @@ export default function ProjectKnowledgePage() {
                               <th className="pb-2 pr-4">
                                 {progressionView === 'byIndividual' ? 'Project' : 'Team Member'}
                               </th>
-                              <th className="pb-2 pr-4">Change</th>
+                              <th className="pb-2 pr-4">Level Change</th>
+                              <th className="pb-2 pr-4">Points</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -969,6 +970,20 @@ export default function ProjectKnowledgePage() {
                                         ({entry.change > 0 ? '+' : ''}{entry.change})
                                       </span>
                                     </span>
+                                  </td>
+                                  <td className="py-2 pr-4">
+                                    {entry.totalPoints !== undefined ? (
+                                      <span className="text-slate-600 dark:text-slate-400">
+                                        {entry.totalPoints} pts
+                                        {entry.manualPoints !== undefined && entry.automaticPoints !== undefined && (
+                                          <span className="text-xs text-slate-500 dark:text-slate-500 ml-1">
+                                            ({entry.manualPoints}<span className="text-green-600 dark:text-green-400">+{entry.automaticPoints}</span>)
+                                          </span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 text-xs">-</span>
+                                    )}
                                   </td>
                                 </tr>
                               ))}
