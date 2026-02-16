@@ -54,8 +54,8 @@ const navigationGroups = [
   [
     { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
     { name: 'Documents', to: '/documents', icon: FileText },
-    { name: 'Tutorials', to: '/tutorials', icon: BookOpen },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
+    { name: 'Tutorials', to: '/tutorials', icon: BookOpen },
   ],
 ]
 

@@ -646,6 +646,7 @@ export interface CreatePublicHolidayLeaveDto {
 export interface CreatePublicHolidayResultDto {
   totalCreated: number
   teamMembersAffected: string[]
+  skippedMembers: string[]
   createdLeaves: Leave[]
 }
 

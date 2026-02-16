@@ -137,5 +137,6 @@ public class CreatePublicHolidayResultDto
 {
     public int TotalCreated { get; set; }
     public List<string> TeamMembersAffected { get; set; } = new();
+    public List<string> SkippedMembers { get; set; } = new();
     public List<LeaveDto> CreatedLeaves { get; set; } = new();
 }

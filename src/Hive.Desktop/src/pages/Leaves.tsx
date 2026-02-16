@@ -118,7 +118,11 @@ export default function Leaves() {
           notes: formData.notes
         }
         const result = await leavesApi.createPublicHoliday(publicHolidayDto)
-        showSuccess(`Public holiday created for ${result.totalCreated} team members`)
+        let successMessage = `Public holiday created for ${result.totalCreated} team members`
+        if (result.skippedMembers && result.skippedMembers.length > 0) {
+          successMessage += `. Skipped ${result.skippedMembers.length} members with existing leave: ${result.skippedMembers.join(', ')}`
+        }
+        showSuccess(successMessage)
       } else {
         await leavesApi.create(formData)
       }
