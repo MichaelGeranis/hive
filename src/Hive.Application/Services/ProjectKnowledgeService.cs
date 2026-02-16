@@ -23,6 +23,15 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
     [GeneratedRegex(@"from level (\d) to level (\d)")]
     private static partial Regex LevelChangeRegex();
 
+    [GeneratedRegex(@"(?:changed from|from) (\d+) (?:to|points to) (\d+)")]
+    private static partial Regex PointsChangeRegex();
+
+    [GeneratedRegex(@"Added (\d+) points")]
+    private static partial Regex PointsAddedRegex();
+
+    [GeneratedRegex(@"created with (\d+) manual points")]
+    private static partial Regex PointsCreatedRegex();
+
     public ProjectKnowledgeService(
         IProjectKnowledgeRepository knowledgeRepository,
         IProjectRepository projectRepository,
@@ -201,10 +210,12 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
     private async Task<List<KnowledgeProgressionEntryDto>> GetAllProgressionEntriesAsync(
         CancellationToken cancellationToken)
     {
-        // Get all ProjectKnowledge activities with "Updated" type
+        // Get all ProjectKnowledge activities (Updated, Created, and Deleted types)
         var activities = await _activityRepository.GetByEntityTypeAsync(EntityType.ProjectKnowledge, cancellationToken);
         var updateActivities = activities
-            .Where(a => a.ActivityType == ActivityType.Updated)
+            .Where(a => a.ActivityType == ActivityType.Updated ||
+                       a.ActivityType == ActivityType.Created ||
+                       a.ActivityType == ActivityType.Deleted)
             .ToList();
 
         // Get all knowledge records, direct reports, and projects for lookups
@@ -261,56 +272,131 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
 
         var result = new List<KnowledgeProgressionEntryDto>();
 
+        // Build a lookup to resolve DirectReportId and ProjectId from KnowledgePoint entity IDs
+        var knowledgePointsLookup = knowledgePoints.ToDictionary(kp => kp.Id);
+
         foreach (var activity in updateActivities)
         {
-            // Parse the description to extract levels: "from level X to level Y"
-            var match = LevelChangeRegex().Match(activity.Description);
-            if (!match.Success) continue;
+            // Try to parse as level change first
+            var levelMatch = LevelChangeRegex().Match(activity.Description);
+            var pointsMatch = PointsChangeRegex().Match(activity.Description);
+            var pointsAddedMatch = PointsAddedRegex().Match(activity.Description);
+            var pointsCreatedMatch = PointsCreatedRegex().Match(activity.Description);
 
-            if (!int.TryParse(match.Groups[1].Value, out var oldLevel) ||
-                !int.TryParse(match.Groups[2].Value, out var newLevel))
-            {
-                continue;
-            }
-
-            // Get the knowledge record to find DirectReportId and ProjectId
-            if (!knowledgeLookup.TryGetValue(activity.EntityId, out var knowledge))
-            {
-                continue;
-            }
-
-            // Get current points for this combination (we'll show current state as we don't track historical points)
-            var pointsRecord = knowledgePoints.FirstOrDefault(kp =>
-                kp.DirectReportId == knowledge.DirectReportId &&
-                kp.ProjectId == knowledge.ProjectId);
-
-            int? manualPoints = pointsRecord?.ManualPoints;
+            int? oldLevel = null;
+            int? newLevel = null;
+            int? change = null;
+            int? manualPoints = null;
             int? automaticPoints = null;
             int? totalPoints = null;
+            string entryType = "Unknown";
+            Guid directReportId = Guid.Empty;
+            Guid projectId = Guid.Empty;
 
-            if (pointsRecord != null)
+            // Handle level changes
+            if (levelMatch.Success)
             {
-                // Use pre-calculated automatic points from cache
-                var key = (knowledge.DirectReportId, knowledge.ProjectId);
-                automaticPoints = automaticPointsCache.GetValueOrDefault(key, 0);
-                totalPoints = manualPoints + automaticPoints;
+                if (int.TryParse(levelMatch.Groups[1].Value, out var oldLvl) &&
+                    int.TryParse(levelMatch.Groups[2].Value, out var newLvl))
+                {
+                    oldLevel = oldLvl;
+                    newLevel = newLvl;
+                    change = newLvl - oldLvl;
+                    entryType = "LevelChange";
+
+                    // Get the knowledge record to find DirectReportId and ProjectId
+                    if (knowledgeLookup.TryGetValue(activity.EntityId, out var knowledge))
+                    {
+                        directReportId = knowledge.DirectReportId;
+                        projectId = knowledge.ProjectId;
+
+                        // Get current points for this combination
+                        var pointsRecord = knowledgePoints.FirstOrDefault(kp =>
+                            kp.DirectReportId == directReportId &&
+                            kp.ProjectId == projectId);
+
+                        if (pointsRecord != null)
+                        {
+                            manualPoints = pointsRecord.ManualPoints;
+                            var key = (directReportId, projectId);
+                            automaticPoints = automaticPointsCache.GetValueOrDefault(key, 0);
+                            totalPoints = manualPoints + automaticPoints;
+                        }
+                    }
+                    else
+                    {
+                        continue; // Skip if we can't find the knowledge record
+                    }
+                }
+            }
+            // Handle points changes
+            else if (pointsMatch.Success || pointsAddedMatch.Success || pointsCreatedMatch.Success)
+            {
+                entryType = "PointsChange";
+
+                // Try to get DirectReportId and ProjectId from KnowledgePoint entity
+                if (knowledgePointsLookup.TryGetValue(activity.EntityId, out var kpEntity))
+                {
+                    directReportId = kpEntity.DirectReportId;
+                    projectId = kpEntity.ProjectId;
+
+                    // Parse the points values from the description
+                    if (pointsMatch.Success)
+                    {
+                        if (int.TryParse(pointsMatch.Groups[2].Value, out var newPts))
+                        {
+                            manualPoints = newPts;
+                        }
+                    }
+                    else if (pointsAddedMatch.Success)
+                    {
+                        // For "Added X points", get current value
+                        manualPoints = kpEntity.ManualPoints;
+                    }
+                    else if (pointsCreatedMatch.Success)
+                    {
+                        // For "created with X manual points", parse the value
+                        if (int.TryParse(pointsCreatedMatch.Groups[1].Value, out var createdPts))
+                        {
+                            manualPoints = createdPts;
+                        }
+                    }
+
+                    // Calculate automatic and total points
+                    var key = (directReportId, projectId);
+                    automaticPoints = automaticPointsCache.GetValueOrDefault(key, 0);
+                    totalPoints = manualPoints + automaticPoints;
+                }
+                else
+                {
+                    continue; // Skip if we can't find the points record
+                }
+            }
+            else
+            {
+                continue; // Skip if no pattern matches
             }
 
-            result.Add(new KnowledgeProgressionEntryDto
+            // Add the progression entry
+            if (directReportId != Guid.Empty && projectId != Guid.Empty)
             {
-                Id = activity.Id,
-                DirectReportId = knowledge.DirectReportId,
-                DirectReportName = drLookup.GetValueOrDefault(knowledge.DirectReportId, "Unknown"),
-                ProjectId = knowledge.ProjectId,
-                ProjectName = projectLookup.GetValueOrDefault(knowledge.ProjectId, "Unknown"),
-                OldLevel = oldLevel,
-                NewLevel = newLevel,
-                Change = newLevel - oldLevel,
-                ManualPoints = manualPoints,
-                AutomaticPoints = automaticPoints,
-                TotalPoints = totalPoints,
-                Timestamp = activity.Timestamp
-            });
+                result.Add(new KnowledgeProgressionEntryDto
+                {
+                    Id = activity.Id,
+                    DirectReportId = directReportId,
+                    DirectReportName = drLookup.GetValueOrDefault(directReportId, "Unknown"),
+                    ProjectId = projectId,
+                    ProjectName = projectLookup.GetValueOrDefault(projectId, "Unknown"),
+                    OldLevel = oldLevel,
+                    NewLevel = newLevel,
+                    Change = change,
+                    ManualPoints = manualPoints,
+                    AutomaticPoints = automaticPoints,
+                    TotalPoints = totalPoints,
+                    EntryType = entryType,
+                    Timestamp = activity.Timestamp
+                });
+            }
         }
 
         return result;

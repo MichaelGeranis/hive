@@ -1338,12 +1338,13 @@ export interface KnowledgeProgressionEntry {
   directReportName: string
   projectId: string
   projectName: string
-  oldLevel: number
-  newLevel: number
-  change: number
+  oldLevel?: number
+  newLevel?: number
+  change?: number
   manualPoints?: number
   automaticPoints?: number
   totalPoints?: number
+  entryType: string  // "LevelChange", "PointsChange", or "Both"
   timestamp: string
 }
 

@@ -916,13 +916,13 @@ export default function ProjectKnowledgePage() {
                       </div>
                       <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
                         <p className="text-2xl font-bold text-green-500">
-                          +{progressionData.filter(e => e.change > 0).reduce((sum, e) => sum + e.change, 0)}
+                          +{progressionData.filter(e => e.change !== undefined && e.change !== null && e.change > 0).reduce((sum, e) => sum + (e.change ?? 0), 0)}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Total Improvement</p>
                       </div>
                       <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
                         <p className="text-2xl font-bold text-blue-500">
-                          {progressionData.filter(e => e.change > 0).length}
+                          {progressionData.filter(e => e.change !== undefined && e.change !== null && e.change > 0).length}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Improvements</p>
                       </div>
@@ -960,16 +960,20 @@ export default function ProjectKnowledgePage() {
                                     {progressionView === 'byIndividual' ? entry.projectName : entry.directReportName}
                                   </td>
                                   <td className="py-2 pr-4">
-                                    <span className={`inline-flex items-center gap-1 ${
-                                      entry.change > 0 ? 'text-green-600 dark:text-green-400' :
-                                      entry.change < 0 ? 'text-red-600 dark:text-red-400' :
-                                      'text-slate-500'
-                                    }`}>
-                                      {entry.oldLevel} → {entry.newLevel}
-                                      <span className="text-xs">
-                                        ({entry.change > 0 ? '+' : ''}{entry.change})
+                                    {entry.oldLevel !== undefined && entry.newLevel !== undefined ? (
+                                      <span className={`inline-flex items-center gap-1 ${
+                                        (entry.change ?? 0) > 0 ? 'text-green-600 dark:text-green-400' :
+                                        (entry.change ?? 0) < 0 ? 'text-red-600 dark:text-red-400' :
+                                        'text-slate-500'
+                                      }`}>
+                                        {entry.oldLevel} → {entry.newLevel}
+                                        <span className="text-xs">
+                                          ({(entry.change ?? 0) > 0 ? '+' : ''}{entry.change})
+                                        </span>
                                       </span>
-                                    </span>
+                                    ) : (
+                                      <span className="text-slate-400 text-xs">No level change</span>
+                                    )}
                                   </td>
                                   <td className="py-2 pr-4">
                                     {entry.totalPoints !== undefined ? (

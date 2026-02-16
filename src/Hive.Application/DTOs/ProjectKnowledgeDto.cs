@@ -55,6 +55,7 @@ public record KnowledgeMatrixMemberDto
 
 /// <summary>
 /// Represents a single knowledge progression entry derived from activity feed.
+/// Can represent either a level change, a points change, or both.
 /// </summary>
 public record KnowledgeProgressionEntryDto
 {
@@ -63,11 +64,12 @@ public record KnowledgeProgressionEntryDto
     public string DirectReportName { get; init; } = string.Empty;
     public Guid ProjectId { get; init; }
     public string ProjectName { get; init; } = string.Empty;
-    public int OldLevel { get; init; }
-    public int NewLevel { get; init; }
-    public int Change { get; init; }
+    public int? OldLevel { get; init; }
+    public int? NewLevel { get; init; }
+    public int? Change { get; init; }
     public int? ManualPoints { get; init; }
     public int? AutomaticPoints { get; init; }
     public int? TotalPoints { get; init; }
     public DateTime Timestamp { get; init; }
+    public string EntryType { get; init; } = string.Empty; // "LevelChange", "PointsChange", or "Both"
 }

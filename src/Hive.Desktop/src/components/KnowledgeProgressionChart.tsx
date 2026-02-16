@@ -68,8 +68,14 @@ export default function KnowledgeProgressionChart({
       const entityName = entry[entityNameKey] as string
 
       // Update trackers with new level and points
-      levelTracker[entityName] = entry.newLevel
-      pointsTracker[entityName + '_points'] = entry.totalPoints
+      // Only update level if this entry has level data
+      if (entry.newLevel !== undefined && entry.newLevel !== null) {
+        levelTracker[entityName] = entry.newLevel
+      }
+      // Update points tracker
+      if (entry.totalPoints !== undefined && entry.totalPoints !== null) {
+        pointsTracker[entityName + '_points'] = entry.totalPoints
+      }
 
       // Create data point
       const timestamp = new Date(entry.timestamp)
@@ -95,7 +101,7 @@ export default function KnowledgeProgressionChart({
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500 dark:text-slate-400">
-        No progression data available. Knowledge levels need to be changed to track progression.
+        No progression data available. Add manual points or change knowledge levels to track progression.
       </div>
     )
   }
