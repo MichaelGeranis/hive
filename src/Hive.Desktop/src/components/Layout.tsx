@@ -22,7 +22,8 @@ import {
   Brain,
   Target,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  BookOpen
 } from 'lucide-react'
 
 const navigationGroups = [
@@ -51,8 +52,9 @@ const navigationGroups = [
   ],
   // Resources
   [
-    { name: 'Activity Feed', to: '/activity-feed', icon: Activity },    
+    { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
     { name: 'Documents', to: '/documents', icon: FileText },
+    { name: 'Tutorials', to: '/tutorials', icon: BookOpen },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
   ],
 ]
