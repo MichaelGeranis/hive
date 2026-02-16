@@ -9,32 +9,36 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  Trash2
+  Trash2,
+  Globe
 } from 'lucide-react'
 import { leavesApi, directReportsApi } from '../services/api'
-import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview } from '../types'
+import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, CreatePublicHolidayLeaveDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
-const leaveTypes = ['Vacation', 'Sick', 'Other']
+const leaveTypes = ['Vacation', 'Sick', 'Other', 'PublicHoliday']
 
 const leaveTypeLabels: Record<string, string> = {
   Vacation: 'Vacation',
   Sick: 'Sick Leave',
-  Other: 'Other'
+  Other: 'Other',
+  PublicHoliday: 'Public Holiday'
 }
 
 const typeIcons: Record<string, typeof Palmtree> = {
   Vacation: Palmtree,
   Sick: Thermometer,
-  Other: Briefcase
+  Other: Briefcase,
+  PublicHoliday: Globe
 }
 
 const typeColors: Record<string, string> = {
   Vacation: 'bg-green-500',
   Sick: 'bg-orange-500',
-  Other: 'bg-blue-500'
+  Other: 'bg-blue-500',
+  PublicHoliday: 'bg-purple-500'
 }
 
 interface DayHoverState {
@@ -43,7 +47,7 @@ interface DayHoverState {
 }
 
 export default function Leaves() {
-  const { showError } = useToast()
+  const { showError, showSuccess } = useToast()
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [overview, setOverview] = useState<TeamLeaveOverview | null>(null)
@@ -53,12 +57,13 @@ export default function Leaves() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [hoveredDay, setHoveredDay] = useState<DayHoverState>({ date: null, timeoutId: null })
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
-  const [formData, setFormData] = useState<CreateLeaveDto>({
+  const [formData, setFormData] = useState<CreateLeaveDto & { name?: string }>({
     directReportId: '',
     type: 'Vacation',
     startDate: '',
     endDate: '',
-    notes: ''
+    notes: '',
+    name: ''
   })
 
   const resetForm = useCallback(() => {
@@ -67,7 +72,8 @@ export default function Leaves() {
       type: 'Vacation',
       startDate: '',
       endDate: '',
-      notes: ''
+      notes: '',
+      name: ''
     })
     setEditingLeave(null)
   }, [])
@@ -104,7 +110,18 @@ export default function Leaves() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await leavesApi.create(formData)
+      if (formData.type === 'PublicHoliday') {
+        const publicHolidayDto: CreatePublicHolidayLeaveDto = {
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          name: formData.name || 'Public Holiday',
+          notes: formData.notes
+        }
+        const result = await leavesApi.createPublicHoliday(publicHolidayDto)
+        showSuccess(`Public holiday created for ${result.totalCreated} team members`)
+      } else {
+        await leavesApi.create(formData)
+      }
       closeModal()
       loadData()
     } catch (error) {
@@ -530,6 +547,10 @@ export default function Leaves() {
             <span className="text-sm text-slate-600 dark:text-slate-400">Other</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-purple-500 rounded"></div>
+            <span className="text-sm text-slate-600 dark:text-slate-400">Public Holiday</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20 rounded"></div>
             <span className="text-sm text-slate-600 dark:text-slate-400">Today</span>
           </div>
@@ -547,7 +568,7 @@ export default function Leaves() {
               {editingLeave ? 'Edit Leave' : 'Add Leave'}
             </h2>
             <form onSubmit={editingLeave ? handleUpdate : handleCreate} className="space-y-4">
-              {!editingLeave && (
+              {!editingLeave && formData.type !== 'PublicHoliday' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Team Member
@@ -571,7 +592,14 @@ export default function Leaves() {
                 </label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => {
+                    const newType = e.target.value
+                    setFormData({
+                      ...formData,
+                      type: newType,
+                      directReportId: newType === 'PublicHoliday' ? '' : formData.directReportId
+                    })
+                  }}
                   className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2"
                   required
                 >
@@ -580,6 +608,28 @@ export default function Leaves() {
                   ))}
                 </select>
               </div>
+              {!editingLeave && formData.type === 'PublicHoliday' && (
+                <>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                    <p className="text-sm text-purple-800 dark:text-purple-200">
+                      This leave will be created for all active team members.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Holiday Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2"
+                      placeholder="e.g., Christmas Day, New Year's Day"
+                      required
+                    />
+                  </div>
+                </>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

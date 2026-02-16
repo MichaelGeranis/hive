@@ -109,6 +109,89 @@ public class LeaveService : ILeaveService
         return MapToDto(created, directReport.FullName);
     }
 
+    public async Task<CreatePublicHolidayResultDto> CreatePublicHolidayAsync(
+        CreatePublicHolidayLeaveDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        // Get all active direct reports
+        var allDirectReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var activeDirectReports = allDirectReports
+            .Where(dr => dr.IsDirect)
+            .ToList();
+
+        if (activeDirectReports.Count == 0)
+        {
+            throw new InvalidOperationException("No active team members found to create public holiday for.");
+        }
+
+        // Pre-validate all team members for overlapping leaves
+        var overlappingMembers = new List<string>();
+        foreach (var directReport in activeDirectReports)
+        {
+            var overlapping = await _leaveRepository.GetOverlappingLeavesAsync(
+                directReport.Id, dto.StartDate, dto.EndDate, null, cancellationToken);
+
+            if (overlapping.Any())
+            {
+                overlappingMembers.Add(directReport.FullName);
+            }
+        }
+
+        if (overlappingMembers.Any())
+        {
+            throw new InvalidOperationException(
+                $"Cannot create public holiday. Overlapping leaves exist for: {string.Join(", ", overlappingMembers)}");
+        }
+
+        // Create leaves for all team members
+        var createdLeaves = new List<Leave>();
+        var notes = string.IsNullOrWhiteSpace(dto.Notes)
+            ? $"Public Holiday: {dto.Name}"
+            : $"Public Holiday: {dto.Name} - {dto.Notes}";
+
+        foreach (var directReport in activeDirectReports)
+        {
+            var leave = new Leave(
+                directReport.Id,
+                LeaveType.PublicHoliday,
+                dto.StartDate,
+                dto.EndDate,
+                notes);
+
+            var created = await _leaveRepository.AddAsync(leave, cancellationToken);
+            createdLeaves.Add(created);
+        }
+
+        // Recalculate sprint capacity once for the date range
+        await _sprintCapacityService.RecalculateForDateRangeAsync(
+            dto.StartDate, dto.EndDate, cancellationToken);
+
+        // Log a single activity for the public holiday
+        var firstLeaveId = createdLeaves.First().Id;
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Leave,
+            firstLeaveId,
+            $"Public Holiday - {dto.Name}",
+            $"Created for {createdLeaves.Count} team members ({dto.StartDate:MMM d} - {dto.EndDate:MMM d})",
+            cancellationToken);
+
+        // Map to DTOs
+        var leaveDtos = new List<LeaveDto>();
+        foreach (var leave in createdLeaves)
+        {
+            var dr = activeDirectReports.First(d => d.Id == leave.DirectReportId);
+            leaveDtos.Add(MapToDto(leave, dr.FullName));
+        }
+
+        return new CreatePublicHolidayResultDto
+        {
+            TotalCreated = createdLeaves.Count,
+            TeamMembersAffected = activeDirectReports.Select(dr => dr.FullName).ToList(),
+            CreatedLeaves = leaveDtos
+        };
+    }
+
     public async Task<LeaveDto> UpdateAsync(Guid id, UpdateLeaveDto dto, CancellationToken cancellationToken = default)
     {
         var leave = await _leaveRepository.GetByIdAsync(id, cancellationToken);

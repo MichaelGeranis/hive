@@ -556,7 +556,8 @@ export interface ProjectAccuracy {
 export enum LeaveType {
   Vacation = 0,
   Sick = 1,
-  Other = 2
+  Other = 2,
+  PublicHoliday = 3
 }
 
 export interface Leave {
@@ -622,6 +623,19 @@ export interface LeaveBalance {
   sickLeaveUsed: number
   otherUsed: number
   totalUsed: number
+}
+
+export interface CreatePublicHolidayLeaveDto {
+  startDate: string
+  endDate: string
+  name: string
+  notes?: string
+}
+
+export interface CreatePublicHolidayResultDto {
+  totalCreated: number
+  teamMembersAffected: string[]
+  createdLeaves: Leave[]
 }
 
 // Settings

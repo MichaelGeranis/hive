@@ -13,6 +13,7 @@ public interface ILeaveService
     Task<IReadOnlyList<LeaveDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveDto>> GetUpcomingAsync(int days = 30, CancellationToken cancellationToken = default);
     Task<LeaveDto> CreateAsync(CreateLeaveDto dto, CancellationToken cancellationToken = default);
+    Task<CreatePublicHolidayResultDto> CreatePublicHolidayAsync(CreatePublicHolidayLeaveDto dto, CancellationToken cancellationToken = default);
     Task<LeaveDto> UpdateAsync(Guid id, UpdateLeaveDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TeamLeaveOverviewDto> GetTeamOverviewAsync(CancellationToken cancellationToken = default);

@@ -377,6 +377,8 @@ export const leavesApi = {
     api.get<MonthlyLeaveSummary[]>(`/leaves/monthly-trend?months=${months}`).then(r => r.data),
   getBalances: (year: number) => api.get<LeaveBalance[]>(`/leaves/balances/${year}`).then(r => r.data),
   create: (data: CreateLeaveDto) => api.post<Leave>('/leaves', data).then(r => r.data),
+  createPublicHoliday: (data: CreatePublicHolidayLeaveDto) =>
+    api.post<CreatePublicHolidayResultDto>('/leaves/public-holiday', data).then(r => r.data),
   update: (id: string, data: UpdateLeaveDto) => api.put<Leave>(`/leaves/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/leaves/${id}`)
 }

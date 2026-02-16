@@ -169,6 +169,32 @@ public class LeavesController : ControllerBase
     }
 
     /// <summary>
+    /// Creates a public holiday leave for all active team members.
+    /// </summary>
+    [HttpPost("public-holiday")]
+    [ProducesResponseType(typeof(CreatePublicHolidayResultDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CreatePublicHolidayResultDto>> CreatePublicHoliday(
+        [FromBody] CreatePublicHolidayLeaveDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Creating public holiday: {Name}", dto.Name);
+            var result = await _service.CreatePublicHolidayAsync(dto, cancellationToken);
+            return CreatedAtAction(nameof(GetAll), null, result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Updates an existing leave record.
     /// </summary>
     [HttpPut("{id:guid}")]

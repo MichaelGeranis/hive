@@ -7,7 +7,8 @@ public enum LeaveType
 {
     Vacation = 0,
     Sick = 1,
-    Other = 2
+    Other = 2,
+    PublicHoliday = 3
 }
 
 /// <summary>

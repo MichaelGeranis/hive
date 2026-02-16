@@ -212,10 +212,52 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
         var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
         var knowledgePoints = await _knowledgePointRepository.GetAllAsync(cancellationToken);
+        var allTasks = await _teamTaskRepository.GetAllAsync(cancellationToken);
 
         var knowledgeLookup = knowledgeRecords.ToDictionary(k => k.Id);
         var drLookup = directReports.ToDictionary(dr => dr.Id, dr => dr.FullName);
         var projectLookup = projects.ToDictionary(p => p.Id, p => p.Name);
+
+        // Pre-calculate automatic points for all direct report + project combinations
+        // to avoid expensive per-entry calculations
+        var automaticPointsCache = new Dictionary<(Guid directReportId, Guid projectId), int>();
+        var completedTasks = allTasks.Where(t => t.Status == Core.Entities.TaskStatus.Done).ToList();
+
+        // Build project label lookups for label-based matching
+        var projectLabelsLookup = projects.ToDictionary(
+            p => p.Id,
+            p => GetLabelSet(p.Labels)
+        );
+
+        foreach (var task in completedTasks)
+        {
+            if (!task.AssigneeId.HasValue) continue;
+
+            var points = task.StoryPoints ?? 1;
+
+            // Match task to projects (either by direct ProjectId or shared labels)
+            foreach (var project in projects)
+            {
+                var isMatch = task.ProjectId == project.Id ||
+                    (projectLabelsLookup.TryGetValue(project.Id, out var projectLabels) &&
+                     projectLabels.Count > 0 &&
+                     GetLabelSet(task.Labels).Overlaps(projectLabels));
+
+                if (isMatch)
+                {
+                    var key = (task.AssigneeId.Value, project.Id);
+
+                    if (automaticPointsCache.ContainsKey(key))
+                    {
+                        automaticPointsCache[key] += points;
+                    }
+                    else
+                    {
+                        automaticPointsCache[key] = points;
+                    }
+                }
+            }
+        }
 
         var result = new List<KnowledgeProgressionEntryDto>();
 
@@ -248,14 +290,9 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
 
             if (pointsRecord != null)
             {
-                // Calculate automatic points from completed tasks
-                var completedTasks = await _teamTaskRepository.GetByAssigneeIdAsync(knowledge.DirectReportId, cancellationToken);
-                var projectTasks = completedTasks
-                    .Where(t => t.ProjectId == knowledge.ProjectId &&
-                               t.Status == Core.Entities.TaskStatus.Done)
-                    .ToList();
-
-                automaticPoints = projectTasks.Sum(t => t.StoryPoints ?? 1);
+                // Use pre-calculated automatic points from cache
+                var key = (knowledge.DirectReportId, knowledge.ProjectId);
+                automaticPoints = automaticPointsCache.GetValueOrDefault(key, 0);
                 totalPoints = manualPoints + automaticPoints;
             }
 
@@ -277,6 +314,23 @@ public partial class ProjectKnowledgeService : IProjectKnowledgeService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Parses a comma-separated label string into a lowercase HashSet.
+    /// </summary>
+    private static HashSet<string> GetLabelSet(string? labels)
+    {
+        if (string.IsNullOrEmpty(labels))
+        {
+            return new HashSet<string>();
+        }
+
+        return labels
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim().ToLowerInvariant())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToHashSet();
     }
 
     private async Task ValidateReferencesAsync(Guid directReportId, Guid projectId, CancellationToken cancellationToken)

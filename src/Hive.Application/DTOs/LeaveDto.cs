@@ -110,3 +110,32 @@ public class TeamLeaveOverviewDto
     public List<LeaveDto> CurrentLeaves { get; set; } = new();
     public List<MonthlyLeaveSummaryDto> MonthlyTrend { get; set; } = new();
 }
+
+/// <summary>
+/// DTO for creating a public holiday leave that applies to all team members
+/// </summary>
+public class CreatePublicHolidayLeaveDto
+{
+    [Required]
+    public DateTime StartDate { get; set; }
+
+    [Required]
+    public DateTime EndDate { get; set; }
+
+    [Required]
+    [MaxLength(200)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Notes { get; set; }
+}
+
+/// <summary>
+/// Result of creating a public holiday leave
+/// </summary>
+public class CreatePublicHolidayResultDto
+{
+    public int TotalCreated { get; set; }
+    public List<string> TeamMembersAffected { get; set; } = new();
+    public List<LeaveDto> CreatedLeaves { get; set; } = new();
+}
