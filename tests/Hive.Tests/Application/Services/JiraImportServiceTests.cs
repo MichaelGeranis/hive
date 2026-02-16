@@ -1021,6 +1021,7 @@ PROJ-123,Test Task,3600,Done";
             5,
             "jira:PROJ-123",
             "",
+            null,
             "",
             120,
             null);

@@ -730,6 +730,16 @@ export default function Tasks() {
                     placeholder="frontend, urgent, bug-fix (comma-separated)"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Components</label>
+                  <input
+                    type="text"
+                    value={formData.components || ''}
+                    onChange={(e) => setFormData({ ...formData, components: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                    placeholder="Authentication, API, Database (comma-separated)"
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -1571,6 +1581,15 @@ export default function Tasks() {
                         {task.labels.split(',').map((label, idx) => (
                           <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs">
                             {label.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {task.components && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {task.components.split(',').map((component, idx) => (
+                          <span key={idx} className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                            {component.trim()}
                           </span>
                         ))}
                       </div>

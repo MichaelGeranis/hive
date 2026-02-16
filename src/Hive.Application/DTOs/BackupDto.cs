@@ -64,8 +64,12 @@ public record TeamTaskBackup
     public decimal? ActualHours { get; init; }
     public string Tags { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
+    public string? Components { get; init; }
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
+    public int? PreviousSprintsStoryPoints { get; init; }
+    public Guid? ParentId { get; init; }
+    public string OverriddenFields { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public DateTime? CompletedAt { get; init; }

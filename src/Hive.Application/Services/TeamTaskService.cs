@@ -217,6 +217,7 @@ public class TeamTaskService : ITeamTaskService
             dto.StoryPoints,
             dto.Tags,
             dto.Labels,
+            dto.Components,
             dto.Sprint,
             dto.TimeSpentMinutes,
             dto.ParentId);
@@ -251,7 +252,7 @@ public class TeamTaskService : ITeamTaskService
         // Calculate estimated hours from story points using the mapping
         var estimatedHours = await CalculateEstimatedHoursAsync(dto.StoryPoints, cancellationToken);
 
-        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, estimatedHours, dto.StoryPoints, dto.Tags, dto.Labels, dto.Sprint, dto.TimeSpentMinutes);
+        entity.Update(dto.Title, dto.Description, dto.Type, dto.Priority, dto.DueDate, estimatedHours, dto.StoryPoints, dto.Tags, dto.Labels, dto.Components, dto.Sprint, dto.TimeSpentMinutes);
         entity.AssignToParent(dto.ParentId);
         await _taskRepository.UpdateAsync(entity, cancellationToken);
 
@@ -462,6 +463,7 @@ public class TeamTaskService : ITeamTaskService
             source.StoryPoints,
             source.Tags,
             source.Labels,
+            source.Components,
             source.Sprint,
             source.TimeSpentMinutes,
             source.ParentId);
@@ -588,6 +590,7 @@ public class TeamTaskService : ITeamTaskService
             StoryPoints = entity.StoryPoints,
             Tags = entity.Tags,
             Labels = entity.Labels,
+            Components = entity.Components,
             Sprint = entity.Sprint,
             TimeSpentMinutes = entity.TimeSpentMinutes,
             PreviousSprintsStoryPoints = entity.PreviousSprintsStoryPoints,

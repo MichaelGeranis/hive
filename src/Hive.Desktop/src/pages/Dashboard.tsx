@@ -95,6 +95,7 @@ interface WidgetVisibility {
   tasksDistributionSP: boolean
   tasksDistributionHours: boolean
   tasksDistributionLabel: boolean
+  componentsDistribution: boolean
   supportDistribution: boolean
   teamSentiment: boolean
   capacityAnalysis: boolean
@@ -112,6 +113,7 @@ const DEFAULT_WIDGETS: WidgetVisibility = {
   tasksDistributionSP: true,
   tasksDistributionHours: true,
   tasksDistributionLabel: true,
+  componentsDistribution: true,
   supportDistribution: true,
   teamSentiment: true,
   capacityAnalysis: true,
@@ -129,6 +131,7 @@ const WIDGET_LABELS: Record<keyof WidgetVisibility, string> = {
   tasksDistributionSP: 'Tasks Distribution (SP)',
   tasksDistributionHours: 'Tasks Distribution (Hours)',
   tasksDistributionLabel: 'Tasks Distribution (Label)',
+  componentsDistribution: 'Components Distribution',
   supportDistribution: 'Support Distribution',
   teamSentiment: 'Team Sentiment',
   capacityAnalysis: 'Capacity Analysis',
@@ -534,6 +537,11 @@ export default function Dashboard() {
   // Use backend-computed label distribution
   const taskLabelChartData = (dashboard.tasks.tasksByLabel || [])
     .map(l => ({ name: l.label, value: l.totalTasks, completed: l.completedTasks, sp: l.totalStoryPoints, completedSP: l.completedStoryPoints, pct: l.percentageOfTotal }))
+    .sort((a, b) => b.value - a.value)
+
+  // Use backend-computed component distribution
+  const taskComponentChartData = (dashboard.tasks.tasksByComponent || [])
+    .map(c => ({ name: c.component, value: c.totalTasks, completed: c.completedTasks, sp: c.totalStoryPoints, completedSP: c.completedStoryPoints, pct: c.percentageOfTotal }))
     .sort((a, b) => b.value - a.value)
 
   // Use backend-computed total story points for current sprint
@@ -1165,6 +1173,54 @@ export default function Dashboard() {
                 No labels assigned
               </div>
             )}
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Components Distribution */}
+        {widgets.componentsDistribution && taskComponentChartData.length > 0 && (
+        <Card>
+          <CardHeader title="Components Distribution" subtitle="By component" />
+          <CardContent>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskComponentChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={60}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {taskComponentChartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={getLabelColor(index)} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, _name, props) => {
+                      const payload = props.payload as typeof taskComponentChartData[0]
+                      return [`${value} tasks (${payload.sp} SP)`, 'Total']
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+              {taskComponentChartData.map((entry, index) => (
+                <div key={entry.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getLabelColor(index) }} />
+                    <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                    <span className="font-medium text-slate-900 dark:text-slate-100">{entry.value}</span>
+                    <span className="text-slate-400">({entry.pct}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
         )}

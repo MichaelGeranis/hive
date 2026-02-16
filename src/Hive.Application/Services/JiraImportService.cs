@@ -38,6 +38,7 @@ public class JiraImportService : IJiraImportService
     private static readonly string[] TimeSpentColumns = { "Σ Time Spent" };
     private static readonly string[] SprintColumns = { "Sprint" };
     private static readonly string[] LabelsColumns = { "Labels", "Label" };
+    private static readonly string[] ComponentsColumns = { "Component/s", "Components", "Component" };
     private static readonly string[] ParentColumns = { "Parent Summary", "Parent summary" };
     private static readonly string[] ParentKeyColumns = { "Parent key", "Parent Key", "ParentKey" };
 
@@ -320,6 +321,7 @@ public class JiraImportService : IJiraImportService
                         overriddenEstimation ? existingTask.StoryPoints : taskData.StoryPoints,
                         taskData.Tags,
                         taskData.Labels,
+                        taskData.Components,
                         overriddenSprint ? existingSprint : taskData.Sprint,
                         overriddenTimeSpent ? existingTask.TimeSpentMinutes : taskData.TimeSpentMinutes,
                         parentId);
@@ -375,6 +377,7 @@ public class JiraImportService : IJiraImportService
                         taskData.StoryPoints,
                         taskData.Tags,
                         taskData.Labels,
+                        taskData.Components,
                         taskData.Sprint,
                         taskData.TimeSpentMinutes,
                         parentId);
@@ -613,8 +616,9 @@ public class JiraImportService : IJiraImportService
         var dueDateStr = GetValue(rowData, DueDateColumns);
         var timeSpentStr = GetValue(rowData, TimeSpentColumns);
 
-        // Collect all Labels and Sprint values (Jira exports multiple columns with same name)
+        // Collect all Labels, Components, and Sprint values (Jira exports multiple columns with same name)
         var labels = GetAllValues(rowData, LabelsColumns);
+        var components = GetAllValues(rowData, ComponentsColumns);
         var sprints = GetAllValues(rowData, SprintColumns);
 
         // Map fields
@@ -649,6 +653,7 @@ public class JiraImportService : IJiraImportService
             DueDate = dueDate,
             Tags = tags,
             Labels = labels,
+            Components = components,
             Sprint = sprints,
             TimeSpentMinutes = timeSpentMinutes
         };
@@ -998,6 +1003,7 @@ public class JiraImportService : IJiraImportService
         public int? EstimatedHours { get; init; }
         public string Tags { get; init; } = string.Empty;
         public string Labels { get; init; } = string.Empty;
+        public string? Components { get; init; }
         public string Sprint { get; init; } = string.Empty;
         public int? TimeSpentMinutes { get; init; }
     }

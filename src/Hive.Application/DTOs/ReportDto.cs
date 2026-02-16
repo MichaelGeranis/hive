@@ -172,6 +172,7 @@ public record TasksOverviewDto
     public IReadOnlyList<TasksByTypeHoursDto> TasksByTypeHours { get; init; } = [];
     public IReadOnlyList<TasksByPriorityDto> TasksByPriority { get; init; } = [];
     public IReadOnlyList<TasksByLabelDto> TasksByLabel { get; init; } = [];
+    public IReadOnlyList<TasksByComponentDto> TasksByComponent { get; init; } = [];
     public SupportDistributionDto SupportDistribution { get; init; } = new();
     public ProductivityMetricsDto Productivity { get; init; } = new();
 }
@@ -259,6 +260,19 @@ public record TasksByTypeHoursDto
 public record TasksByLabelDto
 {
     public string Label { get; init; } = string.Empty;
+    public int TotalTasks { get; init; }
+    public int CompletedTasks { get; init; }
+    public int TotalStoryPoints { get; init; }
+    public int CompletedStoryPoints { get; init; }
+    public double PercentageOfTotal { get; init; }
+}
+
+/// <summary>
+/// Tasks grouped by component.
+/// </summary>
+public record TasksByComponentDto
+{
+    public string Component { get; init; } = string.Empty;
     public int TotalTasks { get; init; }
     public int CompletedTasks { get; init; }
     public int TotalStoryPoints { get; init; }

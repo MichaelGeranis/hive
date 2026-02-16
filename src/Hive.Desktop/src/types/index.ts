@@ -207,6 +207,7 @@ export interface TeamTask {
   actualHours?: number
   tags: string
   labels: string
+  components?: string
   sprint: string
   timeSpentMinutes?: number
   previousSprintsStoryPoints?: number | null
@@ -380,6 +381,7 @@ export interface TasksOverview {
   tasksByTypeHours: TasksByTypeHours[]
   tasksByPriority: TasksByPriority[]
   tasksByLabel: TasksByLabel[]
+  tasksByComponent: TasksByComponent[]
   supportDistribution: SupportDistribution
   productivity: ProductivityMetrics
 }
@@ -400,6 +402,15 @@ export interface TasksByTypeHours {
 
 export interface TasksByLabel {
   label: string
+  totalTasks: number
+  completedTasks: number
+  totalStoryPoints: number
+  completedStoryPoints: number
+  percentageOfTotal: number
+}
+
+export interface TasksByComponent {
+  component: string
   totalTasks: number
   completedTasks: number
   totalStoryPoints: number

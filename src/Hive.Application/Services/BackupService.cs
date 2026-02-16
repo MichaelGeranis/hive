@@ -208,9 +208,9 @@ public class BackupService : IBackupService
                     if (existing == null)
                     {
                         var entity = new TeamTask(
-                            t.Title, 
-                            t.Description, 
-                            (TaskType)t.Type, 
+                            t.Title,
+                            t.Description,
+                            (TaskType)t.Type,
                             (TaskPriority)t.Priority,
                             t.AssigneeId,
                             t.ProjectId,
@@ -219,8 +219,10 @@ public class BackupService : IBackupService
                             t.StoryPoints,
                             t.Tags,
                             t.Labels,
+                            t.Components,
                             t.Sprint,
-                            t.TimeSpentMinutes);
+                            t.TimeSpentMinutes,
+                            t.ParentId);
                         SetEntityId(entity, t.Id);
                         await _taskRepository.AddAsync(entity, cancellationToken);
                         tasksRestored++;
@@ -567,8 +569,12 @@ public class BackupService : IBackupService
         StoryPoints = t.StoryPoints,
         Tags = t.Tags,
         Labels = t.Labels,
+        Components = t.Components,
         Sprint = t.Sprint,
         TimeSpentMinutes = t.TimeSpentMinutes,
+        PreviousSprintsStoryPoints = t.PreviousSprintsStoryPoints,
+        ParentId = t.ParentId,
+        OverriddenFields = t.OverriddenFields,
         CreatedAt = t.CreatedAt,
         UpdatedAt = t.UpdatedAt
     };

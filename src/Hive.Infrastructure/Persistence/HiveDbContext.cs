@@ -137,6 +137,7 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(4000);
             entity.Property(e => e.Tags).HasMaxLength(500);
             entity.Property(e => e.Labels).HasMaxLength(1000);
+            entity.Property(e => e.Components).HasMaxLength(1000);
             entity.Property(e => e.Sprint).HasMaxLength(200);
             entity.Property(e => e.OverriddenFields).HasMaxLength(500);
             entity.HasIndex(e => e.AssigneeId);

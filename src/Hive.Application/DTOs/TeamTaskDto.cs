@@ -29,6 +29,7 @@ public record TeamTaskDto
     public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
+    public string? Components { get; init; }
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
     public int? PreviousSprintsStoryPoints { get; init; }
@@ -57,6 +58,7 @@ public record CreateTeamTaskDto
     public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
+    public string? Components { get; init; }
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
 }
@@ -76,6 +78,7 @@ public record UpdateTeamTaskDto
     public int? StoryPoints { get; init; }
     public string Tags { get; init; } = string.Empty;
     public string Labels { get; init; } = string.Empty;
+    public string? Components { get; init; }
     public string Sprint { get; init; } = string.Empty;
     public int? TimeSpentMinutes { get; init; }
 }

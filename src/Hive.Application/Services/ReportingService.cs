@@ -633,6 +633,43 @@ public class ReportingService : IReportingService
             .OrderByDescending(l => l.TotalTasks)
             .ToList();
 
+        // Component distribution (similar to label distribution)
+        var tasksByComponent = tasks
+            .Where(t => !string.IsNullOrEmpty(t.Components))
+            .SelectMany(t => t.Components!.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(component => new { Task = t, Component = component.Trim() }))
+            .GroupBy(x => x.Component, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var componentTasks = g.Select(x => x.Task).Distinct().ToList();
+                var completedComponentTasks = componentTasks.Where(t => t.Status == TaskStatus.Done).ToList();
+                var totalSP = componentTasks.Sum(t =>
+                {
+                    if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                        return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                    return t.StoryPoints ?? 0;
+                });
+                var completedSP = completedComponentTasks.Sum(t =>
+                {
+                    if (t.PreviousSprintsStoryPoints.HasValue && t.StoryPoints.HasValue)
+                        return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
+                    return t.StoryPoints ?? 0;
+                });
+                return new TasksByComponentDto
+                {
+                    Component = g.Key,
+                    TotalTasks = componentTasks.Count,
+                    CompletedTasks = completedComponentTasks.Count,
+                    TotalStoryPoints = totalSP,
+                    CompletedStoryPoints = completedSP,
+                    PercentageOfTotal = totalTaskCount > 0
+                        ? Math.Round((double)componentTasks.Count / totalTaskCount * 100, 1)
+                        : 0
+                };
+            })
+            .OrderByDescending(c => c.TotalTasks)
+            .ToList();
+
         return new TasksOverviewDto
         {
             Projects = projectsSummary,
@@ -643,6 +680,7 @@ public class ReportingService : IReportingService
             TasksByTypeHours = tasksByTypeHours,
             TasksByPriority = tasksByPriority,
             TasksByLabel = tasksByLabel,
+            TasksByComponent = tasksByComponent,
             SupportDistribution = supportDistribution,
             Productivity = productivity
         };

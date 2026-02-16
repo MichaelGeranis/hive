@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award } from 'lucide-react'
+import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 
-type TutorialId = 'knowledge-matrix'
+type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard'
 
 interface Tutorial {
   id: TutorialId
@@ -13,6 +13,20 @@ interface Tutorial {
 }
 
 const tutorials: Tutorial[] = [
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: BarChart3,
+    description: 'Understand all metrics, widgets, and the sprint history filter',
+    category: 'Analytics & Reporting'
+  },
+  {
+    id: 'team',
+    title: 'Team Management',
+    icon: Users,
+    description: 'Manage your team members, track tenure, and organize by department',
+    category: 'People Management'
+  },
   {
     id: 'knowledge-matrix',
     title: 'Knowledge Matrix',
@@ -84,6 +98,12 @@ interface TutorialContentProps {
 }
 
 function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
+  if (tutorialId === 'dashboard') {
+    return <DashboardTutorial onBack={onBack} />
+  }
+  if (tutorialId === 'team') {
+    return <TeamTutorial onBack={onBack} />
+  }
   if (tutorialId === 'knowledge-matrix') {
     return <KnowledgeMatrixTutorial onBack={onBack} />
   }
@@ -93,6 +113,987 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
 
 interface TutorialProps {
   onBack: () => void
+}
+
+function DashboardTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Dashboard Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Your central hub for team metrics, analytics, and insights
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview',
+              'Sprint History Filter',
+              'Top Stats',
+              'Widget Customization',
+              'Task Analytics',
+              'Capacity Analysis',
+              'Team Performance Metrics',
+              'Project & Member Distribution',
+              'Support & Maintenance Tracking',
+              'Team Insights',
+              'Export Functionality'
+            ].map((section, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const element = document.getElementById(`dashboard-section-${index + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="dashboard-section-1">
+        <Card>
+          <CardHeader title="1. Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Dashboard is your command center, providing a real-time snapshot of your team's performance,
+                capacity, and work distribution. It aggregates data from multiple sources to give you actionable insights.
+              </p>
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What You'll See</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Key team metrics (members, projects, warnings, action items)</li>
+                  <li>Task distribution across types, projects, and team members</li>
+                  <li>Sprint capacity planning and utilization</li>
+                  <li>Team velocity and estimation accuracy trends</li>
+                  <li>Support and maintenance work tracking</li>
+                  <li>Team sentiment analysis and knowledge gaps</li>
+                </ul>
+              </div>
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Pro Tip:</strong> The Dashboard is fully customizable! You can hide widgets you don't need
+                and use the Sprint History filter to focus on specific time periods.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Sprint History Filter */}
+      <div id="dashboard-section-2">
+        <Card>
+          <CardHeader title="2. Sprint History Filter" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Sprint History dropdown filter lets you limit dashboard data to the last N sprints.
+                This helps you focus on recent trends rather than all-time data.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How It Works</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li><strong>All Sprints</strong> (default) - Shows all historical data</li>
+                    <li><strong>Last 1 Sprint</strong> - Shows current sprint only</li>
+                    <li><strong>Last 3, 5, 10 Sprints</strong> - Shows recent sprint history</li>
+                  </ul>
+                  <p className="text-sm mt-2 text-amber-600 dark:text-amber-400">
+                    The filter applies to most widgets but not all. See below for details.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Widgets Affected by Sprint Filter</h4>
+                  <p className="text-sm mb-2">These widgets update when you change the sprint filter:</p>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Warnings stat (depends on filtered capacity/velocity)</li>
+                      <li>Tasks Distribution (all variants: count, story points, hours)</li>
+                      <li>Members Workload</li>
+                      <li>Support & Maintenance Hours</li>
+                      <li>Capacity Analysis</li>
+                      <li>Team Velocity chart</li>
+                      <li>Estimation Accuracy chart</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Widgets NOT Affected (All-Time Data)</h4>
+                  <p className="text-sm mb-2">These widgets always show all-time data and display an "All sprints" badge:</p>
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Team Members stat</li>
+                      <li>Projects stat</li>
+                      <li>1:1 Action Items stat</li>
+                      <li>TODOs stat</li>
+                      <li>Projects Distribution pie chart</li>
+                      <li>Members by Project</li>
+                      <li>Team Sentiment</li>
+                      <li>Knowledge Level Suggestions</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Start with "All Sprints" to see the big picture, then narrow down
+                to "Last 3 Sprints" to focus on recent trends when planning upcoming work.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Top Stats */}
+      <div id="dashboard-section-3">
+        <Card>
+          <CardHeader title="3. Top Stats" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The top row displays key metrics at a glance. Click on any stat card to drill into details.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Team Members</h4>
+                  <p className="text-sm">
+                    Total count of direct reports in the system. Click to navigate to the Team page.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Badge: All sprints</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Projects</h4>
+                  <p className="text-sm">
+                    Total count of all projects (Planning, Active, On Hold, Completed, Cancelled).
+                    Click to navigate to the Projects page.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Badge: All sprints</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Warnings</h4>
+                  <p className="text-sm mb-2">
+                    Count of potential issues detected across capacity, workload, knowledge, and engagement.
+                    Click to see detailed warnings.
+                  </p>
+                  <p className="text-sm font-semibold mt-2 mb-1">Warning Types:</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-xs">
+                    <li><strong>Capacity Warnings:</strong> Sprints over-allocated or under-allocated</li>
+                    <li><strong>Workload Warnings:</strong> Team members overloaded or unassigned</li>
+                    <li><strong>Knowledge Silos:</strong> Projects with only one knowledgeable person</li>
+                    <li><strong>Unengaged Members:</strong> Team members with no active tasks (and not on leave)</li>
+                  </ul>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Respects sprint filter</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1:1 Action Items</h4>
+                  <p className="text-sm">
+                    Count of open action items from 1:1 meetings (status: Open or In Progress).
+                    Click to see the full list with assignees and due dates.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Badge: All sprints</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">TODOs</h4>
+                  <p className="text-sm">
+                    Count of pending manager notes marked as priority/TODO.
+                    Click to see the list and mark items as complete.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Badge: All sprints</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: Widget Customization */}
+      <div id="dashboard-section-4">
+        <Card>
+          <CardHeader title="4. Widget Customization" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Customize your dashboard by showing or hiding widgets based on what's most relevant to you.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How to Customize</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Click the "Customize Widgets" button (gear icon) in the top-right</li>
+                    <li>Toggle widgets on/off using the eye icons</li>
+                    <li>Click "Reset to Default" to restore all widgets</li>
+                    <li>Close the modal - your preferences are saved automatically</li>
+                  </ol>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <strong>Persistence:</strong> Widget visibility preferences are saved in your browser's localStorage
+                  and persist across sessions.
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Available Widgets</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Top Stats (Team Members, Projects, Warnings, Action Items, TODOs)</li>
+                    <li>Projects Distribution</li>
+                    <li>Members by Project</li>
+                    <li>Tasks Distribution (3 variants: count, story points, hours)</li>
+                    <li>Tasks Distribution by Label</li>
+                    <li>Support Distribution</li>
+                    <li>Team Sentiment</li>
+                    <li>Capacity Analysis</li>
+                    <li>Knowledge Level Suggestions</li>
+                    <li>Estimation Accuracy</li>
+                    <li>Team Velocity</li>
+                    <li>Members Workload</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Tip:</strong> Hide widgets you don't actively use to reduce clutter and improve dashboard load times.
+                For example, if you don't track story points, hide the "Tasks Distribution (SP)" widget.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Task Analytics */}
+      <div id="dashboard-section-5">
+        <Card>
+          <CardHeader title="5. Task Analytics" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Task analytics widgets show how work is distributed across different dimensions.
+                All of these respect the sprint history filter.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tasks Distribution (by Type)</h4>
+                  <p className="text-sm mb-2">
+                    Pie chart showing task breakdown by type (Story, Bug, Task, Spike, Support, etc.).
+                    Color-coded for easy identification.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tasks Distribution (Story Points)</h4>
+                  <p className="text-sm mb-2">
+                    Same as above but weighted by story points instead of task count.
+                    Shows where effort is being spent.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tasks Distribution (Hours)</h4>
+                  <p className="text-sm mb-2">
+                    Same breakdown weighted by estimated hours instead of story points.
+                    Useful if you track time estimates.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tasks Distribution by Label</h4>
+                  <p className="text-sm mb-2">
+                    Pie chart showing task distribution across labels (e.g., "backend", "frontend", "infra").
+                    Helps identify work streams and technical areas.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Members Workload</h4>
+                  <p className="text-sm mb-2">
+                    Bar chart showing task count per team member, broken down by status (To Do, In Progress, Done).
+                    Click a member's name to see their assigned projects.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Filtered by sprint history</p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Understanding Task Counts:</strong> Tasks are counted based on their assignment to sprints
+                within the selected history window. A task assigned to multiple sprints may be counted multiple times.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Capacity Analysis */}
+      <div id="dashboard-section-6">
+        <Card>
+          <CardHeader title="6. Capacity Analysis" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Capacity Analysis widget compares planned capacity vs. actual task allocation for each sprint.
+                This helps identify over-allocation or under-utilization.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Bar Chart Visualization</h4>
+                  <p className="text-sm mb-2">Each sprint shows two bars:</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li><strong className="text-amber-600 dark:text-amber-400">Planned (Orange):</strong> Total capacity set in sprint planning</li>
+                    <li><strong className="text-blue-600 dark:text-blue-400">Actual (Blue):</strong> Sum of story points from assigned tasks</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How Capacity is Calculated</h4>
+                  <p className="text-sm mb-2"><strong>Planned Capacity:</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li>Comes from Sprint Capacity entries (per team member, per sprint)</li>
+                    <li>Set manually in the Sprints page</li>
+                    <li>Represents theoretical available capacity</li>
+                  </ul>
+                  <p className="text-sm mt-2 mb-2"><strong>Actual Allocation:</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li>Sum of story points from all tasks assigned to the sprint</li>
+                    <li>Calculated automatically based on task assignments</li>
+                    <li>Updates in real-time as tasks are added/removed from sprints</li>
+                  </ul>
+                </div>
+
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">Warning Indicators</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li><strong>Over-allocated:</strong> Actual &gt; Planned (warning icon appears)</li>
+                    <li><strong>Under-allocated:</strong> Actual significantly &lt; Planned (may indicate poor planning)</li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <strong>Sprint Filter Impact:</strong> Only sprints within the selected history window are shown.
+                  Use "All Sprints" to see the complete capacity history.
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Aim for Actual to be 80-90% of Planned. This leaves buffer for
+                unplanned work while maximizing team utilization.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 7: Team Performance Metrics */}
+      <div id="dashboard-section-7">
+        <Card>
+          <CardHeader title="7. Team Performance Metrics" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Two key charts track your team's delivery performance over time.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Team Velocity</h4>
+                  <p className="text-sm mb-2">
+                    Line chart showing story points completed per sprint over time.
+                    Helps track team throughput and identify trends.
+                  </p>
+                  <p className="text-sm font-semibold mt-2 mb-1">Calculation:</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-xs">
+                    <li>Sum of story points from tasks with status = Done</li>
+                    <li>Grouped by sprint</li>
+                    <li>Respects sprint history filter</li>
+                  </ul>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Estimation Accuracy</h4>
+                  <p className="text-sm mb-2">
+                    Line chart showing what percentage of estimated work was actually completed each sprint.
+                    Helps calibrate future estimates.
+                  </p>
+                  <p className="text-sm font-semibold mt-2 mb-1">Calculation:</p>
+                  <code className="block bg-slate-900 dark:bg-slate-950 text-green-400 p-2 rounded text-xs mt-1">
+                    Accuracy = (Completed SP / Total Estimated SP) × 100
+                  </code>
+                  <p className="text-sm mt-2">Example: If you estimated 50 SP but only completed 40 SP, accuracy = 80%</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Filtered by sprint history</p>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm">
+                  <strong>Understanding Trends:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1 text-xs">
+                    <li>Increasing velocity = team getting faster (or tasks getting easier)</li>
+                    <li>Decreasing velocity = team slowing down (or tasks getting harder)</li>
+                    <li>Accuracy &gt; 100% = team over-delivered (completed more than estimated)</li>
+                    <li>Accuracy &lt; 80% = team consistently under-delivering or over-estimating</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Track these metrics over 5-10 sprints to identify meaningful trends.
+                Single-sprint fluctuations are normal and not cause for concern.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 8: Project & Member Distribution */}
+      <div id="dashboard-section-8">
+        <Card>
+          <CardHeader title="8. Project & Member Distribution" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                These widgets show how work and people are distributed across projects.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Projects Distribution</h4>
+                  <p className="text-sm mb-2">
+                    Pie chart showing task count per project. Based on all tasks (not filtered by sprint).
+                  </p>
+                  <p className="text-sm"><strong>Calculation:</strong> Groups all tasks by ProjectId and counts them.</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Badge: All sprints</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Members by Project</h4>
+                  <p className="text-sm mb-2">
+                    Bar chart showing how many unique team members are working on each project.
+                    Based on task assignments (all tasks, not filtered).
+                  </p>
+                  <p className="text-sm"><strong>Calculation:</strong> Counts distinct assignees per project.</p>
+                  <p className="text-sm mt-2">
+                    <strong>Use Case:</strong> Identify projects with very few contributors (potential knowledge silos)
+                    or projects with too many contributors (potential coordination overhead).
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Badge: All sprints</p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Note:</strong> These widgets show all-time data because they're meant to give you the big picture
+                of project structure, not sprint-specific allocation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 9: Support & Maintenance Tracking */}
+      <div id="dashboard-section-9">
+        <Card>
+          <CardHeader title="9. Support & Maintenance Tracking" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Track time spent on support and maintenance work vs. feature development.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How Support/Maintenance is Identified</h4>
+                  <p className="text-sm mb-2">
+                    Tasks are classified as support or maintenance based on labels configured in App Settings:
+                  </p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li><strong>Support Labels:</strong> Set in Settings → Support Label (e.g., "support", "customer-issue")</li>
+                    <li><strong>Maintenance Labels:</strong> Set in Settings → Maintenance Label (e.g., "maintenance", "tech-debt")</li>
+                  </ul>
+                  <p className="text-sm mt-2">
+                    Tasks with matching labels are counted toward support or maintenance hours/points.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Support Distribution Widget</h4>
+                  <p className="text-sm mb-2">
+                    Shows two views:
+                  </p>
+                  <ol className="list-decimal list-inside ml-4 space-y-2 text-sm">
+                    <li>
+                      <strong>Support vs Maintenance Hours (Pie Chart):</strong>
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1 text-xs">
+                        <li>Sum of hours for support-labeled tasks</li>
+                        <li>Sum of hours for maintenance-labeled tasks</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Support Hours by Assignee (Bar Chart):</strong>
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1 text-xs">
+                        <li>Shows which team members are handling most support work</li>
+                        <li>Helps balance support load</li>
+                      </ul>
+                    </li>
+                  </ol>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Filtered by sprint history</p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Aim to keep support/maintenance under 20-30% of total capacity
+                to ensure sufficient time for feature development and strategic work.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 10: Team Insights */}
+      <div id="dashboard-section-10">
+        <Card>
+          <CardHeader title="10. Team Insights" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                AI-powered insights and recommendations to improve team performance and knowledge distribution.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Team Sentiment</h4>
+                  <p className="text-sm mb-2">
+                    Analyzes manager notes and 1:1 meeting notes using AI sentiment analysis to track team morale.
+                  </p>
+                  <p className="text-sm"><strong>Shows:</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-xs">
+                    <li>Overall team sentiment (Positive/Neutral/Negative)</li>
+                    <li>Per-member sentiment scores</li>
+                    <li>Sentiment trends over time</li>
+                    <li>Common themes extracted from notes</li>
+                  </ul>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Badge: All sprints</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Knowledge Level Suggestions</h4>
+                  <p className="text-sm mb-2">
+                    Recommends team members for knowledge level increases based on accumulated points.
+                  </p>
+                  <p className="text-sm"><strong>Logic:</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-xs">
+                    <li>Tracks manual points + automatic points (from completed tasks)</li>
+                    <li>Suggests level increase when points reach thresholds (5, 13, 21, 55 points)</li>
+                    <li>Shows current level, total points, and suggested new level</li>
+                  </ul>
+                  <p className="text-sm mt-2">Click a suggestion to navigate to Knowledge Matrix and apply the level increase.</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Badge: All sprints</p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Privacy Note:</strong> Sentiment analysis runs locally and does not send data to external services.
+                Analysis is cached to improve performance.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 11: Export Functionality */}
+      <div id="dashboard-section-11">
+        <Card>
+          <CardHeader title="11. Export Functionality" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Export dashboard data for reporting, sharing, or archival purposes.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How to Export</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Click the "Export Dashboard" button (download icon) in the top-right</li>
+                    <li>Wait for data to be compiled</li>
+                    <li>A JSON file will download automatically</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What's Included in Export</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>All dashboard metrics (team, tasks, projects, capacity)</li>
+                    <li>Team velocity data</li>
+                    <li>Estimation accuracy data</li>
+                    <li>Capacity analysis per sprint</li>
+                    <li>Task distribution breakdowns</li>
+                    <li>Export timestamp and sprint filter setting</li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <strong>File Format:</strong> JSON format for easy parsing and integration with other tools.
+                  You can import the JSON into spreadsheet tools or custom reporting dashboards.
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Use Case:</strong> Export snapshots at the end of each quarter to track long-term trends
+                or create executive summary reports.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function TeamTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Team Management Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Learn how to manage your team members and track organizational structure
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview',
+              'Direct vs Indirect Reports',
+              'Adding Team Members',
+              'Bulk CSV Import',
+              'Filtering and Search',
+              'Tenure Tracking'
+            ].map((section, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const element = document.getElementById(`team-section-${index + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="team-section-1">
+        <Card>
+          <CardHeader title="1. Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Team page is the central hub for managing your organization's people. It allows you to:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4">
+                <li>Track all team members with their basic information</li>
+                <li>Distinguish between direct and indirect reports</li>
+                <li>Organize people by department</li>
+                <li>Calculate and display tenure automatically</li>
+                <li>Bulk import team members from CSV files</li>
+                <li>Search and filter to find specific team members</li>
+              </ul>
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Key Concept:</strong> Team members are the foundation of Hive. Once added, they can be assigned to tasks,
+                projects, performance reviews, 1:1 meetings, and more throughout the system.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Direct vs Indirect Reports */}
+      <div id="team-section-2">
+        <Card>
+          <CardHeader title="2. Direct vs Indirect Reports" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Hive distinguishes between two types of team members:
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Direct Reports</h4>
+                  <p className="text-sm">
+                    People who report directly to you. These are typically the team members you manage day-to-day,
+                    have 1:1 meetings with, and write performance reviews for.
+                  </p>
+                  <p className="text-sm mt-2 text-amber-600 dark:text-amber-400">
+                    <strong>Flag:</strong> isDirect = true
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Indirect Reports</h4>
+                  <p className="text-sm">
+                    People in your broader organization who don't report directly to you (e.g., reports of your direct reports,
+                    team members in other departments you need to track).
+                  </p>
+                  <p className="text-sm mt-2 text-amber-600 dark:text-amber-400">
+                    <strong>Flag:</strong> isDirect = false
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Why it matters:</strong> Many features (like knowledge matrix, skill assessments) can be filtered
+                to show only direct reports, helping you focus on your immediate team.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Adding Team Members */}
+      <div id="team-section-3">
+        <Card>
+          <CardHeader title="3. Adding Team Members" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>To add a new team member manually:</p>
+
+              <ol className="list-decimal list-inside space-y-3 ml-4">
+                <li>Click the "Add Team Member" button</li>
+                <li>Fill in the required information:
+                  <ul className="list-disc list-inside ml-6 mt-2 space-y-1 text-sm">
+                    <li><strong>First Name</strong> and <strong>Last Name</strong> - Used to create the full name</li>
+                    <li><strong>Email</strong> - Contact email address</li>
+                    <li><strong>Job Title</strong> - Current role (e.g., "Senior Software Engineer")</li>
+                    <li><strong>Department</strong> - Organizational unit (e.g., "Engineering", "Product")</li>
+                    <li><strong>Hire Date</strong> - Start date, used to calculate tenure</li>
+                    <li><strong>Is Direct Report</strong> - Toggle to mark as direct or indirect</li>
+                  </ul>
+                </li>
+                <li>Click "Save" to create the team member</li>
+              </ol>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mt-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Editing Team Members</h4>
+                <p className="text-sm">
+                  Click the three-dot menu next to any team member and select "Edit" to update their information.
+                  All fields can be modified after creation.
+                </p>
+              </div>
+
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                <strong>⚠️ Deleting Team Members:</strong> Deleting a team member will remove them from the system.
+                This action cannot be undone. Consider carefully before deleting someone who has associated data
+                (tasks, reviews, knowledge assessments, etc.).
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: Bulk CSV Import */}
+      <div id="team-section-4">
+        <Card>
+          <CardHeader title="4. Bulk CSV Import" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                For larger teams, you can import multiple team members at once using a CSV file:
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Steps:</h4>
+                  <ol className="list-decimal list-inside space-y-2 ml-4">
+                    <li>Click the "Import CSV" button</li>
+                    <li>Download the sample template to see the required format</li>
+                    <li>Fill in your team members' data in the CSV file</li>
+                    <li>Upload the completed CSV file</li>
+                    <li>Review the import results</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">CSV Format</h4>
+                  <p className="text-sm mb-2">Required columns (in this exact order):</p>
+                  <code className="block bg-slate-900 dark:bg-slate-950 text-green-400 p-3 rounded text-xs overflow-x-auto">
+                    FirstName,LastName,Email,JobTitle,Department,HireDate,IsDirect
+                  </code>
+                  <p className="text-sm mt-2">Example row:</p>
+                  <code className="block bg-slate-900 dark:bg-slate-950 text-green-400 p-3 rounded text-xs overflow-x-auto">
+                    John,Doe,john.doe@example.com,Software Engineer,Engineering,2023-01-15,true
+                  </code>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <strong>Skip Duplicates:</strong> The import dialog has a "Skip duplicates" checkbox. When enabled,
+                  team members with matching email addresses will be skipped. When disabled, duplicates will cause an error.
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Import Results</h4>
+                <p className="text-sm">
+                  After import, you'll see a summary showing:
+                </p>
+                <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-sm">
+                  <li><span className="text-green-600 dark:text-green-400">Success count</span> - Successfully imported members</li>
+                  <li><span className="text-red-600 dark:text-red-400">Error count</span> - Failed imports with error messages</li>
+                  <li><span className="text-amber-600 dark:text-amber-400">Skipped count</span> - Duplicates skipped</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Filtering and Search */}
+      <div id="team-section-5">
+        <Card>
+          <CardHeader title="5. Filtering and Search" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Team page provides multiple ways to find team members quickly:
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Search Bar</h4>
+                  <p className="text-sm">
+                    Use the search bar to filter team members by name, email, job title, or department.
+                    The search is case-insensitive and updates results in real-time as you type.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Department Filter</h4>
+                  <p className="text-sm">
+                    Click on a department chip to show only team members from that department.
+                    Click "All Departments" to clear the filter.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Report Type Filter</h4>
+                  <p className="text-sm mb-2">Filter by direct/indirect status:</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li><strong>All</strong> - Show both direct and indirect reports</li>
+                    <li><strong>Direct Reports Only</strong> - Show only isDirect = true</li>
+                    <li><strong>Indirect Reports Only</strong> - Show only isDirect = false</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Tip:</strong> Filters can be combined! For example, search for "engineer" + filter by
+                "Engineering" department + show "Direct Reports Only" to see your direct report engineers.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Tenure Tracking */}
+      <div id="team-section-6">
+        <Card>
+          <CardHeader title="6. Tenure Tracking" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Hive automatically calculates each team member's tenure based on their hire date:
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How It's Calculated</h4>
+                  <p className="text-sm mb-2">
+                    Tenure is calculated from the hire date to the current date in months, then converted to a readable format:
+                  </p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li><strong>Less than 12 months:</strong> Shows as "X months" (e.g., "8 months")</li>
+                    <li><strong>12+ months:</strong> Shows as "Xy Xm" (e.g., "2y 3m" for 2 years 3 months)</li>
+                    <li><strong>Even years:</strong> Shows as "X years" (e.g., "3 years")</li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                  <strong>Real-Time Updates:</strong> Tenure is calculated dynamically each time you view the Team page,
+                  so it's always up to date without needing manual updates.
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Use Cases</h4>
+                  <p className="text-sm mb-2">Understanding tenure helps with:</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                    <li>Identifying team members eligible for performance reviews</li>
+                    <li>Recognizing work anniversaries</li>
+                    <li>Understanding team composition and retention</li>
+                    <li>Planning career development conversations</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-sm">
+                <strong>✓ Best Practice:</strong> Ensure hire dates are accurate when adding team members,
+                as they're used for tenure calculation and may affect other features like leave accrual in the future.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
 
 function KnowledgeMatrixTutorial({ onBack }: TutorialProps) {

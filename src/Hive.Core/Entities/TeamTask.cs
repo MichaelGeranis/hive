@@ -18,6 +18,7 @@ public class TeamTask
     public int? StoryPoints { get; private set; }
     public string Tags { get; private set; } = string.Empty;
     public string Labels { get; private set; } = string.Empty;
+    public string? Components { get; private set; }
     public string Sprint { get; private set; } = string.Empty;
     public int? TimeSpentMinutes { get; private set; }
     public int? PreviousSprintsStoryPoints { get; private set; }
@@ -40,6 +41,7 @@ public class TeamTask
         int? storyPoints = null,
         string? tags = null,
         string? labels = null,
+        string? components = null,
         string? sprint = null,
         int? timeSpentMinutes = null,
         Guid? parentId = null)
@@ -59,6 +61,7 @@ public class TeamTask
         StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
         Labels = labels?.Trim() ?? string.Empty;
+        Components = components?.Trim();
         Sprint = sprint?.Trim() ?? string.Empty;
         TimeSpentMinutes = timeSpentMinutes;
         ParentId = parentId;
@@ -75,6 +78,7 @@ public class TeamTask
         int? storyPoints,
         string? tags,
         string? labels = null,
+        string? components = null,
         string? sprint = null,
         int? timeSpentMinutes = null,
         Guid? parentId = null)
@@ -90,6 +94,7 @@ public class TeamTask
         StoryPoints = storyPoints;
         Tags = tags?.Trim() ?? string.Empty;
         Labels = labels?.Trim() ?? string.Empty;
+        Components = components?.Trim();
         Sprint = sprint?.Trim() ?? string.Empty;
         TimeSpentMinutes = timeSpentMinutes;
         ParentId = parentId;
