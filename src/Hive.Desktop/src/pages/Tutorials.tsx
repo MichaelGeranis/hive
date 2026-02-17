@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3 } from 'lucide-react'
+import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3, Search, X } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 
 type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard' | 'quarterly-planning'
@@ -45,6 +45,18 @@ const tutorials: Tutorial[] = [
 
 export default function Tutorials() {
   const [selectedTutorial, setSelectedTutorial] = useState<TutorialId | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Filter tutorials based on search query
+  const filteredTutorials = tutorials.filter(tutorial => {
+    if (!searchQuery.trim()) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      tutorial.title.toLowerCase().includes(query) ||
+      tutorial.description.toLowerCase().includes(query) ||
+      tutorial.category.toLowerCase().includes(query)
+    )
+  })
 
   if (selectedTutorial) {
     return <TutorialContent tutorialId={selectedTutorial} onBack={() => setSelectedTutorial(null)} />
@@ -60,41 +72,71 @@ export default function Tutorials() {
         </p>
       </div>
 
-      {/* Tutorial Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tutorials.map((tutorial) => {
-          const Icon = tutorial.icon
-          return (
-            <div
-              key={tutorial.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setSelectedTutorial(tutorial.id)}
-            >
-              <Card>
-                <CardContent>
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                    <Icon className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                      {tutorial.title}
-                    </h3>
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-                      {tutorial.category}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {tutorial.description}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                </div>
-              </CardContent>
-              </Card>
-            </div>
-          )
-        })}
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search tutorials..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-10 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {/* Tutorial Cards */}
+      {filteredTutorials.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-slate-500 dark:text-slate-400">
+              No tutorials match your search "{searchQuery}"
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTutorials.map((tutorial) => {
+            const Icon = tutorial.icon
+            return (
+              <div
+                key={tutorial.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => setSelectedTutorial(tutorial.id)}
+              >
+                <Card>
+                  <CardContent>
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                      <Icon className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                        {tutorial.title}
+                      </h3>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                        {tutorial.category}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {tutorial.description}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  </div>
+                </CardContent>
+                </Card>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
