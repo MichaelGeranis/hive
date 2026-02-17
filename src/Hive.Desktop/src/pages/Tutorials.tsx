@@ -151,8 +151,6 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   const [totalMatches, setTotalMatches] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
-  const highlightClass = 'bg-yellow-200 dark:bg-yellow-700'
-  const activeHighlightClass = 'bg-amber-400 dark:bg-amber-600'
 
   // Clear highlights and search when tutorial changes
   useEffect(() => {
@@ -238,7 +236,10 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
 
           // Add highlighted match
           const mark = document.createElement('mark')
-          mark.className = `tutorial-search-highlight ${highlightClass}`
+          mark.className = 'tutorial-search-highlight'
+          mark.style.backgroundColor = '#fef08a' // yellow-200
+          mark.style.padding = '2px'
+          mark.style.borderRadius = '2px'
           mark.textContent = text.substring(matchIndex, matchIndex + query.length)
           fragment.appendChild(mark)
           highlights.push(mark)
@@ -258,8 +259,9 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
     setTotalMatches(highlights.length)
     if (highlights.length > 0) {
       setCurrentMatchIndex(0)
-      highlights[0].classList.remove(highlightClass)
-      highlights[0].classList.add(activeHighlightClass)
+      // Highlight first match
+      highlights[0].style.backgroundColor = '#fbbf24' // amber-400
+      highlights[0].style.fontWeight = 'bold'
       highlights[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [tutorialSearchQuery])
@@ -268,12 +270,12 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
   const navigateMatch = (direction: 'next' | 'prev') => {
     if (!contentRef.current || totalMatches === 0) return
 
-    const highlights = Array.from(contentRef.current.querySelectorAll('.tutorial-search-highlight'))
+    const highlights = Array.from(contentRef.current.querySelectorAll('.tutorial-search-highlight')) as HTMLElement[]
     if (highlights.length === 0) return
 
-    // Remove active class from current
-    highlights[currentMatchIndex].classList.remove(activeHighlightClass)
-    highlights[currentMatchIndex].classList.add(highlightClass)
+    // Reset current highlight to default
+    highlights[currentMatchIndex].style.backgroundColor = '#fef08a' // yellow-200
+    highlights[currentMatchIndex].style.fontWeight = 'normal'
 
     // Calculate new index
     let newIndex = currentMatchIndex
@@ -283,9 +285,9 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
       newIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches
     }
 
-    // Add active class to new
-    highlights[newIndex].classList.remove(highlightClass)
-    highlights[newIndex].classList.add(activeHighlightClass)
+    // Highlight new match
+    highlights[newIndex].style.backgroundColor = '#fbbf24' // amber-400
+    highlights[newIndex].style.fontWeight = 'bold'
     highlights[newIndex].scrollIntoView({ behavior: 'smooth', block: 'center' })
 
     setCurrentMatchIndex(newIndex)
