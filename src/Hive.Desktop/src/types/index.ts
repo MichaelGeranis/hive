@@ -415,7 +415,10 @@ export interface TasksByComponent {
   completedTasks: number
   totalStoryPoints: number
   completedStoryPoints: number
+  totalHours: number
+  completedHours: number
   percentageOfTotal: number
+  percentageOfTotalHours: number
 }
 
 export interface SupportDistribution {

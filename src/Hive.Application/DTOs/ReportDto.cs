@@ -277,7 +277,10 @@ public record TasksByComponentDto
     public int CompletedTasks { get; init; }
     public int TotalStoryPoints { get; init; }
     public int CompletedStoryPoints { get; init; }
+    public double TotalHours { get; init; }
+    public double CompletedHours { get; init; }
     public double PercentageOfTotal { get; init; }
+    public double PercentageOfTotalHours { get; init; }
 }
 
 /// <summary>

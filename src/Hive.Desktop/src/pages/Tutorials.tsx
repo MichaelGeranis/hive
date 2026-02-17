@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 
-type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard'
+type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard' | 'quarterly-planning'
 
 interface Tutorial {
   id: TutorialId
@@ -33,6 +33,13 @@ const tutorials: Tutorial[] = [
     icon: Award,
     description: 'Learn how to track team knowledge across projects using levels and points',
     category: 'Team Development'
+  },
+  {
+    id: 'quarterly-planning',
+    title: 'Quarterly Planning',
+    icon: TrendingUp,
+    description: 'Plan quarterly initiatives, allocate team members, and track dependencies',
+    category: 'Strategic Planning'
   }
 ]
 
@@ -106,6 +113,9 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
   }
   if (tutorialId === 'knowledge-matrix') {
     return <KnowledgeMatrixTutorial onBack={onBack} />
+  }
+  if (tutorialId === 'quarterly-planning') {
+    return <QuarterlyPlanningTutorial onBack={onBack} />
   }
 
   return null
@@ -1736,6 +1746,634 @@ function KnowledgeMatrixTutorial({ onBack }: TutorialProps) {
             </div>
           </div>
         </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-8 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Have questions or suggestions for this tutorial?<br/>
+          Reach out to your Hive administrator.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function QuarterlyPlanningTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Quarterly Planning Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Strategic planning for initiatives, team allocations, and quarterly goals
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview',
+              'Creating Quarters',
+              'Managing Initiatives',
+              'T-Shirt Sizing',
+              'Allocations & Planning Matrix',
+              'Sprint Goals',
+              'Dependencies',
+              'Insights & Warnings',
+              'Best Practices'
+            ].map((section, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  const element = document.getElementById(`qp-section-${idx + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="qp-section-1">
+        <Card>
+          <CardHeader title="1. Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Quarterly Planning helps you manage strategic initiatives across quarters, allocate team members to work,
+                track dependencies, and identify potential conflicts or bottlenecks. It bridges high-level OKRs with
+                sprint-level execution.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Key Concepts</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Quarters</strong> - Time periods (Q1-Q4) with associated OKRs and status tracking</li>
+                  <li><strong>Initiatives</strong> - Major work items with T-shirt size estimates</li>
+                  <li><strong>Allocations</strong> - Team member assignments to initiatives within sprints</li>
+                  <li><strong>Sprint Goals</strong> - Goals and notes for each sprint within a quarter</li>
+                  <li><strong>Dependencies</strong> - Relationships between initiatives (Finish-to-Start, etc.)</li>
+                  <li><strong>Insights</strong> - Automated warnings about workload, conflicts, and risks</li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How It Works</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Create a quarter and link it to your OKRs</li>
+                  <li>Add initiatives with T-shirt size estimates</li>
+                  <li>Allocate team members to initiatives across sprints</li>
+                  <li>Track dependencies between initiatives</li>
+                  <li>Monitor insights for workload issues, leave conflicts, and blockers</li>
+                </ol>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Pro Tip:</strong> Start planning at the quarter level, then drill down to sprint allocations.
+                The system will automatically detect conflicts and suggest optimizations.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Creating Quarters */}
+      <div id="qp-section-2">
+        <Card>
+          <CardHeader title="2. Creating Quarters" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Quarters are the top-level organizing structure for planning. Each quarter has a year, quarter number (1-4),
+                and optional OKR reference.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Quarter Status</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Planning</strong> - Draft quarter, still being planned</li>
+                  <li><strong>Active</strong> - Currently executing this quarter</li>
+                  <li><strong>Completed</strong> - Quarter has finished</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Quarter</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Click "Create Quarter" button</li>
+                  <li>Select year and quarter number (1-4)</li>
+                  <li>Optionally add OKR reference (e.g., link to OKR document)</li>
+                  <li>Click "Create" - the quarter will be set to Planning status</li>
+                  <li>The system will load relevant sprints for the quarter period</li>
+                </ol>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Create quarters in advance (e.g., create Q3 during Q2) to allow
+                proper planning time. Link OKRs to maintain alignment between strategy and execution.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Managing Initiatives */}
+      <div id="qp-section-3">
+        <Card>
+          <CardHeader title="3. Managing Initiatives" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Initiatives represent major work items or projects you plan to tackle in a quarter. Each initiative
+                can be sized, linked to projects, and allocated to team members.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Initiative Fields</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Name</strong> - Short, descriptive title</li>
+                  <li><strong>Description</strong> - Detailed explanation of the work</li>
+                  <li><strong>Color</strong> - Visual identifier in the planning matrix (auto-assigned, editable)</li>
+                  <li><strong>T-Shirt Size</strong> - Effort estimate (XS, S, M, L, XL)</li>
+                  <li><strong>Project Link</strong> - Associate with an existing project</li>
+                  <li><strong>URL</strong> - Link to external docs, tickets, or specs</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating an Initiative</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Select a quarter from the dropdown</li>
+                  <li>Click "Add Initiative" in the Initiatives panel</li>
+                  <li>Enter name and description</li>
+                  <li>Select T-shirt size (see next section for sizing guide)</li>
+                  <li>Optionally link to a project and add URL</li>
+                  <li>Initiative appears in the Initiatives panel and Planning Matrix</li>
+                </ol>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Initiative Management</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Edit initiative by clicking the edit icon</li>
+                  <li>Delete initiative using the delete icon (removes all allocations)</li>
+                  <li>Change color to group related initiatives visually</li>
+                  <li>View allocation count to see how many team/sprint allocations exist</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: T-Shirt Sizing */}
+      <div id="qp-section-4">
+        <Card>
+          <CardHeader title="4. T-Shirt Sizing" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                T-shirt sizing provides high-level effort estimates for initiatives without requiring detailed story points.
+                The system maps sizes to story points for capacity planning.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Standard T-Shirt Size Mapping</h4>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-300 dark:border-slate-600">
+                      <th className="text-left py-2">Size</th>
+                      <th className="text-left py-2">Story Points</th>
+                      <th className="text-left py-2">Typical Scope</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tr>
+                      <td className="py-2"><strong>XS</strong></td>
+                      <td className="py-2">3 SP</td>
+                      <td className="py-2">Small bug fix or minor enhancement</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2"><strong>S</strong></td>
+                      <td className="py-2">8 SP</td>
+                      <td className="py-2">Small feature, 1-2 sprints</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2"><strong>M</strong></td>
+                      <td className="py-2">13 SP</td>
+                      <td className="py-2">Medium feature, 2-3 sprints</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2"><strong>L</strong></td>
+                      <td className="py-2">21 SP</td>
+                      <td className="py-2">Large feature, 4-6 sprints</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2"><strong>XL</strong></td>
+                      <td className="py-2">34 SP</td>
+                      <td className="py-2">Major initiative, full quarter or more</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Note: These mappings can be customized in Settings
+                </p>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How Sizing Affects Planning</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>T-shirt size converts to story points for capacity calculations</li>
+                  <li>Each allocation spreads the effort across assigned sprints</li>
+                  <li>Example: L initiative (21 SP) with 3 sprint allocations = 7 SP per sprint</li>
+                  <li>Insights will warn if total workload exceeds team capacity</li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Use T-shirt sizing for high-level planning. Break down larger initiatives
+                (L, XL) into smaller tasks in the Tasks page once sprint planning begins.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Allocations & Planning Matrix */}
+      <div id="qp-section-5">
+        <Card>
+          <CardHeader title="5. Allocations & Planning Matrix" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Planning Matrix is the heart of quarterly planning. It shows a grid of initiatives (rows) by sprints (columns),
+                with team member allocations in each cell.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How Allocations Work</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Each allocation assigns one team member to work on one initiative during one sprint</li>
+                  <li>Multiple team members can be allocated to the same initiative in the same sprint</li>
+                  <li>The same team member can work on multiple initiatives in a sprint (multitasking)</li>
+                  <li>Each allocation contributes to sprint workload calculations</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating an Allocation</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Find the matrix cell for Initiative X Sprint</li>
+                  <li>Click the "+" button in the cell</li>
+                  <li>Select a team member from the dropdown</li>
+                  <li>Click "Allocate"</li>
+                  <li>The team member appears as a pill/badge in the cell</li>
+                </ol>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Matrix Indicators</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Colored pills</strong> - Team members allocated to this initiative + sprint</li>
+                  <li><strong>Leave icon</strong> - Team member has approved leave during this sprint</li>
+                  <li><strong>Empty cell</strong> - No allocations for this initiative in this sprint</li>
+                  <li><strong>Cell hover</strong> - Shows allocation count and team member names</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Workload Calculation Example</h4>
+                <div className="text-sm space-y-2">
+                  <p><strong>Scenario:</strong> Initiative "API Redesign" sized as L (21 SP)</p>
+                  <ul className="list-disc list-inside ml-4 space-y-1">
+                    <li>Sprint 1: Alice, Bob allocated → 21 SP / 3 sprints / 2 people = 3.5 SP each</li>
+                    <li>Sprint 2: Alice allocated → 21 SP / 3 sprints / 1 person = 7 SP</li>
+                    <li>Sprint 3: Charlie, Diana allocated → 21 SP / 3 sprints / 2 people = 3.5 SP each</li>
+                  </ul>
+                  <p className="text-amber-600 dark:text-amber-400 mt-2">
+                    The system distributes effort evenly across allocated sprints and team members.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Allocate conservatively. Leave buffer for unplanned work, bugs, and support.
+                The Insights panel will warn you about over-allocation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Sprint Goals */}
+      <div id="qp-section-6">
+        <Card>
+          <CardHeader title="6. Sprint Goals" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Sprint Goals connect high-level quarterly objectives to sprint-level execution. They appear in the
+                Planning Matrix header for each sprint.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Sprint Goal Fields</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Goal</strong> - Main objective for the sprint</li>
+                  <li><strong>Notes</strong> - Additional context, risks, or dependencies</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setting Sprint Goals</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Locate the sprint column in the Planning Matrix</li>
+                  <li>Click "Set Goal" or edit icon in the sprint header</li>
+                  <li>Enter goal and optional notes</li>
+                  <li>Save - the goal appears in the sprint header</li>
+                </ol>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Pro Tip:</strong> Sprint goals should align with initiatives allocated to that sprint.
+                Review allocations before setting goals to ensure coherence.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 7: Dependencies */}
+      <div id="qp-section-7">
+        <Card>
+          <CardHeader title="7. Dependencies" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Dependencies track relationships between initiatives. They help identify blockers and sequence work properly.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Dependency Types</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Finish-to-Start (FS)</strong> - Most common: B can't start until A finishes</li>
+                  <li><strong>Start-to-Start (SS)</strong> - B can't start until A starts</li>
+                  <li><strong>Finish-to-Finish (FF)</strong> - B can't finish until A finishes</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Dependency</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Click "Manage Dependencies" in the Initiatives panel</li>
+                  <li>Select the dependent initiative (what's blocked)</li>
+                  <li>Select the dependency initiative (what blocks it)</li>
+                  <li>Choose dependency type (Finish-to-Start is default)</li>
+                  <li>Add optional notes</li>
+                  <li>Save - dependency appears in the dependencies list</li>
+                </ol>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Dependency Insights</h4>
+                <p className="text-sm mb-2">The system automatically detects dependency risks:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Dependent initiative scheduled before dependency completes</li>
+                  <li>Circular dependencies (A depends on B, B depends on A)</li>
+                  <li>Critical path bottlenecks</li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>✓ Best Practice:</strong> Document dependencies early in planning. Use notes to capture
+                specific requirements or coordination points.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 8: Insights & Warnings */}
+      <div id="qp-section-8">
+        <Card>
+          <CardHeader title="8. Insights & Warnings" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Insights sidebar automatically analyzes your quarterly plan and flags potential issues.
+                It helps prevent over-allocation, conflicts, and execution risks.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Insight Types</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Leave Conflict</strong> - Team member allocated during approved leave
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 ml-5">
+                      Severity: Warning or Critical (depending on overlap)
+                    </span>
+                  </li>
+                  <li>
+                    <strong>Dependency Risk</strong> - Dependent initiative starts before dependency finishes
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 ml-5">
+                      Severity: Warning or Critical (based on timing)
+                    </span>
+                  </li>
+                  <li>
+                    <strong>Bottleneck</strong> - Team member over-allocated (workload exceeds capacity)
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 ml-5">
+                      Severity: Critical if significantly over-allocated
+                    </span>
+                  </li>
+                  <li>
+                    <strong>Unassigned Work</strong> - Initiative has no allocations
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 ml-5">
+                      Severity: Info
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Insight Severity</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong className="text-blue-600 dark:text-blue-400">Info</strong> - Informational, no action required</li>
+                  <li><strong className="text-amber-600 dark:text-amber-400">Warning</strong> - Should be addressed, not blocking</li>
+                  <li><strong className="text-red-600 dark:text-red-400">Critical</strong> - Likely to cause execution problems</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using Insights</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Insights appear in the right sidebar with severity badges</li>
+                  <li>Click an insight to highlight affected cells in the Planning Matrix</li>
+                  <li>Review the message for specific details and recommendations</li>
+                  <li>Adjust allocations or dependencies to resolve the issue</li>
+                  <li>Insights update automatically as you make changes</li>
+                </ol>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Summary Metrics</h4>
+                <p className="text-sm mb-2">The Insights panel shows summary statistics:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Total Initiatives</strong> - All initiatives in the quarter</li>
+                  <li><strong>Allocated Initiatives</strong> - Initiatives with at least one allocation</li>
+                  <li><strong>Issue Count</strong> - Total insights (Info level)</li>
+                  <li><strong>Warning Count</strong> - Insights requiring attention</li>
+                  <li><strong>Critical Count</strong> - Serious issues blocking execution</li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <strong>⚠ Important:</strong> Address all Critical insights before starting the quarter.
+                Warnings should be reviewed and mitigated if possible.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 9: Best Practices */}
+      <div id="qp-section-9">
+        <Card>
+          <CardHeader title="9. Best Practices" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Planning Workflow
+                </h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Start Early</strong> - Begin planning next quarter during the current quarter
+                  </li>
+                  <li>
+                    <strong>Define OKRs First</strong> - Link quarters to OKRs before creating initiatives
+                  </li>
+                  <li>
+                    <strong>Size Initiatives</strong> - Use T-shirt sizing to estimate effort
+                  </li>
+                  <li>
+                    <strong>Identify Dependencies</strong> - Document blocking relationships early
+                  </li>
+                  <li>
+                    <strong>Allocate Conservatively</strong> - Leave 20-30% buffer for unplanned work
+                  </li>
+                  <li>
+                    <strong>Check Leave Calendar</strong> - Review team leave before allocating
+                  </li>
+                  <li>
+                    <strong>Review Insights</strong> - Address Critical issues before quarter starts
+                  </li>
+                  <li>
+                    <strong>Set Sprint Goals</strong> - Align sprint goals with allocated initiatives
+                  </li>
+                </ol>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Calculator className="w-5 h-5" />
+                  Capacity Planning Tips
+                </h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Account for Support</strong> - Reserve capacity for bug fixes and production issues
+                  </li>
+                  <li>
+                    <strong>Buffer for Meetings</strong> - Not all hours are coding hours (ceremonies, 1:1s, etc.)
+                  </li>
+                  <li>
+                    <strong>Consider Ramp Time</strong> - New team members need time to onboard
+                  </li>
+                  <li>
+                    <strong>Respect Leave</strong> - Don't allocate team members during approved leave
+                  </li>
+                  <li>
+                    <strong>Avoid Over-allocation</strong> - Working multiple initiatives reduces focus and efficiency
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <GitBranch className="w-5 h-5" />
+                  Dependency Management
+                </h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Use Finish-to-Start</strong> - Most dependencies are "B starts after A finishes"
+                  </li>
+                  <li>
+                    <strong>Document Why</strong> - Use notes to explain the dependency relationship
+                  </li>
+                  <li>
+                    <strong>Sequence Work</strong> - Schedule dependent initiatives after dependencies complete
+                  </li>
+                  <li>
+                    <strong>Parallelize When Possible</strong> - Reduce critical path by running independent work concurrently
+                  </li>
+                  <li>
+                    <strong>Monitor Critical Path</strong> - Pay extra attention to initiatives that block others
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Common Pitfalls to Avoid</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Planning Too Much</strong> - Don't allocate 100% capacity, leave buffer
+                  </li>
+                  <li>
+                    <strong>Ignoring Warnings</strong> - Insights exist for a reason, address them
+                  </li>
+                  <li>
+                    <strong>No Dependencies</strong> - Most complex work has dependencies, document them
+                  </li>
+                  <li>
+                    <strong>Skipping Sprint Goals</strong> - Goals help teams focus and align
+                  </li>
+                  <li>
+                    <strong>One-Person Initiatives</strong> - Consider redundancy and knowledge sharing
+                  </li>
+                  <li>
+                    <strong>Set and Forget</strong> - Review quarterly plans regularly and adjust
+                  </li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Remember:</strong> Quarterly planning is a forecast, not a contract. Stay flexible and adjust
+                as priorities shift, dependencies change, or new information emerges. The goal is informed decision-making,
+                not perfect prediction.
+              </p>
+            </div>
+          </CardContent>
         </Card>
       </div>
 

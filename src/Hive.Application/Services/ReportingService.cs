@@ -634,6 +634,9 @@ public class ReportingService : IReportingService
             .ToList();
 
         // Component distribution (similar to label distribution)
+        // Calculate total hours across all tasks for percentage calculation
+        var totalHoursAllTasks = Math.Round(tasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1);
+
         var tasksByComponent = tasks
             .Where(t => !string.IsNullOrEmpty(t.Components))
             .SelectMany(t => t.Components!.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -655,6 +658,9 @@ public class ReportingService : IReportingService
                         return Math.Max(0, t.StoryPoints.Value - t.PreviousSprintsStoryPoints.Value);
                     return t.StoryPoints ?? 0;
                 });
+                var totalHours = Math.Round(componentTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1);
+                var completedHours = Math.Round(completedComponentTasks.Sum(t => t.TimeSpentMinutes ?? 0) / 60.0, 1);
+
                 return new TasksByComponentDto
                 {
                     Component = g.Key,
@@ -662,12 +668,17 @@ public class ReportingService : IReportingService
                     CompletedTasks = completedComponentTasks.Count,
                     TotalStoryPoints = totalSP,
                     CompletedStoryPoints = completedSP,
+                    TotalHours = totalHours,
+                    CompletedHours = completedHours,
                     PercentageOfTotal = totalTaskCount > 0
                         ? Math.Round((double)componentTasks.Count / totalTaskCount * 100, 1)
+                        : 0,
+                    PercentageOfTotalHours = totalHoursAllTasks > 0
+                        ? Math.Round(totalHours / totalHoursAllTasks * 100, 1)
                         : 0
                 };
             })
-            .OrderByDescending(c => c.TotalTasks)
+            .OrderByDescending(c => c.TotalHours)
             .ToList();
 
         return new TasksOverviewDto

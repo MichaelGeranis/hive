@@ -539,9 +539,18 @@ export default function Dashboard() {
     .map(l => ({ name: l.label, value: l.totalTasks, completed: l.completedTasks, sp: l.totalStoryPoints, completedSP: l.completedStoryPoints, pct: l.percentageOfTotal }))
     .sort((a, b) => b.value - a.value)
 
-  // Use backend-computed component distribution
+  // Use backend-computed component distribution (using hours instead of task count)
   const taskComponentChartData = (dashboard.tasks.tasksByComponent || [])
-    .map(c => ({ name: c.component, value: c.totalTasks, completed: c.completedTasks, sp: c.totalStoryPoints, completedSP: c.completedStoryPoints, pct: c.percentageOfTotal }))
+    .map(c => ({
+      name: c.component,
+      value: c.totalHours,
+      totalTasks: c.totalTasks,
+      completed: c.completedTasks,
+      sp: c.totalStoryPoints,
+      completedSP: c.completedStoryPoints,
+      completedHours: c.completedHours,
+      pct: c.percentageOfTotalHours
+    }))
     .sort((a, b) => b.value - a.value)
 
   // Use backend-computed total story points for current sprint
@@ -1180,7 +1189,7 @@ export default function Dashboard() {
         {/* Components Distribution */}
         {widgets.componentsDistribution && taskComponentChartData.length > 0 && (
         <Card>
-          <CardHeader title="Components Distribution" subtitle="By component" />
+          <CardHeader title="Components Distribution" subtitle="By time logged (hours)" />
           <CardContent>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -1201,7 +1210,7 @@ export default function Dashboard() {
                   <Tooltip
                     formatter={(value: number, _name, props) => {
                       const payload = props.payload as typeof taskComponentChartData[0]
-                      return [`${value} tasks (${payload.sp} SP)`, 'Total']
+                      return [`${value} hours (${payload.totalTasks} tasks, ${payload.sp} SP)`, 'Total']
                     }}
                   />
                 </PieChart>
@@ -1215,7 +1224,7 @@ export default function Dashboard() {
                     <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
                   </div>
                   <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                    <span className="font-medium text-slate-900 dark:text-slate-100">{entry.value}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">{entry.value}h</span>
                     <span className="text-slate-400">({entry.pct}%)</span>
                   </div>
                 </div>
