@@ -706,6 +706,36 @@ function DashboardTutorial({ onBack }: TutorialProps) {
                 <strong>Understanding Task Counts:</strong> Tasks are counted based on their assignment to sprints
                 within the selected history window. A task assigned to multiple sprints may be counted multiple times.
               </p>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Parent vs Child Story Points</h4>
+                <p className="text-sm mb-2">
+                  The system distinguishes between parent tasks and their child tasks when calculating story points:
+                </p>
+                <ul className="list-disc list-inside ml-4 space-y-2 text-sm">
+                  <li>
+                    <strong>Child Tasks Only:</strong> All task distribution widgets (by Type, Story Points, Hours, Labels)
+                    count only child tasks. Parent tasks are excluded from these aggregations.
+                  </li>
+                  <li>
+                    <strong>Parent Story Points:</strong> If a parent task has its own story points assigned
+                    (acting as both a parent and a task), those points are <strong>not</strong> included in dashboard
+                    task analytics. Only the child tasks contribute to these metrics.
+                  </li>
+                  <li>
+                    <strong>Viewing Parent Metrics:</strong> To see parent-level aggregations (sum of all child story points),
+                    visit the Parents page where both child totals and parent task story points are displayed separately.
+                  </li>
+                  <li>
+                    <strong>Epic Parents:</strong> Parents with zero child tasks (marked as "Epic") represent planned work
+                    and don't contribute to dashboard task analytics until child tasks are created.
+                  </li>
+                </ul>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  Example: A parent "API Redesign" with 3 child tasks (5 SP, 3 SP, 2 SP) contributes 10 SP total
+                  from children. If the parent itself has 1 SP assigned, that 1 SP is not counted in dashboard task analytics.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -745,6 +775,9 @@ function DashboardTutorial({ onBack }: TutorialProps) {
                     <li>Sum of story points from all tasks assigned to the sprint</li>
                     <li>Calculated automatically based on task assignments</li>
                     <li>Updates in real-time as tasks are added/removed from sprints</li>
+                    <li className="text-blue-600 dark:text-blue-400">
+                      <strong>Note:</strong> Only child tasks are counted. Parent task story points are excluded from capacity calculations.
+                    </li>
                   </ul>
                 </div>
 
@@ -793,6 +826,9 @@ function DashboardTutorial({ onBack }: TutorialProps) {
                     <li>Sum of story points from tasks with status = Done</li>
                     <li>Grouped by sprint</li>
                     <li>Respects sprint history filter</li>
+                    <li className="text-blue-600 dark:text-blue-400">
+                      <strong>Only child tasks counted</strong> - parent task story points excluded
+                    </li>
                   </ul>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Filtered by sprint history</p>
                 </div>
