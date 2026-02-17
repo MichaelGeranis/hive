@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Layers, Search, Tag, Edit, Trash2, MoreVertical, CheckCircle, Clock, X } from 'lucide-react'
+import { Plus, Layers, Search, Tag, Edit, Trash2, MoreVertical, CheckCircle, Clock, X, Zap, CheckCheck } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { parentsApi } from '../services/api'
 import type { Parent } from '../types'
@@ -88,6 +88,18 @@ export default function Parents() {
 
     return result
   }
+
+  // Calculate totals from filtered parents
+  const totals = useMemo(() => {
+    const filtered = filteredParents()
+    return {
+      totalTasks: filtered.reduce((sum, p) => sum + p.totalTasks, 0),
+      completedTasks: filtered.reduce((sum, p) => sum + p.completedTasks, 0),
+      totalStoryPoints: filtered.reduce((sum, p) => sum + p.totalStoryPoints, 0),
+      totalTimeSpentMinutes: filtered.reduce((sum, p) => sum + p.totalTimeSpentMinutes, 0),
+      parentTimeSpentMinutes: filtered.reduce((sum, p) => sum + (p.timeSpentMinutes || 0), 0)
+    }
+  }, [parents, searchQuery, selectedLabel])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -259,6 +271,37 @@ export default function Parents() {
           </div>
         )}
       </div>
+
+      {/* Totals Summary Bar */}
+      {filteredParents().length > 0 && (totals.totalTasks > 0 || totals.totalStoryPoints > 0 || totals.totalTimeSpentMinutes > 0 || totals.parentTimeSpentMinutes > 0) && (
+        <div className="flex items-center gap-6 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Totals:</span>
+          {totals.totalTasks > 0 && (
+            <span className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
+              <CheckCheck className="w-4 h-4" />
+              {totals.completedTasks}/{totals.totalTasks} tasks
+            </span>
+          )}
+          {totals.totalStoryPoints > 0 && (
+            <span className="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
+              <Zap className="w-4 h-4" />
+              {totals.totalStoryPoints} SP
+            </span>
+          )}
+          {totals.totalTimeSpentMinutes > 0 && (
+            <span className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400">
+              <Clock className="w-4 h-4" />
+              {formatTime(totals.totalTimeSpentMinutes)} (children)
+            </span>
+          )}
+          {totals.parentTimeSpentMinutes > 0 && (
+            <span className="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
+              <Clock className="w-4 h-4" />
+              {formatTime(totals.parentTimeSpentMinutes)} (parent)
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Parents Grid */}
       {filteredParents().length === 0 ? (
