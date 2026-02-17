@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3, Search, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3, Search, X, ArrowUp, ArrowDown } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 
 type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard' | 'quarterly-planning'
@@ -147,20 +147,221 @@ interface TutorialContentProps {
 }
 
 function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
-  if (tutorialId === 'dashboard') {
-    return <DashboardTutorial onBack={onBack} />
-  }
-  if (tutorialId === 'team') {
-    return <TeamTutorial onBack={onBack} />
-  }
-  if (tutorialId === 'knowledge-matrix') {
-    return <KnowledgeMatrixTutorial onBack={onBack} />
-  }
-  if (tutorialId === 'quarterly-planning') {
-    return <QuarterlyPlanningTutorial onBack={onBack} />
+  const [tutorialSearchQuery, setTutorialSearchQuery] = useState('')
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const [totalMatches, setTotalMatches] = useState(0)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const highlightClass = 'bg-yellow-200 dark:bg-yellow-700'
+  const activeHighlightClass = 'bg-amber-400 dark:bg-amber-600'
+
+  // Clear highlights and search when tutorial changes
+  useEffect(() => {
+    setTutorialSearchQuery('')
+    setCurrentMatchIndex(0)
+    setTotalMatches(0)
+  }, [tutorialId])
+
+  // Perform search and highlight
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    // Remove existing highlights
+    const existingHighlights = contentRef.current.querySelectorAll('.tutorial-search-highlight')
+    existingHighlights.forEach(el => {
+      const parent = el.parentNode
+      if (parent) {
+        parent.replaceChild(document.createTextNode(el.textContent || ''), el)
+        parent.normalize()
+      }
+    })
+
+    if (!tutorialSearchQuery.trim()) {
+      setTotalMatches(0)
+      setCurrentMatchIndex(0)
+      return
+    }
+
+    // Find and highlight matches
+    const walker = document.createTreeWalker(
+      contentRef.current,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          // Skip script and style elements
+          const parent = node.parentElement
+          if (!parent || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+            return NodeFilter.FILTER_REJECT
+          }
+          // Skip if already highlighted
+          if (parent.classList.contains('tutorial-search-highlight')) {
+            return NodeFilter.FILTER_REJECT
+          }
+          return NodeFilter.FILTER_ACCEPT
+        }
+      }
+    )
+
+    const textNodes: Text[] = []
+    let node: Node | null
+    while ((node = walker.nextNode())) {
+      textNodes.push(node as Text)
+    }
+
+    const query = tutorialSearchQuery.toLowerCase()
+    const highlights: HTMLElement[] = []
+
+    textNodes.forEach(textNode => {
+      const text = textNode.textContent || ''
+      const lowerText = text.toLowerCase()
+      let lastIndex = 0
+      const indices: number[] = []
+
+      let index = lowerText.indexOf(query, lastIndex)
+      while (index !== -1) {
+        indices.push(index)
+        lastIndex = index + query.length
+        index = lowerText.indexOf(query, lastIndex)
+      }
+
+      if (indices.length > 0) {
+        const parent = textNode.parentNode
+        if (!parent) return
+
+        const fragment = document.createDocumentFragment()
+        let currentPos = 0
+
+        indices.forEach(matchIndex => {
+          // Add text before match
+          if (matchIndex > currentPos) {
+            fragment.appendChild(document.createTextNode(text.substring(currentPos, matchIndex)))
+          }
+
+          // Add highlighted match
+          const mark = document.createElement('mark')
+          mark.className = `tutorial-search-highlight ${highlightClass}`
+          mark.textContent = text.substring(matchIndex, matchIndex + query.length)
+          fragment.appendChild(mark)
+          highlights.push(mark)
+
+          currentPos = matchIndex + query.length
+        })
+
+        // Add remaining text
+        if (currentPos < text.length) {
+          fragment.appendChild(document.createTextNode(text.substring(currentPos)))
+        }
+
+        parent.replaceChild(fragment, textNode)
+      }
+    })
+
+    setTotalMatches(highlights.length)
+    if (highlights.length > 0) {
+      setCurrentMatchIndex(0)
+      highlights[0].classList.remove(highlightClass)
+      highlights[0].classList.add(activeHighlightClass)
+      highlights[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [tutorialSearchQuery])
+
+  // Navigate to next/previous match
+  const navigateMatch = (direction: 'next' | 'prev') => {
+    if (!contentRef.current || totalMatches === 0) return
+
+    const highlights = Array.from(contentRef.current.querySelectorAll('.tutorial-search-highlight'))
+    if (highlights.length === 0) return
+
+    // Remove active class from current
+    highlights[currentMatchIndex].classList.remove(activeHighlightClass)
+    highlights[currentMatchIndex].classList.add(highlightClass)
+
+    // Calculate new index
+    let newIndex = currentMatchIndex
+    if (direction === 'next') {
+      newIndex = (currentMatchIndex + 1) % totalMatches
+    } else {
+      newIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches
+    }
+
+    // Add active class to new
+    highlights[newIndex].classList.remove(highlightClass)
+    highlights[newIndex].classList.add(activeHighlightClass)
+    highlights[newIndex].scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+    setCurrentMatchIndex(newIndex)
   }
 
-  return null
+  const renderTutorial = () => {
+    if (tutorialId === 'dashboard') {
+      return <DashboardTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'team') {
+      return <TeamTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'knowledge-matrix') {
+      return <KnowledgeMatrixTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'quarterly-planning') {
+      return <QuarterlyPlanningTutorial onBack={onBack} />
+    }
+    return null
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 pb-4">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search within tutorial..."
+              value={tutorialSearchQuery}
+              onChange={(e) => setTutorialSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 text-sm"
+            />
+            {tutorialSearchQuery && (
+              <button
+                onClick={() => setTutorialSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {totalMatches > 0 && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm text-slate-600 dark:text-slate-300">
+                <span>{currentMatchIndex + 1} / {totalMatches}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => navigateMatch('prev')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300"
+                  title="Previous match"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => navigateMatch('next')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300"
+                  title="Next match"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tutorial Content */}
+      <div ref={contentRef}>
+        {renderTutorial()}
+      </div>
+    </div>
+  )
 }
 
 interface TutorialProps {
