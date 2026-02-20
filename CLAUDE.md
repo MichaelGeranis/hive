@@ -210,11 +210,13 @@ src/Hive.Desktop/
 │   │   ├── Settings.tsx         # Application settings
 │   │   ├── Skills.tsx           # Skills management & heatmap
 │   │   ├── Sprints.tsx          # Sprint management
-│   │   └── Tasks.tsx            # Task management
+│   │   ├── Tasks.tsx            # Task management
+│   │   └── Tutorials.tsx        # In-app tutorials & documentation
 │   ├── components/       # Reusable components
 │   │   ├── Card.tsx             # Generic card component
 │   │   ├── InitiativesPanel.tsx # Quarterly initiatives panel
 │   │   ├── InsightsSidebar.tsx  # Planning insights sidebar
+│   │   ├── KnowledgeProgressionChart.tsx # Knowledge level & points progression chart
 │   │   ├── Layout.tsx           # Main app layout
 │   │   ├── LoadingScreen.tsx    # Loading state component
 │   │   ├── PlanningMatrix.tsx   # Priority/effort matrix
@@ -263,6 +265,7 @@ The Dashboard page has a "Sprint History" dropdown filter that limits data to th
 | Estimation Accuracy | `reportsApi.getEstimationAccuracy(sprintFilter)` |
 | Support Hours | `dashboard.tasks.supportDistribution` |
 | Support Hours by Assignee | `dashboard.tasks.supportDistribution` |
+| Components Distribution | `dashboard.tasks.tasksByComponent` |
 
 ### Key backend detail
 
