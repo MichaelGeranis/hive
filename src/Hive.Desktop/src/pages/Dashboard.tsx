@@ -555,6 +555,8 @@ export default function Dashboard() {
 
   // Use backend-computed total story points for current sprint
   const currentSprintTotalSP = capacityAnalysis?.currentSprint?.totalStoryPoints ?? 0
+  // New SP only (excludes carried-over) — matches newCompletedPoints numerator
+  const currentSprintNewSP = currentSprintTotalSP - (capacityAnalysis?.currentSprint?.carriedOverPoints ?? 0)
 
   // Calculate current sprint task counts from unfiltered tasks array
   // This ensures the widget always shows current sprint data regardless of sprint filter
@@ -763,10 +765,10 @@ export default function Dashboard() {
                 {CURRENT_SPRINT_BADGE}
               </div>
               <div className="flex flex-wrap items-center gap-6">
-                {/* SP Progress - New SP only */}
+                {/* SP Progress - New SP only (carried-over excluded from both numerator and denominator) */}
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0}/{currentSprintTotalSP}</span>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">SP {currentSprintTotalSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0) / currentSprintTotalSP * 100) : 0}%</span>
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0}/{currentSprintNewSP}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">SP {currentSprintNewSP > 0 ? Math.round((capacityAnalysis?.currentSprint?.newCompletedPoints ?? 0) / currentSprintNewSP * 100) : 0}%</span>
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
                 {/* Tasks Count */}
