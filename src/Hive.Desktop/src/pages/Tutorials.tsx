@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3, Search, X, ArrowUp, ArrowDown } from 'lucide-react'
+import { BookOpen, ChevronRight, Home, TrendingUp, Calculator, Zap, GitBranch, Award, Users, BarChart3, Search, X, ArrowUp, ArrowDown, Calendar, Star } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 
-type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard' | 'quarterly-planning'
+type TutorialId = 'knowledge-matrix' | 'team' | 'dashboard' | 'quarterly-planning' | 'sprints-tasks' | 'leaves' | 'reviews'
 
 interface Tutorial {
   id: TutorialId
@@ -40,6 +40,27 @@ const tutorials: Tutorial[] = [
     icon: TrendingUp,
     description: 'Plan quarterly initiatives, allocate team members, and track dependencies',
     category: 'Strategic Planning'
+  },
+  {
+    id: 'sprints-tasks',
+    title: 'Sprints & Tasks',
+    icon: Zap,
+    description: 'Manage sprints, tasks, story points, capacity planning, and Jira imports',
+    category: 'Delivery Management'
+  },
+  {
+    id: 'leaves',
+    title: 'Leave Management',
+    icon: Calendar,
+    description: 'Track team leave, view the calendar, and manage public holidays',
+    category: 'People Management'
+  },
+  {
+    id: 'reviews',
+    title: 'Performance Reviews',
+    icon: Star,
+    description: 'Create and manage performance reviews with ratings and feedback',
+    category: 'People Management'
   }
 ]
 
@@ -305,6 +326,15 @@ function TutorialContent({ tutorialId, onBack }: TutorialContentProps) {
     }
     if (tutorialId === 'quarterly-planning') {
       return <QuarterlyPlanningTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'sprints-tasks') {
+      return <SprintsTasksTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'leaves') {
+      return <LeavesTutorial onBack={onBack} />
+    }
+    if (tutorialId === 'reviews') {
+      return <ReviewsTutorial onBack={onBack} />
     }
     return null
   }
@@ -2652,6 +2682,1106 @@ function QuarterlyPlanningTutorial({ onBack }: TutorialProps) {
                 <strong>Remember:</strong> Quarterly planning is a forecast, not a contract. Stay flexible and adjust
                 as priorities shift, dependencies change, or new information emerges. The goal is informed decision-making,
                 not perfect prediction.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-8 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Have questions or suggestions for this tutorial?<br/>
+          Reach out to your Hive administrator.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function SprintsTasksTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Sprints & Tasks Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Learn how to manage sprints, tasks, story points, capacity, and Jira imports
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview',
+              'Creating Sprints',
+              'Editing Sprint Capacity',
+              'Sprint Team Filter (Jira)',
+              'Managing Tasks',
+              'Story Points & Carried-Over',
+              'Filtering & Pagination',
+              'Jira Import',
+              'Bulk Operations'
+            ].map((section, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const element = document.getElementById(`sprints-tasks-section-${index + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="sprints-tasks-section-1">
+        <Card>
+          <CardHeader title="1. Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Sprints and Tasks are the core of delivery management in Hive. Together they let you:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4">
+                <li>Create time-boxed sprints with capacity targets</li>
+                <li>Track individual tasks with status, priority, story points, and assignees</li>
+                <li>Monitor progress through 10 workflow statuses (Backlog through Done)</li>
+                <li>Import tasks and sprints from Jira via CSV</li>
+                <li>Understand velocity by separating new work from carried-over work</li>
+              </ul>
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Key Concept:</strong> Sprints define the time period and capacity, while tasks represent the individual
+                units of work. Tasks are assigned to sprints, and their story points contribute to the sprint's progress.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Creating Sprints */}
+      <div id="sprints-tasks-section-2">
+        <Card>
+          <CardHeader title="2. Creating Sprints" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>To create a new sprint, click "New Sprint" on the Sprints page and fill in:</p>
+              <ol className="list-decimal list-inside space-y-3 ml-4">
+                <li><strong>Team Name</strong> — A short identifier for your team (e.g., "LP", "PM")</li>
+                <li><strong>Quarter</strong> — Select Q1, Q2, Q3, or Q4</li>
+                <li><strong>Year</strong> — The sprint year (defaults to current year)</li>
+                <li><strong>Sprint Number</strong> — Sequential number within the quarter (starting at 1)</li>
+              </ol>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Sprint Name Format</h4>
+                <p className="text-sm mb-2">
+                  Hive auto-generates the sprint name using this pattern:
+                </p>
+                <code className="block bg-slate-900 dark:bg-slate-950 text-green-400 p-3 rounded text-xs">
+                  {'{TeamName}_{Quarter}Q{YearShort}_S{SprintNumber}'}
+                </code>
+                <p className="text-sm mt-2">
+                  <strong>Example:</strong> Team "LP", Q4, Year 2025, Sprint 6 → <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">LP_4Q25_S6</code>
+                </p>
+                <p className="text-sm mt-1">
+                  A live preview of the generated name is shown below the inputs as you type.
+                </p>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Note:</strong> The naming convention matters if you use the Jira import feature — the team name prefix
+                is used to filter which sprints get imported.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Editing Sprint Capacity */}
+      <div id="sprints-tasks-section-3">
+        <Card>
+          <CardHeader title="3. Editing Sprint Capacity" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Click the edit (pencil) icon on any sprint to configure it:</p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Start & End Dates</h4>
+                  <p className="text-sm">
+                    Set the sprint boundaries. If you don't set dates, Hive estimates them from the quarter and sprint number
+                    (assuming 2-week sprints starting from the quarter start).
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Committed Story Points</h4>
+                  <p className="text-sm">
+                    The total story points the team commits to completing in this sprint.
+                    This is used for capacity utilization calculations on the Dashboard.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Available Members (Auto-Calculated)</h4>
+                  <p className="text-sm mb-2">
+                    This field is read-only and auto-recalculates when you save. The formula is:
+                  </p>
+                  <code className="block bg-slate-900 dark:bg-slate-950 text-green-400 p-3 rounded text-xs">
+                    Available = Total Team Size - (Total Leave Days / Sprint Working Days)
+                  </code>
+                  <p className="text-sm mt-2">
+                    It counts all direct reports, calculates working days in the sprint (excluding weekends),
+                    then subtracts the proportional capacity lost to approved leave.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Tip:</strong> Set accurate sprint dates and keep leave records up to date — the available members
+                calculation depends on both to give you a realistic capacity figure.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: Sprint Team Filter */}
+      <div id="sprints-tasks-section-4">
+        <Card>
+          <CardHeader title="4. Sprint Team Filter (Jira)" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Sprint Team Filter controls which sprints are imported when you import tasks from Jira.
+                It's configured in the blue info box at the top of the Sprints page.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">When Filter Is Empty</h4>
+                  <p className="text-sm">All sprints from the Jira CSV are imported regardless of team name.</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">When Filter Is Set (e.g., "LP")</h4>
+                  <p className="text-sm">
+                    Only sprints whose name starts with "LP" are imported. Other sprints (e.g., "PM_1Q25_S1") are skipped
+                    with a warning in the import results.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>When to use:</strong> Set this filter if your Jira board contains sprints from multiple teams
+                and you only want to track your own team's sprints in Hive.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Managing Tasks */}
+      <div id="sprints-tasks-section-5">
+        <Card>
+          <CardHeader title="5. Managing Tasks" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Tasks are the individual units of work within sprints. Click "New Task" to create one.</p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Task Fields</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li><strong>Title</strong> (required) — Task name</li>
+                  <li><strong>Description</strong> — Additional details</li>
+                  <li><strong>Priority</strong> — Low, Medium (default), High, or Critical</li>
+                  <li><strong>Type</strong> — Task, Epic, Story, Sub-task, Bug, Spike, or Support</li>
+                  <li><strong>Assignee</strong> — Team member responsible</li>
+                  <li><strong>Due Date</strong> — Deadline</li>
+                  <li><strong>Story Points</strong> — Effort estimate (1, 2, 3, 5, 8…)</li>
+                  <li><strong>Time Spent</strong> — Actual time in minutes</li>
+                  <li><strong>Sprint</strong> — Sprint assignment (e.g., "Sprint 1")</li>
+                  <li><strong>Labels</strong> — Comma-separated tags (e.g., "frontend, urgent")</li>
+                  <li><strong>Components</strong> — Comma-separated technical areas (e.g., "API, Database")</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Task Statuses (10 Stages)</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-slate-400" />Backlog
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-400" />To Do
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-orange-400" />Blocked
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-400" />In Progress
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-purple-400" />In Review
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-cyan-400" />In Test
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-indigo-400" />PO Acceptance
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-emerald-400" />Ready To Release
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-green-500" />Done
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-400" />Cancelled
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Task Actions</h4>
+                <p className="text-sm">Each task has a context menu (three dots) with:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4 mt-2">
+                  <li><strong>Edit</strong> — Modify all task fields</li>
+                  <li><strong>Duplicate</strong> — Create a full copy of the task</li>
+                  <li><strong>Pin (Override)</strong> — Lock specific fields so they're preserved during Jira re-imports</li>
+                  <li><strong>Delete</strong> — Remove the task (with confirmation)</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Story Points & Carried-Over */}
+      <div id="sprints-tasks-section-6">
+        <Card>
+          <CardHeader title="6. Story Points & Carried-Over" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Hive tracks three metrics per task: story points, estimated hours, and actual time spent.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Story Points (SP)</h4>
+                  <p className="text-sm">
+                    The effort estimate for a task. Displayed with a bolt icon. The backend automatically converts
+                    story points to estimated hours using the mapping configured in Settings.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Carried-Over Points</h4>
+                  <p className="text-sm mb-2">
+                    When a task spans multiple sprints, Hive tracks how much work was done in previous sprints vs. the
+                    current sprint:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                    <li><strong>New SP</strong> = Total SP - Previous Sprints SP</li>
+                    <li><strong>Carried-Over SP</strong> = Previous Sprints SP (from original sprint)</li>
+                  </ul>
+                  <p className="text-sm mt-2">
+                    On task cards, this appears as <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">3+2 SP</code> meaning
+                    3 new + 2 carried over.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Why it matters:</strong> The Dashboard's velocity chart separates new work from carried-over work,
+                giving you an accurate picture of the team's actual throughput rather than inflating velocity with
+                re-counted points.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 7: Filtering & Pagination */}
+      <div id="sprints-tasks-section-7">
+        <Card>
+          <CardHeader title="7. Filtering & Pagination" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>The Tasks page provides powerful filtering to quickly find what you need:</p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Search</h4>
+                  <p className="text-sm">Full-text search across task titles and descriptions. Results update in real-time with a 300ms debounce.</p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Status Filter</h4>
+                  <p className="text-sm">
+                    Filter by any of the 10 statuses, or use "All" and "Overdue" as special filters.
+                    Each status button shows its task count. Only statuses with tasks appear.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Label & Sprint Filters</h4>
+                  <p className="text-sm">
+                    Click any label or sprint name to filter tasks to just that label/sprint.
+                    Click again to deselect. These can be combined with the status filter.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Exclude Parents Toggle</h4>
+                  <p className="text-sm">
+                    When enabled, hides parent tasks (e.g., Epics) to show only leaf-level tasks.
+                    Useful for focusing on the actual work items.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Pagination</h4>
+                  <p className="text-sm">
+                    Choose to display 10, 20 (default), 50, or 100 tasks per page. Navigate between pages
+                    with Previous/Next buttons. The summary bar shows aggregate story points, estimated hours,
+                    and time spent for the current page.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>URL Deep Linking:</strong> You can link directly to a filtered view using the <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">?filter=status</code> URL
+                parameter (e.g., <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">?filter=overdue</code>). The Dashboard uses this to link to overdue tasks.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 8: Jira Import */}
+      <div id="sprints-tasks-section-8">
+        <Card>
+          <CardHeader title="8. Jira Import" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Import tasks from Jira by uploading a CSV export. Click "Import from Jira" on the Tasks page.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Import Flow</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
+                  <li>Export tasks from Jira as CSV (the dialog includes step-by-step instructions)</li>
+                  <li>Upload the CSV file and click "Preview Import"</li>
+                  <li>Review the preview: valid/invalid rows, detected columns, sample data</li>
+                  <li>Configure import options:
+                    <ul className="list-disc list-inside ml-6 mt-1 space-y-1">
+                      <li><strong>Update Existing</strong> — Update matching tasks or skip them</li>
+                      <li><strong>Match By</strong> — Issue Key (recommended) or Title</li>
+                    </ul>
+                  </li>
+                  <li>Click "Import" and review the results (imported, skipped, errors)</li>
+                </ol>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Field Overrides (Pinning)</h4>
+                <p className="text-sm mb-2">
+                  When you re-import from Jira, some fields you've manually edited in Hive might get overwritten.
+                  Use "Pin" (via the task context menu) to lock fields like:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li>Assignee</li>
+                  <li>Story Points & Estimated Hours</li>
+                  <li>Time Spent</li>
+                  <li>Previous Sprints SP (for multi-sprint tasks)</li>
+                  <li>Sprint assignment</li>
+                </ul>
+                <p className="text-sm mt-2">
+                  Pinned fields show a pin icon and are preserved during future imports.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 9: Bulk Operations */}
+      <div id="sprints-tasks-section-9">
+        <Card>
+          <CardHeader title="9. Bulk Operations" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>For managing multiple tasks at once:</p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Bulk Delete</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
+                  <li>Use the checkboxes next to individual tasks, or "Select All" for the current page</li>
+                  <li>A "Delete Selected (X)" button appears showing the count</li>
+                  <li>Confirm the deletion in the dialog</li>
+                </ol>
+              </div>
+
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                <strong>Warning:</strong> Bulk delete is permanent and cannot be undone. Double-check your selection
+                before confirming.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-8 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Have questions or suggestions for this tutorial?<br/>
+          Reach out to your Hive administrator.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function LeavesTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Leave Management Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Learn how to track team leave, use the calendar view, and manage public holidays
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview & Leave Types',
+              'Creating Leave Records',
+              'Editing & Deleting',
+              'Calendar View',
+              'Analytics & Overview Cards',
+              'Business Days Calculation',
+              'Tips & Best Practices'
+            ].map((section, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const element = document.getElementById(`leaves-section-${index + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="leaves-section-1">
+        <Card>
+          <CardHeader title="1. Overview & Leave Types" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Leaves page is a capacity-planning tool that lets you track when team members are away.
+                It provides a calendar view, analytics, and integrates with sprint capacity calculations.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Four Leave Types</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <span className="w-3 h-3 rounded-full bg-green-500" />
+                    <div>
+                      <p className="font-medium text-sm">Vacation</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Planned time off</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <span className="w-3 h-3 rounded-full bg-orange-500" />
+                    <div>
+                      <p className="font-medium text-sm">Sick Leave</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Illness or medical leave</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <span className="w-3 h-3 rounded-full bg-blue-500" />
+                    <div>
+                      <p className="font-medium text-sm">Other</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Any other time away</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <span className="w-3 h-3 rounded-full bg-purple-500" />
+                    <div>
+                      <p className="font-medium text-sm">Public Holiday</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Applies to all team members</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Key Concept:</strong> Leave records feed directly into sprint capacity calculations. When a team
+                member has leave during a sprint, their availability is automatically reduced in the sprint's
+                "Available Members" count.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Creating Leave Records */}
+      <div id="leaves-section-2">
+        <Card>
+          <CardHeader title="2. Creating Leave Records" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Click "New Leave" to open the creation form. The fields adapt based on the leave type:</p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Regular Leave (Vacation, Sick, Other)</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li><strong>Team Member</strong> — Select from the dropdown</li>
+                  <li><strong>Leave Type</strong> — Vacation, Sick Leave, or Other</li>
+                  <li><strong>Start Date</strong> — First day of leave</li>
+                  <li><strong>End Date</strong> — Last day of leave (inclusive)</li>
+                  <li><strong>Notes</strong> — Optional details</li>
+                </ul>
+              </div>
+
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Public Holiday (Special)</h4>
+                <p className="text-sm mb-2">
+                  When you select "Public Holiday", the Team Member field disappears because the holiday is automatically
+                  created for <strong>all active team members</strong>.
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li><strong>Holiday Name</strong> — e.g., "Christmas Day", "New Year's Day"</li>
+                  <li><strong>Start Date & End Date</strong> — The holiday period</li>
+                </ul>
+                <p className="text-sm mt-2">
+                  After creation, you'll see a summary: how many members it was created for and any members
+                  skipped due to existing leave on those dates.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Editing & Deleting */}
+      <div id="leaves-section-3">
+        <Card>
+          <CardHeader title="3. Editing & Deleting" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Click on any leave badge in the calendar to edit it.</p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What You Can Edit</h4>
+                  <p className="text-sm">
+                    Leave type, start date, end date, and notes can all be modified.
+                    The team member cannot be changed — delete and recreate instead.
+                  </p>
+                </div>
+
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                  <strong>Deleting:</strong> The edit dialog includes a red "Delete" button at the bottom.
+                  Deletion is permanent and works on any leave record, including past ones.
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Note:</strong> Hive tracks leave for capacity planning purposes. Formal approvals are
+                expected to be handled in your HR system (e.g., HiBob).
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: Calendar View */}
+      <div id="leaves-section-4">
+        <Card>
+          <CardHeader title="4. Calendar View" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The main interface is a monthly calendar grid showing all leave records:
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Daily Cells</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                    <li>Each cell shows up to 4 leave entries with the member's first name and a color-coded icon</li>
+                    <li>If more than 4 people are on leave, a "+X more" indicator appears</li>
+                    <li>Click any leave badge to edit it</li>
+                    <li>Today's date is highlighted with an amber border</li>
+                    <li>Weekends have a subtle grey background</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Hover Tooltip</h4>
+                  <p className="text-sm">
+                    Hover over any day cell for 1 second to see a detailed tooltip showing all people on leave
+                    that day, their leave type, and any notes.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Navigation</h4>
+                  <p className="text-sm">
+                    Use the left/right arrows to move between months, or click "Today" to jump back to the current month.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Analytics */}
+      <div id="leaves-section-5">
+        <Card>
+          <CardHeader title="5. Analytics & Overview Cards" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Above the calendar, four overview cards provide a quick summary:</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                  <p className="font-medium text-sm">Total Records</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">All leave records ever created</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                  <p className="font-medium text-sm">On Leave Today</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Team members currently away</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                  <p className="font-medium text-sm">This Week</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Team members on leave this week</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                  <p className="font-medium text-sm">Upcoming</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Upcoming leave records</p>
+                </div>
+              </div>
+
+              <p className="text-sm">
+                A <strong>trend line chart</strong> below the cards shows the number of people on leave per day
+                for the current month, helping you spot high-absence periods at a glance.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Business Days Calculation */}
+      <div id="leaves-section-6">
+        <Card>
+          <CardHeader title="6. Business Days Calculation" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Hive automatically calculates business days for each leave record:
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How It Works</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm ml-4">
+                  <li>
+                    <strong>Total Days</strong> = End Date - Start Date + 1 (inclusive on both ends)
+                  </li>
+                  <li>
+                    <strong>Business Days</strong> = Total Days minus Saturdays and Sundays
+                  </li>
+                </ul>
+                <p className="text-sm mt-2">
+                  <strong>Example:</strong> Friday to Monday (4 calendar days) = 2 business days (Friday + Monday).
+                </p>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Validation Rules</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li>End date cannot be before start date</li>
+                  <li>Leave duration cannot exceed 365 days</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 7: Tips */}
+      <div id="leaves-section-7">
+        <Card>
+          <CardHeader title="7. Tips & Best Practices" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Recommendations</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Create public holidays at the start of the year</strong> — This ensures sprint capacity
+                    is accurate from day one
+                  </li>
+                  <li>
+                    <strong>Log leave as soon as it's known</strong> — The earlier leave is recorded, the more accurate
+                    your sprint capacity planning becomes
+                  </li>
+                  <li>
+                    <strong>Use the trend chart</strong> — Identify weeks with high absence before sprint planning so
+                    you can adjust committed points accordingly
+                  </li>
+                  <li>
+                    <strong>Check "On Leave Today"</strong> — Quick glance at who's available for meetings or urgent tasks
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-8 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Have questions or suggestions for this tutorial?<br/>
+          Reach out to your Hive administrator.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function ReviewsTutorial({ onBack }: TutorialProps) {
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+      >
+        <Home className="w-4 h-4" />
+        Back to Tutorials
+      </button>
+
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          Performance Reviews Tutorial
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          Learn how to create and manage performance reviews with ratings and feedback
+        </p>
+      </div>
+
+      {/* Table of Contents */}
+      <Card>
+        <CardHeader title="Table of Contents" />
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              'Overview',
+              'Creating Reviews',
+              'Rating System',
+              'Editing & Deleting',
+              'Filtering & Search',
+              'Tips & Best Practices'
+            ].map((section, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const element = document.getElementById(`reviews-section-${index + 1}`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-amber-500" />
+                {section}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 1: Overview */}
+      <div id="reviews-section-1">
+        <Card>
+          <CardHeader title="1. Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                The Performance Reviews page lets you create, manage, and track reviews for your direct reports.
+                Each review captures:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4">
+                <li>A rating on a 5-level scale</li>
+                <li>Key strengths and achievements</li>
+                <li>Areas for improvement and development goals</li>
+                <li>Private manager notes</li>
+              </ul>
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Key Concept:</strong> Reviews are linked to a team member and a review period (e.g., "2025 Q4").
+                Once created, the team member and period cannot be changed — this ensures an accurate historical record.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 2: Creating Reviews */}
+      <div id="reviews-section-2">
+        <Card>
+          <CardHeader title="2. Creating Reviews" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Click "New Review" to open the creation form:</p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Form Fields</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm ml-4">
+                  <li><strong>Team Member</strong> (required) — Select from your direct reports dropdown</li>
+                  <li><strong>Review Period</strong> (required) — Free-text field (e.g., "2025 Q4", "H1 2025")</li>
+                  <li><strong>Rating</strong> — Select from the 5 rating levels (see next section)</li>
+                  <li><strong>Strengths</strong> — Key strengths and achievements</li>
+                  <li><strong>Areas for Improvement</strong> — Development areas and goals</li>
+                  <li><strong>Manager Notes</strong> — Private notes (not shared with the team member)</li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Note:</strong> Team Member and Review Period are locked after creation. Plan your
+                review period naming convention upfront (e.g., always use "YYYY QN" format) for consistency.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Rating System */}
+      <div id="reviews-section-3">
+        <Card>
+          <CardHeader title="3. Rating System" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Reviews use a 5-level rating scale, displayed as star ratings on review cards:
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
+                    <span className="font-medium text-sm">Not Rated</span>
+                    <span className="text-sm text-slate-400">No stars (default)</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
+                    <span className="font-medium text-sm">Needs Improvement</span>
+                    <div className="flex gap-0.5">
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
+                    <span className="font-medium text-sm">Meets Expectations</span>
+                    <div className="flex gap-0.5">
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
+                    <span className="font-medium text-sm">Exceeds Expectations</span>
+                    <div className="flex gap-0.5">
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2">
+                    <span className="font-medium text-sm">Outstanding</span>
+                    <div className="flex gap-0.5">
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <strong>Note:</strong> "Not Rated" shows no stars and is the default. It's useful for creating draft reviews
+                where you fill in the qualitative feedback first and set the rating later.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 4: Editing & Deleting */}
+      <div id="reviews-section-4">
+        <Card>
+          <CardHeader title="4. Editing & Deleting" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                Use the three-dot menu on each review card to access edit and delete actions.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What You Can Edit</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                    <li><strong>Rating</strong> — Change the rating at any time</li>
+                    <li><strong>Strengths</strong> — Update achievements and strengths</li>
+                    <li><strong>Areas for Improvement</strong> — Refine development goals</li>
+                    <li><strong>Manager Notes</strong> — Add or update private notes</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What's Locked</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                    <li><strong>Team Member</strong> — Cannot be changed after creation (shown as disabled)</li>
+                    <li><strong>Review Period</strong> — Cannot be changed after creation (shown as disabled)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                <strong>Deleting:</strong> Select "Delete" from the context menu. A confirmation dialog
+                will appear before the review is permanently removed.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Filtering & Search */}
+      <div id="reviews-section-5">
+        <Card>
+          <CardHeader title="5. Filtering & Search" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Find reviews quickly using the built-in search and filter tools:</p>
+
+              <div className="space-y-3">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Search Bar</h4>
+                  <p className="text-sm">
+                    Full-text search across team member names, review periods, strengths, and areas for improvement.
+                    Results filter in real-time as you type.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Team Member Quick Filters</h4>
+                  <p className="text-sm">
+                    Below the search bar, buttons for each team member let you filter to see only that person's reviews.
+                    Click a name to toggle the filter on/off.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Tip:</strong> Combine search with the team member filter to find specific reviews.
+                For example, filter by "Alice" then search for "Q4" to see Alice's Q4 review.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Tips & Best Practices */}
+      <div id="reviews-section-6">
+        <Card>
+          <CardHeader title="6. Tips & Best Practices" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Recommendations</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Use a consistent period format</strong> — Pick one convention like "YYYY QN" (e.g., "2025 Q4")
+                    and stick to it across all reviews for easy filtering and comparison
+                  </li>
+                  <li>
+                    <strong>Start with "Not Rated"</strong> — Create draft reviews with qualitative feedback first,
+                    then set the rating once you've finalized your assessment
+                  </li>
+                  <li>
+                    <strong>Be specific in strengths</strong> — Reference concrete achievements, projects delivered,
+                    or behaviors observed rather than generic praise
+                  </li>
+                  <li>
+                    <strong>Make improvement areas actionable</strong> — Instead of "improve communication",
+                    try "lead sprint retrospectives to practice facilitating team discussions"
+                  </li>
+                  <li>
+                    <strong>Use manager notes for context</strong> — Record calibration decisions, compensation
+                    considerations, or promotion readiness that you don't want in the official review
+                  </li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Remember:</strong> Performance reviews are a snapshot in time. Combine them with regular 1:1
+                meetings and manager notes for a complete picture of each team member's growth trajectory.
               </p>
             </div>
           </CardContent>
