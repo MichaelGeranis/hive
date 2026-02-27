@@ -473,10 +473,16 @@ export interface TasksByAssignee {
   assigneeId?: string
   assigneeName: string
   totalTasks: number
-  completedTasks: number
-  inProgressTasks: number
+  backlogTasks: number
+  todoTasks: number
   blockedTasks: number
+  inProgressTasks: number
   inReviewTasks: number
+  inTestTasks: number
+  poAcceptanceTasks: number
+  readyToReleaseTasks: number
+  completedTasks: number
+  cancelledTasks: number
   overdueTasks: number
   completionRate: number
 }

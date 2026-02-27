@@ -210,10 +210,16 @@ public record TasksByAssigneeDto
     public Guid? AssigneeId { get; init; }
     public string AssigneeName { get; init; } = string.Empty;
     public int TotalTasks { get; init; }
-    public int CompletedTasks { get; init; }
-    public int InProgressTasks { get; init; }
+    public int BacklogTasks { get; init; }
+    public int TodoTasks { get; init; }
     public int BlockedTasks { get; init; }
+    public int InProgressTasks { get; init; }
     public int InReviewTasks { get; init; }
+    public int InTestTasks { get; init; }
+    public int POAcceptanceTasks { get; init; }
+    public int ReadyToReleaseTasks { get; init; }
+    public int CompletedTasks { get; init; }
+    public int CancelledTasks { get; init; }
     public int OverdueTasks { get; init; }
     public double CompletionRate { get; init; }
     public int TotalEstimatedHours { get; init; }

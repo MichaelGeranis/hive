@@ -446,10 +446,16 @@ export default function Dashboard() {
   const tasksByAssigneeData = dashboard.tasks.tasksByAssignee.map(assignee => ({
     name: assignee.assigneeName || 'Unassigned',
     total: assignee.totalTasks,
-    completed: assignee.completedTasks,
+    backlog: assignee.backlogTasks,
+    todo: assignee.todoTasks,
+    blocked: assignee.blockedTasks,
     inProgress: assignee.inProgressTasks,
-    pending: assignee.totalTasks - assignee.completedTasks - assignee.inProgressTasks,
-    overdue: assignee.overdueTasks
+    inReview: assignee.inReviewTasks,
+    inTest: assignee.inTestTasks,
+    poAcceptance: assignee.poAcceptanceTasks,
+    readyToRelease: assignee.readyToReleaseTasks,
+    completed: assignee.completedTasks,
+    cancelled: assignee.cancelledTasks,
   }))
 
   // Use backend-computed workload warnings
@@ -1364,10 +1370,33 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
               <YAxis />
-              <Tooltip />
-              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Completed" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Pending" radius={[4, 4, 0, 0]} />
+              <Tooltip content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                const nonZero = payload.filter(p => (p.value as number) > 0)
+                if (!nonZero.length) return null
+                return (
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">{label}</p>
+                    {nonZero.map(p => (
+                      <div key={p.dataKey as string} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: p.color }} />
+                        <span className="text-slate-600 dark:text-slate-400">{p.name}:</span>
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{p.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }} />
+              <Bar dataKey="backlog" stackId="a" fill="#94a3b8" name="Backlog" />
+              <Bar dataKey="todo" stackId="a" fill="#f59e0b" name="To Do" />
+              <Bar dataKey="blocked" stackId="a" fill="#ef4444" name="Blocked" />
+              <Bar dataKey="inProgress" stackId="a" fill="#3b82f6" name="In Progress" />
+              <Bar dataKey="inReview" stackId="a" fill="#8b5cf6" name="In Review" />
+              <Bar dataKey="inTest" stackId="a" fill="#06b6d4" name="In Test" />
+              <Bar dataKey="poAcceptance" stackId="a" fill="#f97316" name="PO Acceptance" />
+              <Bar dataKey="readyToRelease" stackId="a" fill="#14b8a6" name="Ready to Release" />
+              <Bar dataKey="completed" stackId="a" fill="#10b981" name="Done" />
+              <Bar dataKey="cancelled" stackId="a" fill="#6b7280" name="Cancelled" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
