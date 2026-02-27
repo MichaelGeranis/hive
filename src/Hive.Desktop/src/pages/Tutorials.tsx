@@ -431,6 +431,7 @@ function DashboardTutorial({ onBack }: TutorialProps) {
               'Overview',
               'Sprint History Filter',
               'Top Stats',
+              'Sprint & Tasks Overview',
               'Widget Customization',
               'Task Analytics',
               'Capacity Analysis',
@@ -620,10 +621,70 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 4: Widget Customization */}
+      {/* Section 4: Sprint & Tasks Overview */}
       <div id="dashboard-section-4">
         <Card>
-          <CardHeader title="4. Widget Customization" />
+          <CardHeader title="4. Sprint & Tasks Overview" />
+          <CardContent>
+            <div className="space-y-4 text-slate-700 dark:text-slate-300">
+              <p>
+                This full-width widget sits below the stat cards and gives you a quick snapshot of the current sprint's progress.
+                Click anywhere on it to navigate to the Tasks page.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">What It Shows</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Sprint Name:</strong> The name of the current sprint (e.g., "LP_1Q26_S3") with a
+                    "Current Sprint" badge.
+                  </li>
+                  <li>
+                    <strong>Story Points Progress:</strong> Completed new SP out of total new SP, shown as a fraction
+                    (e.g., "12/20 SP 60%"). Carried-over points are excluded from both the numerator and denominator
+                    to give you an accurate picture of new work progress.
+                  </li>
+                  <li>
+                    <strong>Tasks Progress:</strong> Done tasks out of total tasks in the current sprint, shown as a
+                    fraction with percentage (e.g., "8/15 Tasks 53%").
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Warning Indicators</h4>
+                <p className="text-sm mb-2">
+                  The widget may display one or more warning pills on the right side:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Carried Over SP (blue):</strong> Shows how many story points were carried over from previous
+                    sprints (e.g., "+5 SP carried"). This helps you track technical debt or unfinished work.
+                  </li>
+                  <li>
+                    <strong>Scope Creep (amber):</strong> Appears when the total SP in the sprint exceeds the originally
+                    committed points (e.g., "+3 SP creep"). Signals that work was added after sprint planning.
+                  </li>
+                  <li>
+                    <strong>Unmatched Tasks (amber):</strong> Shows tasks that are not matched to any project
+                    (e.g., "4 unmatched"). These tasks may need to be assigned to the correct project.
+                  </li>
+                </ul>
+              </div>
+
+              <p className="text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <strong>Note:</strong> This widget always shows data for the current sprint regardless of the Sprint
+                History filter setting. It is not affected by the filter.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Widget Customization */}
+      <div id="dashboard-section-5">
+        <Card>
+          <CardHeader title="5. Widget Customization" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -674,10 +735,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 5: Task Analytics */}
-      <div id="dashboard-section-5">
+      {/* Section 6: Task Analytics */}
+      <div id="dashboard-section-6">
         <Card>
-          <CardHeader title="5. Task Analytics" />
+          <CardHeader title="6. Task Analytics" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -771,10 +832,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 6: Capacity Analysis */}
-      <div id="dashboard-section-6">
+      {/* Section 7: Capacity Analysis */}
+      <div id="dashboard-section-7">
         <Card>
-          <CardHeader title="6. Capacity Analysis" />
+          <CardHeader title="7. Capacity Analysis" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -834,10 +895,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 7: Team Performance Metrics */}
-      <div id="dashboard-section-7">
+      {/* Section 8: Team Performance Metrics */}
+      <div id="dashboard-section-8">
         <Card>
-          <CardHeader title="7. Team Performance Metrics" />
+          <CardHeader title="8. Team Performance Metrics" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -897,10 +958,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 8: Project & Member Distribution */}
-      <div id="dashboard-section-8">
+      {/* Section 9: Project & Member Distribution */}
+      <div id="dashboard-section-9">
         <Card>
-          <CardHeader title="8. Project & Member Distribution" />
+          <CardHeader title="9. Project & Member Distribution" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -941,10 +1002,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 9: Support & Maintenance Tracking */}
-      <div id="dashboard-section-9">
+      {/* Section 10: Support & Maintenance Tracking */}
+      <div id="dashboard-section-10">
         <Card>
-          <CardHeader title="9. Support & Maintenance Tracking" />
+          <CardHeader title="10. Support & Maintenance Tracking" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -1000,10 +1061,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 10: Team Insights */}
-      <div id="dashboard-section-10">
+      {/* Section 11: Team Insights */}
+      <div id="dashboard-section-11">
         <Card>
-          <CardHeader title="10. Team Insights" />
+          <CardHeader title="11. Team Insights" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
@@ -1051,10 +1112,10 @@ function DashboardTutorial({ onBack }: TutorialProps) {
         </Card>
       </div>
 
-      {/* Section 11: Export Functionality */}
-      <div id="dashboard-section-11">
+      {/* Section 12: Export Functionality */}
+      <div id="dashboard-section-12">
         <Card>
-          <CardHeader title="11. Export Functionality" />
+          <CardHeader title="12. Export Functionality" />
           <CardContent>
             <div className="space-y-4 text-slate-700 dark:text-slate-300">
               <p>
