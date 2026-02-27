@@ -28,6 +28,9 @@ public record AppSettingsDto
     // Support & Maintenance label configuration
     public List<string> SupportLabels { get; init; } = new();
     public List<string> MaintenanceLabels { get; init; } = new();
+
+    // Jira integration
+    public string? JiraBaseUrl { get; init; }
 }
 
 public record StoryPointMapping
@@ -72,4 +75,7 @@ public record UpdateAppSettingsDto
     // Support & Maintenance label configuration
     public List<string>? SupportLabels { get; init; }
     public List<string>? MaintenanceLabels { get; init; }
+
+    // Jira integration
+    public string? JiraBaseUrl { get; init; }
 }

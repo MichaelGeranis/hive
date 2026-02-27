@@ -686,6 +686,7 @@ export interface AppSettings {
   minProjectMembers: number
   supportLabels: string[]
   maintenanceLabels: string[]
+  jiraBaseUrl?: string | null
   createdAt: string
   updatedAt?: string
 }
@@ -704,6 +705,7 @@ export interface UpdateAppSettings {
   minProjectMembers?: number
   supportLabels?: string[]
   maintenanceLabels?: string[]
+  jiraBaseUrl?: string | null
 }
 
 // Jira Import

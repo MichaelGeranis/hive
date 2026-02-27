@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin, Copy, Users } from 'lucide-react'
+import { AlertTriangle, Clock, Trash2, Tag, Zap, Timer, Search, X, Filter, Upload, FileText, CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Pencil, Pin, Copy, Users, ExternalLink } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { tasksApi, directReportsApi, jiraImportApi, TaskFilters } from '../services/api'
+import { tasksApi, directReportsApi, jiraImportApi, settingsApi, TaskFilters } from '../services/api'
 import { TaskStatus, TaskPriority } from '../types'
 import type { TeamTask, DirectReport, JiraImportPreview, JiraImportResult, JiraImportRequest, TaskSummaryDto, OverrideTeamTaskFieldsDto, ClearTeamTaskOverridesDto } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
+
+const getJiraIssueKey = (tags: string): string | null => {
+  const match = tags.match(/jira:([^,]+)/)
+  return match ? match[1] : null
+}
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.Backlog]: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
@@ -34,6 +39,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<TeamTask[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [jiraBaseUrl, setJiraBaseUrl] = useState<string | null>(null)
 
   // Initialize filter from URL params if present
   const initialFilter = useMemo(() => {
@@ -243,10 +249,11 @@ export default function Tasks() {
     try {
       setLoading(true)
       const filters = currentFilters ?? buildFilters()
-      const [tasksResult, summaryData, drData] = await Promise.all([
+      const [tasksResult, summaryData, drData, appSettings] = await Promise.all([
         tasksApi.getAll(page, pageSize, filters),
         tasksApi.getSummary(),
-        directReportsApi.getAll()
+        directReportsApi.getAll(),
+        settingsApi.get()
       ])
       setTasks(tasksResult.items)
       setTotalCount(tasksResult.totalCount)
@@ -257,6 +264,7 @@ export default function Tasks() {
       setTotalTimeSpentMinutes(tasksResult.totalTimeSpentMinutes ?? 0)
       setSummary(summaryData)
       setDirectReports(drData)
+      setJiraBaseUrl(appSettings.jiraBaseUrl ?? null)
     } catch (err) {
       console.error(err)
     } finally {
@@ -1481,6 +1489,18 @@ export default function Tasks() {
                   <div className="flex items-start justify-between flex-1">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
+                      {jiraBaseUrl && getJiraIssueKey(task.tags) && (
+                        <a
+                          href={`${jiraBaseUrl}/${getJiraIssueKey(task.tags)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title={`Open ${getJiraIssueKey(task.tags)} in Jira`}
+                          className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex-shrink-0"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
                       <h3 className="font-medium text-slate-900 dark:text-slate-100">{task.title}</h3>
                       {task.isOverdue && (
                         <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded">

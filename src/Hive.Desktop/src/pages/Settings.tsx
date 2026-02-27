@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt, Gauge, Tag, X, Plus } from 'lucide-react'
+import { Save, Sun, Moon, Monitor, CheckCircle, AlertCircle, XCircle, Clock, Download, Database, Brain, Key, Eye, EyeOff, Loader2, Shirt, Gauge, Tag, X, Plus, ExternalLink } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { settingsApi, backupApi, sentimentApi } from '../services/api'
 import { useTheme } from '../contexts/ThemeContext'
@@ -63,6 +63,12 @@ export default function Settings() {
   const [thresholdsSaved, setThresholdsSaved] = useState(false)
   const [thresholdsError, setThresholdsError] = useState<string | null>(null)
 
+  // Jira Integration state
+  const [jiraBaseUrl, setJiraBaseUrl] = useState('')
+  const [savingJira, setSavingJira] = useState(false)
+  const [jiraSaved, setJiraSaved] = useState(false)
+  const [jiraError, setJiraError] = useState<string | null>(null)
+
   // Support & Maintenance Labels state
   const [supportLabels, setSupportLabels] = useState<string[]>(['support'])
   const [maintenanceLabels, setMaintenanceLabels] = useState<string[]>(['maintenance'])
@@ -95,6 +101,8 @@ export default function Settings() {
       // Load support & maintenance labels
       setSupportLabels(settings.supportLabels ?? ['support'])
       setMaintenanceLabels(settings.maintenanceLabels ?? ['maintenance'])
+      // Load Jira integration settings
+      setJiraBaseUrl(settings.jiraBaseUrl ?? '')
     } catch (err) {
       console.error('Failed to load settings', err)
       setError('Failed to load settings. Using default values.')
@@ -323,6 +331,23 @@ export default function Settings() {
       setThresholdsError('Failed to reset threshold settings. Please try again.')
     } finally {
       setSavingThresholds(false)
+    }
+  }
+
+  // Jira Integration handlers
+  const handleSaveJira = async () => {
+    try {
+      setSavingJira(true)
+      setJiraError(null)
+      setJiraSaved(false)
+      await settingsApi.update({ jiraBaseUrl: jiraBaseUrl || null })
+      setJiraSaved(true)
+      setTimeout(() => setJiraSaved(false), 3000)
+    } catch (err) {
+      console.error('Failed to save Jira settings', err)
+      setJiraError('Failed to save Jira settings.')
+    } finally {
+      setSavingJira(false)
     }
   }
 
@@ -1019,6 +1044,59 @@ export default function Settings() {
             {thresholdsSaved && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
                 Dashboard threshold settings saved successfully!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Jira Integration */}
+      <Card>
+        <CardHeader
+          title="Jira Integration"
+          subtitle="Configure Jira base URL for linking tasks to Jira issues"
+          action={<ExternalLink className="w-5 h-5 text-blue-500" />}
+        />
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Set your Jira base URL to enable clickable links on tasks imported from Jira. The URL should include the browse path (e.g., <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded">https://yourteam.atlassian.net/browse</code>).
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Jira Base URL
+              </label>
+              <input
+                type="url"
+                value={jiraBaseUrl}
+                onChange={(e) => setJiraBaseUrl(e.target.value)}
+                placeholder="https://yourteam.atlassian.net/browse"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={savingJira}
+              />
+            </div>
+
+            {jiraError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                {jiraError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveJira}
+                disabled={savingJira}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-5 h-5" />
+                {savingJira ? 'Saving...' : jiraSaved ? 'Saved!' : 'Save'}
+              </button>
+            </div>
+
+            {jiraSaved && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">
+                Jira settings saved successfully!
               </div>
             )}
           </div>

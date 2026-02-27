@@ -32,6 +32,9 @@ public class AppSettings
     public string SupportLabels { get; private set; } = "[\"support\"]";
     public string MaintenanceLabels { get; private set; } = "[\"maintenance\"]";
 
+    // Jira integration
+    public string? JiraBaseUrl { get; private set; }
+
     // Private constructor for EF Core / serialization
     private AppSettings() { }
 
@@ -93,6 +96,12 @@ public class AppSettings
     public void UpdateMaintenanceLabels(string maintenanceLabels)
     {
         MaintenanceLabels = maintenanceLabels ?? "[\"maintenance\"]";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateJiraBaseUrl(string? jiraBaseUrl)
+    {
+        JiraBaseUrl = string.IsNullOrWhiteSpace(jiraBaseUrl) ? null : jiraBaseUrl.TrimEnd('/');
         UpdatedAt = DateTime.UtcNow;
     }
 }

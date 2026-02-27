@@ -110,6 +110,13 @@ public class AppSettingsService : IAppSettingsService
             await _repository.UpdateAsync(entity, cancellationToken);
         }
 
+        // Update Jira base URL if provided
+        if (dto.JiraBaseUrl is not null)
+        {
+            entity.UpdateJiraBaseUrl(dto.JiraBaseUrl);
+            await _repository.UpdateAsync(entity, cancellationToken);
+        }
+
         return MapToDto(entity);
     }
 
@@ -136,7 +143,8 @@ public class AppSettingsService : IAppSettingsService
             MaxInReviewTasks = entity.MaxInReviewTasks,
             MinProjectMembers = entity.MinProjectMembers,
             SupportLabels = supportLabels,
-            MaintenanceLabels = maintenanceLabels
+            MaintenanceLabels = maintenanceLabels,
+            JiraBaseUrl = entity.JiraBaseUrl
         };
     }
 
