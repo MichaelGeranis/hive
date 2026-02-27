@@ -651,6 +651,20 @@ function DashboardTutorial({ onBack }: TutorialProps) {
                 </ul>
               </div>
 
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">How Counts Are Calculated</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Parent tasks excluded:</strong> Only child/leaf tasks are counted. Parent tasks (epics, stories
+                    with sub-tasks) are excluded from both the task count and story point totals to avoid double-counting.
+                  </li>
+                  <li>
+                    <strong>Latest sprint assignment:</strong> If a task belongs to multiple sprints (e.g., "Sprint 5, Sprint 6"),
+                    it is counted only under its latest sprint. This prevents the same task from inflating counts across sprints.
+                  </li>
+                </ul>
+              </div>
+
               <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
                 <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Warning Indicators</h4>
                 <p className="text-sm mb-2">

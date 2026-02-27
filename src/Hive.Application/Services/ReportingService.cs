@@ -1436,6 +1436,8 @@ public class ReportingService : IReportingService
                 NewCompletedPoints = newCompletedPoints,
                 CarriedOverPoints = carriedOverPoints,
                 TotalStoryPoints = totalStoryPoints,
+                TotalTasks = sprintTasks.Count,
+                DoneTasks = completedTasks.Count,
                 UtilizationPercentage = utilization,
                 Status = status
             };
@@ -1565,6 +1567,8 @@ public class ReportingService : IReportingService
                     CommittedPoints = fs.CommittedPoints,
                     CompletedPoints = fs.CompletedPoints,
                     TotalStoryPoints = fs.TotalStoryPoints,
+                    TotalTasks = fs.TotalTasks,
+                    DoneTasks = fs.DoneTasks,
                     UtilizationPercentage = fs.UtilizationPercentage,
                     PredictedPoints = predictedPoints,
                     Status = fs.Status

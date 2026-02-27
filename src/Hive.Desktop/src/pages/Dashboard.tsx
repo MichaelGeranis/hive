@@ -20,7 +20,6 @@ import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
 import { reportsApi, tasksApi, projectsApi, meetingNotesApi, notesApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
 import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, MeetingNote, ManagerNote, KnowledgeLevelSuggestion } from '../types'
-import { TaskStatus } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
@@ -558,19 +557,9 @@ export default function Dashboard() {
   // New SP only (excludes carried-over) — matches newCompletedPoints numerator
   const currentSprintNewSP = currentSprintTotalSP - (capacityAnalysis?.currentSprint?.carriedOverPoints ?? 0)
 
-  // Calculate current sprint task counts from unfiltered tasks array
-  // This ensures the widget always shows current sprint data regardless of sprint filter
-  const currentSprintName = capacityAnalysis?.currentSprint?.sprintName
-  const currentSprintTasks = currentSprintName
-    ? tasks.filter(t => {
-        if (!t.sprint) return false
-        // Sprint field can be comma-separated (e.g., "LP_4Q25_S5,LP_4Q25_S6")
-        const taskSprints = t.sprint.split(',').map(s => s.trim())
-        return taskSprints.includes(currentSprintName)
-      })
-    : []
-  const currentSprintDoneTasks = currentSprintTasks.filter(t => t.status === TaskStatus.Done).length
-  const currentSprintTotalTasks = currentSprintTasks.length
+  // Use backend-computed task counts for current sprint
+  const currentSprintDoneTasks = capacityAnalysis?.currentSprint?.doneTasks ?? 0
+  const currentSprintTotalTasks = capacityAnalysis?.currentSprint?.totalTasks ?? 0
   const currentSprintCompletionRate = currentSprintTotalTasks > 0
     ? Math.round(currentSprintDoneTasks / currentSprintTotalTasks * 100)
     : 0

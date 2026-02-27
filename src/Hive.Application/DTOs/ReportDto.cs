@@ -578,6 +578,8 @@ public record SprintCapacityAnalysisDto
     public int CarriedOverPoints { get; init; }
     public double UtilizationPercentage { get; init; }
     public int TotalStoryPoints { get; init; }
+    public int TotalTasks { get; init; }
+    public int DoneTasks { get; init; }
     public int? PredictedPoints { get; init; }
     public string Status { get; init; } = string.Empty; // "Past", "Current", "Future"
 }
