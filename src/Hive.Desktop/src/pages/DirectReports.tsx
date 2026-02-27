@@ -11,6 +11,7 @@ export default function DirectReports() {
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -211,6 +212,7 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
   }), [directReports])
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearchQuery('')
     setSelectedDepartment(null)
     setReportFilter('all')
@@ -298,12 +300,13 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search team members..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search team members... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedDepartment || reportFilter !== 'all') && (
+          {(searchInput || selectedDepartment || reportFilter !== 'all') && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"

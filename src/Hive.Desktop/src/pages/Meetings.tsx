@@ -142,10 +142,12 @@ export default function Meetings() {
     })
   }
 
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'past' | 'upcoming'>('all')
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearchQuery('')
     setFilterDirectReportId('all')
     setStatusFilter('all')
@@ -465,12 +467,13 @@ export default function Meetings() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search meetings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search meetings... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || filterDirectReportId !== 'all' || statusFilter !== 'all') && (
+          {(searchInput || filterDirectReportId !== 'all' || statusFilter !== 'all') && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"

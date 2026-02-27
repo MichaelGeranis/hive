@@ -53,6 +53,7 @@ export default function Notes() {
   const [showForm, setShowForm] = useState(false)
   const [editingNote, setEditingNote] = useState<ManagerNote | null>(null)
   const [filter, setFilter] = useState<FilterType>(initialSearch ? 'all' : 'pending')
+  const [searchInput, setSearchInput] = useState(initialSearch)
   const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
@@ -241,6 +242,7 @@ export default function Notes() {
   }
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearchTerm('')
     setSelectedTag(null)
     setFilter('pending')
@@ -303,12 +305,13 @@ export default function Notes() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search notes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search notes... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setSearchTerm(searchInput) }}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchTerm || selectedTag) && (
+          {(searchInput || selectedTag) && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"

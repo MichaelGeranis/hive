@@ -10,6 +10,7 @@ export default function Parents() {
   const { showError } = useToast()
   const [parents, setParents] = useState<Parent[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -63,6 +64,7 @@ export default function Parents() {
   }, [parents])
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearchQuery('')
     setSelectedLabel(null)
   }
@@ -236,12 +238,13 @@ export default function Parents() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search parents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search parents... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedLabel) && (
+          {(searchInput || selectedLabel) && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"

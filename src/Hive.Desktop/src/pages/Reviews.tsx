@@ -90,10 +90,12 @@ export default function Reviews() {
     }
   }
 
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDirectReportId, setSelectedDirectReportId] = useState<string | null>(null)
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearchQuery('')
     setSelectedDirectReportId(null)
   }
@@ -322,12 +324,13 @@ export default function Reviews() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search reviews..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search reviews... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
           />
-          {(searchQuery || selectedDirectReportId) && (
+          {(searchInput || selectedDirectReportId) && (
             <button
               onClick={clearFilters}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"

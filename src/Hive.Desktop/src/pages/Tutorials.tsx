@@ -66,6 +66,7 @@ const tutorials: Tutorial[] = [
 
 export default function Tutorials() {
   const [selectedTutorial, setSelectedTutorial] = useState<TutorialId | null>(null)
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
   // Filter tutorials based on search query
@@ -98,14 +99,15 @@ export default function Tutorials() {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search tutorials..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search tutorials... (press Enter)"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
           className="w-full pl-10 pr-10 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
         />
-        {searchQuery && (
+        {searchInput && (
           <button
-            onClick={() => setSearchQuery('')}
+            onClick={() => { setSearchInput(''); setSearchQuery('') }}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <X className="w-4 h-4" />

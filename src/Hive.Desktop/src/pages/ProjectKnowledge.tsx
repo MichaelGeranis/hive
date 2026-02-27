@@ -69,6 +69,7 @@ export default function ProjectKnowledgePage() {
   const [progressionLoading, setProgressionLoading] = useState(false)
 
   // Filter state
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
 
@@ -322,9 +323,10 @@ export default function ProjectKnowledgePage() {
   }, [matrix, selectedMembers, sortByAvg, memberSortOrder])
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery.trim() !== '' || selectedMembers.length > 0 || sortByAvg
+  const hasActiveFilters = searchInput.trim() !== '' || selectedMembers.length > 0 || sortByAvg
 
   const clearAllFilters = () => {
+    setSearchInput('')
     setSearchQuery('')
     setSelectedMembers([])
     setSortByAvg(false)
@@ -421,9 +423,10 @@ export default function ProjectKnowledgePage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search projects... (press Enter)"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
             />
             {hasActiveFilters && (
