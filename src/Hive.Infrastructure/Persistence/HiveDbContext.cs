@@ -40,6 +40,7 @@ public class HiveDbContext : DbContext
     public DbSet<Allocation> Allocations => Set<Allocation>();
     public DbSet<SprintGoal> SprintGoals => Set<SprintGoal>();
     public DbSet<InitiativeDependency> InitiativeDependencies => Set<InitiativeDependency>();
+    public DbSet<InitiativeMember> InitiativeMembers => Set<InitiativeMember>();
     public DbSet<KnowledgePoint> KnowledgePoints => Set<KnowledgePoint>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -319,8 +320,19 @@ public class HiveDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(4000);
             entity.Property(e => e.Color).HasMaxLength(20);
             entity.Property(e => e.TshirtSize).HasMaxLength(5);
+            entity.Property(e => e.WorkType).HasDefaultValue(WorkType.ProductRoadmap);
+            entity.Property(e => e.Url).HasMaxLength(500);
             entity.HasIndex(e => e.QuarterId);
             entity.HasIndex(e => e.ProjectId);
+        });
+
+        // InitiativeMember configuration
+        modelBuilder.Entity<InitiativeMember>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.InitiativeId);
+            entity.HasIndex(e => e.DirectReportId);
+            entity.HasIndex(e => new { e.InitiativeId, e.DirectReportId }).IsUnique();
         });
 
         // Allocation configuration

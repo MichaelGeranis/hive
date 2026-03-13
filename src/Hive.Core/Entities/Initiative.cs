@@ -13,6 +13,8 @@ public class Initiative
     public Guid? ProjectId { get; private set; }
     public string TshirtSize { get; private set; } = "M";
     public string Url { get; private set; } = string.Empty;
+    public WorkType WorkType { get; private set; } = WorkType.ProductRoadmap;
+    public Guid? StartSprintId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -44,7 +46,9 @@ public class Initiative
         string? description = null,
         Guid? projectId = null,
         string? tshirtSize = null,
-        string? url = null)
+        string? url = null,
+        WorkType workType = WorkType.ProductRoadmap,
+        Guid? startSprintId = null)
     {
         ValidateName(name);
         ValidateColor(color);
@@ -59,6 +63,8 @@ public class Initiative
         ProjectId = projectId;
         TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? "M" : tshirtSize.Trim().ToUpperInvariant();
         Url = url?.Trim() ?? string.Empty;
+        WorkType = workType;
+        StartSprintId = startSprintId;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -68,7 +74,10 @@ public class Initiative
         string? color,
         Guid? projectId,
         string? tshirtSize = null,
-        string? url = null)
+        string? url = null,
+        WorkType? workType = null,
+        Guid? startSprintId = null,
+        bool clearStartSprint = false)
     {
         ValidateName(name);
         ValidateColor(color);
@@ -81,6 +90,15 @@ public class Initiative
         ProjectId = projectId;
         TshirtSize = string.IsNullOrWhiteSpace(tshirtSize) ? TshirtSize : tshirtSize.Trim().ToUpperInvariant();
         Url = url?.Trim() ?? string.Empty;
+        if (workType.HasValue) WorkType = workType.Value;
+        if (clearStartSprint) StartSprintId = null;
+        else if (startSprintId.HasValue) StartSprintId = startSprintId.Value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AssignToSprint(Guid? startSprintId)
+    {
+        StartSprintId = startSprintId;
         UpdatedAt = DateTime.UtcNow;
     }
 

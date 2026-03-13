@@ -9,7 +9,6 @@ import {
   Loader2,
   RefreshCw,
   PanelLeftClose,
-  PanelRightClose,
   Check,
   Download
 } from 'lucide-react'
@@ -17,12 +16,10 @@ import { Card, CardContent } from '../components/Card'
 import { quarterlyPlanningApi } from '../services/api'
 import type {
   Quarter,
-  PlanningBoard,
-  PlanningInsights
+  PlanningBoard
 } from '../types'
-import PlanningMatrix from '../components/PlanningMatrix'
+import PlanningSpreadsheet from '../components/PlanningSpreadsheet'
 import InitiativesPanel from '../components/InitiativesPanel'
-import InsightsSidebar from '../components/InsightsSidebar'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 export default function QuarterlyPlanning() {
@@ -32,13 +29,11 @@ export default function QuarterlyPlanning() {
   const [quarters, setQuarters] = useState<Quarter[]>([])
   const [selectedQuarterId, setSelectedQuarterId] = useState<string | null>(null)
   const [planningBoard, setPlanningBoard] = useState<PlanningBoard | null>(null)
-  const [insights, setInsights] = useState<PlanningInsights | null>(null)
 
   // UI state
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-  const [rightPanelOpen, setRightPanelOpen] = useState(true)
 
   // Create quarter modal
   const [showCreateQuarter, setShowCreateQuarter] = useState(false)
@@ -85,12 +80,8 @@ export default function QuarterlyPlanning() {
     try {
       setLoading(true)
       setError(null)
-      const [boardData, insightsData] = await Promise.all([
-        quarterlyPlanningApi.getPlanningBoard(quarterId),
-        quarterlyPlanningApi.getInsights(quarterId)
-      ])
+      const boardData = await quarterlyPlanningApi.getPlanningBoard(quarterId)
       setPlanningBoard(boardData)
-      setInsights(insightsData)
     } catch (err: any) {
       console.error('Failed to load board data', err)
       setError(err.response?.data?.message || 'Failed to load planning board data.')
@@ -127,13 +118,7 @@ export default function QuarterlyPlanning() {
     }
   }
 
-  const handleAllocationCreated = () => {
-    if (selectedQuarterId) {
-      loadBoardData(selectedQuarterId)
-    }
-  }
-
-  const handleInitiativeCreated = () => {
+  const handleDataChanged = () => {
     if (selectedQuarterId) {
       loadBoardData(selectedQuarterId)
     }
@@ -256,13 +241,6 @@ export default function QuarterlyPlanning() {
             <PanelLeftClose className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className={`p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 ${!rightPanelOpen ? 'bg-slate-200 dark:bg-slate-700' : ''}`}
-            title="Toggle Insights Panel"
-          >
-            <PanelRightClose className="w-5 h-5" />
-          </button>
-          <button
             onClick={() => setShowCreateQuarter(true)}
             className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
           >
@@ -309,31 +287,22 @@ export default function QuarterlyPlanning() {
               <InitiativesPanel
                 initiatives={planningBoard?.initiatives || []}
                 quarterId={selectedQuarterId!}
-                onInitiativeCreated={handleInitiativeCreated}
-                onDragStart={() => {
-                  // Handle drag start for allocations
-                }}
+                teamMembers={planningBoard?.teamMembers || []}
+                onInitiativeCreated={handleDataChanged}
               />
             </div>
           )}
 
-          {/* Center - Planning Board + Insights */}
+          {/* Center - Planning Spreadsheet */}
           <div className="flex-1 overflow-auto">
-            <PlanningMatrix
+            <PlanningSpreadsheet
               sprints={planningBoard?.sprints || []}
-              teamMembers={planningBoard?.teamMembers || []}
-              allocations={planningBoard?.allocations || []}
               initiatives={planningBoard?.initiatives || []}
-              leaves={planningBoard?.leaves || []}
               sprintGoals={planningBoard?.sprintGoals || []}
+              initiativeMembers={planningBoard?.initiativeMembers || []}
               quarterId={selectedQuarterId!}
-              onAllocationCreated={handleAllocationCreated}
+              onDataChanged={handleDataChanged}
             />
-            {rightPanelOpen && (
-              <div className="mt-4">
-                <InsightsSidebar insights={insights} />
-              </div>
-            )}
           </div>
         </div>
       )}

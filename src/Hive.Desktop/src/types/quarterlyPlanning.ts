@@ -13,6 +13,12 @@ export enum DependencyType {
   FinishToFinish = 2
 }
 
+export enum WorkType {
+  Maintenance = 0,
+  ProductRoadmap = 1,
+  TechRoadmap = 2
+}
+
 export enum InsightSeverity {
   Info = 0,
   Warning = 1,
@@ -49,6 +55,14 @@ export interface UpdateQuarterDto {
 }
 
 // Initiative types
+export interface InitiativeMember {
+  id: string
+  initiativeId: string
+  directReportId: string
+  directReportName: string
+  createdAt: string
+}
+
 export interface Initiative {
   id: string
   quarterId: string
@@ -59,6 +73,10 @@ export interface Initiative {
   projectName?: string
   tshirtSize: string
   url: string
+  workType: number
+  startSprintId?: string
+  sprintSpan: number
+  members: InitiativeMember[]
   allocationCount: number
   createdAt: string
   updatedAt?: string
@@ -71,6 +89,8 @@ export interface CreateInitiativeDto {
   projectId?: string
   tshirtSize?: string
   url?: string
+  workType?: number
+  startSprintId?: string
 }
 
 export interface UpdateInitiativeDto {
@@ -80,6 +100,8 @@ export interface UpdateInitiativeDto {
   projectId?: string
   tshirtSize?: string
   url?: string
+  workType?: number
+  startSprintId?: string
 }
 
 // Allocation types
@@ -149,6 +171,7 @@ export interface PlanningBoard {
   allocations: Allocation[]
   sprintGoals: SprintGoal[]
   dependencies: InitiativeDependency[]
+  initiativeMembers: InitiativeMember[]
   leaves: Leave[]
 }
 

@@ -255,4 +255,87 @@ public class InitiativeTests
         Initiative.AvailableColors.Should().Contain("#10B981");
         Initiative.AvailableColors.Should().HaveCountGreaterThan(5);
     }
+
+    [Fact]
+    public void Constructor_DefaultWorkType_IsProductRoadmap()
+    {
+        // Act
+        var initiative = new Initiative(Guid.NewGuid(), "Name", "#FFF");
+
+        // Assert
+        initiative.WorkType.Should().Be(WorkType.ProductRoadmap);
+        initiative.StartSprintId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_WithWorkTypeAndStartSprint_SetsProperties()
+    {
+        // Arrange
+        var sprintId = Guid.NewGuid();
+
+        // Act
+        var initiative = new Initiative(
+            Guid.NewGuid(), "Name", "#FFF",
+            workType: WorkType.TechRoadmap,
+            startSprintId: sprintId);
+
+        // Assert
+        initiative.WorkType.Should().Be(WorkType.TechRoadmap);
+        initiative.StartSprintId.Should().Be(sprintId);
+    }
+
+    [Fact]
+    public void Update_WithWorkType_UpdatesWorkType()
+    {
+        // Arrange
+        var initiative = new Initiative(Guid.NewGuid(), "Name", "#FFF");
+
+        // Act
+        initiative.Update("Name", null, null, null, workType: WorkType.Maintenance);
+
+        // Assert
+        initiative.WorkType.Should().Be(WorkType.Maintenance);
+    }
+
+    [Fact]
+    public void Update_WithoutWorkType_KeepsExistingWorkType()
+    {
+        // Arrange
+        var initiative = new Initiative(Guid.NewGuid(), "Name", "#FFF", workType: WorkType.TechRoadmap);
+
+        // Act
+        initiative.Update("Name", null, null, null);
+
+        // Assert
+        initiative.WorkType.Should().Be(WorkType.TechRoadmap);
+    }
+
+    [Fact]
+    public void AssignToSprint_SetsStartSprintId()
+    {
+        // Arrange
+        var initiative = new Initiative(Guid.NewGuid(), "Name", "#FFF");
+        var sprintId = Guid.NewGuid();
+
+        // Act
+        initiative.AssignToSprint(sprintId);
+
+        // Assert
+        initiative.StartSprintId.Should().Be(sprintId);
+        initiative.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AssignToSprint_WithNull_ClearsStartSprintId()
+    {
+        // Arrange
+        var initiative = new Initiative(Guid.NewGuid(), "Name", "#FFF", startSprintId: Guid.NewGuid());
+
+        // Act
+        initiative.AssignToSprint(null);
+
+        // Assert
+        initiative.StartSprintId.Should().BeNull();
+        initiative.UpdatedAt.Should().NotBeNull();
+    }
 }

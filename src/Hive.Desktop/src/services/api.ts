@@ -673,6 +673,7 @@ import type {
   UpsertSprintGoalDto,
   InitiativeDependency,
   CreateInitiativeDependencyDto,
+  InitiativeMember,
   PlanningBoard,
   PlanningInsights
 } from '../types/quarterlyPlanning'
@@ -709,6 +710,18 @@ export const quarterlyPlanningApi = {
     api.put<Initiative>(`/quarterly-planning/initiatives/${id}`, data).then(r => r.data),
   deleteInitiative: (id: string) =>
     api.delete(`/quarterly-planning/initiatives/${id}`),
+
+  // Initiative Members
+  getInitiativeMembers: (initiativeId: string) =>
+    api.get<InitiativeMember[]>(`/quarterly-planning/initiatives/${initiativeId}/members`).then(r => r.data),
+  addInitiativeMember: (initiativeId: string, directReportId: string) =>
+    api.post<InitiativeMember>(`/quarterly-planning/initiatives/${initiativeId}/members`, { directReportId }).then(r => r.data),
+  removeInitiativeMember: (id: string) =>
+    api.delete(`/quarterly-planning/initiative-members/${id}`),
+
+  // Sprint Assignment
+  assignInitiativeToSprint: (initiativeId: string, startSprintId: string | null) =>
+    api.put<Initiative>(`/quarterly-planning/initiatives/${initiativeId}/assign-sprint`, { startSprintId }).then(r => r.data),
 
   // Allocations
   getAllocationsByQuarter: (quarterId: string) =>

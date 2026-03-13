@@ -1,23 +1,42 @@
 import { useState } from 'react'
-import { Plus, Trash2, Loader2, X, Check, Target } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, Check, Target, UserPlus, UserMinus } from 'lucide-react'
 import { Card, CardHeader, CardContent } from './Card'
 import { quarterlyPlanningApi } from '../services/api'
-import type { Initiative } from '../types/quarterlyPlanning'
+import type { Initiative, WorkType } from '../types/quarterlyPlanning'
+import type { DirectReport } from '../types'
 
 interface InitiativesPanelProps {
   initiatives: Initiative[]
   quarterId: string
+  teamMembers: DirectReport[]
   onInitiativeCreated: () => void
-  onDragStart?: (initiative: Initiative) => void
 }
 
 const TSHIRT_SIZES = ['S', 'M', 'L', 'XL']
 
+const WORK_TYPES: { value: number; label: string }[] = [
+  { value: 0, label: 'Maintenance' },
+  { value: 1, label: 'Product Roadmap' },
+  { value: 2, label: 'Tech Roadmap' }
+]
+
+const WORK_TYPE_BADGE_COLORS: Record<number, string> = {
+  0: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  1: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  2: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+}
+
+const WORK_TYPE_SHORT: Record<number, string> = {
+  0: 'Maint',
+  1: 'Product',
+  2: 'Tech'
+}
+
 export default function InitiativesPanel({
   initiatives,
   quarterId,
-  onInitiativeCreated,
-  onDragStart
+  teamMembers,
+  onInitiativeCreated
 }: InitiativesPanelProps) {
   // Modal state
   const [showModal, setShowModal] = useState(false)
@@ -30,12 +49,18 @@ export default function InitiativesPanel({
   const [description, setDescription] = useState('')
   const [tshirtSize, setTshirtSize] = useState('M')
   const [url, setUrl] = useState('')
+  const [workType, setWorkType] = useState<number>(1)
+
+  // Member management
+  const [addingMember, setAddingMember] = useState(false)
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
 
   const resetForm = () => {
     setName('')
     setDescription('')
     setTshirtSize('M')
     setUrl('')
+    setWorkType(1)
     setEditingInitiative(null)
   }
 
@@ -50,6 +75,7 @@ export default function InitiativesPanel({
     setDescription(initiative.description || '')
     setTshirtSize(initiative.tshirtSize || 'M')
     setUrl(initiative.url || '')
+    setWorkType(initiative.workType ?? 1)
     setShowModal(true)
   }
 
@@ -64,7 +90,8 @@ export default function InitiativesPanel({
           name,
           description,
           tshirtSize,
-          url
+          url,
+          workType
         })
       } else {
         await quarterlyPlanningApi.createInitiative({
@@ -72,7 +99,8 @@ export default function InitiativesPanel({
           name,
           description,
           tshirtSize,
-          url
+          url,
+          workType
         })
       }
 
@@ -102,8 +130,47 @@ export default function InitiativesPanel({
     }
   }
 
-  // Count allocated initiatives
-  const allocatedCount = initiatives.filter(i => i.allocationCount > 0).length
+  const handleAddMember = async (directReportId: string) => {
+    if (!editingInitiative) return
+    try {
+      setAddingMember(true)
+      await quarterlyPlanningApi.addInitiativeMember(editingInitiative.id, directReportId)
+      onInitiativeCreated()
+      // Refresh the editing initiative's members
+      const updated = await quarterlyPlanningApi.getInitiativeById(editingInitiative.id)
+      setEditingInitiative(updated)
+    } catch (err) {
+      console.error('Failed to add member', err)
+    } finally {
+      setAddingMember(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      setRemovingMemberId(memberId)
+      await quarterlyPlanningApi.removeInitiativeMember(memberId)
+      onInitiativeCreated()
+      if (editingInitiative) {
+        const updated = await quarterlyPlanningApi.getInitiativeById(editingInitiative.id)
+        setEditingInitiative(updated)
+      }
+    } catch (err) {
+      console.error('Failed to remove member', err)
+    } finally {
+      setRemovingMemberId(null)
+    }
+  }
+
+  // Get unassigned members for the current initiative
+  const getAvailableMembers = () => {
+    if (!editingInitiative) return teamMembers
+    const assignedIds = new Set((editingInitiative.members || []).map(m => m.directReportId))
+    return teamMembers.filter(m => !assignedIds.has(m.id))
+  }
+
+  // Count placed initiatives (ones with a start sprint assigned)
+  const placedCount = initiatives.filter(i => i.startSprintId).length
 
   return (
     <Card className="h-full flex flex-col">
@@ -124,7 +191,7 @@ export default function InitiativesPanel({
 
         {/* Summary */}
         <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          {initiatives.length} initiatives | {allocatedCount} with allocations
+          {initiatives.length} initiatives | {placedCount} placed in sprints
         </div>
       </CardHeader>
 
@@ -145,8 +212,6 @@ export default function InitiativesPanel({
             {initiatives.map(initiative => (
               <div
                 key={initiative.id}
-                draggable
-                onDragStart={() => onDragStart?.(initiative)}
                 onClick={() => openEdit(initiative)}
                 className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:shadow-md transition-shadow"
                 style={{ borderLeftWidth: 4, borderLeftColor: initiative.color }}
@@ -167,10 +232,20 @@ export default function InitiativesPanel({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {initiative.allocationCount} allocation{initiative.allocationCount !== 1 ? 's' : ''}
-                  </div>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${WORK_TYPE_BADGE_COLORS[initiative.workType] || WORK_TYPE_BADGE_COLORS[1]}`}>
+                    {WORK_TYPE_SHORT[initiative.workType] || 'Product'}
+                  </span>
+                  {(initiative.members || []).length > 0 && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {initiative.members.length} member{initiative.members.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {initiative.startSprintId && (
+                    <span className="text-[10px] text-green-600 dark:text-green-400">
+                      {initiative.sprintSpan}sp
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -181,7 +256,7 @@ export default function InitiativesPanel({
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-[420px] max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-[480px] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">
                 {editingInitiative ? 'Edit Initiative' : 'Create Initiative'}
@@ -219,6 +294,28 @@ export default function InitiativesPanel({
                   placeholder="What does this initiative involve?"
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white resize-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Work Type
+                </label>
+                <div className="flex gap-2">
+                  {WORK_TYPES.map(wt => (
+                    <button
+                      key={wt.value}
+                      type="button"
+                      onClick={() => setWorkType(wt.value)}
+                      className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                        workType === wt.value
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-amber-400'
+                      }`}
+                    >
+                      {wt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -268,6 +365,67 @@ export default function InitiativesPanel({
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Colors are automatically assigned to ensure uniqueness
                   </p>
+                </div>
+              )}
+
+              {/* Member assignment - only in edit mode */}
+              {editingInitiative && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Assigned Members
+                  </label>
+
+                  {/* Current members */}
+                  <div className="space-y-1 mb-2">
+                    {(editingInitiative.members || []).map(member => (
+                      <div key={member.id} className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-slate-700 rounded text-sm">
+                        <span className="text-slate-700 dark:text-slate-300">{member.directReportName}</span>
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={removingMemberId === member.id}
+                          className="p-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
+                        >
+                          {removingMemberId === member.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <UserMinus className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                    {(!editingInitiative.members || editingInitiative.members.length === 0) && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">No members assigned</p>
+                    )}
+                  </div>
+
+                  {/* Add member dropdown */}
+                  {getAvailableMembers().length > 0 && (
+                    <div className="flex gap-2">
+                      <select
+                        id="add-member-select"
+                        className="flex-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Add member...</option>
+                        {getAvailableMembers().map(m => (
+                          <option key={m.id} value={m.id}>{m.fullName}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          const select = document.getElementById('add-member-select') as HTMLSelectElement
+                          if (select?.value) {
+                            handleAddMember(select.value)
+                            select.value = ''
+                          }
+                        }}
+                        disabled={addingMember}
+                        className="p-1.5 bg-amber-500 text-white rounded hover:bg-amber-600 disabled:opacity-50"
+                      >
+                        {addingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

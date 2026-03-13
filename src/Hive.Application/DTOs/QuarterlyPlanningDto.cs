@@ -49,6 +49,10 @@ public record InitiativeDto
     public string? ProjectName { get; init; }
     public string TshirtSize { get; init; } = "M";
     public string Url { get; init; } = string.Empty;
+    public int WorkType { get; init; } = 1;
+    public Guid? StartSprintId { get; init; }
+    public int SprintSpan { get; init; } = 1;
+    public IReadOnlyList<InitiativeMemberDto> Members { get; init; } = new List<InitiativeMemberDto>();
     public int AllocationCount { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -65,6 +69,8 @@ public record CreateInitiativeDto
     public Guid? ProjectId { get; init; }
     public string? TshirtSize { get; init; }
     public string? Url { get; init; }
+    public int? WorkType { get; init; }
+    public Guid? StartSprintId { get; init; }
 }
 
 /// <summary>
@@ -78,6 +84,36 @@ public record UpdateInitiativeDto
     public Guid? ProjectId { get; init; }
     public string? TshirtSize { get; init; }
     public string? Url { get; init; }
+    public int? WorkType { get; init; }
+    public Guid? StartSprintId { get; init; }
+}
+
+/// <summary>
+/// Data transfer object for InitiativeMember entity.
+/// </summary>
+public record InitiativeMemberDto
+{
+    public Guid Id { get; init; }
+    public Guid InitiativeId { get; init; }
+    public Guid DirectReportId { get; init; }
+    public string DirectReportName { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
+}
+
+/// <summary>
+/// Data transfer object for adding a member to an initiative.
+/// </summary>
+public record CreateInitiativeMemberDto
+{
+    public Guid DirectReportId { get; init; }
+}
+
+/// <summary>
+/// Data transfer object for assigning an initiative to a sprint.
+/// </summary>
+public record AssignSprintDto
+{
+    public Guid? StartSprintId { get; init; }
 }
 
 /// <summary>
@@ -171,6 +207,7 @@ public record PlanningBoardDto
     public IReadOnlyList<AllocationDto> Allocations { get; init; } = new List<AllocationDto>();
     public IReadOnlyList<SprintGoalDto> SprintGoals { get; init; } = new List<SprintGoalDto>();
     public IReadOnlyList<InitiativeDependencyDto> Dependencies { get; init; } = new List<InitiativeDependencyDto>();
+    public IReadOnlyList<InitiativeMemberDto> InitiativeMembers { get; init; } = new List<InitiativeMemberDto>();
     public IReadOnlyList<LeaveDto> Leaves { get; init; } = new List<LeaveDto>();
 }
 

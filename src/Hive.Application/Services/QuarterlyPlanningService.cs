@@ -17,11 +17,13 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
     private readonly IAllocationRepository _allocationRepository;
     private readonly ISprintGoalRepository _sprintGoalRepository;
     private readonly IInitiativeDependencyRepository _dependencyRepository;
+    private readonly IInitiativeMemberRepository _initiativeMemberRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ILeaveRepository _leaveRepository;
     private readonly IActivityService _activityService;
+    private readonly IAppSettingsService _appSettingsService;
 
     public QuarterlyPlanningService(
         IQuarterRepository quarterRepository,
@@ -29,22 +31,26 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         IAllocationRepository allocationRepository,
         ISprintGoalRepository sprintGoalRepository,
         IInitiativeDependencyRepository dependencyRepository,
+        IInitiativeMemberRepository initiativeMemberRepository,
         ISprintRepository sprintRepository,
         IDirectReportRepository directReportRepository,
         IProjectRepository projectRepository,
         ILeaveRepository leaveRepository,
-        IActivityService activityService)
+        IActivityService activityService,
+        IAppSettingsService appSettingsService)
     {
         _quarterRepository = quarterRepository ?? throw new ArgumentNullException(nameof(quarterRepository));
         _initiativeRepository = initiativeRepository ?? throw new ArgumentNullException(nameof(initiativeRepository));
         _allocationRepository = allocationRepository ?? throw new ArgumentNullException(nameof(allocationRepository));
         _sprintGoalRepository = sprintGoalRepository ?? throw new ArgumentNullException(nameof(sprintGoalRepository));
         _dependencyRepository = dependencyRepository ?? throw new ArgumentNullException(nameof(dependencyRepository));
+        _initiativeMemberRepository = initiativeMemberRepository ?? throw new ArgumentNullException(nameof(initiativeMemberRepository));
         _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
         _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         _leaveRepository = leaveRepository ?? throw new ArgumentNullException(nameof(leaveRepository));
         _activityService = activityService ?? throw new ArgumentNullException(nameof(activityService));
+        _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
     }
 
     #region Quarter Operations
@@ -170,6 +176,7 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         {
             await _allocationRepository.DeleteByInitiativeAsync(initiative.Id, cancellationToken);
             await _dependencyRepository.DeleteByInitiativeAsync(initiative.Id, cancellationToken);
+            await _initiativeMemberRepository.DeleteByInitiativeAsync(initiative.Id, cancellationToken);
             await _initiativeRepository.DeleteAsync(initiative.Id, cancellationToken);
         }
 
@@ -200,25 +207,39 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         if (entity is null) return null;
 
         var allocations = await _allocationRepository.GetByInitiativeAsync(id, cancellationToken);
+        var members = await _initiativeMemberRepository.GetByInitiativeAsync(id, cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
         var project = entity.ProjectId.HasValue
             ? await _projectRepository.GetByIdAsync(entity.ProjectId.Value, cancellationToken)
             : null;
 
-        return MapInitiativeToDto(entity, allocations.Count, project?.Name);
+        var settings = await _appSettingsService.GetAsync(cancellationToken);
+        var sprintSpan = ComputeSprintSpan(entity.TshirtSize, settings.TshirtSizeMappings);
+        var memberDtos = MapMembersToDtos(members, drDict);
+
+        return MapInitiativeToDto(entity, allocations.Count, project?.Name, sprintSpan, memberDtos);
     }
 
     public async Task<IReadOnlyList<InitiativeDto>> GetInitiativesByQuarterAsync(Guid quarterId, CancellationToken cancellationToken = default)
     {
         var entities = await _initiativeRepository.GetByQuarterAsync(quarterId, cancellationToken);
         var allocations = await _allocationRepository.GetByQuarterAsync(quarterId, cancellationToken);
+        var allMembers = await _initiativeMemberRepository.GetByQuarterAsync(quarterId, cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
         var projects = await _projectRepository.GetAllAsync(cancellationToken);
         var projectDict = projects.ToDictionary(p => p.Id, p => p.Name);
+        var settings = await _appSettingsService.GetAsync(cancellationToken);
 
         return entities.Select(e =>
         {
             var initiativeAllocations = allocations.Where(a => a.InitiativeId == e.Id);
             var projectName = e.ProjectId.HasValue && projectDict.TryGetValue(e.ProjectId.Value, out var name) ? name : null;
-            return MapInitiativeToDto(e, initiativeAllocations.Count(), projectName);
+            var sprintSpan = ComputeSprintSpan(e.TshirtSize, settings.TshirtSizeMappings);
+            var initiativeMembers = allMembers.Where(m => m.InitiativeId == e.Id).ToList();
+            var memberDtos = MapMembersToDtos(initiativeMembers, drDict);
+            return MapInitiativeToDto(e, initiativeAllocations.Count(), projectName, sprintSpan, memberDtos);
         }).ToList();
     }
 
@@ -242,6 +263,8 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         var usedColors = existingInitiatives.Select(i => i.Color).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var color = GetNextAvailableColor(usedColors);
 
+        var workType = dto.WorkType.HasValue ? (WorkType)dto.WorkType.Value : WorkType.ProductRoadmap;
+
         var entity = new Initiative(
             dto.QuarterId,
             dto.Name,
@@ -249,7 +272,9 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             dto.Description,
             dto.ProjectId,
             dto.TshirtSize,
-            dto.Url);
+            dto.Url,
+            workType,
+            dto.StartSprintId);
 
         var created = await _initiativeRepository.AddAsync(entity, cancellationToken);
 
@@ -261,7 +286,10 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             $"Initiative '{created.Name}' was created for {quarter.Name}",
             cancellationToken);
 
-        return MapInitiativeToDto(created, 0, projectName);
+        var settings = await _appSettingsService.GetAsync(cancellationToken);
+        var sprintSpan = ComputeSprintSpan(created.TshirtSize, settings.TshirtSizeMappings);
+
+        return MapInitiativeToDto(created, 0, projectName, sprintSpan, new List<InitiativeMemberDto>());
     }
 
     private static string GetNextAvailableColor(HashSet<string> usedColors)
@@ -294,17 +322,24 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             projectName = project.Name;
         }
 
+        var workType = dto.WorkType.HasValue ? (WorkType)dto.WorkType.Value : (WorkType?)null;
+
         entity.Update(
             dto.Name,
             dto.Description,
             dto.Color,
             dto.ProjectId,
             dto.TshirtSize,
-            dto.Url);
+            dto.Url,
+            workType,
+            dto.StartSprintId);
 
         await _initiativeRepository.UpdateAsync(entity, cancellationToken);
 
         var allocations = await _allocationRepository.GetByInitiativeAsync(id, cancellationToken);
+        var members = await _initiativeMemberRepository.GetByInitiativeAsync(id, cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
 
         await _activityService.LogActivityAsync(
             ActivityType.Updated,
@@ -314,7 +349,11 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             $"Initiative '{entity.Name}' was updated",
             cancellationToken);
 
-        return MapInitiativeToDto(entity, allocations.Count, projectName);
+        var settings = await _appSettingsService.GetAsync(cancellationToken);
+        var sprintSpan = ComputeSprintSpan(entity.TshirtSize, settings.TshirtSizeMappings);
+        var memberDtos = MapMembersToDtos(members, drDict);
+
+        return MapInitiativeToDto(entity, allocations.Count, projectName, sprintSpan, memberDtos);
     }
 
     public async Task DeleteInitiativeAsync(Guid id, CancellationToken cancellationToken = default)
@@ -324,6 +363,7 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
 
         await _allocationRepository.DeleteByInitiativeAsync(id, cancellationToken);
         await _dependencyRepository.DeleteByInitiativeAsync(id, cancellationToken);
+        await _initiativeMemberRepository.DeleteByInitiativeAsync(id, cancellationToken);
         await _initiativeRepository.DeleteAsync(id, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -525,6 +565,92 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
 
     #endregion
 
+    #region Initiative Member Operations
+
+    public async Task<IReadOnlyList<InitiativeMemberDto>> GetInitiativeMembersByInitiativeAsync(Guid initiativeId, CancellationToken cancellationToken = default)
+    {
+        var members = await _initiativeMemberRepository.GetByInitiativeAsync(initiativeId, cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
+        return MapMembersToDtos(members, drDict);
+    }
+
+    public async Task<InitiativeMemberDto> AddInitiativeMemberAsync(Guid initiativeId, CreateInitiativeMemberDto dto, CancellationToken cancellationToken = default)
+    {
+        var initiative = await _initiativeRepository.GetByIdAsync(initiativeId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Initiative), initiativeId);
+        var directReport = await _directReportRepository.GetByIdAsync(dto.DirectReportId, cancellationToken)
+            ?? throw new NotFoundException(nameof(DirectReport), dto.DirectReportId);
+
+        if (await _initiativeMemberRepository.ExistsAsync(initiativeId, dto.DirectReportId, cancellationToken))
+        {
+            throw new ConflictException($"Member '{directReport.FullName}' is already assigned to initiative '{initiative.Name}'.");
+        }
+
+        var entity = new InitiativeMember(initiativeId, dto.DirectReportId);
+        var created = await _initiativeMemberRepository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.Initiative,
+            initiative.Id,
+            initiative.Name,
+            $"Member '{directReport.FullName}' was added to initiative '{initiative.Name}'",
+            cancellationToken);
+
+        return new InitiativeMemberDto
+        {
+            Id = created.Id,
+            InitiativeId = created.InitiativeId,
+            DirectReportId = created.DirectReportId,
+            DirectReportName = directReport.FullName,
+            CreatedAt = created.CreatedAt
+        };
+    }
+
+    public async Task RemoveInitiativeMemberAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _initiativeMemberRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException(nameof(InitiativeMember), id);
+
+        await _initiativeMemberRepository.DeleteAsync(id, cancellationToken);
+    }
+
+    #endregion
+
+    #region Sprint Assignment Operations
+
+    public async Task<InitiativeDto> AssignInitiativeToSprintAsync(Guid initiativeId, Guid? startSprintId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _initiativeRepository.GetByIdAsync(initiativeId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Initiative), initiativeId);
+
+        if (startSprintId.HasValue)
+        {
+            _ = await _sprintRepository.GetByIdAsync(startSprintId.Value, cancellationToken)
+                ?? throw new NotFoundException(nameof(Sprint), startSprintId.Value);
+        }
+
+        entity.AssignToSprint(startSprintId);
+        await _initiativeRepository.UpdateAsync(entity, cancellationToken);
+
+        var allocations = await _allocationRepository.GetByInitiativeAsync(initiativeId, cancellationToken);
+        var members = await _initiativeMemberRepository.GetByInitiativeAsync(initiativeId, cancellationToken);
+        var directReports = await _directReportRepository.GetAllAsync(cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
+        var project = entity.ProjectId.HasValue
+            ? await _projectRepository.GetByIdAsync(entity.ProjectId.Value, cancellationToken)
+            : null;
+
+        var settings = await _appSettingsService.GetAsync(cancellationToken);
+        var sprintSpan = ComputeSprintSpan(entity.TshirtSize, settings.TshirtSizeMappings);
+        var memberDtos = MapMembersToDtos(members, drDict);
+
+        return MapInitiativeToDto(entity, allocations.Count, project?.Name, sprintSpan, memberDtos);
+    }
+
+    #endregion
+
     #region Board Operations
 
     public async Task<PlanningBoardDto> GetPlanningBoardAsync(Guid quarterId, CancellationToken cancellationToken = default)
@@ -544,6 +670,11 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         // Get team members (only direct reports, not skip-levels)
         var allMembers = await _directReportRepository.GetAllAsync(cancellationToken);
         var directReports = allMembers.Where(d => d.IsDirect).ToList();
+
+        // Get initiative members
+        var initiativeMembers = await _initiativeMemberRepository.GetByQuarterAsync(quarterId, cancellationToken);
+        var drDict = directReports.ToDictionary(d => d.Id, d => d.FullName);
+        var initiativeMemberDtos = MapMembersToDtos(initiativeMembers, drDict);
 
         // Get leaves that overlap with quarter sprints
         var allLeaves = await _leaveRepository.GetAllAsync(cancellationToken);
@@ -586,6 +717,7 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
             Allocations = allocations,
             SprintGoals = sprintGoals,
             Dependencies = dependencies,
+            InitiativeMembers = initiativeMemberDtos,
             Leaves = relevantLeaves.Select(l => new LeaveDto
             {
                 Id = l.Id,
@@ -618,7 +750,12 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         UpdatedAt = entity.UpdatedAt
     };
 
-    private static InitiativeDto MapInitiativeToDto(Initiative entity, int allocationCount, string? projectName) => new()
+    private static InitiativeDto MapInitiativeToDto(
+        Initiative entity,
+        int allocationCount,
+        string? projectName,
+        int sprintSpan = 1,
+        IReadOnlyList<InitiativeMemberDto>? members = null) => new()
     {
         Id = entity.Id,
         QuarterId = entity.QuarterId,
@@ -629,10 +766,47 @@ public class QuarterlyPlanningService : IQuarterlyPlanningService
         ProjectName = projectName,
         TshirtSize = entity.TshirtSize,
         Url = entity.Url,
+        WorkType = (int)entity.WorkType,
+        StartSprintId = entity.StartSprintId,
+        SprintSpan = sprintSpan,
+        Members = members ?? new List<InitiativeMemberDto>(),
         AllocationCount = allocationCount,
         CreatedAt = entity.CreatedAt,
         UpdatedAt = entity.UpdatedAt
     };
+
+    private static int ComputeSprintSpan(string tshirtSize, List<TshirtSizeMapping> mappings)
+    {
+        var mapping = mappings.FirstOrDefault(m =>
+            string.Equals(m.Size, tshirtSize, StringComparison.OrdinalIgnoreCase));
+        if (mapping != null)
+        {
+            return (int)Math.Ceiling(mapping.Sprints);
+        }
+        // Default: S=1, M=1, L=2, XL=4
+        return tshirtSize.ToUpperInvariant() switch
+        {
+            "S" => 1,
+            "M" => 1,
+            "L" => 2,
+            "XL" => 4,
+            _ => 1
+        };
+    }
+
+    private static List<InitiativeMemberDto> MapMembersToDtos(
+        IEnumerable<InitiativeMember> members,
+        Dictionary<Guid, string> drDict)
+    {
+        return members.Select(m => new InitiativeMemberDto
+        {
+            Id = m.Id,
+            InitiativeId = m.InitiativeId,
+            DirectReportId = m.DirectReportId,
+            DirectReportName = drDict.TryGetValue(m.DirectReportId, out var name) ? name : string.Empty,
+            CreatedAt = m.CreatedAt
+        }).ToList();
+    }
 
     private static AllocationDto MapAllocationToDto(
         Allocation entity,

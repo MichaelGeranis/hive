@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IAllocationRepository, AllocationRepository>();
         services.AddScoped<ISprintGoalRepository, SprintGoalRepository>();
         services.AddScoped<IInitiativeDependencyRepository, InitiativeDependencyRepository>();
+        services.AddScoped<IInitiativeMemberRepository, InitiativeMemberRepository>();
         services.AddScoped<IKnowledgePointRepository, KnowledgePointRepository>();
 
         // Register Claude API service with HttpClient
@@ -109,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<IAllocationRepository, SqliteAllocationRepository>();
         services.AddScoped<ISprintGoalRepository, SqliteSprintGoalRepository>();
         services.AddScoped<IInitiativeDependencyRepository, SqliteInitiativeDependencyRepository>();
+        services.AddScoped<IInitiativeMemberRepository, SqliteInitiativeMemberRepository>();
         services.AddScoped<IKnowledgePointRepository, SqliteKnowledgePointRepository>();
 
         // Register Claude API service with HttpClient

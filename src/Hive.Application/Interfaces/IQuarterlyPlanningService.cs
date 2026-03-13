@@ -40,6 +40,14 @@ public interface IQuarterlyPlanningService
     Task<InitiativeDependencyDto> CreateDependencyAsync(CreateInitiativeDependencyDto dto, CancellationToken cancellationToken = default);
     Task DeleteDependencyAsync(Guid id, CancellationToken cancellationToken = default);
 
+    // Initiative Member operations
+    Task<IReadOnlyList<InitiativeMemberDto>> GetInitiativeMembersByInitiativeAsync(Guid initiativeId, CancellationToken cancellationToken = default);
+    Task<InitiativeMemberDto> AddInitiativeMemberAsync(Guid initiativeId, CreateInitiativeMemberDto dto, CancellationToken cancellationToken = default);
+    Task RemoveInitiativeMemberAsync(Guid id, CancellationToken cancellationToken = default);
+
+    // Sprint Assignment operations
+    Task<InitiativeDto> AssignInitiativeToSprintAsync(Guid initiativeId, Guid? startSprintId, CancellationToken cancellationToken = default);
+
     // Board operations
     Task<PlanningBoardDto> GetPlanningBoardAsync(Guid quarterId, CancellationToken cancellationToken = default);
 

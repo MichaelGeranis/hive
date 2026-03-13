@@ -36,6 +36,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, Allocation> Allocations { get; } = new();
     public ConcurrentDictionary<Guid, SprintGoal> SprintGoals { get; } = new();
     public ConcurrentDictionary<Guid, InitiativeDependency> InitiativeDependencies { get; } = new();
+    public ConcurrentDictionary<Guid, InitiativeMember> InitiativeMembers { get; } = new();
     public ConcurrentDictionary<Guid, KnowledgePoint> KnowledgePoints { get; } = new();
     public List<AppSettings> AppSettings { get; } = new();
 

@@ -312,6 +312,83 @@ public class QuarterlyPlanningController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets members assigned to an initiative.
+    /// </summary>
+    [HttpGet("initiatives/{id:guid}/members")]
+    [ProducesResponseType(typeof(IEnumerable<InitiativeMemberDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<InitiativeMemberDto>>> GetInitiativeMembers(Guid id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting members for initiative: {Id}", id);
+        var members = await _planningService.GetInitiativeMembersByInitiativeAsync(id, cancellationToken);
+        return Ok(members);
+    }
+
+    /// <summary>
+    /// Adds a member to an initiative.
+    /// </summary>
+    [HttpPost("initiatives/{id:guid}/members")]
+    [ProducesResponseType(typeof(InitiativeMemberDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<InitiativeMemberDto>> AddInitiativeMember(Guid id, [FromBody] CreateInitiativeMemberDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Adding member to initiative: {Id}", id);
+        try
+        {
+            var created = await _planningService.AddInitiativeMemberAsync(id, dto, cancellationToken);
+            return CreatedAtAction(nameof(GetInitiativeMembers), new { id }, created);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Removes a member from an initiative.
+    /// </summary>
+    [HttpDelete("initiative-members/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveInitiativeMember(Guid id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Removing initiative member: {Id}", id);
+        try
+        {
+            await _planningService.RemoveInitiativeMemberAsync(id, cancellationToken);
+            return NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Assigns an initiative to a start sprint (or clears assignment).
+    /// </summary>
+    [HttpPut("initiatives/{id:guid}/assign-sprint")]
+    [ProducesResponseType(typeof(InitiativeDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<InitiativeDto>> AssignInitiativeToSprint(Guid id, [FromBody] AssignSprintDto dto, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Assigning initiative {Id} to sprint", id);
+        try
+        {
+            var updated = await _planningService.AssignInitiativeToSprintAsync(id, dto.StartSprintId, cancellationToken);
+            return Ok(updated);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     #endregion
 
     #region Allocation Endpoints
