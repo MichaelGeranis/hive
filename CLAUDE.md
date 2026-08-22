@@ -83,7 +83,7 @@ src/
 - .NET 9.0, ASP.NET Core Web API
 - xUnit + Moq + FluentAssertions for testing
 - SQLite database (production) / In-memory database (development)
-- Basic Authentication (credentials in appsettings.json: admin/admin123)
+- Basic Authentication (default admin/admin123, local-dev only — override via `HIVE_ADMIN_USERNAME`/`HIVE_ADMIN_PASSWORD`, see Authentication section below)
 - Swagger/OpenAPI for API documentation
 - CORS enabled for localhost:5173
 
@@ -357,11 +357,17 @@ tests/Hive.Tests/
 
 ### Authentication
 - Basic Authentication required for all API endpoints
-- Default credentials: `admin/admin123` (configured in appsettings.json)
+- Default credentials: `admin/admin123` — a local-dev-only convenience baked into
+  `AdminCredentials` (`src/Hive.Api/Authentication/BasicAuthenticationHandler.cs`),
+  not read from appsettings.json anymore. Override via `HIVE_ADMIN_USERNAME`/
+  `HIVE_ADMIN_PASSWORD` (backend) and `VITE_ADMIN_USERNAME`/`VITE_ADMIN_PASSWORD`
+  (frontend, see `src/Hive.Desktop/.env.example`) before exposing the API beyond
+  localhost
 - Frontend stores credentials for API calls
 
 ### Environment Variables
 - `HIVE_DATABASE_PATH` - Override default SQLite database location
+- `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` - Override the default Basic Auth admin credentials (backend)
 - `UseInMemoryDatabase` - Set to `true` for in-memory database (appsettings.json)
 
 ## Common Development Tasks

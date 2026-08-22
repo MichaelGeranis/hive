@@ -401,10 +401,22 @@ Navigate to http://localhost:5000 (or https://localhost:5001) to access Swagger 
 
 ## Authentication
 
-The API uses Basic Authentication. Default credentials:
+The API uses Basic Authentication. Default credentials (local development only):
 
 - **Username**: `admin`
 - **Password**: `admin123`
+
+These defaults are intended for a single-user instance bound to `localhost` only,
+and are documented here precisely because they are **not** a secret — anyone who
+reads this repository knows them. Do not rely on them, and never expose the API
+beyond localhost without overriding them first:
+
+- **Backend**: set the `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` environment
+  variables before starting the API (or the standard ASP.NET Core
+  `AdminCredentials__Username` / `AdminCredentials__Password` variables).
+- **Frontend**: set `VITE_ADMIN_USERNAME` / `VITE_ADMIN_PASSWORD` (see
+  `src/Hive.Desktop/.env.example`) to matching values when building the desktop
+  app, so it authenticates with the overridden backend credentials.
 
 ### Authenticating in Swagger UI
 

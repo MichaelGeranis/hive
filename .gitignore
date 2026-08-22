@@ -99,3 +99,11 @@ src/Hive.Desktop/dist/index.html
 INSTALLATION.md
 TROUBLESHOOTING.md
 .claude/agents/dotnet-backend-architect.md
+
+# Local environment overrides (may contain credentials) - never commit these
+.env
+.env.local
+.env.*.local
+src/Hive.Desktop/.env
+src/Hive.Desktop/.env.local
+src/Hive.Desktop/.env.*.local

@@ -8,9 +8,27 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 
-// Configure Admin Credentials
-builder.Services.Configure<AdminCredentials>(
-    builder.Configuration.GetSection("AdminCredentials"));
+// Configure Admin Credentials.
+// The compiled-in default (admin/admin123) is a well-known local-development
+// convenience only. Override it via HIVE_ADMIN_USERNAME / HIVE_ADMIN_PASSWORD
+// (or the standard AdminCredentials__Username / AdminCredentials__Password
+// environment variables) for any instance reachable outside localhost.
+builder.Services.Configure<AdminCredentials>(options =>
+{
+    builder.Configuration.GetSection("AdminCredentials").Bind(options);
+
+    var envUsername = Environment.GetEnvironmentVariable("HIVE_ADMIN_USERNAME");
+    if (!string.IsNullOrEmpty(envUsername))
+    {
+        options.Username = envUsername;
+    }
+
+    var envPassword = Environment.GetEnvironmentVariable("HIVE_ADMIN_PASSWORD");
+    if (!string.IsNullOrEmpty(envPassword))
+    {
+        options.Password = envPassword;
+    }
+});
 
 // Configure Authentication
 builder.Services.AddAuthentication("BasicAuthentication")
@@ -134,6 +152,17 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Warn loudly if the well-known default admin credentials are still active,
+// since anyone who has read the (public) source knows them.
+var adminCredentials = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdminCredentials>>().Value;
+if (adminCredentials.Username == "admin" && adminCredentials.Password == "admin123")
+{
+    app.Logger.LogWarning(
+        "Using the default admin/admin123 credentials. This is fine for a local, single-user " +
+        "instance bound to localhost, but MUST be overridden via HIVE_ADMIN_USERNAME / " +
+        "HIVE_ADMIN_PASSWORD before this API is reachable from anywhere else.");
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
