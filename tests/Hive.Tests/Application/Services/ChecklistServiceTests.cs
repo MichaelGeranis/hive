@@ -594,16 +594,13 @@ public class ChecklistServiceTests
         var instanceId = instance.Id;
         var item1 = new ChecklistInstanceItem(instanceId, Guid.NewGuid(), 0, "Set up laptop", ChecklistItemType.Task, true);
         var item2 = new ChecklistInstanceItem(instanceId, Guid.NewGuid(), 1, "Meet the team", ChecklistItemType.Task, true);
-        var item3 = new ChecklistInstanceItem(instanceId, Guid.NewGuid(), 2, "Review handbook", ChecklistItemType.Document, false);
+        var item3Optional = new ChecklistInstanceItem(instanceId, Guid.NewGuid(), 2, "Optional reading", ChecklistItemType.Document, false);
 
-        // Complete 2 of 3 items
+        // Complete required items
         item1.MarkComplete("Done");
-        item2.MarkSkipped(); // only if not required - but item2 IS required, so we'll use MarkComplete instead
-        // Actually let's mark item2 complete and item3 skipped:
         item2.MarkComplete();
 
-        // item3 is optional (IsRequired=false), mark as skipped
-        var item3Optional = new ChecklistInstanceItem(instanceId, Guid.NewGuid(), 2, "Optional reading", ChecklistItemType.Document, false);
+        // Skip optional item
         item3Optional.MarkSkipped();
 
         _instanceRepositoryMock.Setup(r => r.GetByIdAsync(instance.Id, It.IsAny<CancellationToken>()))
