@@ -1,594 +1,256 @@
 # Hive
 
-Engineering Manager tool for assisting in managing projects, people, delivery and technical tasks.
+The Engineering Manager's operating system.
 
-## Table of Contents
+An EM's work is scattered across half a dozen tools that do not talk to each other:
+reviews in an HR system, 1:1 notes in a personal doc, delivery data in Jira, capacity in a
+spreadsheet, quarterly plans in slides. The manager becomes the integration layer, and the
+questions that actually matter take an afternoon to answer.
 
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [Backend Installation](#backend-installation)
-  - [Frontend Installation](#frontend-installation)
-- [Running the Application](#running-the-application)
-  - [Running the Backend](#running-the-backend)
-  - [Running the Frontend](#running-the-frontend)
-- [Testing](#testing)
-  - [Backend Tests](#backend-tests)
-  - [Frontend Tests](#frontend-tests)
-- [Debugging](#debugging)
-  - [Backend Debugging](#backend-debugging)
-  - [Frontend Debugging](#frontend-debugging)
-- [API Documentation](#api-documentation)
-- [Authentication](#authentication)
-- [Project Structure](#project-structure)
-- [Configuration](#configuration)
-
-## Architecture
-
-This application follows **Clean Architecture** principles with the following layers:
+Hive puts people, delivery, planning and process in one local desktop application, and
+derives the answers instead of making you assemble them.
 
 ```
-src/
-├── Hive.Core/           # Domain Layer (Entities, Interfaces, Business Rules)
-├── Hive.Application/    # Application Layer (Use Cases, Services, DTOs)
-├── Hive.Infrastructure/ # Infrastructure Layer (Repositories, Database)
-├── Hive.Api/            # Presentation Layer (API Controllers, Authentication)
-└── Hive.Desktop/        # Desktop Application (Electron + React)
+People ──┐
+Delivery ─┼──> Capacity · Velocity · Knowledge risk · Planning insights · Sentiment
+Planning ─┘
 ```
 
-### SOLID Principles Applied
+---
 
-- **Single Responsibility**: Each class has one reason to change
-- **Open/Closed**: Extensible via interfaces without modifying existing code
-- **Liskov Substitution**: Repository implementations are interchangeable
-- **Interface Segregation**: Small, focused interfaces (IDirectReportRepository)
-- **Dependency Inversion**: High-level modules depend on abstractions
+## Documentation
+
+| Document | What's in it |
+|----------|--------------|
+| [BUSINESS.md](BUSINESS.md) | Domain model, business rules, glossary, ubiquitous language |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Layers, dependency rule, data model, state machine, extension recipes |
+| [CODEBASE.md](CODEBASE.md) | File-by-file map of the repository |
+| [CLAUDE.md](CLAUDE.md) | Working agreement for AI agents and contributors |
+| [docs/DEBUGGING.md](docs/DEBUGGING.md) | IDE and browser debugging setups |
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Backend API | ASP.NET Core (C#) | .NET 9.0 |
+| Desktop shell | Electron | 28.x |
+| Frontend | React + TypeScript + Vite | React 18 |
+| Styling | Tailwind CSS | 3.x |
+| Database | SQLite + Entity Framework Core | EF Core 9.0 |
+| Charts | Recharts | 2.x |
+| AI (optional) | Claude API via HttpClient | — |
+| Backend testing | xUnit + Moq + FluentAssertions | xUnit 2.6 |
+| Frontend testing | Vitest + Testing Library + MSW | Vitest 4.x |
+
+---
 
 ## Prerequisites
 
-### Backend
-- .NET 9.0 SDK ([Download](https://dotnet.microsoft.com/download/dotnet/9.0))
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [Node.js 20+](https://nodejs.org/)
 
-### Frontend
-- Node.js 18+ ([Download](https://nodejs.org/))
-- npm 9+ (comes with Node.js)
+All projects target `net9.0`. `global.json` sets a floor of SDK 8.0.0 with
+`rollForward: latestMajor`, so a newer installed SDK is used automatically.
 
-## Installation
+---
 
-### Backend Installation
+## Getting Started
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd hive
-   ```
+### 1. Clone and install
 
-2. **Restore NuGet packages**
-   ```bash
-   dotnet restore Hive.sln
-   ```
-
-3. **Build the solution**
-   ```bash
-   dotnet build Hive.sln
-   ```
-
-### Frontend Installation
-
-1. **Navigate to the Desktop project**
-   ```bash
-   cd src/Hive.Desktop
-   ```
-
-2. **Install npm dependencies**
-   ```bash
-   npm install
-   ```
-
-## Running the Application
-
-### Running the Backend
-
-1. **Start the API server**
-   ```bash
-   cd src/Hive.Api
-   dotnet run
-   ```
-
-   The API will start at:
-   - HTTP: http://localhost:5000
-   - HTTPS: https://localhost:5001
-
-2. **Access Swagger UI**
-
-   Navigate to http://localhost:5000 to access the interactive API documentation.
-
-### Running the Frontend
-
-> **Note**: The backend API must be running before starting the frontend.
-
-1. **Development mode** (with hot reload)
-   ```bash
-   cd src/Hive.Desktop
-   npm run electron:dev
-   ```
-   This starts both the Vite dev server and Electron concurrently.
-
-2. **Build for production**
-   ```bash
-   cd src/Hive.Desktop
-   npm run electron:build
-   ```
-   Production builds are output to the `release/` directory.
-
-### Running Both Together
-
-For development, run in two separate terminal windows:
-
-**Terminal 1 - Backend:**
 ```bash
-cd src/Hive.Api
-dotnet run
+git clone https://github.com/MichaelGeranis/hive.git
+cd hive
+make install
 ```
 
-**Terminal 2 - Frontend:**
+`make install` restores NuGet packages and installs frontend dependencies.
+
+### 2. Run it
+
 ```bash
+make dev
+```
+
+This starts the backend on `http://localhost:5002` and the frontend on
+`http://localhost:5173`.
+
+To run the halves separately:
+
+```bash
+make backend-inmemory   # backend, in-memory database, resets on restart
+make backend-sqlite     # backend, persistent SQLite database
+make frontend           # Vite dev server only
+```
+
+**The backend must be running before the frontend is useful.** If port 5002 is already
+held, `make kill-backend` frees it.
+
+### 3. Sign in
+
+All endpoints require HTTP Basic Authentication. The default credentials are
+`admin` / `admin123`, configured in `src/Hive.Api/appsettings.json`.
+
+### 4. Explore the API
+
+With the backend running in development, Swagger UI is at `http://localhost:5002`.
+
+### 5. Run the tests
+
+```bash
+make test               # backend + frontend
+make test-coverage      # with coverage collection
+make coverage-report    # generate and open the HTML report
+```
+
+---
+
+## Common Commands
+
+Run `make help` for the full list.
+
+| Command | Does |
+|---------|------|
+| `make install` | Install backend and frontend dependencies |
+| `make dev` | Run backend and frontend together |
+| `make backend-sqlite` | Run backend with a persistent database |
+| `make backend-inmemory` | Run backend with an in-memory database |
+| `make frontend` | Run the Vite dev server (port 5173) |
+| `make test` | Run all tests |
+| `make test-coverage` | Run tests with coverage |
+| `make coverage-report` | Generate and open the HTML coverage report |
+| `make build` | Build backend and frontend |
+| `make check` | Build and test |
+| `make clean` | Remove build artifacts |
+| `make kill-backend` | Free port 5002 |
+| `make migration-add` | Create a new EF Core migration (prompts for a name) |
+| `make migration-update` | Apply migrations to the database |
+| `make migration-list` | List all migrations |
+| `make migration-remove` | Remove the last migration |
+| `make electron-build` | Build the packaged desktop application |
+
+Direct equivalents:
+
+```bash
+dotnet build Hive.sln
+dotnet run --project src/Hive.Api
+dotnet test Hive.sln
+dotnet test --filter "FullyQualifiedName~DirectReport"
+
 cd src/Hive.Desktop
-npm run electron:dev
+npm run electron:dev        # Vite + Electron together
+npm run test                # Vitest
+npm run electron:build      # Package the desktop app
 ```
 
-## Testing
+---
 
-### Backend Tests
+## Database
 
-The backend uses **xUnit** as the testing framework with **Moq** for mocking and **FluentAssertions** for readable assertions.
+Hive runs against one of two persistence modes, chosen by `UseInMemoryDatabase` in
+`appsettings.json`. Unset, it defaults to in-memory in the Development environment.
 
-1. **Run all tests**
-   ```bash
-   dotnet test Hive.sln
-   ```
+| | In-memory | SQLite |
+|---|---|---|
+| Setting | `UseInMemoryDatabase: true` | `UseInMemoryDatabase: false` |
+| Survives restart | No | Yes |
+| Seeds data | Optional | On first run |
+| Use for | Development, tests | Production, anything you want to keep |
 
-2. **Run tests with verbose output**
-   ```bash
-   dotnet test Hive.sln --verbosity normal
-   ```
+The SQLite file lives in a platform-specific user data directory:
 
-3. **Run tests with code coverage**
-   ```bash
-   dotnet test Hive.sln --collect:"XPlat Code Coverage"
-   ```
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/Hive/hive.db` |
+| Windows | `%APPDATA%/Hive/hive.db` |
+| Linux | `~/.local/share/Hive/hive.db` |
 
-4. **Run specific test project**
-   ```bash
-   dotnet test tests/Hive.Tests/Hive.Tests.csproj
-   ```
+`HIVE_DATABASE_PATH` overrides all three.
 
-5. **Run tests matching a filter**
-   ```bash
-   # Run only DirectReport tests
-   dotnet test Hive.sln --filter "FullyQualifiedName~DirectReport"
+> **Note for contributors:** these are two genuinely separate implementations, not one
+> store with two backends. Every repository interface is implemented twice. See
+> [ARCHITECTURE.md § Dual Persistence](ARCHITECTURE.md#dual-persistence) before adding an
+> entity.
 
-   # Run only service tests
-   dotnet test Hive.sln --filter "FullyQualifiedName~ServiceTests"
-   ```
+---
 
-6. **Watch mode** (re-run tests on file changes)
-   ```bash
-   dotnet watch test --project tests/Hive.Tests/Hive.Tests.csproj
-   ```
+## Contributing
 
-#### Test Structure
+### Development workflow
 
-```
-tests/Hive.Tests/
-├── Api/
-│   └── Controllers/          # Controller tests
-├── Application/
-│   └── Services/             # Service layer tests
-├── Core/
-│   ├── Entities/             # Domain entity tests
-│   └── Exceptions/           # Exception tests
-├── Infrastructure/
-│   ├── Persistence/          # Database service tests
-│   └── Repositories/         # Repository tests
-└── Integration/              # Integration tests
-```
+1. Create a branch: `git checkout -b feat/your-feature`.
+2. Read [ARCHITECTURE.md](ARCHITECTURE.md) if you are adding an entity, a page, or a
+   dashboard widget — each has a recipe, and each has a step that is easy to miss.
+3. Make your changes. Domain rules go on the entity, not in a service.
+4. Run `make test`. Add tests for what you changed.
+5. Update [CODEBASE.md](CODEBASE.md) if you added or removed a file.
+6. Commit using [conventional commits](https://www.conventionalcommits.org/):
+   `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
+7. Open a pull request against `main`.
 
-### Frontend Tests
+### Before you open a PR
 
-Currently, the frontend does not have a test suite configured. To add tests:
+- Both repository implementations registered, if you added one
+- DTOs cover every field the frontend needs — controllers never return entities
+- Tests added for entity, repository, service, and controller
+- Docs updated: CODEBASE.md for files, ARCHITECTURE.md for structure, BUSINESS.md for rules
 
-1. **Install testing dependencies**
-   ```bash
-   cd src/Hive.Desktop
-   npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom
-   ```
+Full checklist in [CLAUDE.md](CLAUDE.md).
 
-2. **Add test script to package.json**
-   ```json
-   {
-     "scripts": {
-       "test": "vitest",
-       "test:coverage": "vitest --coverage"
-     }
-   }
-   ```
-
-## Debugging
-
-### Backend Debugging
-
-#### Using Visual Studio Code
-
-1. **Install the C# extension** (C# Dev Kit recommended)
-
-2. **Create launch configuration** (`.vscode/launch.json`):
-   ```json
-   {
-     "version": "0.2.0",
-     "configurations": [
-       {
-         "name": ".NET Core Launch (API)",
-         "type": "coreclr",
-         "request": "launch",
-         "preLaunchTask": "build",
-         "program": "${workspaceFolder}/src/Hive.Api/bin/Debug/net9.0/Hive.Api.dll",
-         "args": [],
-         "cwd": "${workspaceFolder}/src/Hive.Api",
-         "stopAtEntry": false,
-         "env": {
-           "ASPNETCORE_ENVIRONMENT": "Development"
-         }
-       },
-       {
-         "name": ".NET Core Attach",
-         "type": "coreclr",
-         "request": "attach"
-       }
-     ]
-   }
-   ```
-
-3. **Create build task** (`.vscode/tasks.json`):
-   ```json
-   {
-     "version": "2.0.0",
-     "tasks": [
-       {
-         "label": "build",
-         "command": "dotnet",
-         "type": "process",
-         "args": [
-           "build",
-           "${workspaceFolder}/Hive.sln",
-           "/property:GenerateFullPaths=true",
-           "/consoleloggerparameters:NoSummary"
-         ],
-         "problemMatcher": "$msCompile"
-       }
-     ]
-   }
-   ```
-
-4. **Set breakpoints** and press `F5` to start debugging.
-
-#### Using Visual Studio
-
-1. Open `Hive.sln` in Visual Studio
-2. Set `Hive.Api` as the startup project
-3. Set breakpoints in your code
-4. Press `F5` to start debugging
-
-#### Using JetBrains Rider
-
-1. Open the solution in Rider
-2. Select the `Hive.Api` run configuration
-3. Click the Debug button or press `Shift+F9`
-
-#### Command-line Debugging
-
-For quick debugging without an IDE:
-
-```bash
-# Enable detailed logging
-cd src/Hive.Api
-ASPNETCORE_ENVIRONMENT=Development dotnet run --verbosity detailed
-```
-
-#### Debugging Tests
-
-```bash
-# Debug a specific test
-dotnet test --filter "FullyQualifiedName~TestMethodName" --logger "console;verbosity=detailed"
-```
-
-### Frontend Debugging
-
-#### Using Visual Studio Code
-
-1. **Install the recommended extensions**:
-   - JavaScript Debugger (built-in)
-   - Electron Debug
-
-2. **Create launch configuration** (`.vscode/launch.json`):
-   ```json
-   {
-     "version": "0.2.0",
-     "configurations": [
-       {
-         "name": "Debug Electron Main",
-         "type": "node",
-         "request": "launch",
-         "cwd": "${workspaceFolder}/src/Hive.Desktop",
-         "runtimeExecutable": "${workspaceFolder}/src/Hive.Desktop/node_modules/.bin/electron",
-         "args": ["."],
-         "env": {
-           "NODE_ENV": "development"
-         }
-       },
-       {
-         "name": "Debug Electron Renderer",
-         "type": "chrome",
-         "request": "attach",
-         "port": 9222,
-         "webRoot": "${workspaceFolder}/src/Hive.Desktop/src"
-       }
-     ]
-   }
-   ```
-
-#### Using Chrome DevTools
-
-1. **Start the app in development mode**
-   ```bash
-   cd src/Hive.Desktop
-   npm run electron:dev
-   ```
-
-2. **Open DevTools** in the Electron window:
-   - Press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (macOS)
-   - Or use the menu: View > Toggle Developer Tools
-
-3. **Debug React components**:
-   - Use the Sources tab to set breakpoints
-   - Use the React Developer Tools extension for component inspection
-
-#### Debugging Network Requests
-
-1. Open Chrome DevTools in the Electron window
-2. Go to the **Network** tab
-3. Monitor API calls to `http://localhost:5000/api/*`
-4. Check request/response payloads and headers
-
-#### Common Debugging Tips
-
-- **API Connection Issues**: Ensure the backend is running on port 5000
-- **CORS Errors**: Check that the API allows requests from localhost:5173
-- **Authentication Errors**: Verify Basic Auth credentials in `src/services/api.ts`
-
-## API Documentation
-
-### Swagger UI
-
-Navigate to http://localhost:5000 (or https://localhost:5001) to access Swagger UI.
-
-### API Endpoints
-
-| Resource | Method | Endpoint | Description |
-|----------|--------|----------|-------------|
-| Direct Reports | GET | /api/directreports | Get all direct reports |
-| Direct Reports | GET | /api/directreports/{id} | Get direct report by ID |
-| Direct Reports | POST | /api/directreports | Create new direct report |
-| Direct Reports | PUT | /api/directreports/{id} | Update direct report |
-| Direct Reports | DELETE | /api/directreports/{id} | Delete direct report |
-| Reviews | GET | /api/performancereviews | Get all performance reviews |
-| Reviews | POST | /api/performancereviews | Create performance review |
-| Meetings | GET | /api/oneononemeetings | Get all 1:1 meetings |
-| Meetings | POST | /api/oneononemeetings | Schedule 1:1 meeting |
-| Projects | GET | /api/projects | Get all projects |
-| Projects | POST | /api/projects | Create new project |
-| Tasks | GET | /api/teamtasks | Get all tasks |
-| Tasks | POST | /api/teamtasks | Create new task |
-| Sprints | GET | /api/sprints | Get all sprints |
-| Sprints | POST | /api/sprints | Create new sprint |
-| Leaves | GET | /api/leaves | Get all leave requests |
-| Leaves | POST | /api/leaves | Create leave request |
-| Skills | GET | /api/skills | Get all skills |
-| Settings | GET | /api/settings | Get application settings |
-| Backup | POST | /api/backup | Create database backup |
-| Reports | GET | /api/reports/dashboard | Get dashboard overview |
-| Jira Import | POST | /api/jiraimport | Import data from Jira |
-
-## Authentication
-
-The API uses Basic Authentication. Default credentials:
-
-- **Username**: `admin`
-- **Password**: `admin123`
-
-### Authenticating in Swagger UI
-
-1. Click "Authorize" button
-2. Enter username and password
-3. Click "Authorize"
-
-### Using curl
-
-```bash
-# Encode credentials: admin:admin123 -> YWRtaW46YWRtaW4xMjM=
-curl -X GET "http://localhost:5000/api/directreports" \
-     -H "Authorization: Basic YWRtaW46YWRtaW4xMjM="
-```
-
-## Project Structure
-
-### Backend
-
-```
-src/
-├── Hive.Core/                    # Domain Layer
-│   ├── Entities/                 # Domain entities
-│   ├── Interfaces/               # Repository contracts
-│   └── Exceptions/               # Domain exceptions
-├── Hive.Application/             # Application Layer
-│   ├── DTOs/                     # Data Transfer Objects
-│   ├── Interfaces/               # Service contracts
-│   └── Services/                 # Business logic
-├── Hive.Infrastructure/          # Infrastructure Layer
-│   └── Persistence/
-│       ├── InMemoryDbContext.cs  # In-memory database
-│       └── Repositories/         # Repository implementations
-└── Hive.Api/                     # Presentation Layer
-    ├── Controllers/              # REST API endpoints
-    └── Authentication/           # Auth handlers
-```
-
-### Frontend
-
-```
-src/Hive.Desktop/
-├── electron/
-│   ├── main.ts                   # Electron main process
-│   └── preload.ts                # Preload script
-├── src/
-│   ├── components/               # Reusable React components
-│   ├── pages/                    # Page components
-│   ├── services/                 # API client
-│   └── types/                    # TypeScript types
-├── package.json                  # npm dependencies
-├── vite.config.ts                # Vite configuration
-└── tailwind.config.js            # Tailwind CSS configuration
-```
+---
 
 ## Configuration
 
-### Database Configuration
-
-The application supports two database modes:
-
-**Development (In-Memory)**
-- Configured via `UseInMemoryDatabase: true` in appsettings.json
-- Data is lost on restart
-- Automatically seeds sample data
-
-**Production (SQLite)**
-- Configured via `UseInMemoryDatabase: false`
-- Persistent storage in platform-specific locations:
-  - **macOS**: `~/Library/Application Support/Hive/hive.db`
-  - **Windows**: `%APPDATA%/Hive/hive.db`
-  - **Linux**: `~/.local/share/Hive/hive.db`
-- Override with `HIVE_DATABASE_PATH` environment variable
-
-### Backend Configuration
-
-Admin credentials can be configured in `src/Hive.Api/appsettings.json`:
-
-```json
-{
-  "AdminCredentials": {
-    "Username": "admin",
-    "Password": "your-secure-password"
-  },
-  "UseInMemoryDatabase": false
-}
-```
-
-### Frontend Configuration
-
-API base URL is configured in `src/Hive.Desktop/src/services/api.ts`:
-
-```typescript
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  // ...
-})
-```
-
-### Environment Variables
+### Environment variables
 
 | Variable | Description |
 |----------|-------------|
-| `HIVE_DATABASE_PATH` | Override default SQLite database location |
-| `UseInMemoryDatabase` | Set to `true` for in-memory database (appsettings.json) |
-| `ASPNETCORE_ENVIRONMENT` | Set to `Development` for dev mode |
+| `HIVE_DATABASE_PATH` | Override the default SQLite database location |
+| `ASPNETCORE_ENVIRONMENT` | `Development` enables Swagger and defaults to the in-memory database |
 
-## Dashboard Sprint History Filter
+### appsettings.json
 
-The Dashboard has a "Sprint History" dropdown that filters data to the last N sprints. Some widgets always show all-time data regardless of the selected filter — these are marked with an "All time" badge next to their title.
+| Key | Description |
+|-----|-------------|
+| `AdminCredentials:Username` | Basic Auth username (default `admin`) |
+| `AdminCredentials:Password` | Basic Auth password (default `admin123`) |
+| `UseInMemoryDatabase` | `true` for in-memory, `false` for SQLite |
 
-### Widgets not affected by the filter (all-time data)
+### Runtime settings
 
-- **Team Members** — total count of all direct reports
-- **Projects** — total count of all projects
-- **1:1 Action Items** — all open action items
-- **TODOs** — all pending high/urgent priority notes
-- **Projects Distribution** — project engagement per team member (all tasks)
-- **Members by Project** — team member count per project (all tasks)
-- **Support Hours** — support task hours (all tasks tagged "support")
-- **Support Hours by Assignee** — support hours broken down by assignee
-- **Knowledge Level Suggestions** — accumulated knowledge points
-- **Team Sentiment** — AI-powered sentiment analysis from meeting notes
+Everything the manager can change while the app is running is stored in the database and
+edited on the Settings page, not in a config file: story point mappings, T-shirt size
+mappings, dashboard warning thresholds, support and maintenance labels, the Jira base URL,
+and the optional Claude API key.
 
-### Widgets affected by the filter
+### Frontend
 
-- **Warnings** — aggregated warning count from filtered data
-- **Sprint & Tasks Overview** — current sprint progress bar
-- **Tasks Distribution** (count, SP, hours) — task type breakdown
-- **Members Workload** — task count per assignee
-- **Capacity Analysis** — sprint capacity utilization
-- **Sprint Capacity Suggestions** — leave-based capacity adjustments
-- **Team Velocity** — story points and completion trends
-- **Estimation Accuracy** — estimated vs actual hours per sprint
+The API base URL is set in `src/Hive.Desktop/src/services/api.ts`
+(`http://localhost:5002/api`). CORS on the backend allows exactly one origin,
+`http://localhost:5173`.
 
-## Future Enhancements
-0. Use or remove Authentication for 
-1. Career Development Plans 🎯
-    Create RAG evaluations based on current company's RAg Excel/Confluence and promotion criteria
-    Track promotion readiness and career progression paths
-    Link skill gaps to development goals
-    Why: Critical for retention and addressing "what's next?" conversations in 1:1s
+---
 
-2. On-call & Incident Management
-    Rotation scheduling, incident tracking, post-mortems
-    Why: Common for engineering teams, impacts work-life balance
+## Optional: sentiment analysis
 
-3. Task Dependencies
-   Blocking/blocked relationships, critical path analysis
-   Why: Complex projects need dependency visualization   
+Hive can analyse the tone of your 1:1 notes using the Claude API. It is **off by default**
+and requires your own API key, entered on the Settings page. With no key configured
+nothing is sent anywhere. See [BUSINESS.md § Sentiment insights](BUSINESS.md#sentiment-insights).
 
-4. Hiring & Recruiting Pipeline
-    Job requisitions, candidate tracking, interview scheduling
-    Interview feedback collection and pipeline analytics
-    Why: Hiring is typically 30-40% of an EM's time, currently not tracked
+---
 
-5. Sprint/Iteration Management
-    Link tasks to sprints, burndown charts, velocity trends
-    Why: You have tasks but no sprint planning or velocity tracking
+## Security note
 
-6. Team Goals & OKRs
-    Quarterly/annual objective and key result tracking
-    Team vs individual goals with progress tracking
-    Why: Your current system has tasks and reviews but no structured goal framework
+Hive is a **single-user, local-first desktop application**. Basic Authentication against a
+credential pair in a settings file is adequate for an API bound to localhost on the
+manager's own machine, and it is not adequate for anything else. Do not deploy Hive to a
+shared host without replacing the authentication scheme first — see
+[ARCHITECTURE.md § Authentication](ARCHITECTURE.md#authentication).
 
-7. Team Health & Engagement Surveys
-    Pulse surveys, eNPS tracking, anonymous feedback
-    Trend analysis to spot morale issues early
-    Why: Proactive team wellness monitoring vs reactive 1:1s
+---
 
-8. Training & Certifications
-   Track courses, certifications, learning budgets
-   Recommendations based on skill gap analysis
-   Why: Natural extension of your skill assessment system   
+## License
 
-9. Compensation Management
-    Salary bands, equity/RSU tracking, compensation review cycles
-    Budget planning for raises and promotions
-    Why: Sensitive but crucial EM responsibility, currently no visibility
-
-Reviewed:
-scripts
-- generate-icons
-Hive.Api
-- Auth
-- Controllers/DirectReports
-- Controllers/JiraImport
+TBD
