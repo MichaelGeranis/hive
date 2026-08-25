@@ -736,8 +736,8 @@ export default function Tasks() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Components</label>
                   <input
                     type="text"
-                    value={formData.components || ''}
-                    onChange={(e) => setFormData({ ...formData, components: e.target.value })}
+                    value={(formData as any).components || ''}
+                    onChange={(e) => setFormData({ ...formData, ...(e.target.value && { components: e.target.value }) })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                     placeholder="Authentication, API, Database (comma-separated)"
                   />
@@ -1525,13 +1525,13 @@ export default function Tasks() {
                       </span>
                     </div>
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
-                      {task.assigneeName && (
+                          {task.assigneeName && (
                         <span className="flex items-center gap-1">
                           <div className="w-5 h-5 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 text-xs font-medium">
                             {task.assigneeName.split(' ').map(n => n[0]).join('')}
                           </div>
                           {task.assigneeName}
-                          {isFieldOverridden(task, 'AssigneeId') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
+                          {isFieldOverridden(task, 'AssigneeId') && <span title="Overridden - preserved during import"><Pin className="w-3 h-3 text-amber-500" /></span>}
                         </span>
                       )}
                       {task.projectName && (
@@ -1571,22 +1571,22 @@ export default function Tasks() {
                           ) : (
                             <>{task.storyPoints} SP</>
                           )}
-                          {isFieldOverridden(task, 'StoryPoints') && <Pin className="w-3 h-3" title="Overridden - preserved during import" />}
-                          {isFieldOverridden(task, 'PreviousSprintsStoryPoints') && <Pin className="w-3 h-3" title="Previous SP overridden" />}
+                          {isFieldOverridden(task, 'StoryPoints') && <span title="Overridden - preserved during import"><Pin className="w-3 h-3" /></span>}
+                          {isFieldOverridden(task, 'PreviousSprintsStoryPoints') && <span title="Previous SP overridden"><Pin className="w-3 h-3" /></span>}
                         </span>
                       )}
                       {task.timeSpentMinutes && (
                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                           <Timer className="w-4 h-4" />
                           {formatTimeSpent(task.timeSpentMinutes)} logged
-                          {isFieldOverridden(task, 'TimeSpentMinutes') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
+                          {isFieldOverridden(task, 'TimeSpentMinutes') && <span title="Overridden - preserved during import"><Pin className="w-3 h-3 text-amber-500" /></span>}
                         </span>
                       )}
                       {task.sprint && (
                         <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                           <Zap className="w-4 h-4" />
                           {task.sprint}
-                          {isFieldOverridden(task, 'Sprint') && <Pin className="w-3 h-3 text-amber-500" title="Overridden - preserved during import" />}
+                          {isFieldOverridden(task, 'Sprint') && <span title="Overridden - preserved during import"><Pin className="w-3 h-3 text-amber-500" /></span>}
                         </span>
                       )}
                     </div>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, Trash2, Loader2, X, Check, Target, UserPlus, UserMinus } from 'lucide-react'
 import { Card, CardHeader, CardContent } from './Card'
 import { quarterlyPlanningApi } from '../services/api'
-import type { Initiative, WorkType } from '../types/quarterlyPlanning'
+import type { Initiative } from '../types/quarterlyPlanning'
 import type { DirectReport } from '../types'
 
 interface InitiativesPanelProps {

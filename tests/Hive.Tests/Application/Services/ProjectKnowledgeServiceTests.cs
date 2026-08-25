@@ -43,7 +43,7 @@ public class ProjectKnowledgeServiceTests
             _teamTaskRepositoryMock.Object);
 
         _testDirectReport = new DirectReport("Jane", "Smith", "jane@test.com", "Engineer", "Eng", new DateTime(2022, 1, 1));
-        _testProject = new Project("Alpha", "Project Alpha description", new DateTime(2023, 1, 1));
+        _testProject = new Project("Alpha", "Project Alpha description");
     }
 
     // ============== Constructor Tests ==============
@@ -136,7 +136,7 @@ public class ProjectKnowledgeServiceTests
     {
         // Arrange
         var dr2 = new DirectReport("Bob", "Jones", "bob@test.com", "Dev", "Eng", new DateTime(2021, 1, 1));
-        var project2 = new Project("Beta", "Beta project", new DateTime(2023, 3, 1));
+        var project2 = new Project("Beta", "Beta project");
         var knowledgeList = new List<ProjectKnowledge>
         {
             new ProjectKnowledge(_testDirectReport.Id, _testProject.Id, 4),
@@ -226,7 +226,7 @@ public class ProjectKnowledgeServiceTests
         var directReport = new DirectReport("Alice", "Brown", "alice@test.com", "Lead", "Eng", new DateTime(2020, 6, 1));
         var indirectReport = new DirectReport("Charlie", "Davis", "charlie@test.com", "Dev", "Eng", new DateTime(2021, 1, 1));
         // Make indirectReport not direct by setting a parent
-        var parent = new Parent(indirectReport.Id, directReport.Id, "direct.reports");
+        var parent = new Parent("direct.reports");
 
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Project>());

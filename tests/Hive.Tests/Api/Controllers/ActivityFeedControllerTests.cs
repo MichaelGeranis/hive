@@ -159,7 +159,7 @@ public class ActivityFeedControllerTests
             .ReturnsAsync(activities);
 
         // Act
-        var result = await _controller.GetByEntityType(EntityType.Sprint, CancellationToken.None);
+        var result = await _controller.GetByEntityType("Sprint", CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;

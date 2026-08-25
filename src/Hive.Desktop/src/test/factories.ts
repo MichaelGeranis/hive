@@ -98,8 +98,12 @@ export function createTeamTask(overrides?: Partial<TeamTask>): TeamTask {
     matchedProjectNames: [],
     tags: '',
     labels: '',
-    sprint: '',
+    components: '',
+    sprint: 'Sprint 1',
+    timeSpentMinutes: 120,
+    overriddenFields: '',
     isOverdue: false,
+    isParentTask: false,
     ...overrides,
   }
 }

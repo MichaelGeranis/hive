@@ -65,8 +65,12 @@ export const createTeamTask = (overrides?: Partial<TeamTask>): TeamTask => ({
   matchedProjectNames: [],
   tags: '',
   labels: '',
+  components: '',
   sprint: '',
+  timeSpentMinutes: 120,
+  overriddenFields: '',
   isOverdue: false,
+  isParentTask: false,
   ...overrides,
 })
 
@@ -335,6 +339,8 @@ export const handlers = [
         tasksByTypeSP: [],
         tasksByTypeHours: [],
         tasksByPriority: [],
+        tasksByLabel: [],
+        tasksByComponent: [],
         supportDistribution: {
           completedHours: 0,
           completedTaskCount: 0,
@@ -356,6 +362,7 @@ export const handlers = [
         workloadWarnings: [],
         knowledgeSilos: [],
         unengagedMembers: [],
+        unmatchedTaskCount: 0,
       },
       generatedAt: new Date().toISOString(),
     }

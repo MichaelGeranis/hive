@@ -299,7 +299,6 @@ export default function QuarterlyPlanning() {
               sprints={planningBoard?.sprints || []}
               initiatives={planningBoard?.initiatives || []}
               sprintGoals={planningBoard?.sprintGoals || []}
-              initiativeMembers={planningBoard?.initiativeMembers || []}
               quarterId={selectedQuarterId!}
               onDataChanged={handleDataChanged}
             />

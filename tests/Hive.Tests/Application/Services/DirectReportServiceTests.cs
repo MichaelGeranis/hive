@@ -803,10 +803,10 @@ public class DirectReportServiceTests
         // Assert
         result.Results[0].DirectReport.Should().NotBeNull();
         result.Results[0].DirectReport!.FirstName.Should().Be("John");
-        result.Results[0].DirectReport.LastName.Should().Be("Doe");
-        result.Results[0].DirectReport.Email.Should().Be("john@test.com");
-        result.Results[0].DirectReport.JobTitle.Should().Be("Engineer");
-        result.Results[0].DirectReport.Department.Should().Be("Engineering");
+        result.Results[0].DirectReport!.LastName.Should().Be("Doe");
+        result.Results[0].DirectReport!.Email.Should().Be("john@test.com");
+        result.Results[0].DirectReport!.JobTitle.Should().Be("Engineer");
+        result.Results[0].DirectReport!.Department.Should().Be("Engineering");
     }
 
     #endregion
