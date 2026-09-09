@@ -31,7 +31,7 @@ const navigationGroups = [
   [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
     { name: 'Calendar', to: '/calendar', icon: CalendarDays },
-    { name: 'TODOs', to: '/notes', icon: StickyNote },
+    { name: 'Notes', to: '/notes', icon: StickyNote },
   ],
   // Delivery
   [

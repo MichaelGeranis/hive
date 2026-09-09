@@ -15,6 +15,7 @@ public class BackupServiceTests
     private readonly Mock<IMeetingNoteRepository> _meetingNoteRepositoryMock;
     private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
     private readonly Mock<IManagerNoteRepository> _managerNoteRepositoryMock;
+    private readonly Mock<INoteFolderRepository> _noteFolderRepositoryMock;
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
     private readonly Mock<ISprintCapacityRepository> _sprintCapacityRepositoryMock;
     private readonly Mock<IDocumentRepository> _documentRepositoryMock;
@@ -34,6 +35,7 @@ public class BackupServiceTests
         _meetingNoteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _leaveRepositoryMock = new Mock<ILeaveRepository>();
         _managerNoteRepositoryMock = new Mock<IManagerNoteRepository>();
+        _noteFolderRepositoryMock = new Mock<INoteFolderRepository>();
         _sprintRepositoryMock = new Mock<ISprintRepository>();
         _sprintCapacityRepositoryMock = new Mock<ISprintCapacityRepository>();
         _documentRepositoryMock = new Mock<IDocumentRepository>();
@@ -51,6 +53,7 @@ public class BackupServiceTests
             _meetingNoteRepositoryMock.Object,
             _leaveRepositoryMock.Object,
             _managerNoteRepositoryMock.Object,
+            _noteFolderRepositoryMock.Object,
             _sprintRepositoryMock.Object,
             _sprintCapacityRepositoryMock.Object,
             _documentRepositoryMock.Object,
@@ -58,6 +61,10 @@ public class BackupServiceTests
             _skillRepositoryMock.Object,
             _skillAssessmentRepositoryMock.Object,
             _settingsRepositoryMock.Object);
+
+        // Folders are read on every export; an empty list is the default for these tests.
+        _noteFolderRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NoteFolder>());
     }
 
     #region ExportAsync Tests
@@ -919,4 +926,96 @@ public class BackupServiceTests
         new("[]");
 
     #endregion
+
+    [Fact]
+    public async Task ExportAsync_WithNoteFolders_IncludesFoldersInBackup()
+    {
+        // Arrange
+        var folder = new NoteFolder("Work");
+        SetupEmptyRepositories();
+        _noteFolderRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NoteFolder> { folder });
+
+        // Act
+        var result = await _service.ExportAsync();
+
+        // Assert
+        result.NoteFolders.Should().HaveCount(1);
+        result.NoteFolders[0].Id.Should().Be(folder.Id);
+        result.NoteFolders[0].Name.Should().Be("Work");
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithNotes_IncludesFolderAndPinState()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        var note = new ManagerNote("Note", "Body", NotePriority.Normal, null, null, folderId, true);
+        note.Pin();
+        SetupEmptyRepositories();
+        _managerNoteRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ManagerNote> { note });
+
+        // Act
+        var result = await _service.ExportAsync();
+
+        // Assert
+        result.ManagerNotes.Should().ContainSingle();
+        result.ManagerNotes[0].FolderId.Should().Be(folderId);
+        result.ManagerNotes[0].IsPinned.Should().BeTrue();
+        result.ManagerNotes[0].IsTodo.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ImportAsync_RestoresFoldersAndKeepsNotesFiledInThem()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        var backup = new BackupDto
+        {
+            NoteFolders = new List<NoteFolderBackup>
+            {
+                new() { Id = folderId, Name = "Work", SortOrder = 0, CreatedAt = DateTime.UtcNow }
+            },
+            ManagerNotes = new List<ManagerNoteBackup>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Note",
+                    Content = "Body",
+                    Priority = 1,
+                    FolderId = folderId,
+                    IsPinned = true,
+                    IsTodo = true,
+                    CreatedAt = DateTime.UtcNow
+                }
+            }
+        };
+
+        NoteFolder? restoredFolder = null;
+        ManagerNote? restoredNote = null;
+
+        _noteFolderRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((NoteFolder?)null);
+        _noteFolderRepositoryMock.Setup(r => r.AddAsync(It.IsAny<NoteFolder>(), It.IsAny<CancellationToken>()))
+            .Callback<NoteFolder, CancellationToken>((folder, _) => restoredFolder = folder)
+            .ReturnsAsync((NoteFolder folder, CancellationToken _) => folder);
+        _managerNoteRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote?)null);
+        _managerNoteRepositoryMock.Setup(r => r.AddAsync(It.IsAny<ManagerNote>(), It.IsAny<CancellationToken>()))
+            .Callback<ManagerNote, CancellationToken>((note, _) => restoredNote = note)
+            .ReturnsAsync((ManagerNote note, CancellationToken _) => note);
+
+        // Act
+        var result = await _service.ImportAsync(backup);
+
+        // Assert
+        result.NoteFoldersRestored.Should().Be(1);
+        result.ManagerNotesRestored.Should().Be(1);
+        restoredFolder!.Id.Should().Be(folderId);
+        restoredNote!.FolderId.Should().Be(folderId);
+        restoredNote.IsPinned.Should().BeTrue();
+        restoredNote.IsTodo.Should().BeTrue();
+    }
 }

@@ -34,7 +34,7 @@ Hive divides the EM role into six domains. Every entity belongs to exactly one.
 | Domain | Question it answers | Core entities |
 |--------|---------------------|---------------|
 | People & Growth | Who is on the team and are they developing? | `DirectReport`, `PerformanceReview`, `Skill`, `SkillAssessment` |
-| Conversations | What have we talked about and what did we commit to? | `OneOnOneMeeting`, `MeetingNote`, `ManagerNote` |
+| Conversations | What have we talked about and what did we commit to? | `OneOnOneMeeting`, `MeetingNote`, `ManagerNote`, `NoteFolder` |
 | Availability | Who is here, and when? | `Leave` |
 | Delivery | What is the team working on and how is it going? | `Project`, `TeamTask`, `Parent`, `Sprint`, `SprintCapacity` |
 | Planning | What are we committing to next quarter, and can we? | `Quarter`, `Initiative`, `Allocation`, `InitiativeDependency` |
@@ -143,22 +143,53 @@ The 1:1 record.
 - `IsSyncedFromCalendar` marks meetings that came from a calendar rather than being
   entered by hand, so they can be distinguished when reporting on 1:1 cadence.
 
-### ManagerNote
+### ManagerNote and NoteFolder
 
-The manager's own private notes and TODOs — not attached to any person or meeting.
+The manager's own private notes — not attached to any person or meeting. A note is a page
+to write on: it is created empty, saved as it is written, and its body is markdown.
 
 | Property | Business meaning |
 |----------|------------------|
-| Title / Content | The note |
+| Content | The body of the note, written as markdown |
+| Title | The heading of the note, **derived from the first line of the content** |
+| FolderId | The folder the note is filed in; none means it sits at the root |
+| IsPinned | Pinned notes are listed above every other note in their folder |
 | Tags | Comma-separated free-form tags |
-| Priority | `Low`, `Normal`, `High`, `Urgent` |
-| IsCompleted / CompletedAt | Whether this note was a TODO that got done |
+| IsTodo | Whether this note is also tracked as a to-do |
+| Priority | `Low`, `Normal`, `High`, `Urgent` — only meaningful for a to-do |
+| IsCompleted / CompletedAt | Whether this to-do got done |
 | DueDate | Optional deadline |
 
 **Rules:**
-- Title cannot be empty and cannot exceed 200 characters.
+- Title cannot be empty and cannot exceed 200 characters. When a note is written rather
+  than filled in on a form, the title is **derived**: the first non-empty line of the
+  content with its markdown decoration stripped, truncated to 200 characters. An empty
+  note is titled `New Note`. The manager never types a title separately.
+- A blank note is a valid note. It exists from the moment it is created, so nothing typed
+  into it can be lost, and it is saved as it is written rather than on a Save button.
+- The body is free text with no length limit, and whitespace is preserved exactly as
+  typed — leading indentation and blank lines are part of what was written.
+- **Only a note flagged `IsTodo` is a to-do.** Pending, overdue and completed counts —
+  including the dashboard's TODO figure — count those notes and no others. Clearing the
+  flag also clears completion: a note that is not a to-do cannot be done.
 - A `ManagerNote` is not about a person. Notes about a direct report belong on a meeting
   or a review, where they are part of that person's record.
+
+A `NoteFolder` groups notes. Folders may be nested.
+
+| Property | Business meaning |
+|----------|------------------|
+| Name | The folder's name |
+| ParentFolderId | The folder it sits in; none means a top-level folder |
+| SortOrder | Position among its siblings |
+
+**Rules:**
+- Folder name cannot be empty and cannot exceed 100 characters.
+- A folder cannot be moved inside itself or inside one of its own sub-folders.
+- **Deleting a folder never deletes what was written in it.** Its notes and its
+  sub-folders move up to the folder that contained it. Notes are the record; folders are
+  only how the manager arranges them.
+- A note filed nowhere is not lost — it is simply listed under "All Notes".
 
 ### Leave
 
@@ -503,6 +534,7 @@ records by email. Jira parents become `Parent` entities. Fields listed in a task
 | **Initiative** | A body of work committed to within a quarter |
 | **Knowledge level** | A 1–5 rating of how well a person knows a project |
 | **Knowledge points** | Earned evidence (completed story points) that suggests a knowledge level |
+| **Note folder** | A nestable grouping of manager notes; deleting one keeps its notes |
 | **Parent** | A Jira parent issue or epic that groups tasks — not an organisational parent |
 | **Sprint history filter** | The dashboard control limiting analytics to the last N sprints |
 | **T-shirt size** | A coarse effort estimate on an initiative, mapped to points via settings |
@@ -523,5 +555,6 @@ These terms must be used consistently across code, comments, and variable names.
 | `Allocation` | Person + initiative + sprint | assignment, booking |
 | `Leave` | Time a person is unavailable | PTO, holiday, absence, timeoff |
 | `KnowledgePoint` | Earned evidence of project knowledge | score, xp, credit |
+| `NoteFolder` | A folder grouping manager notes | notebook, category, directory |
 | `ChecklistInstance` | One run of a checklist template | checklist, run, session |
 | `Activity` | An audit trail entry | log, event, history |

@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import type {
   DirectReport,
   ManagerNote,
+  NoteFolder,
   Leave,
   TeamTask,
   DashboardOverview,
@@ -33,8 +34,22 @@ export const createManagerNote = (overrides?: Partial<ManagerNote>): ManagerNote
   tagsList: ['test', 'sample'],
   priority: 1,
   priorityName: 'Normal',
+  folderId: null,
+  isPinned: false,
+  isTodo: true,
+  snippet: 'Test content',
   isCompleted: false,
   isOverdue: false,
+  createdAt: '2024-01-01T10:00:00Z',
+  ...overrides,
+})
+
+export const createNoteFolder = (overrides?: Partial<NoteFolder>): NoteFolder => ({
+  id: '1',
+  name: 'Test Folder',
+  parentFolderId: null,
+  sortOrder: 0,
+  noteCount: 0,
   createdAt: '2024-01-01T10:00:00Z',
   ...overrides,
 })
@@ -78,6 +93,10 @@ export const createTeamTask = (overrides?: Partial<TeamTask>): TeamTask => ({
 let mockDirectReports: DirectReport[] = [
   createDirectReport({ id: '1', firstName: 'John', lastName: 'Doe' }),
   createDirectReport({ id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@example.com' }),
+]
+
+let mockNoteFolders: NoteFolder[] = [
+  createNoteFolder({ id: 'f1', name: 'Work', noteCount: 1 }),
 ]
 
 let mockNotes: ManagerNote[] = [
@@ -130,9 +149,28 @@ export const handlers = [
     const url = new URL(request.url)
     const pageNumber = parseInt(url.searchParams.get('pageNumber') || '1')
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20')
-    const totalCount = mockNotes.length
+    const search = url.searchParams.get('search')?.toLowerCase()
+    const folderId = url.searchParams.get('folderId')
+    const filter = url.searchParams.get('filter')
+
+    let matching = [...mockNotes]
+    if (folderId) {
+      matching = matching.filter(n => n.folderId === folderId)
+    }
+    if (filter === 'pending') {
+      matching = matching.filter(n => n.isTodo && !n.isCompleted)
+    } else if (filter === 'completed') {
+      matching = matching.filter(n => n.isCompleted)
+    }
+    if (search) {
+      matching = matching.filter(n =>
+        n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search)
+      )
+    }
+
+    const totalCount = matching.length
     const totalPages = Math.ceil(totalCount / pageSize)
-    const items = mockNotes.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)
+    const items = matching.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)
     return HttpResponse.json({
       items,
       totalCount,
@@ -200,8 +238,78 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 })
   }),
 
+  http.post(`${API_BASE}/managernotes/blank`, async ({ request }) => {
+    const data = await request.json() as { folderId?: string | null }
+    const newNote = createManagerNote({
+      id: `note-${mockNotes.length + 1}`,
+      title: 'New Note',
+      content: '',
+      snippet: '',
+      tags: '',
+      tagsList: [],
+      isTodo: false,
+      folderId: data?.folderId ?? null,
+    })
+    mockNotes = [newNote, ...mockNotes]
+    return HttpResponse.json(newNote, { status: 201 })
+  }),
+
+  http.put(`${API_BASE}/managernotes/:id/content`, async ({ params, request }) => {
+    const { content } = await request.json() as { content: string }
+    const note = mockNotes.find(n => n.id === params.id)
+    if (!note) return new HttpResponse(null, { status: 404 })
+    note.content = content
+    note.title = content.split('\n').find(line => line.trim()) ?? 'New Note'
+    note.updatedAt = new Date().toISOString()
+    return HttpResponse.json(note)
+  }),
+
+  http.post(`${API_BASE}/managernotes/:id/pin`, ({ params }) => {
+    const note = mockNotes.find(n => n.id === params.id)
+    if (!note) return new HttpResponse(null, { status: 404 })
+    note.isPinned = !note.isPinned
+    return HttpResponse.json(note)
+  }),
+
+  http.post(`${API_BASE}/managernotes/:id/move`, async ({ params, request }) => {
+    const { folderId } = await request.json() as { folderId: string | null }
+    const note = mockNotes.find(n => n.id === params.id)
+    if (!note) return new HttpResponse(null, { status: 404 })
+    note.folderId = folderId
+    return HttpResponse.json(note)
+  }),
+
   http.delete(`${API_BASE}/managernotes/:id`, ({ params }) => {
     mockNotes = mockNotes.filter(n => n.id !== params.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // Note folders
+  http.get(`${API_BASE}/notefolders`, () => {
+    return HttpResponse.json(mockNoteFolders)
+  }),
+
+  http.post(`${API_BASE}/notefolders`, async ({ request }) => {
+    const data = await request.json() as { name: string; parentFolderId?: string | null }
+    const folder = createNoteFolder({
+      id: `f${mockNoteFolders.length + 1}`,
+      name: data.name,
+      parentFolderId: data.parentFolderId ?? null,
+    })
+    mockNoteFolders.push(folder)
+    return HttpResponse.json(folder, { status: 201 })
+  }),
+
+  http.put(`${API_BASE}/notefolders/:id`, async ({ params, request }) => {
+    const data = await request.json() as { name: string }
+    const folder = mockNoteFolders.find(f => f.id === params.id)
+    if (!folder) return new HttpResponse(null, { status: 404 })
+    folder.name = data.name
+    return HttpResponse.json(folder)
+  }),
+
+  http.delete(`${API_BASE}/notefolders/:id`, ({ params }) => {
+    mockNoteFolders = mockNoteFolders.filter(f => f.id !== params.id)
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -382,8 +490,11 @@ export function resetMockData() {
     createDirectReport({ id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@example.com' }),
   ]
   mockNotes = [
-    createManagerNote({ id: '1', title: 'First Note', priority: 2, priorityName: 'High' }),
+    createManagerNote({ id: '1', title: 'First Note', priority: 2, priorityName: 'High', folderId: 'f1' }),
     createManagerNote({ id: '2', title: 'Second Note', isCompleted: true }),
+  ]
+  mockNoteFolders = [
+    createNoteFolder({ id: 'f1', name: 'Work', noteCount: 1 }),
   ]
   mockLeaves = [
     createLeave({ id: '1' }),

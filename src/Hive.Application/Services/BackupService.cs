@@ -18,6 +18,7 @@ public class BackupService : IBackupService
     private readonly IMeetingNoteRepository _meetingNoteRepository;
     private readonly ILeaveRepository _leaveRepository;
     private readonly IManagerNoteRepository _managerNoteRepository;
+    private readonly INoteFolderRepository _noteFolderRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly ISprintCapacityRepository _sprintCapacityRepository;
     private readonly IDocumentRepository _documentRepository;
@@ -35,6 +36,7 @@ public class BackupService : IBackupService
         IMeetingNoteRepository meetingNoteRepository,
         ILeaveRepository leaveRepository,
         IManagerNoteRepository managerNoteRepository,
+        INoteFolderRepository noteFolderRepository,
         ISprintRepository sprintRepository,
         ISprintCapacityRepository sprintCapacityRepository,
         IDocumentRepository documentRepository,
@@ -51,6 +53,7 @@ public class BackupService : IBackupService
         _meetingNoteRepository = meetingNoteRepository;
         _leaveRepository = leaveRepository;
         _managerNoteRepository = managerNoteRepository;
+        _noteFolderRepository = noteFolderRepository;
         _sprintRepository = sprintRepository;
         _sprintCapacityRepository = sprintCapacityRepository;
         _documentRepository = documentRepository;
@@ -75,6 +78,7 @@ public class BackupService : IBackupService
         }
         var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
         var managerNotes = await _managerNoteRepository.GetAllAsync(cancellationToken);
+        var noteFolders = await _noteFolderRepository.GetAllAsync(cancellationToken);
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
         var documents = await _documentRepository.GetAllAsync(cancellationToken);
@@ -95,6 +99,7 @@ public class BackupService : IBackupService
             MeetingNotes = meetingNotes.Select(MapMeetingNote).ToList(),
             Leaves = leaves.Select(MapLeave).ToList(),
             ManagerNotes = managerNotes.Select(MapManagerNote).ToList(),
+            NoteFolders = noteFolders.Select(MapNoteFolder).ToList(),
             Sprints = sprints.Select(MapSprint).ToList(),
             SprintCapacities = sprintCapacities.Select(MapSprintCapacity).ToList(),
             Documents = documents.Select(MapDocument).ToList(),
@@ -117,6 +122,7 @@ public class BackupService : IBackupService
         int meetingNotesRestored = 0;
         int leavesRestored = 0;
         int managerNotesRestored = 0;
+        int noteFoldersRestored = 0;
         int sprintsRestored = 0;
         int sprintCapacitiesRestored = 0;
         int documentsRestored = 0;
@@ -327,6 +333,26 @@ public class BackupService : IBackupService
                 }
             }
 
+            // Import Note Folders before the notes that are filed in them
+            foreach (var f in backup.NoteFolders)
+            {
+                try
+                {
+                    var existing = await _noteFolderRepository.GetByIdAsync(f.Id, cancellationToken);
+                    if (existing == null)
+                    {
+                        var entity = new NoteFolder(f.Name, f.ParentFolderId, f.SortOrder);
+                        SetEntityId(entity, f.Id);
+                        await _noteFolderRepository.AddAsync(entity, cancellationToken);
+                        noteFoldersRestored++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Failed to restore note folder {f.Name}: {ex.Message}");
+                }
+            }
+
             // Import Manager Notes
             foreach (var n in backup.ManagerNotes)
             {
@@ -335,8 +361,12 @@ public class BackupService : IBackupService
                     var existing = await _managerNoteRepository.GetByIdAsync(n.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new ManagerNote(n.Title, n.Content, (NotePriority)n.Priority, n.DueDate, n.Tags);
+                        var entity = new ManagerNote(n.Title, n.Content, (NotePriority)n.Priority, n.DueDate, n.Tags, n.FolderId, n.IsTodo);
                         SetEntityId(entity, n.Id);
+                        if (n.IsPinned)
+                        {
+                            entity.Pin();
+                        }
                         await _managerNoteRepository.AddAsync(entity, cancellationToken);
                         managerNotesRestored++;
                     }
@@ -501,6 +531,7 @@ public class BackupService : IBackupService
             MeetingNotesRestored = meetingNotesRestored,
             LeavesRestored = leavesRestored,
             ManagerNotesRestored = managerNotesRestored,
+            NoteFoldersRestored = noteFoldersRestored,
             SprintsRestored = sprintsRestored,
             SprintCapacitiesRestored = sprintCapacitiesRestored,
             DocumentsRestored = documentsRestored,
@@ -635,11 +666,24 @@ public class BackupService : IBackupService
         Content = n.Content,
         Tags = n.Tags,
         Priority = (int)n.Priority,
+        FolderId = n.FolderId,
+        IsPinned = n.IsPinned,
+        IsTodo = n.IsTodo,
         IsCompleted = n.IsCompleted,
         DueDate = n.DueDate,
         CreatedAt = n.CreatedAt,
         UpdatedAt = n.UpdatedAt,
         CompletedAt = n.CompletedAt
+    };
+
+    private static NoteFolderBackup MapNoteFolder(NoteFolder f) => new()
+    {
+        Id = f.Id,
+        Name = f.Name,
+        ParentFolderId = f.ParentFolderId,
+        SortOrder = f.SortOrder,
+        CreatedAt = f.CreatedAt,
+        UpdatedAt = f.UpdatedAt
     };
 
     private static SprintBackup MapSprint(Sprint s) => new()

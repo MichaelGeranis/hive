@@ -42,20 +42,26 @@ public class ManagerNoteRepository : IManagerNoteRepository
         return Task.FromResult<(IReadOnlyList<ManagerNote>, int)>((items, totalCount));
     }
 
-    public Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    public Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, Guid? folderId = null, NoteSortOrder sort = NoteSortOrder.Priority, CancellationToken cancellationToken = default)
     {
         var query = _context.ManagerNotes.Values.AsEnumerable();
 
-        // Apply status filter
+        // Apply status filter - only notes tracked as to-dos have a pending or overdue state
         if (!string.IsNullOrWhiteSpace(filter))
         {
             query = filter.ToLowerInvariant() switch
             {
-                "pending" => query.Where(n => !n.IsCompleted),
+                "pending" => query.Where(n => n.IsTodo && !n.IsCompleted),
                 "completed" => query.Where(n => n.IsCompleted),
-                "overdue" => query.Where(n => n.IsOverdue()),
+                "overdue" => query.Where(n => n.IsTodo && n.IsOverdue()),
                 _ => query
             };
+        }
+
+        // Apply folder filter
+        if (folderId.HasValue)
+        {
+            query = query.Where(n => n.FolderId == folderId.Value);
         }
 
         // Apply tag filter
@@ -75,10 +81,14 @@ public class ManagerNoteRepository : IManagerNoteRepository
         }
 
         // Apply ordering
-        var orderedQuery = query
-            .OrderByDescending(n => n.Priority)
-            .ThenBy(n => n.DueDate)
-            .ThenByDescending(n => n.CreatedAt);
+        var orderedQuery = sort == NoteSortOrder.Recent
+            ? query
+                .OrderByDescending(n => n.IsPinned)
+                .ThenByDescending(n => n.UpdatedAt ?? n.CreatedAt)
+            : query
+                .OrderByDescending(n => n.Priority)
+                .ThenBy(n => n.DueDate)
+                .ThenByDescending(n => n.CreatedAt);
 
         var filteredList = orderedQuery.ToList();
         var totalCount = filteredList.Count;
@@ -90,7 +100,7 @@ public class ManagerNoteRepository : IManagerNoteRepository
     public Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         var notes = _context.ManagerNotes.Values
-            .Where(n => !n.IsCompleted)
+            .Where(n => n.IsTodo && !n.IsCompleted)
             .OrderByDescending(n => n.Priority)
             .ThenBy(n => n.DueDate)
             .ThenByDescending(n => n.CreatedAt)
@@ -110,7 +120,7 @@ public class ManagerNoteRepository : IManagerNoteRepository
     public Task<IReadOnlyList<ManagerNote>> GetOverdueAsync(CancellationToken cancellationToken = default)
     {
         var notes = _context.ManagerNotes.Values
-            .Where(n => n.IsOverdue())
+            .Where(n => n.IsTodo && n.IsOverdue())
             .OrderBy(n => n.DueDate)
             .ToList();
         return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
@@ -159,6 +169,25 @@ public class ManagerNoteRepository : IManagerNoteRepository
             .OrderBy(t => t)
             .ToList();
         return Task.FromResult<IReadOnlyList<string>>(tags);
+    }
+
+    public Task<IReadOnlyList<(Guid? FolderId, int Count)>> GetCountsByFolderAsync(CancellationToken cancellationToken = default)
+    {
+        var counts = _context.ManagerNotes.Values
+            .GroupBy(n => n.FolderId)
+            .Select(g => (FolderId: g.Key, Count: g.Count()))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<(Guid?, int)>>(counts);
+    }
+
+    public Task<IReadOnlyList<ManagerNote>> GetByFolderAsync(Guid folderId, CancellationToken cancellationToken = default)
+    {
+        var notes = _context.ManagerNotes.Values
+            .Where(n => n.FolderId == folderId)
+            .OrderByDescending(n => n.IsPinned)
+            .ThenByDescending(n => n.UpdatedAt ?? n.CreatedAt)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<ManagerNote>>(notes);
     }
 
     public Task<ManagerNote> AddAsync(ManagerNote note, CancellationToken cancellationToken = default)

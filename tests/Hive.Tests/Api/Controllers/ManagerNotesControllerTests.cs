@@ -49,7 +49,7 @@ public class ManagerNotesControllerTests
             .ReturnsAsync(pagedResult);
 
         // Act
-        var result = await _controller.GetAll(1, 20, null, null, null, CancellationToken.None);
+        var result = await _controller.GetAll(1, 20, null, null, null, null, null, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -430,6 +430,164 @@ public class ManagerNotesControllerTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };
+    }
+
+    #endregion
+
+    #region Notes app endpoints
+
+    [Fact]
+    public async Task GetAll_PassesFolderAndSortToTheService()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        NotePaginationParams? captured = null;
+        _serviceMock.Setup(s => s.GetFilteredPagedAsync(It.IsAny<NotePaginationParams>(), It.IsAny<CancellationToken>()))
+            .Callback<NotePaginationParams, CancellationToken>((p, _) => captured = p)
+            .ReturnsAsync(new PagedResult<ManagerNoteDto>());
+
+        // Act
+        await _controller.GetAll(1, 20, null, null, null, folderId, "recent", CancellationToken.None);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.FolderId.Should().Be(folderId);
+        captured.Sort.Should().Be(NoteSortOrder.Recent);
+    }
+
+    [Fact]
+    public async Task GetAll_WithoutSort_DefaultsToPriorityOrder()
+    {
+        // Arrange
+        NotePaginationParams? captured = null;
+        _serviceMock.Setup(s => s.GetFilteredPagedAsync(It.IsAny<NotePaginationParams>(), It.IsAny<CancellationToken>()))
+            .Callback<NotePaginationParams, CancellationToken>((p, _) => captured = p)
+            .ReturnsAsync(new PagedResult<ManagerNoteDto>());
+
+        // Act
+        await _controller.GetAll(1, 20, null, null, null, null, null, CancellationToken.None);
+
+        // Assert
+        captured!.Sort.Should().Be(NoteSortOrder.Priority);
+    }
+
+    [Fact]
+    public async Task CreateBlank_ReturnsCreatedNote()
+    {
+        // Arrange
+        var dto = CreateDto("New Note");
+        _serviceMock.Setup(s => s.CreateBlankAsync(It.IsAny<CreateBlankNoteDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.CreateBlank(new CreateBlankNoteDto(), CancellationToken.None);
+
+        // Assert
+        var created = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        created.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task CreateBlank_WithoutABody_StillCreatesANote()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.CreateBlankAsync(It.IsAny<CreateBlankNoteDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDto("New Note"));
+
+        // Act
+        var result = await _controller.CreateBlank(null, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task UpdateContent_ReturnsOkWithSavedNote()
+    {
+        // Arrange
+        var dto = CreateDto("Weekly plan");
+        _serviceMock.Setup(s => s.UpdateContentAsync(It.IsAny<Guid>(), It.IsAny<UpdateNoteContentDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.UpdateContent(dto.Id, new UpdateNoteContentDto { Content = "Weekly plan" }, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task UpdateContent_WhenNoteNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.UpdateContentAsync(It.IsAny<Guid>(), It.IsAny<UpdateNoteContentDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("ManagerNote", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.UpdateContent(Guid.NewGuid(), new UpdateNoteContentDto(), CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task Move_ReturnsOkWithMovedNote()
+    {
+        // Arrange
+        var dto = CreateDto("Note");
+        _serviceMock.Setup(s => s.MoveToFolderAsync(It.IsAny<Guid>(), It.IsAny<MoveNoteDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.Move(dto.Id, new MoveNoteDto { FolderId = Guid.NewGuid() }, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Move_WhenNoteNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.MoveToFolderAsync(It.IsAny<Guid>(), It.IsAny<MoveNoteDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("ManagerNote", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.Move(Guid.NewGuid(), new MoveNoteDto(), CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task TogglePin_ReturnsOkWithPinnedNote()
+    {
+        // Arrange
+        var dto = CreateDto("Note") with { IsPinned = true };
+        _serviceMock.Setup(s => s.TogglePinAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.TogglePin(dto.Id, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        (okResult.Value as ManagerNoteDto)!.IsPinned.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TogglePin_WhenNoteNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.TogglePinAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("ManagerNote", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.TogglePin(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     #endregion
