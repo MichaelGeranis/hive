@@ -62,6 +62,13 @@ public record NotePaginationParams : PaginationParams
     public NoteFilter Filter { get; init; } = NoteFilter.All;
     public string? SearchTerm { get; init; }
     public string? Tag { get; init; }
+
+    /// <summary>
+    /// Limits the result to one folder. Null lists every note, wherever it is filed.
+    /// </summary>
+    public Guid? FolderId { get; init; }
+
+    public Hive.Core.Entities.NoteSortOrder Sort { get; init; } = Hive.Core.Entities.NoteSortOrder.Priority;
 }
 
 /// <summary>

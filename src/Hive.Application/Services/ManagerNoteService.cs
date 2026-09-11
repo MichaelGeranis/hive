@@ -55,6 +55,8 @@ public class ManagerNoteService : IManagerNoteService
             filterStr,
             pagination.SearchTerm,
             pagination.Tag,
+            pagination.FolderId,
+            pagination.Sort,
             cancellationToken);
 
         var dtos = entities.Select(MapToDto).ToList();
@@ -103,7 +105,9 @@ public class ManagerNoteService : IManagerNoteService
             dto.Content,
             dto.Priority,
             dto.DueDate,
-            dto.Tags);
+            dto.Tags,
+            dto.FolderId,
+            dto.IsTodo);
 
         var created = await _repository.AddAsync(entity, cancellationToken);
 
@@ -123,6 +127,8 @@ public class ManagerNoteService : IManagerNoteService
         var entity = await GetEntityOrThrowAsync(id, cancellationToken);
 
         entity.Update(dto.Title, dto.Content, dto.Priority, dto.DueDate, dto.Tags);
+        entity.MoveToFolder(dto.FolderId);
+        entity.SetTodo(dto.IsTodo);
         await _repository.UpdateAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(
@@ -132,6 +138,61 @@ public class ManagerNoteService : IManagerNoteService
             $"Note '{entity.Title}'",
             $"Note '{entity.Title}' was updated",
             cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    /// <summary>
+    /// Opens a blank note in a folder. The manager starts typing straight away; the note
+    /// exists from the first keystroke, so nothing is lost if the app closes.
+    /// </summary>
+    public async Task<ManagerNoteDto> CreateBlankAsync(CreateBlankNoteDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = ManagerNote.CreateBlank(dto.FolderId);
+        var created = await _repository.AddAsync(entity, cancellationToken);
+
+        await _activityService.LogActivityAsync(
+            ActivityType.Created,
+            EntityType.ManagerNote,
+            created.Id,
+            $"Note '{created.Title}'",
+            $"Note '{created.Title}' was created",
+            cancellationToken);
+
+        return MapToDto(created);
+    }
+
+    /// <summary>
+    /// Saves the body of a note as it is written and re-derives its title from the first line.
+    /// Deliberately not logged to the activity feed: this runs on every autosave, and a feed
+    /// of keystrokes is not history.
+    /// </summary>
+    public async Task<ManagerNoteDto> UpdateContentAsync(Guid id, UpdateNoteContentDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        entity.UpdateContent(dto.Content);
+        await _repository.UpdateAsync(entity, cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    public async Task<ManagerNoteDto> MoveToFolderAsync(Guid id, MoveNoteDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        entity.MoveToFolder(dto.FolderId);
+        await _repository.UpdateAsync(entity, cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    public async Task<ManagerNoteDto> TogglePinAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetEntityOrThrowAsync(id, cancellationToken);
+
+        entity.TogglePin();
+        await _repository.UpdateAsync(entity, cancellationToken);
 
         return MapToDto(entity);
     }
@@ -199,6 +260,10 @@ public class ManagerNoteService : IManagerNoteService
             TagsList = entity.GetTagsList(),
             Priority = entity.Priority,
             PriorityName = GetPriorityName(entity.Priority),
+            FolderId = entity.FolderId,
+            IsPinned = entity.IsPinned,
+            IsTodo = entity.IsTodo,
+            Snippet = BuildSnippet(entity.Content),
             IsCompleted = entity.IsCompleted,
             DueDate = entity.DueDate,
             IsOverdue = entity.IsOverdue(),
@@ -206,6 +271,47 @@ public class ManagerNoteService : IManagerNoteService
             UpdatedAt = entity.UpdatedAt,
             CompletedAt = entity.CompletedAt
         };
+    }
+
+    /// <summary>
+    /// Builds the one-line preview shown under a note's title in the list, skipping the
+    /// line the title itself came from.
+    /// </summary>
+    private static string BuildSnippet(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return string.Empty;
+        }
+
+        var lines = content.Split('\n');
+        var skippedTitleLine = false;
+        var parts = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var text = line.Replace("\r", string.Empty).Trim();
+            if (text.Length == 0)
+            {
+                continue;
+            }
+
+            if (!skippedTitleLine)
+            {
+                skippedTitleLine = true;
+                continue;
+            }
+
+            parts.Add(text);
+
+            if (parts.Sum(p => p.Length) > 200)
+            {
+                break;
+            }
+        }
+
+        var snippet = string.Join(" ", parts);
+        return snippet.Length > 200 ? snippet[..200].TrimEnd() : snippet;
     }
 
     private static string GetPriorityName(NotePriority priority) => priority switch

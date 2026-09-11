@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IManagerNoteRepository, ManagerNoteRepository>();
+        services.AddScoped<INoteFolderRepository, NoteFolderRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SprintCapacityRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
@@ -94,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingsRepository, SqliteAppSettingsRepository>();
         services.AddScoped<ILeaveRepository, SqliteLeaveRepository>();
         services.AddScoped<IManagerNoteRepository, SqliteManagerNoteRepository>();
+        services.AddScoped<INoteFolderRepository, SqliteNoteFolderRepository>();
         services.AddScoped<ISprintRepository, SqliteSprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
         services.AddScoped<IDocumentRepository, SqliteDocumentRepository>();

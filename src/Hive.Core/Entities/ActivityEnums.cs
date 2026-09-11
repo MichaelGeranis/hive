@@ -149,5 +149,10 @@ public enum EntityType
     /// <summary>
     /// Allocation entity for quarterly planning.
     /// </summary>
-    Allocation = 19
+    Allocation = 19,
+
+    /// <summary>
+    /// Folder grouping manager notes.
+    /// </summary>
+    NoteFolder = 20
 }

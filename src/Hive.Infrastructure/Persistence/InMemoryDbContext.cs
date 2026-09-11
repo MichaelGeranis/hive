@@ -20,6 +20,7 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
     public ConcurrentDictionary<Guid, Leave> Leaves { get; } = new();
     public ConcurrentDictionary<Guid, ManagerNote> ManagerNotes { get; } = new();
+    public ConcurrentDictionary<Guid, NoteFolder> NoteFolders { get; } = new();
     public ConcurrentDictionary<Guid, Sprint> Sprints { get; } = new();
     public ConcurrentDictionary<Guid, SprintCapacity> SprintCapacities { get; } = new();
     public ConcurrentDictionary<Guid, Document> Documents { get; } = new();

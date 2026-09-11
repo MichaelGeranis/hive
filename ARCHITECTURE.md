@@ -232,7 +232,11 @@ MeetingNote
   ActionStatus?, ActionDueDate?, ActionAssignee?
 
 ManagerNote
-  Id, Title, Content, Tags, Priority, IsCompleted, DueDate?, CompletedAt?
+  Id, Title, Content, Tags, Priority, FolderId? → NoteFolder, IsPinned, IsTodo,
+  IsCompleted, DueDate?, CompletedAt?
+
+NoteFolder
+  Id, Name, ParentFolderId? → NoteFolder, SortOrder
 
 SkillCategory
   Id, Name, Description, SortOrder, IsActive

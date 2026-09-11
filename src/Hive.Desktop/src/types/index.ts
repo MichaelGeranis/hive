@@ -771,6 +771,10 @@ export interface ManagerNote {
   tagsList: string[]
   priority: NotePriority
   priorityName: string
+  folderId?: string | null
+  isPinned: boolean
+  isTodo: boolean
+  snippet: string
   isCompleted: boolean
   dueDate?: string
   isOverdue: boolean
@@ -785,6 +789,8 @@ export interface CreateManagerNoteDto {
   tags?: string
   priority: NotePriority
   dueDate?: string
+  folderId?: string | null
+  isTodo?: boolean
 }
 
 export interface UpdateManagerNoteDto {
@@ -793,6 +799,29 @@ export interface UpdateManagerNoteDto {
   tags?: string
   priority: NotePriority
   dueDate?: string
+  folderId?: string | null
+  isTodo: boolean
+}
+
+export interface NoteFolder {
+  id: string
+  name: string
+  parentFolderId?: string | null
+  sortOrder: number
+  noteCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateNoteFolderDto {
+  name: string
+  parentFolderId?: string | null
+}
+
+export interface UpdateNoteFolderDto {
+  name: string
+  parentFolderId?: string | null
+  sortOrder: number
 }
 
 // Sprints

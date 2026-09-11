@@ -311,4 +311,242 @@ public class ManagerNoteTests
         // Act & Assert
         note.IsOverdue().Should().BeFalse();
     }
+
+    [Fact]
+    public void CreateBlank_CreatesEmptyNoteWithPlaceholderTitle()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+
+        // Act
+        var note = ManagerNote.CreateBlank(folderId);
+
+        // Assert
+        note.Title.Should().Be(ManagerNote.DefaultTitle);
+        note.Content.Should().BeEmpty();
+        note.FolderId.Should().Be(folderId);
+        note.IsTodo.Should().BeFalse();
+        note.IsPinned.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CreateBlank_WithoutFolder_SitsAtRoot()
+    {
+        // Act
+        var note = ManagerNote.CreateBlank();
+
+        // Assert
+        note.FolderId.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateContent_TakesTitleFromFirstLine()
+    {
+        // Arrange
+        var note = ManagerNote.CreateBlank();
+
+        // Act
+        note.UpdateContent("Sprint retro\nWhat went well?");
+
+        // Assert
+        note.Title.Should().Be("Sprint retro");
+        note.Content.Should().Be("Sprint retro\nWhat went well?");
+        note.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void UpdateContent_PreservesWhitespaceAsTyped()
+    {
+        // Arrange
+        var note = ManagerNote.CreateBlank();
+
+        // Act
+        note.UpdateContent("Notes\n\n  indented line\n\n");
+
+        // Assert
+        note.Content.Should().Be("Notes\n\n  indented line\n\n");
+    }
+
+    [Fact]
+    public void UpdateContent_WithEmptyContent_FallsBackToDefaultTitle()
+    {
+        // Arrange
+        var note = new ManagerNote("Something");
+
+        // Act
+        note.UpdateContent("   ");
+
+        // Assert
+        note.Title.Should().Be(ManagerNote.DefaultTitle);
+    }
+
+    [Theory]
+    [InlineData("# Heading", "Heading")]
+    [InlineData("### Deep heading", "Deep heading")]
+    [InlineData("- bullet item", "bullet item")]
+    [InlineData("1. first step", "first step")]
+    [InlineData("- [ ] open task", "open task")]
+    [InlineData("- [x] done task", "done task")]
+    [InlineData("> quoted", "quoted")]
+    [InlineData("**bold title**", "bold title")]
+    [InlineData("`code title`", "code title")]
+    public void DeriveTitle_StripsMarkdownDecoration(string content, string expected)
+    {
+        // Act
+        var title = ManagerNote.DeriveTitle(content);
+
+        // Assert
+        title.Should().Be(expected);
+    }
+
+    [Fact]
+    public void DeriveTitle_SkipsBlankAndRuleOnlyLines()
+    {
+        // Act
+        var title = ManagerNote.DeriveTitle("\n---\n\nActual title\n");
+
+        // Assert
+        title.Should().Be("Actual title");
+    }
+
+    [Fact]
+    public void DeriveTitle_TruncatesVeryLongFirstLine()
+    {
+        // Act
+        var title = ManagerNote.DeriveTitle(new string('a', 250));
+
+        // Assert
+        title.Length.Should().Be(200);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void DeriveTitle_WithNoContent_ReturnsDefaultTitle(string? content)
+    {
+        // Act
+        var title = ManagerNote.DeriveTitle(content);
+
+        // Assert
+        title.Should().Be(ManagerNote.DefaultTitle);
+    }
+
+    [Fact]
+    public void MoveToFolder_FilesNoteInFolder()
+    {
+        // Arrange
+        var note = new ManagerNote("Note");
+        var folderId = Guid.NewGuid();
+
+        // Act
+        note.MoveToFolder(folderId);
+
+        // Assert
+        note.FolderId.Should().Be(folderId);
+        note.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoveToFolder_WithNull_MovesNoteToRoot()
+    {
+        // Arrange
+        var note = new ManagerNote("Note", folderId: Guid.NewGuid());
+
+        // Act
+        note.MoveToFolder(null);
+
+        // Assert
+        note.FolderId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Pin_MarksNotePinned()
+    {
+        // Arrange
+        var note = new ManagerNote("Note");
+
+        // Act
+        note.Pin();
+
+        // Assert
+        note.IsPinned.Should().BeTrue();
+        note.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Unpin_ClearsPin()
+    {
+        // Arrange
+        var note = new ManagerNote("Note");
+        note.Pin();
+
+        // Act
+        note.Unpin();
+
+        // Assert
+        note.IsPinned.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TogglePin_FlipsPinnedState()
+    {
+        // Arrange
+        var note = new ManagerNote("Note");
+
+        // Act
+        note.TogglePin();
+        var afterFirstToggle = note.IsPinned;
+        note.TogglePin();
+
+        // Assert
+        afterFirstToggle.Should().BeTrue();
+        note.IsPinned.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetTodo_TracksNoteAsTodo()
+    {
+        // Arrange
+        var note = ManagerNote.CreateBlank();
+
+        // Act
+        note.SetTodo(true);
+
+        // Assert
+        note.IsTodo.Should().BeTrue();
+        note.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void SetTodo_False_ClearsCompletion()
+    {
+        // Arrange
+        var note = new ManagerNote("Note", isTodo: true);
+        note.MarkComplete();
+
+        // Act
+        note.SetTodo(false);
+
+        // Assert
+        note.IsTodo.Should().BeFalse();
+        note.IsCompleted.Should().BeFalse();
+        note.CompletedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetTodo_WithSameValue_DoesNothing()
+    {
+        // Arrange
+        var note = new ManagerNote("Note", isTodo: true);
+        note.MarkComplete();
+        var completedAt = note.CompletedAt;
+
+        // Act
+        note.SetTodo(true);
+
+        // Assert
+        note.IsCompleted.Should().BeTrue();
+        note.CompletedAt.Should().Be(completedAt);
+    }
 }

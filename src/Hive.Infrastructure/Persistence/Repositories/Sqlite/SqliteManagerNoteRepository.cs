@@ -41,21 +41,27 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
         return (items, totalCount);
     }
 
-    public async Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<ManagerNote> Items, int TotalCount)> GetFilteredPagedAsync(int skip, int take, string? filter, string? searchTerm, string? tag, Guid? folderId = null, NoteSortOrder sort = NoteSortOrder.Priority, CancellationToken cancellationToken = default)
     {
         var query = _context.ManagerNotes.AsQueryable();
 
-        // Apply status filter
+        // Apply status filter - only notes tracked as to-dos have a pending or overdue state
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var now = DateTime.UtcNow;
             query = filter.ToLowerInvariant() switch
             {
-                "pending" => query.Where(n => !n.IsCompleted),
+                "pending" => query.Where(n => n.IsTodo && !n.IsCompleted),
                 "completed" => query.Where(n => n.IsCompleted),
-                "overdue" => query.Where(n => !n.IsCompleted && n.DueDate.HasValue && n.DueDate.Value < now),
+                "overdue" => query.Where(n => n.IsTodo && !n.IsCompleted && n.DueDate.HasValue && n.DueDate.Value < now),
                 _ => query
             };
+        }
+
+        // Apply folder filter
+        if (folderId.HasValue)
+        {
+            query = query.Where(n => n.FolderId == folderId.Value);
         }
 
         // Apply tag filter
@@ -79,10 +85,16 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         // Apply ordering and pagination
-        var items = await query
-            .OrderByDescending(n => n.Priority)
-            .ThenBy(n => n.DueDate)
-            .ThenByDescending(n => n.CreatedAt)
+        var orderedQuery = sort == NoteSortOrder.Recent
+            ? query
+                .OrderByDescending(n => n.IsPinned)
+                .ThenByDescending(n => n.UpdatedAt ?? n.CreatedAt)
+            : query
+                .OrderByDescending(n => n.Priority)
+                .ThenBy(n => n.DueDate)
+                .ThenByDescending(n => n.CreatedAt);
+
+        var items = await orderedQuery
             .Skip(skip)
             .Take(take)
             .ToListAsync(cancellationToken);
@@ -93,7 +105,7 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
     public async Task<IReadOnlyList<ManagerNote>> GetPendingAsync(CancellationToken cancellationToken = default)
     {
         return await _context.ManagerNotes
-            .Where(n => !n.IsCompleted)
+            .Where(n => n.IsTodo && !n.IsCompleted)
             .OrderByDescending(n => n.Priority)
             .ThenBy(n => n.DueDate)
             .ThenByDescending(n => n.CreatedAt)
@@ -112,7 +124,7 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
     {
         var now = DateTime.UtcNow;
         return await _context.ManagerNotes
-            .Where(n => !n.IsCompleted && n.DueDate.HasValue && n.DueDate.Value < now)
+            .Where(n => n.IsTodo && !n.IsCompleted && n.DueDate.HasValue && n.DueDate.Value < now)
             .OrderBy(n => n.DueDate)
             .ToListAsync(cancellationToken);
     }
@@ -165,6 +177,25 @@ public class SqliteManagerNoteRepository : IManagerNoteRepository
             .ToList();
 
         return tags;
+    }
+
+    public async Task<IReadOnlyList<(Guid? FolderId, int Count)>> GetCountsByFolderAsync(CancellationToken cancellationToken = default)
+    {
+        var counts = await _context.ManagerNotes
+            .GroupBy(n => n.FolderId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return counts.Select(c => (c.Key, c.Count)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ManagerNote>> GetByFolderAsync(Guid folderId, CancellationToken cancellationToken = default)
+    {
+        return await _context.ManagerNotes
+            .Where(n => n.FolderId == folderId)
+            .OrderByDescending(n => n.IsPinned)
+            .ThenByDescending(n => n.UpdatedAt ?? n.CreatedAt)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<ManagerNote> AddAsync(ManagerNote note, CancellationToken cancellationToken = default)

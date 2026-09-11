@@ -24,6 +24,7 @@ public class HiveDbContext : DbContext
     public DbSet<Leave> Leaves => Set<Leave>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
     public DbSet<ManagerNote> ManagerNotes => Set<ManagerNote>();
+    public DbSet<NoteFolder> NoteFolders => Set<NoteFolder>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
     public DbSet<Document> Documents => Set<Document>();
@@ -178,11 +179,21 @@ public class HiveDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
-            entity.Property(e => e.Content).HasMaxLength(4000);
+            // The body is deliberately uncapped: a note is a place to write freely.
             entity.Property(e => e.Tags).HasMaxLength(500);
             entity.HasIndex(e => e.IsCompleted);
             entity.HasIndex(e => e.Priority);
             entity.HasIndex(e => e.DueDate);
+            entity.HasIndex(e => e.FolderId);
+            entity.HasIndex(e => e.IsPinned);
+        });
+
+        // NoteFolder configuration
+        modelBuilder.Entity<NoteFolder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.ParentFolderId);
         });
 
         // Sprint configuration

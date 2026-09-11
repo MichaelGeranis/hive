@@ -113,6 +113,8 @@ const ActivityFeed = () => {
         return <StickyNote className="w-5 h-5 text-violet-500" />
       case 'managernote':
         return <StickyNote className="w-5 h-5 text-amber-500" />
+      case 'notefolder':
+        return <FolderKanban className="w-5 h-5 text-amber-600" />
       case 'project':
         return <FolderKanban className="w-5 h-5 text-orange-500" />
       case 'sprint':
@@ -152,6 +154,7 @@ const ActivityFeed = () => {
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
       case 'meetingnote':
         return 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200'
+      case 'notefolder':
       case 'managernote':
         return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
       case 'project':
