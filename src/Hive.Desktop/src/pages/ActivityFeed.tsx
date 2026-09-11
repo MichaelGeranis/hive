@@ -9,7 +9,6 @@ import {
   FolderKanban,
   Timer,
   BarChart3,
-  FileBox,
   Award,
   Star,
   ClipboardList,
@@ -121,8 +120,6 @@ const ActivityFeed = () => {
         return <Timer className="w-5 h-5 text-cyan-500" />
       case 'sprintcapacity':
         return <BarChart3 className="w-5 h-5 text-sky-500" />
-      case 'document':
-        return <FileBox className="w-5 h-5 text-slate-500" />
       case 'skill':
         return <Award className="w-5 h-5 text-yellow-500" />
       case 'skillassessment':
@@ -163,8 +160,6 @@ const ActivityFeed = () => {
         return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
       case 'sprintcapacity':
         return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200'
-      case 'document':
-        return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
       case 'skill':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
       case 'skillassessment':

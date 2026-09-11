@@ -47,7 +47,6 @@ public static class DependencyInjection
         services.AddScoped<INoteFolderRepository, NoteFolderRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SprintCapacityRepository>();
-        services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IParentRepository, ParentRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<IChecklistTemplateRepository, ChecklistTemplateRepository>();
@@ -98,7 +97,6 @@ public static class DependencyInjection
         services.AddScoped<INoteFolderRepository, SqliteNoteFolderRepository>();
         services.AddScoped<ISprintRepository, SqliteSprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
-        services.AddScoped<IDocumentRepository, SqliteDocumentRepository>();
         services.AddScoped<IParentRepository, SqliteParentRepository>();
         services.AddScoped<IActivityRepository, SqliteActivityRepository>();
         services.AddScoped<IChecklistTemplateRepository, SqliteChecklistTemplateRepository>();

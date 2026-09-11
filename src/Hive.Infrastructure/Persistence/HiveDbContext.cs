@@ -27,7 +27,6 @@ public class HiveDbContext : DbContext
     public DbSet<NoteFolder> NoteFolders => Set<NoteFolder>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
-    public DbSet<Document> Documents => Set<Document>();
     public DbSet<Parent> Parents => Set<Parent>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
@@ -212,17 +211,6 @@ public class HiveDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.SprintId).IsUnique();
-        });
-
-        // Document configuration
-        modelBuilder.Entity<Document>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
-            entity.Property(e => e.Content).HasMaxLength(4000);
-            entity.Property(e => e.Url).HasMaxLength(2000);
-            entity.Property(e => e.Tags).HasMaxLength(1000);
-            entity.HasIndex(e => e.CreatedAt);
         });
 
         // Parent configuration

@@ -21,7 +21,6 @@ public class BackupService : IBackupService
     private readonly INoteFolderRepository _noteFolderRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly ISprintCapacityRepository _sprintCapacityRepository;
-    private readonly IDocumentRepository _documentRepository;
     private readonly IActivityRepository _activityRepository;
     private readonly ISkillRepository _skillRepository;
     private readonly ISkillAssessmentRepository _skillAssessmentRepository;
@@ -39,7 +38,6 @@ public class BackupService : IBackupService
         INoteFolderRepository noteFolderRepository,
         ISprintRepository sprintRepository,
         ISprintCapacityRepository sprintCapacityRepository,
-        IDocumentRepository documentRepository,
         IActivityRepository activityRepository,
         ISkillRepository skillRepository,
         ISkillAssessmentRepository skillAssessmentRepository,
@@ -56,7 +54,6 @@ public class BackupService : IBackupService
         _noteFolderRepository = noteFolderRepository;
         _sprintRepository = sprintRepository;
         _sprintCapacityRepository = sprintCapacityRepository;
-        _documentRepository = documentRepository;
         _activityRepository = activityRepository;
         _skillRepository = skillRepository;
         _skillAssessmentRepository = skillAssessmentRepository;
@@ -81,7 +78,6 @@ public class BackupService : IBackupService
         var noteFolders = await _noteFolderRepository.GetAllAsync(cancellationToken);
         var sprints = await _sprintRepository.GetAllAsync(cancellationToken);
         var sprintCapacities = await _sprintCapacityRepository.GetAllAsync(cancellationToken);
-        var documents = await _documentRepository.GetAllAsync(cancellationToken);
         var activities = await _activityRepository.GetAllAsync(cancellationToken);
         var skills = await _skillRepository.GetAllAsync(true, cancellationToken);
         var skillAssessments = await _skillAssessmentRepository.GetAllAsync(cancellationToken);
@@ -102,7 +98,6 @@ public class BackupService : IBackupService
             NoteFolders = noteFolders.Select(MapNoteFolder).ToList(),
             Sprints = sprints.Select(MapSprint).ToList(),
             SprintCapacities = sprintCapacities.Select(MapSprintCapacity).ToList(),
-            Documents = documents.Select(MapDocument).ToList(),
             Activities = activities.Select(MapActivity).ToList(),
             Skills = skills.Select(MapSkill).ToList(),
             SkillAssessments = skillAssessments.Select(MapSkillAssessment).ToList(),
@@ -125,7 +120,6 @@ public class BackupService : IBackupService
         int noteFoldersRestored = 0;
         int sprintsRestored = 0;
         int sprintCapacitiesRestored = 0;
-        int documentsRestored = 0;
         int activitiesRestored = 0;
         int skillsRestored = 0;
         int skillAssessmentsRestored = 0;
@@ -397,26 +391,6 @@ public class BackupService : IBackupService
                 }
             }
 
-            // Import Documents
-            foreach (var d in backup.Documents)
-            {
-                try
-                {
-                    var existing = await _documentRepository.GetByIdAsync(d.Id, cancellationToken);
-                    if (existing == null)
-                    {
-                        var entity = new Document(d.Title, d.Content, d.Url, d.Tags);
-                        SetEntityId(entity, d.Id);
-                        await _documentRepository.AddAsync(entity, cancellationToken);
-                        documentsRestored++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    errors.Add($"Failed to restore document {d.Title}: {ex.Message}");
-                }
-            }
-
             // Import Skills
             foreach (var s in backup.Skills)
             {
@@ -534,7 +508,6 @@ public class BackupService : IBackupService
             NoteFoldersRestored = noteFoldersRestored,
             SprintsRestored = sprintsRestored,
             SprintCapacitiesRestored = sprintCapacitiesRestored,
-            DocumentsRestored = documentsRestored,
             ActivitiesRestored = activitiesRestored,
             SkillsRestored = skillsRestored,
             SkillAssessmentsRestored = skillAssessmentsRestored,
@@ -702,17 +675,6 @@ public class BackupService : IBackupService
         AvailableMembers = sc.AvailableMembers,
         CreatedAt = sc.CreatedAt,
         UpdatedAt = sc.UpdatedAt
-    };
-
-    private static DocumentBackup MapDocument(Document d) => new()
-    {
-        Id = d.Id,
-        Title = d.Title,
-        Content = d.Content,
-        Url = d.Url,
-        Tags = d.Tags,
-        CreatedAt = d.CreatedAt,
-        UpdatedAt = d.UpdatedAt
     };
 
     private static AppSettingsBackup MapSettings(AppSettings s) => new()

@@ -1336,8 +1336,6 @@ export default function Settings() {
                     <div className="text-xs text-slate-500 dark:text-slate-400">Notes</div>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
-                    <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{restoreResult.documentsRestored}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Documents</div>
                   </div>
                 </div>
 

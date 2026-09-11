@@ -14,7 +14,6 @@ import {
   Palmtree,
   StickyNote,
   Zap,
-  FileText,
   ScrollText,
   Award,
   Activity,
@@ -53,7 +52,6 @@ const navigationGroups = [
   // Resources
   [
     { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
-    { name: 'Documents', to: '/documents', icon: FileText },
     { name: 'Hiring', to: '/checklists', icon: ClipboardList },
     { name: 'Tutorials', to: '/tutorials', icon: BookOpen },
   ],

@@ -46,9 +46,6 @@ import type {
   CreateSprintCapacityDto,
   LateTasksReport,
   CapacityAnalysis,
-  Document,
-  CreateDocumentDto,
-  UpdateDocumentDto,
   Parent,
   CreateParentDto,
   UpdateParentDto,
@@ -455,15 +452,6 @@ export const noteFoldersApi = {
   delete: (id: string) => api.delete(`/notefolders/${id}`)
 }
 
-// Documents
-export const documentsApi = {
-  getAll: () => api.get<Document[]>('/documents').then(r => r.data),
-  getById: (id: string) => api.get<Document>(`/documents/${id}`).then(r => r.data),
-  getByTags: (tags: string) => api.get<Document[]>(`/documents/by-tags?tags=${encodeURIComponent(tags)}`).then(r => r.data),
-  create: (data: CreateDocumentDto) => api.post<Document>('/documents', data).then(r => r.data),
-  update: (id: string, data: UpdateDocumentDto) => api.put<Document>(`/documents/${id}`, data).then(r => r.data),
-  delete: (id: string) => api.delete(`/documents/${id}`)
-}
 
 // Parents (task groupings like Epics)
 export const parentsApi = {

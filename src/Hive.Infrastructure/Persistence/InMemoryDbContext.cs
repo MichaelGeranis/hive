@@ -23,7 +23,6 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, NoteFolder> NoteFolders { get; } = new();
     public ConcurrentDictionary<Guid, Sprint> Sprints { get; } = new();
     public ConcurrentDictionary<Guid, SprintCapacity> SprintCapacities { get; } = new();
-    public ConcurrentDictionary<Guid, Document> Documents { get; } = new();
     public ConcurrentDictionary<Guid, Parent> Parents { get; } = new();
     public ConcurrentDictionary<Guid, Activity> Activities { get; } = new();
     public ConcurrentDictionary<Guid, ChecklistTemplate> ChecklistTemplates { get; } = new();

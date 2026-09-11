@@ -999,7 +999,6 @@ export interface BackupDto {
   managerNotes: any[]
   sprints: any[]
   sprintCapacities: any[]
-  documents: any[]
   settings?: any
 }
 
@@ -1015,7 +1014,6 @@ export interface RestoreResultDto {
   managerNotesRestored: number
   sprintsRestored: number
   sprintCapacitiesRestored: number
-  documentsRestored: number
   settingsRestored: boolean
   errors: string[]
   warnings: string[]

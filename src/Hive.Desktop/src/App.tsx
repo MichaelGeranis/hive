@@ -16,7 +16,6 @@ import Skills from './pages/Skills'
 import Leaves from './pages/Leaves'
 import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
-import Documents from './pages/Documents'
 import ActivityFeed from './pages/ActivityFeed'
 import Logs from './pages/Logs'
 import Checklists from './pages/Checklists'
@@ -135,7 +134,6 @@ function App() {
         <Route path="leaves" element={<Leaves />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />
-        <Route path="documents" element={<Documents />} />
         <Route path="tutorials" element={<Tutorials />} />
         <Route path="logs" element={<Logs />} />
         <Route path="quarterly-planning" element={<QuarterlyPlanning />} />

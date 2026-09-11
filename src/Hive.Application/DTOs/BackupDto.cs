@@ -18,7 +18,6 @@ public record BackupDto
     public List<NoteFolderBackup> NoteFolders { get; init; } = new();
     public List<SprintBackup> Sprints { get; init; } = new();
     public List<SprintCapacityBackup> SprintCapacities { get; init; } = new();
-    public List<DocumentBackup> Documents { get; init; } = new();
     public List<ActivityBackup> Activities { get; init; } = new();
     public List<SkillBackup> Skills { get; init; } = new();
     public List<SkillAssessmentBackup> SkillAssessments { get; init; } = new();
@@ -166,17 +165,6 @@ public record SprintCapacityBackup
     public Guid SprintId { get; init; }
     public int TotalCapacityPoints { get; init; }
     public int AvailableMembers { get; init; }
-    public DateTime CreatedAt { get; init; }
-    public DateTime? UpdatedAt { get; init; }
-}
-
-public record DocumentBackup
-{
-    public Guid Id { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public string Content { get; init; } = string.Empty;
-    public string? Url { get; init; }
-    public string Tags { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
