@@ -3,6 +3,7 @@ import type {
   DirectReport,
   ManagerNote,
   NoteFolder,
+  OneOnOneMeeting,
   Leave,
   TeamTask,
   DashboardOverview,
@@ -41,6 +42,21 @@ export const createManagerNote = (overrides?: Partial<ManagerNote>): ManagerNote
   isCompleted: false,
   isOverdue: false,
   createdAt: '2024-01-01T10:00:00Z',
+  ...overrides,
+})
+
+export const createMeeting = (overrides?: Partial<OneOnOneMeeting>): OneOnOneMeeting => ({
+  id: '1',
+  directReportId: '1',
+  directReportName: 'John Doe',
+  isUnlinked: false,
+  meetingDate: '2026-09-10',
+  title: 'Weekly sync',
+  content: 'Weekly sync\n\n- Went well',
+  tags: 'johndoe',
+  tagsList: ['johndoe'],
+  snippet: '- Went well',
+  createdAt: '2026-09-10T10:00:00Z',
   ...overrides,
 })
 
@@ -93,6 +109,22 @@ export const createTeamTask = (overrides?: Partial<TeamTask>): TeamTask => ({
 let mockDirectReports: DirectReport[] = [
   createDirectReport({ id: '1', firstName: 'John', lastName: 'Doe' }),
   createDirectReport({ id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@example.com' }),
+]
+
+let mockMeetings: OneOnOneMeeting[] = [
+  createMeeting({ id: 'm1', title: 'Weekly sync', directReportId: '1', directReportName: 'John Doe', tags: 'johndoe', tagsList: ['johndoe'] }),
+  createMeeting({
+    id: 'm2',
+    title: 'Career chat',
+    content: 'Career chat\n\n- Wants to move towards staff',
+    snippet: '- Wants to move towards staff',
+    meetingDate: '2026-09-03',
+    directReportId: null,
+    directReportName: null,
+    isUnlinked: true,
+    tags: '',
+    tagsList: [],
+  }),
 ]
 
 let mockNoteFolders: NoteFolder[] = [
@@ -281,6 +313,109 @@ export const handlers = [
 
   http.delete(`${API_BASE}/managernotes/:id`, ({ params }) => {
     mockNotes = mockNotes.filter(n => n.id !== params.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // 1:1 meetings
+  http.get(`${API_BASE}/oneononemeetings`, ({ request }) => {
+    const url = new URL(request.url)
+    const pageNumber = parseInt(url.searchParams.get('pageNumber') || '1')
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20')
+    const directReportId = url.searchParams.get('directReportId')
+    const unlinked = url.searchParams.get('unlinked') === 'true'
+    const search = url.searchParams.get('search')?.toLowerCase()
+
+    let matching = [...mockMeetings]
+    if (unlinked) {
+      matching = matching.filter(m => m.isUnlinked)
+    } else if (directReportId) {
+      matching = matching.filter(m => m.directReportId === directReportId)
+    }
+    if (search) {
+      matching = matching.filter(m =>
+        m.title.toLowerCase().includes(search) || m.content.toLowerCase().includes(search)
+      )
+    }
+
+    const totalCount = matching.length
+    const totalPages = Math.ceil(totalCount / pageSize)
+    return HttpResponse.json({
+      items: matching.slice((pageNumber - 1) * pageSize, pageNumber * pageSize),
+      totalCount,
+      pageNumber,
+      pageSize,
+      totalPages,
+      hasPreviousPage: pageNumber > 1,
+      hasNextPage: pageNumber < totalPages
+    })
+  }),
+
+  http.get(`${API_BASE}/oneononemeetings/count`, () => {
+    return HttpResponse.json(mockMeetings.length)
+  }),
+
+  http.get(`${API_BASE}/oneononemeetings/counts`, () => {
+    const counts = new Map<string | null, number>()
+    mockMeetings.forEach(m => {
+      const key = m.directReportId ?? null
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    })
+    return HttpResponse.json(
+      Array.from(counts.entries()).map(([directReportId, count]) => ({ directReportId, count }))
+    )
+  }),
+
+  http.post(`${API_BASE}/oneononemeetings/blank`, async ({ request }) => {
+    const data = await request.json() as { tags?: string | null }
+    const tags = data?.tags ?? ''
+    const linked = mockDirectReports.find(r => tags.includes(r.lastName.toLowerCase()) || tags.includes(r.firstName.toLowerCase()))
+    const meeting = createMeeting({
+      id: `m-${mockMeetings.length + 1}`,
+      title: 'New 1:1',
+      content: '',
+      snippet: '',
+      tags,
+      tagsList: tags ? [tags] : [],
+      directReportId: linked?.id ?? null,
+      directReportName: linked?.fullName ?? null,
+      isUnlinked: !linked,
+    })
+    mockMeetings = [meeting, ...mockMeetings]
+    return HttpResponse.json(meeting, { status: 201 })
+  }),
+
+  http.put(`${API_BASE}/oneononemeetings/:id/content`, async ({ params, request }) => {
+    const { content } = await request.json() as { content: string }
+    const meeting = mockMeetings.find(m => m.id === params.id)
+    if (!meeting) return new HttpResponse(null, { status: 404 })
+    meeting.content = content
+    meeting.title = content.split('\n').find(line => line.trim()) ?? 'New 1:1'
+    return HttpResponse.json(meeting)
+  }),
+
+  http.put(`${API_BASE}/oneononemeetings/:id/tags`, async ({ params, request }) => {
+    const { tags } = await request.json() as { tags: string }
+    const meeting = mockMeetings.find(m => m.id === params.id)
+    if (!meeting) return new HttpResponse(null, { status: 404 })
+    const linked = mockDirectReports.find(r => tags.includes(r.lastName.toLowerCase()) || tags.includes(r.firstName.toLowerCase()))
+    meeting.tags = tags
+    meeting.tagsList = tags ? tags.split(',').map(t => t.trim()) : []
+    meeting.directReportId = linked?.id ?? null
+    meeting.directReportName = linked?.fullName ?? null
+    meeting.isUnlinked = !linked
+    return HttpResponse.json(meeting)
+  }),
+
+  http.put(`${API_BASE}/oneononemeetings/:id/date`, async ({ params, request }) => {
+    const { meetingDate } = await request.json() as { meetingDate: string }
+    const meeting = mockMeetings.find(m => m.id === params.id)
+    if (!meeting) return new HttpResponse(null, { status: 404 })
+    meeting.meetingDate = meetingDate
+    return HttpResponse.json(meeting)
+  }),
+
+  http.delete(`${API_BASE}/oneononemeetings/:id`, ({ params }) => {
+    mockMeetings = mockMeetings.filter(m => m.id !== params.id)
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -495,6 +630,21 @@ export function resetMockData() {
   ]
   mockNoteFolders = [
     createNoteFolder({ id: 'f1', name: 'Work', noteCount: 1 }),
+  ]
+  mockMeetings = [
+    createMeeting({ id: 'm1', title: 'Weekly sync', directReportId: '1', directReportName: 'John Doe', tags: 'johndoe', tagsList: ['johndoe'] }),
+    createMeeting({
+      id: 'm2',
+      title: 'Career chat',
+      content: 'Career chat\n\n- Wants to move towards staff',
+      snippet: '- Wants to move towards staff',
+      meetingDate: '2026-09-03',
+      directReportId: null,
+      directReportName: null,
+      isUnlinked: true,
+      tags: '',
+      tagsList: [],
+    }),
   ]
   mockLeaves = [
     createLeave({ id: '1' }),

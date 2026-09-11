@@ -82,62 +82,29 @@ export interface PerformanceReview {
 }
 
 // One-on-One Meetings
-export enum NoteCategory {
-  Discussion = 0,
-  ActionItem = 1,
-  Feedback = 2,
-  Achievement = 3
-}
-
-export enum ActionItemStatus {
-  Open = 0,
-  InProgress = 1,
-  Completed = 2,
-  Cancelled = 3
-}
-
 export interface OneOnOneMeeting {
   id: string
-  directReportId: string
-  directReportName: string
+  directReportId?: string | null
+  directReportName?: string | null
+  isUnlinked: boolean
   meetingDate: string
-  agenda: string
-  noteCount: number
-  openActionItemCount: number
+  title: string
+  content: string
+  tags: string
+  tagsList: string[]
+  snippet: string
   createdAt: string
   updatedAt?: string
 }
 
-export interface MeetingNote {
-  id: string
-  meetingId: string
-  meetingDate: string
-  directReportName: string
-  content: string
-  category: NoteCategory
-  categoryName: string
-  actionStatus?: ActionItemStatus
-  actionStatusName?: string
-  actionDueDate?: string
-  actionAssignee?: string
-  isOverdue: boolean
-  createdAt: string
-  updatedAt?: string
+export interface CreateBlankMeetingDto {
+  meetingDate?: string
+  tags?: string
 }
 
-export interface CreateMeetingNoteDto {
-  meetingId: string
-  content: string
-  category: NoteCategory
-  actionDueDate?: string
-  actionAssignee?: string
-}
-
-export interface UpdateMeetingNoteDto {
-  content: string
-  category: NoteCategory
-  actionDueDate?: string
-  actionAssignee?: string
+export interface MeetingCount {
+  directReportId?: string | null
+  count: number
 }
 
 // Projects

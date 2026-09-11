@@ -81,6 +81,12 @@ the start date throws; there is no code path that produces an invalid `Leave`.
 Entities use **private setters** and expose intent-revealing methods (`Start()`,
 `Complete()`, `Deactivate()`, `AddPoints()`) rather than public property assignment.
 
+**Derived fields belong to the text they come from.** A note's title is derived from the
+first line of its content (`NoteText.DeriveTitle`), and a 1:1's person and date are derived
+from its tags. The entity owns the parts it can compute alone; resolving a tag to a
+`DirectReport` needs the team, so that happens in `OneOnOneMeetingService`, which then calls
+`LinkTo` on the entity.
+
 ### Hive.Application — Services Layer
 
 **What belongs here:**
@@ -225,11 +231,7 @@ PerformanceReview
   Strengths, AreasForImprovement, ManagerNotes
 
 OneOnOneMeeting
-  Id, DirectReportId → DirectReport, MeetingDate (DateOnly), Agenda, IsSyncedFromCalendar
-
-MeetingNote
-  Id, MeetingId → OneOnOneMeeting, Content, Category,
-  ActionStatus?, ActionDueDate?, ActionAssignee?
+  Id, DirectReportId? → DirectReport, MeetingDate (DateOnly), Title, Content, Tags
 
 ManagerNote
   Id, Title, Content, Tags, Priority, FolderId? → NoteFolder, IsPinned, IsTodo,
@@ -461,7 +463,7 @@ defined in `Dashboard.tsx`.
 |--------|-------------|----------------|
 | Team Members (stat) | `dashboard.team.totalReports` | `GetTeamOverviewAsync()` takes no sprint parameter |
 | Projects (stat) | `dashboard.tasks.projects.totalProjects` | Backend uses `projects.Count` (all projects) |
-| 1:1 Action Items (stat) | `meetingNotesApi.getOpenActionItems()` | Independent API, no sprint parameter |
+| 1:1s logged (stat) | `meetingsApi.getCount()` | Independent API, no sprint parameter |
 | TODOs (stat) | `notesApi.getPending()` | Independent API, no sprint parameter |
 | Projects Distribution | Local computation from `tasksApi.getAll()` | Fetches all tasks |
 | Members by Project | Local computation from `tasksApi.getAll()` | Fetches all tasks |

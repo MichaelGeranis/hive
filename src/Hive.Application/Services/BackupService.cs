@@ -15,7 +15,6 @@ public class BackupService : IBackupService
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IPerformanceReviewRepository _reviewRepository;
     private readonly IOneOnOneMeetingRepository _meetingRepository;
-    private readonly IMeetingNoteRepository _meetingNoteRepository;
     private readonly ILeaveRepository _leaveRepository;
     private readonly IManagerNoteRepository _managerNoteRepository;
     private readonly INoteFolderRepository _noteFolderRepository;
@@ -33,7 +32,6 @@ public class BackupService : IBackupService
         ITeamTaskRepository taskRepository,
         IPerformanceReviewRepository reviewRepository,
         IOneOnOneMeetingRepository meetingRepository,
-        IMeetingNoteRepository meetingNoteRepository,
         ILeaveRepository leaveRepository,
         IManagerNoteRepository managerNoteRepository,
         INoteFolderRepository noteFolderRepository,
@@ -50,7 +48,6 @@ public class BackupService : IBackupService
         _taskRepository = taskRepository;
         _reviewRepository = reviewRepository;
         _meetingRepository = meetingRepository;
-        _meetingNoteRepository = meetingNoteRepository;
         _leaveRepository = leaveRepository;
         _managerNoteRepository = managerNoteRepository;
         _noteFolderRepository = noteFolderRepository;
@@ -70,12 +67,6 @@ public class BackupService : IBackupService
         var tasks = await _taskRepository.GetAllAsync(cancellationToken);
         var reviews = await _reviewRepository.GetAllAsync(cancellationToken);
         var meetings = await _meetingRepository.GetAllAsync(cancellationToken);
-        var meetingNotes = new List<MeetingNote>();
-        foreach (var meeting in meetings)
-        {
-            var notes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, cancellationToken);
-            meetingNotes.AddRange(notes);
-        }
         var leaves = await _leaveRepository.GetAllAsync(cancellationToken);
         var managerNotes = await _managerNoteRepository.GetAllAsync(cancellationToken);
         var noteFolders = await _noteFolderRepository.GetAllAsync(cancellationToken);
@@ -96,7 +87,6 @@ public class BackupService : IBackupService
             Tasks = tasks.Select(MapTask).ToList(),
             PerformanceReviews = reviews.Select(MapReview).ToList(),
             Meetings = meetings.Select(MapMeeting).ToList(),
-            MeetingNotes = meetingNotes.Select(MapMeetingNote).ToList(),
             Leaves = leaves.Select(MapLeave).ToList(),
             ManagerNotes = managerNotes.Select(MapManagerNote).ToList(),
             NoteFolders = noteFolders.Select(MapNoteFolder).ToList(),
@@ -277,7 +267,7 @@ public class BackupService : IBackupService
                     var existing = await _meetingRepository.GetByIdAsync(m.Id, cancellationToken);
                     if (existing == null)
                     {
-                        var entity = new OneOnOneMeeting(m.DirectReportId, m.MeetingDate, m.Agenda);
+                        var entity = new OneOnOneMeeting(m.MeetingDate, m.Content, m.Tags, m.DirectReportId);
                         SetEntityId(entity, m.Id);
                         await _meetingRepository.AddAsync(entity, cancellationToken);
                         meetingsRestored++;
@@ -293,23 +283,27 @@ public class BackupService : IBackupService
                 }
             }
 
-            // Import Meeting Notes
-            foreach (var n in backup.MeetingNotes)
+            // Fold notes from a pre-redesign backup into the body of their meeting,
+            // so restoring an old export does not lose what was written in a 1:1.
+            foreach (var group in backup.MeetingNotes.GroupBy(n => n.MeetingId))
             {
                 try
                 {
-                    var existing = await _meetingNoteRepository.GetByIdAsync(n.Id, cancellationToken);
-                    if (existing == null)
+                    var meeting = await _meetingRepository.GetByIdAsync(group.Key, cancellationToken);
+                    if (meeting is null)
                     {
-                        var entity = new MeetingNote(n.MeetingId, n.Content, (NoteCategory)n.Category);
-                        SetEntityId(entity, n.Id);
-                        await _meetingNoteRepository.AddAsync(entity, cancellationToken);
-                        meetingNotesRestored++;
+                        warnings.Add($"Legacy 1:1 notes reference a meeting that is not in the backup, skipping");
+                        continue;
                     }
+
+                    var folded = FoldLegacyNotes(meeting.Content, group.OrderBy(n => n.CreatedAt));
+                    meeting.UpdateContent(folded);
+                    await _meetingRepository.UpdateAsync(meeting, cancellationToken);
+                    meetingNotesRestored += group.Count();
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Failed to restore meeting note: {ex.Message}");
+                    errors.Add($"Failed to restore legacy 1:1 notes: {ex.Message}");
                 }
             }
 
@@ -624,27 +618,34 @@ public class BackupService : IBackupService
         UpdatedAt = r.UpdatedAt
     };
 
+    /// <summary>
+    /// Appends legacy note rows to a meeting body as plain markdown lines.
+    /// </summary>
+    private static string FoldLegacyNotes(string content, IEnumerable<MeetingNoteBackup> notes)
+    {
+        var lines = notes
+            .Select(n => n.Content.Trim())
+            .Where(text => text.Length > 0)
+            .Select(text => $"- {text}");
+
+        var appended = string.Join("\n", lines);
+        if (appended.Length == 0)
+        {
+            return content;
+        }
+
+        return string.IsNullOrWhiteSpace(content) ? appended : $"{content.TrimEnd()}\n\n{appended}";
+    }
+
     private static OneOnOneMeetingBackup MapMeeting(OneOnOneMeeting m) => new()
     {
         Id = m.Id,
         DirectReportId = m.DirectReportId,
         MeetingDate = m.MeetingDate,
-        Agenda = m.Agenda,
+        Content = m.Content,
+        Tags = m.Tags,
         CreatedAt = m.CreatedAt,
         UpdatedAt = m.UpdatedAt
-    };
-
-    private static MeetingNoteBackup MapMeetingNote(MeetingNote n) => new()
-    {
-        Id = n.Id,
-        MeetingId = n.MeetingId,
-        Content = n.Content,
-        Category = (int)n.Category,
-        ActionStatus = n.ActionStatus.HasValue ? (int?)n.ActionStatus.Value : null,
-        ActionDueDate = n.ActionDueDate,
-        ActionAssignee = n.ActionAssignee,
-        CreatedAt = n.CreatedAt,
-        UpdatedAt = n.UpdatedAt
     };
 
     private static LeaveBackup MapLeave(Leave l) => new()

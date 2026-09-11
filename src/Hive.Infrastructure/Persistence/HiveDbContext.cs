@@ -18,7 +18,6 @@ public class HiveDbContext : DbContext
     public DbSet<SkillCategoryEntity> SkillCategories => Set<SkillCategoryEntity>();
     public DbSet<SkillAssessment> SkillAssessments => Set<SkillAssessment>();
     public DbSet<OneOnOneMeeting> OneOnOneMeetings => Set<OneOnOneMeeting>();
-    public DbSet<MeetingNote> MeetingNotes => Set<MeetingNote>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TeamTask> TeamTasks => Set<TeamTask>();
     public DbSet<Leave> Leaves => Set<Leave>();
@@ -107,18 +106,11 @@ public class HiveDbContext : DbContext
         modelBuilder.Entity<OneOnOneMeeting>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Agenda).HasMaxLength(4000);
+            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
+            // The body is deliberately uncapped: a 1:1 is a place to write freely.
+            entity.Property(e => e.Tags).HasMaxLength(500);
             entity.HasIndex(e => e.DirectReportId);
             entity.HasIndex(e => e.MeetingDate);
-        });
-
-        // MeetingNote configuration
-        modelBuilder.Entity<MeetingNote>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Content).HasMaxLength(4000).IsRequired();
-            entity.Property(e => e.ActionAssignee).HasMaxLength(200);
-            entity.HasIndex(e => e.MeetingId);
         });
 
         // Project configuration
@@ -465,26 +457,27 @@ public class HiveDbContext : DbContext
         PerformanceReviews.AddRange(reviews);
         SaveChanges();
 
-        // Create 1:1 meetings (simplified - no status workflow)
+        // Create 1:1 meetings - each one is a single markdown note tagged with the person
         var meetings = new[]
         {
-            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)), "Weekly sync"),
-            new OneOnOneMeeting(alice.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), "Weekly sync"),
-            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Bi-weekly check-in"),
-            new OneOnOneMeeting(bob.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)), "Bi-weekly check-in"),
-            new OneOnOneMeeting(carol.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-21)), "Monthly review")
+            new OneOnOneMeeting(
+                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)),
+                "Weekly sync\n\n- Discussed the project timeline, still on track\n- Reviewing PR #123 together this week",
+                "alice",
+                alice.Id),
+            new OneOnOneMeeting(
+                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
+                "Bi-weekly check-in\n\nCareer growth discussion - wants to move towards a staff role.",
+                "bob",
+                bob.Id),
+            new OneOnOneMeeting(
+                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-21)),
+                "Monthly review\n\nCompleted a major milestone. Recognised it in the team channel.",
+                "carol",
+                carol.Id)
         };
 
         OneOnOneMeetings.AddRange(meetings);
-        SaveChanges();
-
-        // Create meeting notes
-        MeetingNotes.AddRange(
-            new MeetingNote(meetings[0].Id, "Discussed project timeline", NoteCategory.Discussion),
-            new MeetingNote(meetings[0].Id, "Review PR #123 by Friday", NoteCategory.ActionItem),
-            new MeetingNote(meetings[2].Id, "Career growth discussion", NoteCategory.Feedback),
-            new MeetingNote(meetings[4].Id, "Completed major milestone", NoteCategory.Achievement)
-        );
         SaveChanges();
 
         // Create projects

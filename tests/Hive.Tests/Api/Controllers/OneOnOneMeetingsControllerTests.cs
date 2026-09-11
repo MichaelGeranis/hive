@@ -25,54 +25,86 @@ public class OneOnOneMeetingsControllerTests
         _controller = new OneOnOneMeetingsController(_serviceMock.Object, _loggerMock.Object);
     }
 
-    #region GetAll Tests
-
     [Fact]
-    public async Task GetAll_ReturnsOkWithAllMeetings()
+    public async Task GetAll_ReturnsOkWithPagedMeetings()
     {
         // Arrange
-        var meetings = new List<OneOnOneMeetingDto>
-        {
-            CreateDto(),
-            CreateDto()
-        };
-
-        _serviceMock.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(meetings);
+        _serviceMock.Setup(s => s.GetFilteredPagedAsync(It.IsAny<MeetingPaginationParams>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<OneOnOneMeetingDto> { Items = new[] { CreateDto() }, TotalCount = 1 });
 
         // Act
-        var result = await _controller.GetAll(CancellationToken.None);
+        var result = await _controller.GetAll(1, 20, null, false, null, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<OneOnOneMeetingDto>>();
-        var resultMeetings = okResult.Value as IEnumerable<OneOnOneMeetingDto>;
-        resultMeetings.Should().HaveCount(2);
+        (okResult.Value as PagedResult<OneOnOneMeetingDto>)!.Items.Should().HaveCount(1);
     }
 
-    #endregion
+    [Fact]
+    public async Task GetAll_PassesTheFiltersToTheService()
+    {
+        // Arrange
+        var reportId = Guid.NewGuid();
+        MeetingPaginationParams? captured = null;
+        _serviceMock.Setup(s => s.GetFilteredPagedAsync(It.IsAny<MeetingPaginationParams>(), It.IsAny<CancellationToken>()))
+            .Callback<MeetingPaginationParams, CancellationToken>((p, _) => captured = p)
+            .ReturnsAsync(new PagedResult<OneOnOneMeetingDto>());
 
-    #region GetById Tests
+        // Act
+        await _controller.GetAll(2, 10, reportId, true, "career", CancellationToken.None);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.DirectReportId.Should().Be(reportId);
+        captured.UnlinkedOnly.Should().BeTrue();
+        captured.SearchTerm.Should().Be("career");
+    }
 
     [Fact]
-    public async Task GetById_WhenExists_ReturnsOkWithMeeting()
+    public async Task GetCount_ReturnsHowMany1on1sWereLogged()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.GetTotalCountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(7);
+
+        // Act
+        var result = await _controller.GetCount(CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task GetCounts_ReturnsOkWithCountsPerPerson()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.GetCountsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MeetingCountDto> { new() { DirectReportId = Guid.NewGuid(), Count = 3 } });
+
+        // Act
+        var result = await _controller.GetCounts(CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetById_WhenFound_ReturnsOk()
     {
         // Arrange
         var dto = CreateDto();
-
-        _serviceMock.Setup(s => s.GetByIdAsync(dto.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dto);
+        _serviceMock.Setup(s => s.GetByIdAsync(dto.Id, It.IsAny<CancellationToken>())).ReturnsAsync(dto);
 
         // Act
         var result = await _controller.GetById(dto.Id, CancellationToken.None);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeOfType<OneOnOneMeetingDto>();
+        okResult.Value.Should().Be(dto);
     }
 
     [Fact]
-    public async Task GetById_WhenNotExists_ReturnsNotFound()
+    public async Task GetById_WhenNotFound_ReturnsNotFound()
     {
         // Arrange
         _serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -85,197 +117,153 @@ public class OneOnOneMeetingsControllerTests
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
-    #endregion
-
-    #region GetDetails Tests
-
     [Fact]
-    public async Task GetDetails_WhenExists_ReturnsOkWithDetails()
+    public async Task GetByDirectReport_ReturnsOkWithTheirMeetings()
     {
         // Arrange
-        var detailsDto = CreateDetailsDto();
-
-        _serviceMock.Setup(s => s.GetDetailsAsync(detailsDto.Meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(detailsDto);
+        _serviceMock.Setup(s => s.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OneOnOneMeetingDto> { CreateDto() });
 
         // Act
-        var result = await _controller.GetDetails(detailsDto.Meeting.Id, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeOfType<OneOnOneMeetingDetailsDto>();
-    }
-
-    [Fact]
-    public async Task GetDetails_WhenNotExists_ReturnsNotFound()
-    {
-        // Arrange
-        _serviceMock.Setup(s => s.GetDetailsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((OneOnOneMeetingDetailsDto?)null);
-
-        // Act
-        var result = await _controller.GetDetails(Guid.NewGuid(), CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    #endregion
-
-    #region GetByDirectReport Tests
-
-    [Fact]
-    public async Task GetByDirectReport_ReturnsOkWithMeetings()
-    {
-        // Arrange
-        var directReportId = Guid.NewGuid();
-        var meetings = new List<OneOnOneMeetingDto> { CreateDto() };
-
-        _serviceMock.Setup(s => s.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(meetings);
-
-        // Act
-        var result = await _controller.GetByDirectReport(directReportId, CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<OneOnOneMeetingDto>>();
-    }
-
-    #endregion
-
-    #region Create Tests
-
-    [Fact]
-    public async Task Create_WithValidDto_ReturnsCreatedAtAction()
-    {
-        // Arrange
-        var createDto = new CreateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Agenda = "Discuss progress"
-        };
-        var resultDto = CreateDto();
-
-        _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Create(createDto, CancellationToken.None);
-
-        // Assert
-        var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
-        createdResult.ActionName.Should().Be(nameof(_controller.GetById));
-    }
-
-    [Fact]
-    public async Task Create_WhenDirectReportNotFound_ReturnsNotFound()
-    {
-        // Arrange
-        var createDto = new CreateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow)
-        };
-
-        _serviceMock.Setup(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("DirectReport", createDto.DirectReportId));
-
-        // Act
-        var result = await _controller.Create(createDto, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    #endregion
-
-    #region Update Tests
-
-    [Fact]
-    public async Task Update_WhenExists_ReturnsOkWithUpdatedMeeting()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Agenda = "Updated agenda"
-        };
-        var resultDto = CreateDto();
-
-        _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resultDto);
-
-        // Act
-        var result = await _controller.Update(id, updateDto, CancellationToken.None);
+        var result = await _controller.GetByDirectReport(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task Update_WhenNotExists_ReturnsNotFound()
+    public async Task CreateBlank_ReturnsCreated1on1()
     {
         // Arrange
-        var id = Guid.NewGuid();
-        var updateDto = new UpdateOneOnOneMeetingDto
-        {
-            DirectReportId = Guid.NewGuid(),
-            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow)
-        };
-
-        _serviceMock.Setup(s => s.UpdateAsync(id, updateDto, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("OneOnOneMeeting", id));
+        var dto = CreateDto();
+        _serviceMock.Setup(s => s.CreateBlankAsync(It.IsAny<CreateBlankMeetingDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
 
         // Act
-        var result = await _controller.Update(id, updateDto, CancellationToken.None);
+        var result = await _controller.CreateBlank(new CreateBlankMeetingDto(), CancellationToken.None);
+
+        // Assert
+        var created = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        created.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task CreateBlank_WithoutABody_StillCreatesA1on1()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.CreateBlankAsync(It.IsAny<CreateBlankMeetingDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateDto());
+
+        // Act
+        var result = await _controller.CreateBlank(null, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task UpdateContent_ReturnsOkWithTheSavedNote()
+    {
+        // Arrange
+        var dto = CreateDto();
+        _serviceMock.Setup(s => s.UpdateContentAsync(It.IsAny<Guid>(), It.IsAny<UpdateMeetingContentDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.UpdateContent(dto.Id, new UpdateMeetingContentDto { Content = "x" }, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateContent_WhenNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.UpdateContentAsync(It.IsAny<Guid>(), It.IsAny<UpdateMeetingContentDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("OneOnOneMeeting", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.UpdateContent(Guid.NewGuid(), new UpdateMeetingContentDto(), CancellationToken.None);
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
-    #endregion
-
-    #region Delete Tests
-
     [Fact]
-    public async Task Delete_WhenExists_ReturnsNoContent()
+    public async Task UpdateTags_ReturnsOkWithTheRelinked1on1()
     {
         // Arrange
-        var id = Guid.NewGuid();
+        var dto = CreateDto();
+        _serviceMock.Setup(s => s.UpdateTagsAsync(It.IsAny<Guid>(), It.IsAny<UpdateMeetingTagsDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
 
-        _serviceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>()))
+        // Act
+        var result = await _controller.UpdateTags(dto.Id, new UpdateMeetingTagsDto { Tags = "#badredin" }, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateTags_WhenNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.UpdateTagsAsync(It.IsAny<Guid>(), It.IsAny<UpdateMeetingTagsDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("OneOnOneMeeting", Guid.NewGuid()));
+
+        // Act
+        var result = await _controller.UpdateTags(Guid.NewGuid(), new UpdateMeetingTagsDto(), CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateDate_ReturnsOkWithTheMoved1on1()
+    {
+        // Arrange
+        var dto = CreateDto();
+        _serviceMock.Setup(s => s.UpdateDateAsync(It.IsAny<Guid>(), It.IsAny<UpdateMeetingDateDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dto);
+
+        // Act
+        var result = await _controller.UpdateDate(
+            dto.Id,
+            new UpdateMeetingDateDto { MeetingDate = DateOnly.FromDateTime(DateTime.Today) },
+            CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent()
+    {
+        // Arrange
+        _serviceMock.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.Delete(id, CancellationToken.None);
+        var result = await _controller.Delete(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<NoContentResult>();
     }
 
     [Fact]
-    public async Task Delete_WhenNotExists_ReturnsNotFound()
+    public async Task Delete_WhenNotFound_ReturnsNotFound()
     {
         // Arrange
-        var id = Guid.NewGuid();
-
-        _serviceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException("OneOnOneMeeting", id));
+        _serviceMock.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("OneOnOneMeeting", Guid.NewGuid()));
 
         // Act
-        var result = await _controller.Delete(id, CancellationToken.None);
+        var result = await _controller.Delete(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
     }
-
-    #endregion
-
-    #region Helper Methods
 
     private static OneOnOneMeetingDto CreateDto()
     {
@@ -283,24 +271,15 @@ public class OneOnOneMeetingsControllerTests
         {
             Id = Guid.NewGuid(),
             DirectReportId = Guid.NewGuid(),
-            DirectReportName = "John Doe",
-            MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Agenda = "Weekly check-in",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = null,
-            NoteCount = 0,
-            OpenActionItemCount = 0
+            DirectReportName = "Panagiotis Badredin",
+            IsUnlinked = false,
+            MeetingDate = DateOnly.FromDateTime(DateTime.Today),
+            Title = "Weekly sync",
+            Content = "Weekly sync\n\n- Went well",
+            Tags = "#badredin",
+            TagsList = new[] { "#badredin" },
+            Snippet = "- Went well",
+            CreatedAt = DateTime.UtcNow
         };
     }
-
-    private static OneOnOneMeetingDetailsDto CreateDetailsDto()
-    {
-        return new OneOnOneMeetingDetailsDto
-        {
-            Meeting = CreateDto(),
-            Notes = new List<MeetingNoteDto>()
-        };
-    }
-
-    #endregion
 }

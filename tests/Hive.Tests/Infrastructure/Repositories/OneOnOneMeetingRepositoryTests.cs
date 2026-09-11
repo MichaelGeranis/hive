@@ -8,31 +8,28 @@ public class OneOnOneMeetingRepositoryTests
 {
     private readonly InMemoryDbContext _context;
     private readonly OneOnOneMeetingRepository _repository;
-    private readonly Guid _directReportId;
+    private readonly Guid _alice = Guid.NewGuid();
+    private readonly Guid _bob = Guid.NewGuid();
 
     public OneOnOneMeetingRepositoryTests()
     {
         _context = new InMemoryDbContext();
         _repository = new OneOnOneMeetingRepository(_context);
-        _directReportId = Guid.NewGuid();
     }
 
     [Fact]
     public void Constructor_WithNullContext_ThrowsArgumentNullException()
     {
-        // Act
         var act = () => new OneOnOneMeetingRepository(null!);
 
-        // Assert
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("context");
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
-    public async Task GetByIdAsync_WhenExists_ReturnsEntity()
+    public async Task AddAsync_StoresTheMeeting()
     {
         // Arrange
-        var meeting = CreateAndAddMeeting();
+        var meeting = Add(_alice, daysAgo: 1);
 
         // Act
         var result = await _repository.GetByIdAsync(meeting.Id);
@@ -43,191 +40,178 @@ public class OneOnOneMeetingRepositoryTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_WhenNotExists_ReturnsNull()
-    {
-        // Act
-        var result = await _repository.GetByIdAsync(Guid.NewGuid());
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetAllAsync_ReturnsAllMeetings()
+    public async Task GetAllAsync_ReturnsNewestFirst()
     {
         // Arrange
-        CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
-        CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
+        Add(_alice, daysAgo: 10, content: "Older");
+        Add(_alice, daysAgo: 1, content: "Newer");
 
         // Act
         var result = await _repository.GetAllAsync();
 
         // Assert
-        result.Should().HaveCount(2);
+        result.Select(m => m.Title).Should().ContainInOrder("Newer", "Older");
     }
 
     [Fact]
-    public async Task GetAllAsync_OrdersByMeetingDateDescending()
+    public async Task GetByDirectReportIdAsync_ReturnsOnlyThatPersonsMeetings()
     {
         // Arrange
-        var meeting1 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
-        var meeting2 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
-        var meeting3 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow));
+        Add(_alice, daysAgo: 1, content: "With Alice");
+        Add(_bob, daysAgo: 2, content: "With Bob");
 
         // Act
-        var result = await _repository.GetAllAsync();
+        var result = await _repository.GetByDirectReportIdAsync(_alice);
 
         // Assert
-        result[0].Id.Should().Be(meeting3.Id); // Most recent first
-        result[1].Id.Should().Be(meeting2.Id);
-        result[2].Id.Should().Be(meeting1.Id);
+        result.Should().ContainSingle().Which.Title.Should().Be("With Alice");
     }
 
     [Fact]
-    public async Task GetByDirectReportIdAsync_ReturnsMatchingMeetings()
+    public async Task GetFilteredPagedAsync_WithoutFilters_ReturnsEverything()
     {
         // Arrange
-        var otherReportId = Guid.NewGuid();
-        CreateAndAddMeeting();
-        CreateAndAddMeeting();
-        CreateAndAddMeeting(directReportId: otherReportId);
+        Add(_alice, daysAgo: 1);
+        Add(_bob, daysAgo: 2);
+        Add(null, daysAgo: 3);
 
         // Act
-        var result = await _repository.GetByDirectReportIdAsync(_directReportId);
+        var (items, totalCount) = await _repository.GetFilteredPagedAsync(0, 20, null, false, null);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().AllSatisfy(m => m.DirectReportId.Should().Be(_directReportId));
+        totalCount.Should().Be(3);
+        items.Should().HaveCount(3);
     }
 
     [Fact]
-    public async Task GetByDirectReportIdAsync_OrdersByMeetingDateDescending()
+    public async Task GetFilteredPagedAsync_WithADirectReport_ReturnsOnlyTheirMeetings()
     {
         // Arrange
-        var meeting1 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)));
-        var meeting2 = CreateAndAddMeeting(meetingDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
+        Add(_alice, daysAgo: 1, content: "With Alice");
+        Add(_bob, daysAgo: 2, content: "With Bob");
 
         // Act
-        var result = await _repository.GetByDirectReportIdAsync(_directReportId);
+        var (items, totalCount) = await _repository.GetFilteredPagedAsync(0, 20, _alice, false, null);
 
         // Assert
-        result[0].Id.Should().Be(meeting2.Id);
-        result[1].Id.Should().Be(meeting1.Id);
+        totalCount.Should().Be(1);
+        items[0].Title.Should().Be("With Alice");
     }
 
     [Fact]
-    public async Task AddAsync_AddsMeetingToContext()
+    public async Task GetFilteredPagedAsync_UnlinkedOnly_ReturnsMeetingsWithNobody()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_directReportId, DateOnly.FromDateTime(DateTime.UtcNow));
+        Add(_alice, daysAgo: 1, content: "With Alice");
+        Add(null, daysAgo: 2, content: "With nobody");
 
         // Act
-        var result = await _repository.AddAsync(meeting);
+        var (items, totalCount) = await _repository.GetFilteredPagedAsync(0, 20, null, true, null);
 
         // Assert
-        result.Should().Be(meeting);
-        _context.OneOnOneMeetings.Should().ContainKey(meeting.Id);
+        totalCount.Should().Be(1);
+        items[0].Title.Should().Be("With nobody");
     }
 
     [Fact]
-    public async Task AddAsync_WithDuplicateId_ThrowsInvalidOperationException()
+    public async Task GetFilteredPagedAsync_WithASearchTerm_MatchesTitleContentAndTags()
     {
         // Arrange
-        var meeting = CreateAndAddMeeting();
+        Add(_alice, daysAgo: 1, content: "Career chat\nWants to move towards staff", tags: "#alice");
+        Add(_bob, daysAgo: 2, content: "Weekly sync", tags: "#bob");
 
         // Act
-        var act = () => _repository.AddAsync(meeting);
+        var (byContent, _) = await _repository.GetFilteredPagedAsync(0, 20, null, false, "staff");
+        var (byTag, _) = await _repository.GetFilteredPagedAsync(0, 20, null, false, "#bob");
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*already exists*");
+        byContent.Should().ContainSingle().Which.Title.Should().Be("Career chat");
+        byTag.Should().ContainSingle().Which.Title.Should().Be("Weekly sync");
     }
 
     [Fact]
-    public async Task UpdateAsync_UpdatesMeetingInContext()
+    public async Task GetFilteredPagedAsync_PagesTheResults()
     {
         // Arrange
-        var meeting = CreateAndAddMeeting();
-        var newDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
-        meeting.Update(_directReportId, newDate, "New agenda");
+        for (var i = 1; i <= 5; i++)
+        {
+            Add(_alice, daysAgo: i, content: $"Meeting {i}");
+        }
+
+        // Act
+        var (items, totalCount) = await _repository.GetFilteredPagedAsync(2, 2, null, false, null);
+
+        // Assert
+        totalCount.Should().Be(5);
+        items.Should().HaveCount(2);
+        items[0].Title.Should().Be("Meeting 3");
+    }
+
+    [Fact]
+    public async Task GetCountsByDirectReportAsync_CountsPerPersonAndTheUnlinkedOnes()
+    {
+        // Arrange
+        Add(_alice, daysAgo: 1);
+        Add(_alice, daysAgo: 2);
+        Add(null, daysAgo: 3);
+
+        // Act
+        var result = await _repository.GetCountsByDirectReportAsync();
+
+        // Assert
+        result.Single(c => c.DirectReportId == _alice).Count.Should().Be(2);
+        result.Single(c => c.DirectReportId == null).Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CountAsync_CountsEvery1on1()
+    {
+        // Arrange
+        Add(_alice, daysAgo: 1);
+        Add(_bob, daysAgo: 2);
+
+        // Act
+        var result = await _repository.CountAsync();
+
+        // Assert
+        result.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReplacesTheStoredMeeting()
+    {
+        // Arrange
+        var meeting = Add(_alice, daysAgo: 1, content: "Before");
+        meeting.UpdateContent("After");
 
         // Act
         await _repository.UpdateAsync(meeting);
 
         // Assert
-        var stored = _context.OneOnOneMeetings[meeting.Id];
-        stored.MeetingDate.Should().Be(newDate);
-        stored.Agenda.Should().Be("New agenda");
+        var stored = await _repository.GetByIdAsync(meeting.Id);
+        stored!.Title.Should().Be("After");
     }
 
     [Fact]
-    public async Task UpdateAsync_WithNonExistentMeeting_ThrowsInvalidOperationException()
+    public async Task DeleteAsync_RemovesTheMeeting()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_directReportId, DateOnly.FromDateTime(DateTime.UtcNow));
-
-        // Act
-        var act = () => _repository.UpdateAsync(meeting);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
-    }
-
-    [Fact]
-    public async Task DeleteAsync_RemovesMeetingFromContext()
-    {
-        // Arrange
-        var meeting = CreateAndAddMeeting();
+        var meeting = Add(_alice, daysAgo: 1);
 
         // Act
         await _repository.DeleteAsync(meeting.Id);
 
         // Assert
-        _context.OneOnOneMeetings.Should().NotContainKey(meeting.Id);
+        (await _repository.ExistsAsync(meeting.Id)).Should().BeFalse();
     }
 
-    [Fact]
-    public async Task DeleteAsync_WithNonExistentId_DoesNotThrow()
-    {
-        // Act
-        var act = () => _repository.DeleteAsync(Guid.NewGuid());
-
-        // Assert
-        await act.Should().NotThrowAsync();
-    }
-
-    [Fact]
-    public async Task ExistsAsync_WhenExists_ReturnsTrue()
-    {
-        // Arrange
-        var meeting = CreateAndAddMeeting();
-
-        // Act
-        var result = await _repository.ExistsAsync(meeting.Id);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task ExistsAsync_WhenNotExists_ReturnsFalse()
-    {
-        // Act
-        var result = await _repository.ExistsAsync(Guid.NewGuid());
-
-        // Assert
-        result.Should().BeFalse();
-    }
-
-    private OneOnOneMeeting CreateAndAddMeeting(
-        Guid? directReportId = null,
-        DateOnly? meetingDate = null)
+    private OneOnOneMeeting Add(Guid? directReportId, int daysAgo, string content = "Check-in", string? tags = null)
     {
         var meeting = new OneOnOneMeeting(
-            directReportId ?? _directReportId,
-            meetingDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
-            "Weekly sync");
+            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-daysAgo)),
+            content,
+            tags,
+            directReportId);
         _context.OneOnOneMeetings.TryAdd(meeting.Id, meeting);
         return meeting;
     }

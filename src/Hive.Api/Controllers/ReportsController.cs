@@ -116,19 +116,6 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets action items summary from one-on-one meetings.
-    /// </summary>
-    /// <returns>Summary of action items with status breakdown.</returns>
-    [HttpGet("action-items")]
-    [ProducesResponseType(typeof(ActionItemsSummaryDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ActionItemsSummaryDto>> GetActionItemsSummary(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Generating action items summary");
-        var summary = await _service.GetActionItemsSummaryAsync(cancellationToken);
-        return Ok(summary);
-    }
-
-    /// <summary>
     /// Gets tasks grouped by assignee.
     /// </summary>
     /// <returns>Task distribution and metrics per assignee.</returns>

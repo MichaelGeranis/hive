@@ -47,10 +47,9 @@ src/
 │   │   ├── Leave.cs                             — Time a person is unavailable
 │   │   ├── LeaveEnums.cs                        — LeaveType, LeaveStatus
 │   │   ├── ManagerNote.cs                       — Manager's note: markdown body, folder, pin, optional TODO; NotePriority, NoteSortOrder
-│   │   ├── MeetingEnums.cs                      — NoteCategory, ActionItemStatus
-│   │   ├── MeetingNote.cs                       — Note taken during a 1:1
 │   │   ├── NoteFolder.cs                        — Folder grouping manager notes, nestable
-│   │   ├── OneOnOneMeeting.cs                   — A 1:1 with a direct report
+│   │   ├── NoteText.cs                          — Shared markdown rules: derived titles, tag normalisation
+│   │   ├── OneOnOneMeeting.cs                   — One 1:1, written as a single markdown note
 │   │   ├── Parent.cs                            — Jira parent work item grouping tasks
 │   │   ├── PerformanceEnums.cs                  — PerformanceRating
 │   │   ├── PerformanceReview.cs                 — Formal review for a named period
@@ -87,7 +86,6 @@ src/
 │       ├── IKnowledgePointRepository.cs
 │       ├── ILeaveRepository.cs
 │       ├── IManagerNoteRepository.cs
-│       ├── IMeetingNoteRepository.cs
 │       ├── INoteFolderRepository.cs
 │       ├── IOneOnOneMeetingRepository.cs
 │       ├── IParentRepository.cs
@@ -118,9 +116,8 @@ src/
 │   │   ├── KnowledgePointDto.cs                 — Points and level-upgrade suggestions
 │   │   ├── LeaveDto.cs                          — Leave payloads
 │   │   ├── ManagerNoteDto.cs                    — Manager note payloads
-│   │   ├── MeetingNoteDto.cs                    — Meeting note and action item payloads
 │   │   ├── NoteFolderDto.cs                     — Note folder payloads
-│   │   ├── OneOnOneMeetingDto.cs                — 1:1 payloads
+│   │   ├── OneOnOneMeetingDto.cs                — 1:1 payloads: body, tags, resolved person
 │   │   ├── PaginationDto.cs                     — Shared paged-result wrapper
 │   │   ├── ParentDto.cs                         — Parent work item payloads
 │   │   ├── PerformanceReviewDto.cs              — Review payloads
@@ -146,7 +143,6 @@ src/
 │   │   ├── IKnowledgePointService.cs
 │   │   ├── ILeaveService.cs
 │   │   ├── IManagerNoteService.cs
-│   │   ├── IMeetingNoteService.cs
 │   │   ├── INoteFolderService.cs
 │   │   ├── IOneOnOneMeetingService.cs
 │   │   ├── IParentService.cs
@@ -174,9 +170,8 @@ src/
 │       ├── KnowledgePointService.cs             — Point calculation and level suggestions
 │       ├── LeaveService.cs                      — Leave CRUD and overlap queries
 │       ├── ManagerNoteService.cs                — Manager notes and pending TODOs
-│       ├── MeetingNoteService.cs                — Meeting notes and open action items
 │       ├── NoteFolderService.cs                 — Note folders: nesting, cycle checks, non-destructive delete
-│       ├── OneOnOneMeetingService.cs            — 1:1 CRUD
+│       ├── OneOnOneMeetingService.cs            — 1:1 CRUD and tag-to-person resolution
 │       ├── ParentService.cs                     — Parent work item CRUD
 │       ├── PerformanceReviewService.cs          — Review CRUD
 │       ├── ProjectKnowledgeService.cs           — Knowledge level CRUD
@@ -216,7 +211,6 @@ src/
 │   │       ├── KnowledgePointRepository.cs
 │   │       ├── LeaveRepository.cs
 │   │       ├── ManagerNoteRepository.cs
-│   │       ├── MeetingNoteRepository.cs
 │   │       ├── NoteFolderRepository.cs
 │   │       ├── OneOnOneMeetingRepository.cs
 │   │       ├── ParentRepository.cs
@@ -248,7 +242,6 @@ src/
 │   │           ├── SqliteKnowledgePointRepository.cs
 │   │           ├── SqliteLeaveRepository.cs
 │   │           ├── SqliteManagerNoteRepository.cs
-│   │           ├── SqliteMeetingNoteRepository.cs
 │   │           ├── SqliteNoteFolderRepository.cs
 │   │           ├── SqliteOneOnOneMeetingRepository.cs
 │   │           ├── SqliteParentRepository.cs
@@ -284,7 +277,6 @@ src/
 │       ├── KnowledgePointsController.cs         — Points and level suggestions
 │       ├── LeavesController.cs                  — Leave records
 │       ├── ManagerNotesController.cs            — Manager notes and TODOs
-│       ├── MeetingNotesController.cs            — Meeting notes and action items
 │       ├── NoteFoldersController.cs             — Note folders
 │       ├── OneOnOneMeetingsController.cs        — 1:1 meetings
 │       ├── ParentsController.cs                 — Parent work items
@@ -322,7 +314,9 @@ src/
         │   ├── KnowledgeProgressionChart.tsx    — Knowledge level and points over time
         │   ├── Layout.tsx                       — App shell and navigation
         │   ├── LoadingScreen.tsx                — Backend startup state
+        │   ├── MarkdownEditor.tsx               — Shared writing surface: toolbar, shortcuts, preview
         │   ├── MarkdownPreview.tsx              — Renders note markdown (GFM: tables, task lists)
+        │   ├── MeetingEditor.tsx                — 1:1 editor: tags, resolved person chip, date
         │   ├── NoteEditor.tsx                   — Note writing surface: markdown shortcuts, preview, to-do inspector
         │   ├── NoteFolderTree.tsx               — Folder sidebar with nesting, rename and drop targets
         │   ├── PlanningMatrix.tsx               — Initiative × sprint allocation matrix
@@ -344,7 +338,7 @@ src/
         │   ├── Documents.tsx                    — Documents
         │   ├── Leaves.tsx                       — Leave records
         │   ├── Logs.tsx                         — Client-side log viewer
-        │   ├── Meetings.tsx                     — 1:1 meetings and notes
+        │   ├── Meetings.tsx                     — 1:1s: people rail, 1:1 list, markdown editor
         │   ├── Notes.tsx                        — Notes: folder sidebar, note list, autosaving markdown editor
         │   ├── Parents.tsx                      — Parent work items
         │   ├── ProjectKnowledge.tsx             — Knowledge levels and suggestions
@@ -378,35 +372,36 @@ tests/
     │   └── {Activity,Allocation,AppSettings,ChecklistInstance,ChecklistInstanceItem,
     │       ChecklistTemplate,ChecklistTemplateItem,DirectReport,Document,Initiative,
     │       InitiativeDependency,InitiativeMember,KnowledgePoint,Leave,ManagerNote,
-    │       MeetingNote,NoteFolder,OneOnOneMeeting,Parent,PerformanceReview,Project,ProjectKnowledge,
+    │       NoteFolder,NoteText,OneOnOneMeeting,Parent,PerformanceReview,Project,ProjectKnowledge,
     │       Quarter,SentimentAnalysisCache,Skill,SkillAssessment,SkillCategoryEntity,
     │       Sprint,SprintCapacity,SprintGoal,TeamTask}Tests.cs
     ├── Core/Exceptions/
     │   └── ExceptionTests.cs                    — DomainException hierarchy behaviour
     ├── Application/Services/                    — Service logic with mocked repositories (Moq)
     │   └── {Activity,AppSettings,Backup,Checklist,DirectReport,Document,JiraImport,
-    │       KnowledgePoint,Leave,ManagerNote,MeetingNote,NoteFolder,OneOnOneMeeting,Parent,
+    │       KnowledgePoint,Leave,ManagerNote,NoteFolder,OneOnOneMeeting,Parent,
     │       PerformanceReview,ProjectKnowledge,Project,QuarterlyPlanning,Reporting,
     │       SentimentAnalysis,SkillAssessment,Skill,SprintCapacity,Sprint,TeamTask}ServiceTests.cs
     ├── Api/Authentication/
     │   └── BasicAuthenticationHandlerTests.cs   — Credential parsing and rejection
     ├── Api/Controllers/                         — Controller behaviour with mocked services
     │   └── {ActivityFeed,Backup,ChecklistInstances,ChecklistTemplates,DirectReports,
-    │       Documents,JiraImport,Leaves,ManagerNotes,MeetingNotes,OneOnOneMeetings,
+    │       Documents,JiraImport,Leaves,ManagerNotes,OneOnOneMeetings,
     │       NoteFolders,Parents,PerformanceReviews,Projects,QuarterlyPlanning,Reports,Settings,
     │       SkillAssessments,SprintCapacity,Sprints,TeamTasks}ControllerTests.cs
     ├── Infrastructure/Persistence/
     │   └── DatabaseBackupServiceTests.cs        — File-level backup behaviour
     ├── Infrastructure/Repositories/             — Repository implementations
     │   └── {Activity,Allocation,AppSettings,ChecklistInstance,ChecklistTemplate,
-    │       DirectReport,Document,Initiative,KnowledgePoint,Leave,ManagerNote,MeetingNote,
+    │       DirectReport,Document,Initiative,KnowledgePoint,Leave,ManagerNote,
     │       NoteFolder,OneOnOneMeeting,Parent,PerformanceReview,Project,Quarter,SentimentAnalysisCache,
     │       SkillAssessment,SkillCategory,Skill,SprintCapacity,SprintGoal,Sprint,
     │       TeamTask}RepositoryTests.cs
     └── Integration/                             — Real services, full DI container, in-memory database
         ├── IntegrationTestBase.cs               — Base class building the DI container
         ├── JiraImportServiceIntegrationTests.cs — End-to-end CSV import
-        └── NotesIntegrationTests.cs             — End-to-end note writing, folders and pinning
+        ├── NotesIntegrationTests.cs             — End-to-end note writing, folders and pinning
+        └── OneOnOneIntegrationTests.cs          — End-to-end 1:1 writing and tag linking
 
 scripts/
 ├── build-backend.sh                             — Cross-platform .NET publish (osx-arm64, osx-x64, win-x64, linux-x64, all)

@@ -151,63 +151,12 @@ public class ManagerNote
     /// Derives a note title from the first non-empty line of its content, stripping the
     /// markdown that decorates that line. Falls back to a placeholder for an empty note.
     /// </summary>
-    public static string DeriveTitle(string? content)
-    {
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            return DefaultTitle;
-        }
-
-        var firstLine = content
-            .Split('\n')
-            .Select(line => StripMarkdown(line))
-            .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
-
-        if (string.IsNullOrWhiteSpace(firstLine))
-        {
-            return DefaultTitle;
-        }
-
-        return firstLine.Length > 200 ? firstLine[..200].TrimEnd() : firstLine;
-    }
-
-    /// <summary>
-    /// Removes the markdown decoration from a single line so it reads as a plain title.
-    /// </summary>
-    private static string StripMarkdown(string line)
-    {
-        var text = line.Replace("\r", string.Empty).Trim();
-
-        // Leading block markers: headings, quotes, list bullets, ordered list numbers.
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"^(#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)", string.Empty);
-
-        // Task list checkbox left behind by a bullet marker.
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"^\[[ xX]\]\s*", string.Empty);
-
-        // A horizontal rule carries no title.
-        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^([-*_]\s*){3,}$"))
-        {
-            return string.Empty;
-        }
-
-        // Inline emphasis and code markers.
-        text = text.Replace("**", string.Empty)
-            .Replace("__", string.Empty)
-            .Replace("`", string.Empty)
-            .Replace("~~", string.Empty);
-
-        return text.Trim();
-    }
+    public static string DeriveTitle(string? content) => NoteText.DeriveTitle(content, DefaultTitle);
 
     /// <summary>
     /// Gets the list of tags as an array.
     /// </summary>
-    public string[] GetTagsList()
-    {
-        if (string.IsNullOrWhiteSpace(Tags))
-            return Array.Empty<string>();
-        return Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    }
+    public string[] GetTagsList() => NoteText.SplitTags(Tags);
 
     /// <summary>
     /// Checks if the note has a specific tag.
@@ -222,20 +171,7 @@ public class ManagerNote
     /// <summary>
     /// Normalizes tags to lowercase, comma-separated format.
     /// </summary>
-    private static string NormalizeTags(string? tags)
-    {
-        if (string.IsNullOrWhiteSpace(tags))
-            return string.Empty;
-
-        var tagList = tags
-            .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(t => t.ToLowerInvariant())
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Distinct()
-            .OrderBy(t => t);
-
-        return string.Join(",", tagList);
-    }
+    private static string NormalizeTags(string? tags) => NoteText.NormalizeTags(tags);
 
     public void ToggleComplete()
     {

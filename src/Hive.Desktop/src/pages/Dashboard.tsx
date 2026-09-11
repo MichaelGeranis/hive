@@ -9,16 +9,14 @@ import {
   Eye,
   EyeOff,
   ListTodo,
-  Calendar,
-  Check,
   Star,
   TrendingUp,
   Download
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, meetingNotesApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, MeetingNote, KnowledgeLevelSuggestion } from '../types'
+import { reportsApi, tasksApi, projectsApi, meetingsApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, KnowledgeLevelSuggestion } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
@@ -149,8 +147,7 @@ export default function Dashboard() {
   const [accuracy, setAccuracy] = useState<EstimationAccuracy | null>(null)
   const [includeSupportEstimate, setIncludeSupportEstimate] = useState(false)
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
-  const [actionItems, setActionItems] = useState<MeetingNote[]>([])
-  const [showActionItemsModal, setShowActionItemsModal] = useState(false)
+  const [oneOnOneCount, setOneOnOneCount] = useState(0)
   const [knowledgeSuggestions, setKnowledgeSuggestions] = useState<KnowledgeLevelSuggestion[]>([])
   const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -195,10 +192,8 @@ export default function Dashboard() {
 
   const closeModal = useCallback(() => setSelectedMember(null), [])
   const closeCustomizeModal = useCallback(() => setShowCustomize(false), [])
-  const closeActionItemsModal = useCallback(() => setShowActionItemsModal(false), [])
   useEscapeKey(closeModal, !!selectedMember)
   useEscapeKey(closeCustomizeModal, showCustomize && !selectedMember)
-  useEscapeKey(closeActionItemsModal, showActionItemsModal && !selectedMember && !showCustomize)
 
   // Load core data (always needed)
   useEffect(() => {
@@ -236,25 +231,18 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, actionItemsData, knowledgeSuggestionsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, meetingCount, knowledgeSuggestionsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
-        meetingNotesApi.getOpenActionItems(),
+        meetingsApi.getCount(),
         knowledgePointsApi.getSuggestions()
       ])
       setDashboard(dashboardData)
       setTasks(tasksData.items)
       setProjects(projectsData)
       setKnowledgeSuggestions(knowledgeSuggestionsData)
-      // Sort action items by due date ascending (earliest first)
-      const sortedActionItems = actionItemsData.sort((a, b) => {
-        if (!a.actionDueDate && !b.actionDueDate) return 0
-        if (!a.actionDueDate) return 1
-        if (!b.actionDueDate) return -1
-        return new Date(a.actionDueDate).getTime() - new Date(b.actionDueDate).getTime()
-      })
-      setActionItems(sortedActionItems)
+      setOneOnOneCount(meetingCount)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -296,17 +284,6 @@ export default function Dashboard() {
       console.error('Failed to load capacity data:', err)
     } finally {
       setLoadingStates(prev => ({ ...prev, capacity: false }))
-    }
-  }
-
-  const handleCompleteActionItem = async (noteId: string) => {
-    try {
-      await meetingNotesApi.completeAction(noteId)
-      // Remove the completed item from the list
-      setActionItems(prev => prev.filter(item => item.id !== noteId))
-    } catch (err) {
-      console.error('Failed to complete action item:', err)
-      showError(getErrorMessage(err))
     }
   }
 
@@ -664,13 +641,12 @@ export default function Dashboard() {
           onClick={() => navigate('/projects?filter=active')}
         />
         <StatCard
-          title="1:1 Action Items"
-          value={actionItems.length}
-          subtitle={actionItems.filter(a => a.isOverdue).length > 0 ? `${actionItems.filter(a => a.isOverdue).length} overdue` : undefined}
+          title="1:1s logged"
+          value={oneOnOneCount}
           icon={<ListTodo className="w-6 h-6" />}
           badge={ALL_SPRINTS_BADGE}
-          color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
-          onClick={() => setShowActionItemsModal(true)}
+          color="blue"
+          onClick={() => navigate('/meetings')}
         />
         <div className={`rounded-xl p-4 ${getWarningBgClass(warningCount)} transition-colors`}>
           <div className="flex items-center justify-between">
@@ -1776,77 +1752,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Action Items Modal */}
-      {showActionItemsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl mx-4">
-            <CardHeader
-              title="1:1 Action Items"
-              subtitle={`${actionItems.length} open item${actionItems.length !== 1 ? 's' : ''}${actionItems.filter(a => a.isOverdue).length > 0 ? ` (${actionItems.filter(a => a.isOverdue).length} overdue)` : ''}`}
-              action={
-                <button
-                  onClick={closeActionItemsModal}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  <X className="w-5 h-5 text-slate-500" />
-                </button>
-              }
-            />
-            <CardContent>
-              {actionItems.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {actionItems.map(item => (
-                    <div
-                      key={item.id}
-                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg ${item.isOverdue ? 'border-l-4 border-red-500' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.content}</p>
-                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {item.directReportName}
-                            </span>
-                            {item.actionDueDate && (
-                              <span className={`flex items-center gap-1 ${item.isOverdue ? 'text-red-500 font-medium' : ''}`}>
-                                <Calendar className="w-3 h-3" />
-                                {new Date(item.actionDueDate).toLocaleDateString()}
-                                {item.isOverdue && ' (Overdue)'}
-                              </span>
-                            )}
-                            {item.actionAssignee && (
-                              <span>Assigned: {item.actionAssignee}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {item.isOverdue && (
-                            <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
-                              Overdue
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleCompleteActionItem(item.id)}
-                            className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                            title="Mark as completed"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                  No open action items from 1:1 meetings
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
     </div>
   )

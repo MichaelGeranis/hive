@@ -4,101 +4,248 @@ namespace Hive.Tests.Core.Entities;
 
 public class OneOnOneMeetingTests
 {
-    private readonly Guid _validDirectReportId = Guid.NewGuid();
+    private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
 
     [Fact]
-    public void Constructor_WithValidData_CreatesMeeting()
+    public void Constructor_WithDateOnly_CreatesAnEmptyUnlinked1on1()
     {
-        // Arrange
-        var meetingDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
-        var agenda = "Weekly sync";
-
         // Act
-        var meeting = new OneOnOneMeeting(_validDirectReportId, meetingDate, agenda);
+        var meeting = new OneOnOneMeeting(Today);
 
         // Assert
         meeting.Id.Should().NotBeEmpty();
-        meeting.DirectReportId.Should().Be(_validDirectReportId);
-        meeting.MeetingDate.Should().Be(meetingDate);
-        meeting.Agenda.Should().Be(agenda);
-        meeting.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        meeting.MeetingDate.Should().Be(Today);
+        meeting.Content.Should().BeEmpty();
+        meeting.Title.Should().Be(OneOnOneMeeting.DefaultTitle);
+        meeting.Tags.Should().BeEmpty();
+        meeting.DirectReportId.Should().BeNull();
+        meeting.IsUnlinked().Should().BeTrue();
+        meeting.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        meeting.UpdatedAt.Should().BeNull();
     }
 
     [Fact]
-    public void Constructor_WithDefaultParams_UsesDefaults()
+    public void Constructor_WithContent_DerivesTheTitleFromTheFirstLine()
     {
         // Act
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)));
+        var meeting = new OneOnOneMeeting(Today, "Weekly sync\nTalked about the migration");
 
         // Assert
-        meeting.Agenda.Should().BeEmpty();
+        meeting.Title.Should().Be("Weekly sync");
+        meeting.Content.Should().Be("Weekly sync\nTalked about the migration");
     }
 
     [Fact]
-    public void Constructor_WithEmptyDirectReportId_ThrowsArgumentException()
+    public void Constructor_NormalisesTags()
     {
         // Act
-        var act = () => new OneOnOneMeeting(Guid.Empty, DateOnly.FromDateTime(DateTime.UtcNow));
+        var meeting = new OneOnOneMeeting(Today, null, "#Badredin, Growth");
 
         // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithParameterName("directReportId");
+        meeting.Tags.Should().Be("#badredin,growth");
+        meeting.GetTagsList().Should().BeEquivalentTo(new[] { "#badredin", "growth" });
     }
 
     [Fact]
-    public void Update_UpdatesProperties()
+    public void Constructor_WithADateTag_TakesItsDateFromTheTag()
+    {
+        // Act
+        var meeting = new OneOnOneMeeting(Today, null, "#panagiotis #20260401");
+
+        // Assert
+        meeting.MeetingDate.Should().Be(new DateOnly(2026, 4, 1));
+    }
+
+    [Fact]
+    public void CreateBlank_OpensAnEmptyNoteForTheDay()
+    {
+        // Act
+        var meeting = OneOnOneMeeting.CreateBlank(Today);
+
+        // Assert
+        meeting.Content.Should().BeEmpty();
+        meeting.Title.Should().Be(OneOnOneMeeting.DefaultTitle);
+        meeting.MeetingDate.Should().Be(Today);
+    }
+
+    [Fact]
+    public void UpdateContent_TakesTheTitleFromTheFirstLine()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow));
-        var newDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
-        var newDirectReportId = Guid.NewGuid();
+        var meeting = OneOnOneMeeting.CreateBlank(Today);
 
         // Act
-        meeting.Update(newDirectReportId, newDate, "New agenda");
+        meeting.UpdateContent("# Career chat\nWants to move towards staff");
 
         // Assert
-        meeting.DirectReportId.Should().Be(newDirectReportId);
-        meeting.MeetingDate.Should().Be(newDate);
-        meeting.Agenda.Should().Be("New agenda");
+        meeting.Title.Should().Be("Career chat");
         meeting.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Update_WithNullAgenda_SetsEmptyString()
+    public void UpdateContent_PreservesWhitespaceAsTyped()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "Initial Agenda");
+        var meeting = OneOnOneMeeting.CreateBlank(Today);
 
         // Act
-        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), null);
+        meeting.UpdateContent("Notes\n\n  indented\n\n");
 
         // Assert
-        meeting.Agenda.Should().BeEmpty();
+        meeting.Content.Should().Be("Notes\n\n  indented\n\n");
     }
 
     [Fact]
-    public void Update_TrimsWhitespace()
+    public void UpdateContent_WithEmptyContent_FallsBackToThePlaceholderTitle()
     {
         // Arrange
-        var meeting = new OneOnOneMeeting(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow));
+        var meeting = new OneOnOneMeeting(Today, "Something");
 
         // Act
-        meeting.Update(_validDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow), "  Weekly sync  ");
+        meeting.UpdateContent("   ");
 
         // Assert
-        meeting.Agenda.Should().Be("Weekly sync");
+        meeting.Title.Should().Be(OneOnOneMeeting.DefaultTitle);
     }
 
     [Fact]
-    public void Constructor_TrimsWhitespace()
+    public void UpdateTags_ReplacesTheTags()
     {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today, null, "#alice");
+
         // Act
-        var meeting = new OneOnOneMeeting(
-            _validDirectReportId,
-            DateOnly.FromDateTime(DateTime.UtcNow),
-            "  Weekly sync  ");
+        meeting.UpdateTags("#bob, growth");
 
         // Assert
-        meeting.Agenda.Should().Be("Weekly sync");
+        meeting.Tags.Should().Be("#bob,growth");
+        meeting.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void UpdateTags_WithADateTag_MovesTheMeeting()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+
+        // Act
+        meeting.UpdateTags("#bob #20251224");
+
+        // Assert
+        meeting.MeetingDate.Should().Be(new DateOnly(2025, 12, 24));
+    }
+
+    [Fact]
+    public void UpdateTags_WithoutADateTag_LeavesTheDateAlone()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+
+        // Act
+        meeting.UpdateTags("#bob");
+
+        // Assert
+        meeting.MeetingDate.Should().Be(Today);
+    }
+
+    [Theory]
+    [InlineData("#20261301")]  // month 13
+    [InlineData("#20260230")]  // February 30th
+    [InlineData("#2026041")]   // too short
+    [InlineData("#notadate")]
+    public void UpdateTags_WithAnInvalidDateTag_LeavesTheDateAlone(string tag)
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+
+        // Act
+        meeting.UpdateTags(tag);
+
+        // Assert
+        meeting.MeetingDate.Should().Be(Today);
+    }
+
+    [Fact]
+    public void LinkTo_LinksTheMeetingToAPerson()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+        var reportId = Guid.NewGuid();
+
+        // Act
+        meeting.LinkTo(reportId);
+
+        // Assert
+        meeting.DirectReportId.Should().Be(reportId);
+        meeting.IsUnlinked().Should().BeFalse();
+        meeting.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void LinkTo_Null_LeavesTheMeetingUnlinked()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today, null, null, Guid.NewGuid());
+
+        // Act
+        meeting.LinkTo(null);
+
+        // Assert
+        meeting.DirectReportId.Should().BeNull();
+        meeting.IsUnlinked().Should().BeTrue();
+    }
+
+    [Fact]
+    public void LinkTo_TheSamePerson_ChangesNothing()
+    {
+        // Arrange
+        var reportId = Guid.NewGuid();
+        var meeting = new OneOnOneMeeting(Today, null, null, reportId);
+
+        // Act
+        meeting.LinkTo(reportId);
+
+        // Assert
+        meeting.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetMeetingDate_MovesTheMeeting()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+        var earlier = Today.AddDays(-3);
+
+        // Act
+        meeting.SetMeetingDate(earlier);
+
+        // Assert
+        meeting.MeetingDate.Should().Be(earlier);
+        meeting.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void SetMeetingDate_WithTheSameDay_ChangesNothing()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today);
+
+        // Act
+        meeting.SetMeetingDate(Today);
+
+        // Assert
+        meeting.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void HasTag_FindsATagRegardlessOfCase()
+    {
+        // Arrange
+        var meeting = new OneOnOneMeeting(Today, null, "#Badredin");
+
+        // Act & Assert
+        meeting.HasTag("#badredin").Should().BeTrue();
+        meeting.HasTag("#BADREDIN").Should().BeTrue();
+        meeting.HasTag("#alice").Should().BeFalse();
     }
 }

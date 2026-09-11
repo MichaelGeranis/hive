@@ -16,7 +16,6 @@ public class SentimentAnalysisService : ISentimentAnalysisService
     private readonly IAppSettingsRepository _settingsRepository;
     private readonly ISentimentAnalysisCacheRepository _cacheRepository;
     private readonly IDirectReportRepository _directReportRepository;
-    private readonly IMeetingNoteRepository _meetingNoteRepository;
     private readonly IOneOnOneMeetingRepository _meetingRepository;
     private readonly IClaudeApiService _claudeApiService;
     private readonly ILogger<SentimentAnalysisService> _logger;
@@ -25,7 +24,6 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         IAppSettingsRepository settingsRepository,
         ISentimentAnalysisCacheRepository cacheRepository,
         IDirectReportRepository directReportRepository,
-        IMeetingNoteRepository meetingNoteRepository,
         IOneOnOneMeetingRepository meetingRepository,
         IClaudeApiService claudeApiService,
         ILogger<SentimentAnalysisService> logger)
@@ -33,7 +31,6 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         _settingsRepository = settingsRepository ?? throw new ArgumentNullException(nameof(settingsRepository));
         _cacheRepository = cacheRepository ?? throw new ArgumentNullException(nameof(cacheRepository));
         _directReportRepository = directReportRepository ?? throw new ArgumentNullException(nameof(directReportRepository));
-        _meetingNoteRepository = meetingNoteRepository ?? throw new ArgumentNullException(nameof(meetingNoteRepository));
         _meetingRepository = meetingRepository ?? throw new ArgumentNullException(nameof(meetingRepository));
         _claudeApiService = claudeApiService ?? throw new ArgumentNullException(nameof(claudeApiService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -250,6 +247,10 @@ public class SentimentAnalysisService : ISentimentAnalysisService
         };
     }
 
+    /// <summary>
+    /// Collects the bodies of the person's recent 1:1s. Each 1:1 is one note, so an empty
+    /// one contributes nothing to the analysis.
+    /// </summary>
     private async Task<IReadOnlyList<MeetingNoteForAnalysis>> GetNotesForDirectReportAsync(
         Guid directReportId,
         DateTime cutoffDate,
@@ -257,25 +258,11 @@ public class SentimentAnalysisService : ISentimentAnalysisService
     {
         var meetings = await _meetingRepository.GetByDirectReportIdAsync(directReportId, cancellationToken);
         var cutoffDateOnly = DateOnly.FromDateTime(cutoffDate);
-        var recentMeetings = meetings.Where(m => m.MeetingDate >= cutoffDateOnly).ToList();
 
-        var notes = new List<MeetingNoteForAnalysis>();
-
-        foreach (var meeting in recentMeetings)
-        {
-            var meetingNotes = await _meetingNoteRepository.GetByMeetingIdAsync(meeting.Id, cancellationToken);
-
-            foreach (var note in meetingNotes)
-            {
-                notes.Add(new MeetingNoteForAnalysis(
-                    note.Content,
-                    note.Category.ToString(),
-                    meeting.MeetingDate
-                ));
-            }
-        }
-
-        return notes;
+        return meetings
+            .Where(m => m.MeetingDate >= cutoffDateOnly && !string.IsNullOrWhiteSpace(m.Content))
+            .Select(m => new MeetingNoteForAnalysis(m.Content, m.MeetingDate))
+            .ToList();
     }
 
     private SentimentAnalysisDto MapCacheToDto(SentimentAnalysisCache cache, string directReportName)

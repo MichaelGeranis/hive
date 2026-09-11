@@ -170,26 +170,6 @@ public class ReportsControllerTests
 
     #endregion
 
-    #region Action Items Summary Tests
-
-    [Fact]
-    public async Task GetActionItemsSummary_ReturnsOkWithSummary()
-    {
-        // Arrange
-        var summary = CreateActionItemsSummary();
-        _serviceMock.Setup(s => s.GetActionItemsSummaryAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(summary);
-
-        // Act
-        var result = await _controller.GetActionItemsSummary(CancellationToken.None);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeOfType<ActionItemsSummaryDto>();
-    }
-
-    #endregion
-
     #region Tasks By Assignee Report Tests
 
     [Fact]
@@ -244,8 +224,7 @@ public class ReportsControllerTests
             CancelledMeetings = 0,
             RescheduledMeetings = 0,
             CompletionRate = 80,
-            FrequencyByDirectReport = new List<OneOnOneFrequencyDto>(),
-            ActionItemsSummary = new List<ActionItemsSummaryDto>()
+            FrequencyByDirectReport = new List<OneOnOneFrequencyDto>()
         };
     }
 
@@ -298,20 +277,6 @@ public class ReportsControllerTests
                 DaysSinceLastMeeting = 21,
                 FrequencyStatus = "Overdue"
             }
-        };
-    }
-
-    private static ActionItemsSummaryDto CreateActionItemsSummary()
-    {
-        return new ActionItemsSummaryDto
-        {
-            TotalActionItems = 30,
-            OpenItems = 10,
-            InProgressItems = 5,
-            CompletedItems = 12,
-            CancelledItems = 3,
-            OverdueItems = 2,
-            CompletionRate = 40
         };
     }
 

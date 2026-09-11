@@ -13,7 +13,6 @@ public class SentimentAnalysisServiceTests
     private readonly Mock<IAppSettingsRepository> _settingsRepositoryMock;
     private readonly Mock<ISentimentAnalysisCacheRepository> _cacheRepositoryMock;
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
-    private readonly Mock<IMeetingNoteRepository> _meetingNoteRepositoryMock;
     private readonly Mock<IOneOnOneMeetingRepository> _meetingRepositoryMock;
     private readonly Mock<IClaudeApiService> _claudeApiServiceMock;
     private readonly Mock<ILogger<SentimentAnalysisService>> _loggerMock;
@@ -22,12 +21,13 @@ public class SentimentAnalysisServiceTests
     private readonly DirectReport _testDirectReport;
     private AppSettings _enabledSettings;
 
+    private const string MeetingBody = "Weekly 1:1\n\nThings are going well, good progress this week.";
+
     public SentimentAnalysisServiceTests()
     {
         _settingsRepositoryMock = new Mock<IAppSettingsRepository>();
         _cacheRepositoryMock = new Mock<ISentimentAnalysisCacheRepository>();
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
-        _meetingNoteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _meetingRepositoryMock = new Mock<IOneOnOneMeetingRepository>();
         _claudeApiServiceMock = new Mock<IClaudeApiService>();
         _loggerMock = new Mock<ILogger<SentimentAnalysisService>>();
@@ -36,7 +36,6 @@ public class SentimentAnalysisServiceTests
             _settingsRepositoryMock.Object,
             _cacheRepositoryMock.Object,
             _directReportRepositoryMock.Object,
-            _meetingNoteRepositoryMock.Object,
             _meetingRepositoryMock.Object,
             _claudeApiServiceMock.Object,
             _loggerMock.Object);
@@ -54,7 +53,7 @@ public class SentimentAnalysisServiceTests
     public void Constructor_WithNullSettingsRepository_ThrowsArgumentNullException()
     {
         var act = () => new SentimentAnalysisService(null!, _cacheRepositoryMock.Object,
-            _directReportRepositoryMock.Object, _meetingNoteRepositoryMock.Object,
+            _directReportRepositoryMock.Object,
             _meetingRepositoryMock.Object, _claudeApiServiceMock.Object, _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("settingsRepository");
     }
@@ -63,7 +62,7 @@ public class SentimentAnalysisServiceTests
     public void Constructor_WithNullClaudeApiService_ThrowsArgumentNullException()
     {
         var act = () => new SentimentAnalysisService(_settingsRepositoryMock.Object, _cacheRepositoryMock.Object,
-            _directReportRepositoryMock.Object, _meetingNoteRepositoryMock.Object,
+            _directReportRepositoryMock.Object,
             _meetingRepositoryMock.Object, null!, _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("claudeApiService");
     }
@@ -223,13 +222,10 @@ public class SentimentAnalysisServiceTests
             .ReturnsAsync(_testDirectReport);
 
         // Set up a meeting with a note
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
+        var meeting = new OneOnOneMeeting(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), MeetingBody, directReportId: directReportId);
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Things are going well", NoteCategory.Feedback);
-        _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote> { note });
 
         // Cache is fresh (latest note is older than cache analyzed time)
         var latestNoteDate = DateTime.UtcNow.AddDays(-5);
@@ -260,13 +256,10 @@ public class SentimentAnalysisServiceTests
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
 
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
+        var meeting = new OneOnOneMeeting(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), MeetingBody, directReportId: directReportId);
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Good progress this week", NoteCategory.Feedback);
-        _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote> { note });
 
         var apiResult = new SentimentAnalysisResult(75, 20, 5, "Positive",
             new[] { "engagement" }, Array.Empty<MonthlySentiment>());
@@ -297,13 +290,10 @@ public class SentimentAnalysisServiceTests
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
 
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
+        var meeting = new OneOnOneMeeting(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), MeetingBody, directReportId: directReportId);
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Some note content", NoteCategory.Feedback);
-        _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote> { note });
 
         _cacheRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SentimentAnalysisCache?)null);

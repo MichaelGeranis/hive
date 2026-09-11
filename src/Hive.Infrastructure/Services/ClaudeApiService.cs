@@ -156,7 +156,7 @@ public class ClaudeApiService : IClaudeApiService
 
             foreach (var note in monthGroup)
             {
-                sb.AppendLine($"- [{note.Category}] {note.Content}");
+                sb.AppendLine($"- {note.Content}");
             }
             sb.AppendLine();
         }

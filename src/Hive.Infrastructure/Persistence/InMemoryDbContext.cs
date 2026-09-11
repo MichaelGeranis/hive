@@ -15,7 +15,6 @@ public class InMemoryDbContext
     public ConcurrentDictionary<Guid, Skill> Skills { get; } = new();
     public ConcurrentDictionary<Guid, SkillAssessment> SkillAssessments { get; } = new();
     public ConcurrentDictionary<Guid, OneOnOneMeeting> OneOnOneMeetings { get; } = new();
-    public ConcurrentDictionary<Guid, MeetingNote> MeetingNotes { get; } = new();
     public ConcurrentDictionary<Guid, Project> Projects { get; } = new();
     public ConcurrentDictionary<Guid, TeamTask> TeamTasks { get; } = new();
     public ConcurrentDictionary<Guid, Leave> Leaves { get; } = new();
@@ -256,68 +255,50 @@ public class InMemoryDbContext
 
     private void SeedOneOnOneMeetings()
     {
-        var directReportIds = DirectReports.Keys.ToList();
-        if (directReportIds.Count == 0) return;
+        var reports = DirectReports.Values.OrderBy(r => r.FirstName).ToList();
+        if (reports.Count == 0) return;
 
-        // Past meeting with Alice
-        var meeting1 = new OneOnOneMeeting(
-            directReportIds[0],
-            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-            "Weekly sync - project updates, blockers");
-        OneOnOneMeetings.TryAdd(meeting1.Id, meeting1);
-
-        // Add notes to the completed meeting
-        var note1 = new MeetingNote(meeting1.Id, "Discussed progress on the API redesign project. On track for Q1 delivery.", NoteCategory.Discussion);
-        var note2 = new MeetingNote(meeting1.Id, "Review and approve architecture proposal", NoteCategory.ActionItem);
-        note2.SetActionDetails(DateTime.UtcNow.AddDays(-3), "Manager");
-        note2.CompleteAction();
-        var note3 = new MeetingNote(meeting1.Id, "Great job on mentoring the new team member!", NoteCategory.Achievement);
-        var note4 = new MeetingNote(meeting1.Id, "Schedule tech talk on Clean Architecture", NoteCategory.ActionItem);
-        note4.SetActionDetails(DateTime.UtcNow.AddDays(7), "Alice");
-
-        MeetingNotes.TryAdd(note1.Id, note1);
-        MeetingNotes.TryAdd(note2.Id, note2);
-        MeetingNotes.TryAdd(note3.Id, note3);
-        MeetingNotes.TryAdd(note4.Id, note4);
-
-        // Upcoming meeting with Alice
-        var meeting2 = new OneOnOneMeeting(
-            directReportIds[0],
-            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)),
-            "Weekly sync - follow up on action items");
-        OneOnOneMeetings.TryAdd(meeting2.Id, meeting2);
-
-        // Upcoming meeting with Bob
-        if (directReportIds.Count > 1)
+        void Seed(DirectReport report, int daysAgo, string content)
         {
-            var meeting3 = new OneOnOneMeeting(
-                directReportIds[1],
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
-                "Career development discussion");
-            OneOnOneMeetings.TryAdd(meeting3.Id, meeting3);
-
-            // Past meeting with Bob
-            var meeting4 = new OneOnOneMeeting(
-                directReportIds[1],
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14)),
-                "Project check-in");
-            OneOnOneMeetings.TryAdd(meeting4.Id, meeting4);
-
-            var note5 = new MeetingNote(meeting4.Id, "Discussed .NET Core learning path", NoteCategory.Discussion);
-            var note6 = new MeetingNote(meeting4.Id, "Complete Pluralsight course on .NET Core", NoteCategory.ActionItem);
-            note6.SetActionDetails(DateTime.UtcNow.AddDays(-5), "Bob");
-            MeetingNotes.TryAdd(note5.Id, note5);
-            MeetingNotes.TryAdd(note6.Id, note6);
+            var meeting = new OneOnOneMeeting(
+                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-daysAgo)),
+                content,
+                report.FirstName.ToLowerInvariant(),
+                report.Id);
+            OneOnOneMeetings.TryAdd(meeting.Id, meeting);
         }
 
-        // Upcoming meeting with Carol
-        if (directReportIds.Count > 2)
+        Seed(reports[0], 7, """
+            Weekly sync
+
+            - API redesign is on track for Q1 delivery
+            - Wants to mentor the new joiner, happy to pair on it
+            - Asked about the architecture proposal, said it reads well
+            """.Trim());
+
+        Seed(reports[0], 21, """
+            Weekly sync
+
+            Quieter week. Picked up the migration work and is enjoying it.
+            """.Trim());
+
+        if (reports.Count > 1)
         {
-            var meeting5 = new OneOnOneMeeting(
-                directReportIds[2],
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)),
-                "Quarterly check-in");
-            OneOnOneMeetings.TryAdd(meeting5.Id, meeting5);
+            Seed(reports[1], 14, """
+                Project check-in
+
+                - Working through the .NET Core learning path
+                - Wants more review time before the next release
+                """.Trim());
+        }
+
+        if (reports.Count > 2)
+        {
+            Seed(reports[2], 30, """
+                Quarterly check-in
+
+                Feeling stretched across two projects. Agreed to drop one next quarter.
+                """.Trim());
         }
     }
 
