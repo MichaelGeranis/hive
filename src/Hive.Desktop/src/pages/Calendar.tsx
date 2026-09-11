@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, StickyNote, MessageSquare } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
 import { meetingsApi, notesApi } from '../services/api'
@@ -30,8 +30,9 @@ const EVENT_ICONS = {
   'one-on-one': MessageSquare,
 }
 
-const parseDateTag = (tags: string[]): Date | null => {
-  const dateTag = tags.find((tag) => /^#\d{8}$/.test(tag.trim()))
+const parseDateTag = (tags: string[], content: string): Date | null => {
+  const tagValues = [...tags, ...(content.match(/#\d{8}/g) ?? [])]
+  const dateTag = tagValues.find((tag) => /^#\d{8}$/.test(tag.trim()))
   if (!dateTag) return null
 
   const value = dateTag.trim().slice(1)
@@ -47,6 +48,7 @@ export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const hasAutoNavigatedToNote = useRef(false)
   const { showError } = useToast()
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export default function Calendar() {
 
       // Date-tagged notes appear on the exact date in their #YYYYMMDD tag.
       notesResponse.items.forEach((note: ManagerNote) => {
-        const date = parseDateTag(note.tagsList)
+        const date = parseDateTag(note.tagsList, note.content)
         if (!date) return
 
         calendarEvents.push({
@@ -91,6 +93,23 @@ export default function Calendar() {
       })
 
       setEvents(calendarEvents)
+
+      if (!hasAutoNavigatedToNote.current) {
+        hasAutoNavigatedToNote.current = true
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const currentMonthHasNote = calendarEvents.some((event) =>
+          event.type === 'note' &&
+          event.date.getFullYear() === currentDate.getFullYear() &&
+          event.date.getMonth() === currentDate.getMonth())
+        const nextNote = calendarEvents
+          .filter((event) => event.type === 'note' && event.date >= today)
+          .sort((a, b) => a.date.getTime() - b.date.getTime())[0]
+
+        if (!currentMonthHasNote && nextNote) {
+          setCurrentDate(new Date(nextNote.date.getFullYear(), nextNote.date.getMonth(), 1))
+        }
+      }
     } catch (error) {
       console.error('Failed to load calendar events:', error)
       showError(getErrorMessage(error))
