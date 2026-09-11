@@ -268,6 +268,217 @@ public class TeamTaskTests
     }
 
     [Fact]
+    public void MoveToReview_FromBlocked_SetsStatusToInReview()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Block();
+
+        // Act
+        task.MoveToReview();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.InReview);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoveToReview_FromInTest_SetsStatusToInReview()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.MoveToTest();
+
+        // Act
+        task.MoveToReview();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.InReview);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Block_FromInProgress_SetsStatusToBlocked()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Start();
+
+        // Act
+        task.Block();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.Blocked);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Block_WhenDone_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Complete();
+
+        // Act
+        var act = () => task.Block();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void Block_WhenCancelled_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Cancel();
+
+        // Act
+        var act = () => task.Block();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToTest_FromInReview_SetsStatusToInTest()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Start();
+        task.MoveToReview();
+
+        // Act
+        task.MoveToTest();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.InTest);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoveToTest_WhenDone_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Complete();
+
+        // Act
+        var act = () => task.MoveToTest();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToTest_WhenCancelled_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Cancel();
+
+        // Act
+        var act = () => task.MoveToTest();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToPOAcceptance_FromInTest_SetsStatusToPOAcceptance()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.MoveToTest();
+
+        // Act
+        task.MoveToPOAcceptance();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.POAcceptance);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoveToPOAcceptance_WhenDone_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Complete();
+
+        // Act
+        var act = () => task.MoveToPOAcceptance();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToPOAcceptance_WhenCancelled_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Cancel();
+
+        // Act
+        var act = () => task.MoveToPOAcceptance();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToReadyToRelease_FromPOAcceptance_SetsStatusToReadyToRelease()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.MoveToPOAcceptance();
+
+        // Act
+        task.MoveToReadyToRelease();
+
+        // Assert
+        task.Status.Should().Be(TaskStatus.ReadyToRelease);
+        task.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoveToReadyToRelease_WhenDone_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Complete();
+
+        // Act
+        var act = () => task.MoveToReadyToRelease();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
+    public void MoveToReadyToRelease_WhenCancelled_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var task = new TeamTask("Task");
+        task.Cancel();
+
+        // Act
+        var act = () => task.MoveToReadyToRelease();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*completed or cancelled*");
+    }
+
+    [Fact]
     public void Complete_SetsStatusToDone()
     {
         // Arrange
