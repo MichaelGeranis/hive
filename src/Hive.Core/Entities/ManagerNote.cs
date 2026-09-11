@@ -65,9 +65,9 @@ public class ManagerNote
     /// Creates an empty note ready to be written into, the way a notes app opens a blank page.
     /// The title is a placeholder until the first line of content replaces it.
     /// </summary>
-    public static ManagerNote CreateBlank(Guid? folderId = null)
+    public static ManagerNote CreateBlank(Guid? folderId = null, bool isTodo = false)
     {
-        return new ManagerNote(DefaultTitle, string.Empty, NotePriority.Normal, null, null, folderId);
+        return new ManagerNote(DefaultTitle, string.Empty, NotePriority.Normal, null, null, folderId, isTodo);
     }
 
     public void Update(string title, string content, NotePriority priority, DateTime? dueDate, string? tags = null)

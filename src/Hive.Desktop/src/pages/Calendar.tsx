@@ -10,10 +10,9 @@ type CalendarEvent = {
   title: string
   displayDate: Date  // The date to show on calendar (1 day before due)
   dueDate: Date      // The actual due date
-  type: 'todo' | 'action-item'
+  type: 'note' | 'action-item'
   color: string
   details?: string
-  priority?: string
   isOverdue: boolean
 }
 
@@ -23,15 +22,26 @@ const monthNames = [
 ]
 
 const EVENT_COLORS = {
-  todo: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-l-4 border-amber-500',
-  'todo-overdue': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-l-4 border-red-500',
+  note: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-l-4 border-amber-500',
   'action-item': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
   'action-item-overdue': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-l-4 border-red-500',
 }
 
 const EVENT_ICONS = {
-  todo: StickyNote,
+  note: StickyNote,
   'action-item': CalendarIcon,
+}
+
+const parseDateTag = (tags: string[]): Date | null => {
+  const dateTag = tags.find((tag) => /^#\d{8}$/.test(tag.trim()))
+  if (!dateTag) return null
+
+  const value = dateTag.trim().slice(1)
+  const year = Number(value.slice(0, 4))
+  const month = Number(value.slice(4, 6))
+  const day = Number(value.slice(6, 8))
+  const date = new Date(year, month - 1, day)
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null
 }
 
 // Adjust display date to Friday if it falls on a weekend
@@ -65,33 +75,28 @@ export default function Calendar() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const [todosResponse, actionItems] = await Promise.all([
-        notesApi.getPending(),  // Get incomplete TODOs
+      const [notesResponse, actionItems] = await Promise.all([
+        notesApi.getAll(1, 100, 'all', undefined, undefined, undefined, 'recent'),
         meetingNotesApi.getOpenActionItems(),  // Get open action items
       ])
 
       const calendarEvents: CalendarEvent[] = []
 
-      // Add TODOs with due dates (show 1 day before due, adjusted for weekends)
-      todosResponse.forEach((todo: ManagerNote) => {
-        if (todo.dueDate) {
-          const dueDate = new Date(todo.dueDate)
-          let displayDate = new Date(dueDate)
-          displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
-          displayDate = adjustForWeekend(displayDate)  // Move to Friday if on weekend
+      // Date-tagged notes appear on the exact date in their #YYYYMMDD tag.
+      notesResponse.items.forEach((note: ManagerNote) => {
+        const date = parseDateTag(note.tagsList)
+        if (!date) return
 
-          calendarEvents.push({
-            id: `todo-${todo.id}`,
-            title: todo.title,
-            displayDate,
-            dueDate,
-            type: 'todo',
-            color: todo.isOverdue ? EVENT_COLORS['todo-overdue'] : EVENT_COLORS.todo,
-            details: todo.content ? todo.content.substring(0, 100) : undefined,
-            priority: todo.priorityName,
-            isOverdue: todo.isOverdue,
-          })
-        }
+        calendarEvents.push({
+          id: `note-${note.id}`,
+          title: note.title,
+          displayDate: date,
+          dueDate: date,
+          type: 'note',
+          color: EVENT_COLORS.note,
+          details: note.content ? note.content.substring(0, 100) : undefined,
+          isOverdue: false,
+        })
       })
 
       // Add Action Items with due dates (show 1 day before due, adjusted for weekends)
@@ -123,16 +128,10 @@ export default function Calendar() {
     }
   }
 
-  const handleCompleteTask = async (eventId: string, eventType: 'todo' | 'action-item') => {
+  const handleCompleteTask = async (eventId: string) => {
     try {
-      // Extract the actual ID from the event ID (e.g., "todo-123" -> "123")
-      const actualId = eventId.replace(/^(todo|action)-/, '')
-
-      if (eventType === 'todo') {
-        await notesApi.toggle(actualId)
-      } else {
-        await meetingNotesApi.completeAction(actualId)
-      }
+      const actualId = eventId.replace(/^action-/, '')
+      await meetingNotesApi.completeAction(actualId)
 
       // Remove the completed item from the list
       setEvents(prev => prev.filter(event => event.id !== eventId))
@@ -221,7 +220,7 @@ export default function Calendar() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Daily Planner</h1>
-          <p className="text-slate-500 dark:text-slate-400">TODOs and Action Items (shown 1 day before due)</p>
+          <p className="text-slate-500 dark:text-slate-400">Notes and Action Items</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -254,7 +253,7 @@ export default function Calendar() {
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-amber-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">TODOs</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">Notes</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-purple-500"></div>
@@ -335,7 +334,7 @@ export default function Calendar() {
       {selectedDate && (
         <Card>
           <CardHeader
-            title={`Tasks for ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`}
+            title={`Items for ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`}
             action={
               <button
                 onClick={() => setSelectedDate(null)}
@@ -347,7 +346,7 @@ export default function Calendar() {
           />
           <CardContent>
             {getEventsForDate(selectedDate.getDate()).length === 0 ? (
-              <p className="text-slate-500 dark:text-slate-400 text-center py-4">No tasks scheduled for this day</p>
+              <p className="text-slate-500 dark:text-slate-400 text-center py-4">No items scheduled for this day</p>
             ) : (
               <div className="space-y-2">
                 {getEventsForDate(selectedDate.getDate()).map(event => {
@@ -359,11 +358,6 @@ export default function Calendar() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium">{event.title}</h4>
-                            {event.priority && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
-                                {event.priority}
-                              </span>
-                            )}
                             {event.isOverdue && (
                               <span className="text-xs px-1.5 py-0.5 rounded bg-red-500 text-white">
                                 Overdue
@@ -377,13 +371,15 @@ export default function Calendar() {
                             <p className="text-sm opacity-80 mt-1">{event.details}</p>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleCompleteTask(event.id, event.type)}
-                          className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
-                          title="Mark as completed"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
+                        {event.type === 'action-item' && (
+                          <button
+                            onClick={() => handleCompleteTask(event.id)}
+                            className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
+                            title="Mark as completed"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

@@ -148,7 +148,7 @@ public class ManagerNoteService : IManagerNoteService
     /// </summary>
     public async Task<ManagerNoteDto> CreateBlankAsync(CreateBlankNoteDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = ManagerNote.CreateBlank(dto.FolderId);
+        var entity = ManagerNote.CreateBlank(dto.FolderId, dto.IsTodo);
         var created = await _repository.AddAsync(entity, cancellationToken);
 
         await _activityService.LogActivityAsync(

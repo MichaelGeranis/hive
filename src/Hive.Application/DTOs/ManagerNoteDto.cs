@@ -45,6 +45,7 @@ public record CreateManagerNoteDto
 public record CreateBlankNoteDto
 {
     public Guid? FolderId { get; init; }
+    public bool IsTodo { get; init; }
 }
 
 /// <summary>

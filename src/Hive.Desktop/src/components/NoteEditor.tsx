@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import {
   Bold,
-  Check,
   CheckSquare,
-  Clock,
   Eye,
   Heading2,
   Italic,
@@ -17,12 +15,9 @@ import {
   Trash2
 } from 'lucide-react'
 import MarkdownPreview from './MarkdownPreview'
-import type { ManagerNote, NoteFolder, NotePriority } from '../types'
+import type { ManagerNote, NoteFolder } from '../types'
 
 export interface NoteMetaPatch {
-  isTodo?: boolean
-  priority?: NotePriority
-  dueDate?: string
   tags?: string
 }
 
@@ -30,10 +25,10 @@ interface NoteEditorProps {
   note: ManagerNote
   folders: NoteFolder[]
   content: string
+  startInEditMode?: boolean
   saving: boolean
   onContentChange: (value: string) => void
   onTogglePin: () => void
-  onToggleComplete: () => void
   onDelete: () => void
   onMove: (folderId: string | null) => void
   onUpdateMeta: (patch: NoteMetaPatch) => void
@@ -41,13 +36,6 @@ interface NoteEditorProps {
 
 /** Markers that continue onto the next line when Enter is pressed. */
 const LIST_PATTERN = /^(\s*)([-*+]\s\[[ xX]\]\s|[-*+]\s|(\d+)([.)])\s)/
-
-const priorityOptions: { value: NotePriority; label: string }[] = [
-  { value: 0 as NotePriority, label: 'Low' },
-  { value: 1 as NotePriority, label: 'Normal' },
-  { value: 2 as NotePriority, label: 'High' },
-  { value: 3 as NotePriority, label: 'Urgent' }
-]
 
 /**
  * The writing surface. Plain markdown text in, rendered markdown out — the note is
@@ -57,10 +45,10 @@ export default function NoteEditor({
   note,
   folders,
   content,
+  startInEditMode = false,
   saving,
   onContentChange,
   onTogglePin,
-  onToggleComplete,
   onDelete,
   onMove,
   onUpdateMeta
@@ -69,15 +57,17 @@ export default function NoteEditor({
   const [showInspector, setShowInspector] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // A different note means a fresh page: start in edit mode with the cursor ready.
+  // A different note opens in preview unless the owner explicitly requests editing.
   useEffect(() => {
-    setPreview(false)
-    const textarea = textareaRef.current
-    if (textarea) {
-      textarea.focus()
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    setPreview(!startInEditMode)
+    if (startInEditMode) {
+      const textarea = textareaRef.current
+      if (textarea) {
+        textarea.focus()
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+      }
     }
-  }, [note.id])
+  }, [note.id, startInEditMode])
 
   const applyEdit = (value: string, selectionStart: number, selectionEnd = selectionStart) => {
     onContentChange(value)
@@ -232,8 +222,8 @@ export default function NoteEditor({
 
         <button
           onClick={() => setShowInspector((value) => !value)}
-          title="To-do details"
-          aria-label="To-do details"
+          title="Note details"
+          aria-label="Note details"
           className={`rounded-md p-1.5 ${
             showInspector ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
           }`}
@@ -262,40 +252,9 @@ export default function NoteEditor({
         </button>
       </div>
 
-      {/* To-do inspector */}
+      {/* Note details */}
       {showInspector && (
-        <div className="grid grid-cols-1 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40 sm:grid-cols-4">
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={note.isTodo}
-              onChange={(e) => onUpdateMeta({ isTodo: e.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
-            />
-            Track as to-do
-          </label>
-
-          <select
-            value={note.priority}
-            disabled={!note.isTodo}
-            onChange={(e) => onUpdateMeta({ priority: Number(e.target.value) as NotePriority })}
-            className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-          >
-            {priorityOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="date"
-            value={note.dueDate ? note.dueDate.split('T')[0] : ''}
-            disabled={!note.isTodo}
-            onChange={(e) => onUpdateMeta({ dueDate: e.target.value })}
-            className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-          />
-
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
           <input
             type="text"
             defaultValue={note.tags}
@@ -308,30 +267,6 @@ export default function NoteEditor({
             className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
           />
 
-          {note.isTodo && (
-            <button
-              onClick={onToggleComplete}
-              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium sm:col-span-2 ${
-                note.isCompleted
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
-              }`}
-            >
-              <Check className="h-4 w-4" />
-              {note.isCompleted ? 'Completed' : 'Mark complete'}
-            </button>
-          )}
-
-          {note.isTodo && note.dueDate && (
-            <span
-              className={`flex items-center gap-1.5 text-xs sm:col-span-2 ${
-                note.isOverdue && !note.isCompleted ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Due {new Date(note.dueDate).toLocaleDateString()}
-            </span>
-          )}
         </div>
       )}
 

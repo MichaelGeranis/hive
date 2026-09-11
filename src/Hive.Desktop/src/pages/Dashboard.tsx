@@ -10,7 +10,6 @@ import {
   EyeOff,
   ListTodo,
   Calendar,
-  StickyNote,
   Check,
   Star,
   TrendingUp,
@@ -18,8 +17,8 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader, CardContent, StatCard } from '../components/Card'
 import { SentimentInsights } from '../components/SentimentInsights'
-import { reportsApi, tasksApi, projectsApi, meetingNotesApi, notesApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
-import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, MeetingNote, ManagerNote, KnowledgeLevelSuggestion } from '../types'
+import { reportsApi, tasksApi, projectsApi, meetingNotesApi, knowledgePointsApi, projectKnowledgeApi } from '../services/api'
+import type { DashboardOverview, TeamTask, TeamVelocity, EstimationAccuracy, Project, CapacityAnalysis, MeetingNote, KnowledgeLevelSuggestion } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import {
@@ -152,8 +151,6 @@ export default function Dashboard() {
   const [capacityAnalysis, setCapacityAnalysis] = useState<CapacityAnalysis | null>(null)
   const [actionItems, setActionItems] = useState<MeetingNote[]>([])
   const [showActionItemsModal, setShowActionItemsModal] = useState(false)
-  const [priorityNotes, setPriorityNotes] = useState<ManagerNote[]>([])
-  const [showPriorityNotesModal, setShowPriorityNotesModal] = useState(false)
   const [knowledgeSuggestions, setKnowledgeSuggestions] = useState<KnowledgeLevelSuggestion[]>([])
   const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -199,11 +196,9 @@ export default function Dashboard() {
   const closeModal = useCallback(() => setSelectedMember(null), [])
   const closeCustomizeModal = useCallback(() => setShowCustomize(false), [])
   const closeActionItemsModal = useCallback(() => setShowActionItemsModal(false), [])
-  const closePriorityNotesModal = useCallback(() => setShowPriorityNotesModal(false), [])
   useEscapeKey(closeModal, !!selectedMember)
   useEscapeKey(closeCustomizeModal, showCustomize && !selectedMember)
   useEscapeKey(closeActionItemsModal, showActionItemsModal && !selectedMember && !showCustomize)
-  useEscapeKey(closePriorityNotesModal, showPriorityNotesModal && !selectedMember && !showCustomize && !showActionItemsModal)
 
   // Load core data (always needed)
   useEffect(() => {
@@ -241,12 +236,11 @@ export default function Dashboard() {
   const loadCoreData = async () => {
     try {
       setLoading(true)
-      const [dashboardData, tasksData, projectsData, actionItemsData, notesData, knowledgeSuggestionsData] = await Promise.all([
+      const [dashboardData, tasksData, projectsData, actionItemsData, knowledgeSuggestionsData] = await Promise.all([
         reportsApi.getDashboard(sprintFilter),
         tasksApi.getAll(),
         projectsApi.getAll(),
         meetingNotesApi.getOpenActionItems(),
-        notesApi.getPending(),
         knowledgePointsApi.getSuggestions()
       ])
       setDashboard(dashboardData)
@@ -261,24 +255,6 @@ export default function Dashboard() {
         return new Date(a.actionDueDate).getTime() - new Date(b.actionDueDate).getTime()
       })
       setActionItems(sortedActionItems)
-      // Filter for urgent (3) and high (2) priority notes
-      // Sort by due date (closest first), then by priority (urgent first)
-      const highPriorityNotes = notesData
-        .filter((note: ManagerNote) => note.priority >= 2)
-        .sort((a: ManagerNote, b: ManagerNote) => {
-          // First sort by due date (closest to today first, null dates last)
-          if (a.dueDate && b.dueDate) {
-            const dateCompare = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-            if (dateCompare !== 0) return dateCompare
-          } else if (a.dueDate && !b.dueDate) {
-            return -1 // a has date, b doesn't - a comes first
-          } else if (!a.dueDate && b.dueDate) {
-            return 1 // b has date, a doesn't - b comes first
-          }
-          // Then sort by priority (higher priority first: 3=urgent before 2=high)
-          return b.priority - a.priority
-        })
-      setPriorityNotes(highPriorityNotes)
     } catch (err) {
       setError('Failed to load dashboard. Make sure the API is running.')
       console.error(err)
@@ -330,17 +306,6 @@ export default function Dashboard() {
       setActionItems(prev => prev.filter(item => item.id !== noteId))
     } catch (err) {
       console.error('Failed to complete action item:', err)
-      showError(getErrorMessage(err))
-    }
-  }
-
-  const handleCompletePriorityNote = async (noteId: string) => {
-    try {
-      await notesApi.toggle(noteId)
-      // Remove the completed item from the list
-      setPriorityNotes(prev => prev.filter(item => item.id !== noteId))
-    } catch (err) {
-      console.error('Failed to complete priority note:', err)
       showError(getErrorMessage(err))
     }
   }
@@ -706,15 +671,6 @@ export default function Dashboard() {
           badge={ALL_SPRINTS_BADGE}
           color={actionItems.some(a => a.isOverdue) ? 'red' : 'blue'}
           onClick={() => setShowActionItemsModal(true)}
-        />
-        <StatCard
-          title="TODOs"
-          value={priorityNotes.length}
-          subtitle={priorityNotes.filter(n => n.priority === 3).length > 0 ? `${priorityNotes.filter(n => n.priority === 3).length} urgent` : priorityNotes.length > 0 ? `${priorityNotes.filter(n => n.priority === 2).length} high` : undefined}
-          icon={<StickyNote className="w-6 h-6" />}
-          badge={ALL_SPRINTS_BADGE}
-          color={priorityNotes.some(n => n.priority === 3) ? 'red' : priorityNotes.length > 0 ? 'amber' : 'green'}
-          onClick={() => setShowPriorityNotesModal(true)}
         />
         <div className={`rounded-xl p-4 ${getWarningBgClass(warningCount)} transition-colors`}>
           <div className="flex items-center justify-between">
@@ -1892,95 +1848,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Priority Notes Modal */}
-      {showPriorityNotesModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl mx-4">
-            <CardHeader
-              title="Priorities"
-              subtitle={`${priorityNotes.length} high priority item${priorityNotes.length !== 1 ? 's' : ''}${priorityNotes.filter(n => n.priority === 3).length > 0 ? ` (${priorityNotes.filter(n => n.priority === 3).length} urgent)` : ''}`}
-              action={
-                <button
-                  onClick={closePriorityNotesModal}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  <X className="w-5 h-5 text-slate-500" />
-                </button>
-              }
-            />
-            <CardContent>
-              {priorityNotes.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {priorityNotes.map(note => (
-                    <div
-                      key={note.id}
-                      className={`p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg ${note.priority === 3 ? 'border-l-4 border-red-500' : 'border-l-4 border-amber-500'}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div
-                          className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            closePriorityNotesModal()
-                            navigate(`/notes?search=${encodeURIComponent(note.title)}`)
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{note.title}</p>
-                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                              note.priority === 3
-                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                            }`}>
-                              {note.priorityName}
-                            </span>
-                          </div>
-                          {note.content && (
-                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                              {note.content}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            {note.dueDate && (
-                              <span className={`flex items-center gap-1 ${note.isOverdue ? 'text-red-500 font-medium' : ''}`}>
-                                <Calendar className="w-3 h-3" />
-                                {new Date(note.dueDate).toLocaleDateString()}
-                                {note.isOverdue && ' (Overdue)'}
-                              </span>
-                            )}
-                            {note.tagsList && note.tagsList.length > 0 && (
-                              <div className="flex gap-1">
-                                {note.tagsList.slice(0, 2).map((tag, idx) => (
-                                  <span key={idx} className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
-                                {note.tagsList.length > 2 && (
-                                  <span className="text-xs">+{note.tagsList.length - 2}</span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleCompletePriorityNote(note.id)}
-                          className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
-                          title="Mark as completed"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                  No urgent or high priority TODO items found
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }

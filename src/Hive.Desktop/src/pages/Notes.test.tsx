@@ -26,11 +26,10 @@ describe('Notes page', () => {
     expect(screen.getByText('Second Note')).toBeInTheDocument()
   })
 
-  it('should open the first note in the editor', async () => {
+  it('should open existing notes in preview mode', async () => {
     renderNotes()
 
-    const editor = await screen.findByLabelText('Note content')
-    expect(editor).toHaveValue('Test content')
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument()
   })
 
   it('should create an empty note ready to write in', async () => {
@@ -82,6 +81,7 @@ describe('Notes page', () => {
   it('should render markdown in preview mode', async () => {
     const user = userEvent.setup()
     renderNotes()
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
     const editor = await screen.findByLabelText('Note content')
     await user.clear(editor)
     await user.type(editor, '# Heading')

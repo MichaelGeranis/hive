@@ -1,30 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Clock, Pin, Plus, Search, StickyNote, X } from 'lucide-react'
+import { Pin, Plus, Search, StickyNote, X } from 'lucide-react'
 import NoteEditor from '../components/NoteEditor'
-import type { NoteMetaPatch } from '../components/NoteEditor'
 import NoteFolderTree from '../components/NoteFolderTree'
 import { noteFoldersApi, notesApi } from '../services/api'
 import type { ManagerNote, NoteFolder } from '../types'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
-type NoteFilter = 'all' | 'pending' | 'completed'
-
 const AUTOSAVE_DELAY_MS = 700
 const PAGE_SIZE = 100
-
-const filterOptions: { value: NoteFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'To-dos' },
-  { value: 'completed', label: 'Done' }
-]
-
-const priorityDotColors: Record<number, string> = {
-  0: 'bg-slate-400',
-  1: 'bg-blue-500',
-  2: 'bg-orange-500',
-  3: 'bg-red-500'
-}
 
 function formatListDate(note: ManagerNote): string {
   const date = new Date(note.updatedAt || note.createdAt)
@@ -51,12 +35,12 @@ export default function Notes() {
   const [totalCount, setTotalCount] = useState(0)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
-  const [filter, setFilter] = useState<NoteFilter>('all')
   const [searchInput, setSearchInput] = useState(initialSearch)
   const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [startEditingNoteId, setStartEditingNoteId] = useState<string | null>(null)
 
   // Autosave bookkeeping: what is being edited, and what has not reached the server yet.
   const draftRef = useRef('')
@@ -113,22 +97,23 @@ export default function Notes() {
     await saveDraft()
   }, [saveDraft])
 
-  const openNote = useCallback((note: ManagerNote | null) => {
+  const openNote = useCallback((note: ManagerNote | null, startInEditMode = false) => {
     editingNoteIdRef.current = note?.id ?? null
     dirtyRef.current = false
     draftRef.current = note?.content ?? ''
     setSelectedNoteId(note?.id ?? null)
     setDraft(note?.content ?? '')
+    setStartEditingNoteId(startInEditMode ? note?.id ?? null : null)
   }, [])
 
   const loadNotes = useCallback(
-    async (folderId: string | null, currentFilter: NoteFilter, search: string, keepSelection = false) => {
+    async (folderId: string | null, search: string, keepSelection = false) => {
       setLoading(true)
       try {
         const result = await notesApi.getAll(
           1,
           PAGE_SIZE,
-          currentFilter,
+          'all',
           search || undefined,
           undefined,
           folderId,
@@ -155,14 +140,14 @@ export default function Notes() {
     loadFolders()
   }, [loadFolders])
 
-  // The list follows the folder, the filter and the search box. Whatever is being
+  // The list follows the folder and the search box. Whatever is being
   // written is saved first, so switching away never loses a keystroke.
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       await flushPendingSave()
       if (!cancelled) {
-        await loadNotes(selectedFolderId, filter, searchTerm, true)
+        await loadNotes(selectedFolderId, searchTerm, true)
       }
     }
     run()
@@ -170,7 +155,7 @@ export default function Notes() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFolderId, filter, searchTerm])
+  }, [selectedFolderId, searchTerm])
 
   // Debounced search.
   useEffect(() => {
@@ -212,7 +197,7 @@ export default function Notes() {
       const created = await notesApi.createBlank(selectedFolderId)
       setNotes((current) => [created, ...current])
       setTotalCount((count) => count + 1)
-      openNote(created)
+      openNote(created, true)
       loadFolders()
     } catch (error) {
       console.error('Failed to create note:', error)
@@ -271,15 +256,6 @@ export default function Notes() {
     }
   }
 
-  const handleToggleComplete = async () => {
-    if (!selectedNote) return
-    try {
-      patchNote(await notesApi.toggle(selectedNote.id))
-    } catch (error) {
-      showError(getErrorMessage(error))
-    }
-  }
-
   const moveNote = async (noteId: string, folderId: string | null) => {
     try {
       const updated = await notesApi.move(noteId, folderId)
@@ -300,7 +276,7 @@ export default function Notes() {
     }
   }
 
-  const handleUpdateMeta = async (patch: NoteMetaPatch) => {
+  const handleUpdateMeta = async (patch: { tags?: string }) => {
     if (!selectedNote) return
     await flushPendingSave()
     try {
@@ -308,10 +284,10 @@ export default function Notes() {
         title: selectedNote.title,
         content: draftRef.current,
         tags: patch.tags ?? selectedNote.tags,
-        priority: patch.priority ?? selectedNote.priority,
-        dueDate: patch.dueDate !== undefined ? patch.dueDate || undefined : selectedNote.dueDate,
+        priority: selectedNote.priority,
+        dueDate: selectedNote.dueDate,
         folderId: selectedNote.folderId ?? null,
-        isTodo: patch.isTodo ?? selectedNote.isTodo
+        isTodo: selectedNote.isTodo
       })
       patchNote(updated)
     } catch (error) {
@@ -350,7 +326,7 @@ export default function Notes() {
       if (selectedFolderId === folder.id) {
         setSelectedFolderId(folder.parentFolderId ?? null)
       } else {
-        await loadNotes(selectedFolderId, filter, searchTerm, true)
+        await loadNotes(selectedFolderId, searchTerm, true)
       }
     } catch (error) {
       showError(getErrorMessage(error))
@@ -378,18 +354,7 @@ export default function Notes() {
       >
         <div className="flex items-center gap-2">
           {note.isPinned && <Pin className="h-3 w-3 shrink-0 text-amber-500" />}
-          {note.isTodo && (
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${
-                note.isCompleted ? 'bg-green-500' : priorityDotColors[note.priority]
-              }`}
-            />
-          )}
-          <span
-            className={`flex-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100 ${
-              note.isCompleted ? 'line-through opacity-60' : ''
-            }`}
-          >
+          <span className="flex-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {note.title}
           </span>
         </div>
@@ -397,16 +362,6 @@ export default function Notes() {
           <span className="shrink-0">{formatListDate(note)}</span>
           <span className="truncate">{note.snippet || 'No additional text'}</span>
         </div>
-        {note.isTodo && note.dueDate && (
-          <div
-            className={`mt-1 flex items-center gap-1 text-xs ${
-              note.isOverdue && !note.isCompleted ? 'text-red-500' : 'text-slate-400'
-            }`}
-          >
-            {note.isCompleted ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-            {new Date(note.dueDate).toLocaleDateString()}
-          </div>
-        )}
       </button>
     )
   }
@@ -469,21 +424,6 @@ export default function Notes() {
             )}
           </div>
 
-          <div className="flex gap-1">
-            {filterOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setFilter(option.value)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  filter === option.value
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -537,10 +477,10 @@ export default function Notes() {
               note={selectedNote}
               folders={folders}
               content={draft}
+              startInEditMode={selectedNote.id === startEditingNoteId}
               saving={saving}
               onContentChange={handleContentChange}
               onTogglePin={handleTogglePin}
-              onToggleComplete={handleToggleComplete}
               onDelete={handleDeleteNote}
               onMove={(folderId) => moveNote(selectedNote.id, folderId)}
               onUpdateMeta={handleUpdateMeta}

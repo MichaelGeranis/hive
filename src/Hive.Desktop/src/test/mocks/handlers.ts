@@ -239,7 +239,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE}/managernotes/blank`, async ({ request }) => {
-    const data = await request.json() as { folderId?: string | null }
+    const data = await request.json() as { folderId?: string | null; isTodo?: boolean }
     const newNote = createManagerNote({
       id: `note-${mockNotes.length + 1}`,
       title: 'New Note',
@@ -247,8 +247,8 @@ export const handlers = [
       snippet: '',
       tags: '',
       tagsList: [],
-      isTodo: false,
       folderId: data?.folderId ?? null,
+      isTodo: data?.isTodo ?? false,
     })
     mockNotes = [newNote, ...mockNotes]
     return HttpResponse.json(newNote, { status: 201 })
