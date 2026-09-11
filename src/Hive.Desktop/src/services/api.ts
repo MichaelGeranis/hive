@@ -102,12 +102,19 @@ import type {
 
 const API_BASE_URL = 'http://localhost:5002/api'
 
+// Admin credentials for the local backend. These match the backend's default
+// (admin/admin123) unless overridden at build time via VITE_ADMIN_USERNAME /
+// VITE_ADMIN_PASSWORD, which must match whatever the backend was configured
+// with via HIVE_ADMIN_USERNAME / HIVE_ADMIN_PASSWORD. See README.md.
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'admin'
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Basic ' + btoa('admin:admin123')
+    'Authorization': 'Basic ' + btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)
   }
 })
 

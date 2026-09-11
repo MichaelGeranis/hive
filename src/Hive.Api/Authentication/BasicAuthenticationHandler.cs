@@ -104,6 +104,13 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 /// <summary>
 /// Admin credentials configuration.
 /// </summary>
+/// <remarks>
+/// These defaults are a well-known local-development convenience and MUST NOT be relied on
+/// for any instance reachable outside localhost. Override them via the
+/// <c>HIVE_ADMIN_USERNAME</c> / <c>HIVE_ADMIN_PASSWORD</c> environment variables (or the
+/// standard ASP.NET Core <c>AdminCredentials__Username</c> / <c>AdminCredentials__Password</c>
+/// variables) rather than editing appsettings.json.
+/// </remarks>
 public class AdminCredentials
 {
     public string Username { get; set; } = "admin";

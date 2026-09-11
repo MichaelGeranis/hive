@@ -124,8 +124,9 @@ if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${RED}✗${NC} Health endpoint not responding"
     fi
 
-    # Test API with auth
-    if curl -s -u admin:admin123 http://localhost:5000/api/directreports > /dev/null 2>&1; then
+    # Test API with auth (respects HIVE_ADMIN_USERNAME/HIVE_ADMIN_PASSWORD overrides,
+    # falling back to the local-dev defaults otherwise)
+    if curl -s -u "${HIVE_ADMIN_USERNAME:-admin}:${HIVE_ADMIN_PASSWORD:-admin123}" http://localhost:5000/api/directreports > /dev/null 2>&1; then
         echo -e "${GREEN}✓${NC} API authentication working"
     else
         echo -e "${YELLOW}⚠${NC}  API authentication check failed (might be empty data)"

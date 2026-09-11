@@ -91,7 +91,9 @@ held, `make kill-backend` frees it.
 ### 3. Sign in
 
 All endpoints require HTTP Basic Authentication. The default credentials are
-`admin` / `admin123`, configured in `src/Hive.Api/appsettings.json`.
+`admin` / `admin123` — a local-development convenience compiled into `AdminCredentials`,
+not a secret. Override them with `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` before
+running the API anywhere but localhost; see [Configuration](#configuration).
 
 ### 4. Explore the API
 
@@ -208,14 +210,16 @@ Full checklist in [CLAUDE.md](CLAUDE.md).
 | Variable | Description |
 |----------|-------------|
 | `HIVE_DATABASE_PATH` | Override the default SQLite database location |
+| `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` | Override the Basic Auth credentials (backend). The standard `AdminCredentials__Username` / `AdminCredentials__Password` variables work too |
+| `VITE_ADMIN_USERNAME` / `VITE_ADMIN_PASSWORD` | Credentials the desktop client is built with — set them to match the backend. See `src/Hive.Desktop/.env.example` |
 | `ASPNETCORE_ENVIRONMENT` | `Development` enables Swagger and defaults to the in-memory database |
 
 ### appsettings.json
 
 | Key | Description |
 |-----|-------------|
-| `AdminCredentials:Username` | Basic Auth username (default `admin`) |
-| `AdminCredentials:Password` | Basic Auth password (default `admin123`) |
+| `AdminCredentials:Username` | Basic Auth username. Absent by default — the `admin` default lives in code, and the environment variables above are the preferred override |
+| `AdminCredentials:Password` | Basic Auth password. Absent by default, as above |
 | `UseInMemoryDatabase` | `true` for in-memory, `false` for SQLite |
 
 ### Runtime settings
@@ -231,6 +235,11 @@ The API base URL is set in `src/Hive.Desktop/src/services/api.ts`
 (`http://localhost:5002/api`). CORS on the backend allows exactly one origin,
 `http://localhost:5173`.
 
+Credentials are read at build time from `VITE_ADMIN_USERNAME` / `VITE_ADMIN_PASSWORD`,
+falling back to the same `admin` / `admin123` default. Copy
+`src/Hive.Desktop/.env.example` to `.env.local` to override them — local `.env` files are
+gitignored, so a real credential never gets committed.
+
 ---
 
 ## Optional: sentiment analysis
@@ -244,10 +253,13 @@ nothing is sent anywhere. See [BUSINESS.md § Sentiment insights](BUSINESS.md#se
 ## Security note
 
 Hive is a **single-user, local-first desktop application**. Basic Authentication against a
-credential pair in a settings file is adequate for an API bound to localhost on the
-manager's own machine, and it is not adequate for anything else. Do not deploy Hive to a
-shared host without replacing the authentication scheme first — see
-[ARCHITECTURE.md § Authentication](ARCHITECTURE.md#authentication).
+single known credential pair is adequate for an API bound to localhost on the manager's
+own machine, and it is not adequate for anything else. The `admin` / `admin123` default is
+documented here precisely because it is **not** a secret: anyone who reads this repository
+knows it. Override it with `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` (and the matching
+`VITE_ADMIN_*` values for the client) before the API is reachable from anywhere else, and
+do not deploy Hive to a shared host without replacing the authentication scheme first —
+see [ARCHITECTURE.md § Authentication](ARCHITECTURE.md#authentication).
 
 ---
 

@@ -365,8 +365,10 @@ skipped).
 All API endpoints require **HTTP Basic Authentication**, implemented by
 `BasicAuthenticationHandler` in `Hive.Api/Authentication/`.
 
-- Credentials come from the `AdminCredentials` configuration section, bound as an options
-  object. Defaults are `admin` / `admin123`.
+- Credentials come from the `AdminCredentials` options object. Its compiled-in defaults are
+  `admin` / `admin123`; the `AdminCredentials` configuration section is bound over them,
+  and `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` override both. The API logs a startup
+  warning while the default credentials are still in effect.
 - The frontend holds the credentials in `services/api.ts` and sends them on every request.
 - `/health` is the one anonymous endpoint.
 
