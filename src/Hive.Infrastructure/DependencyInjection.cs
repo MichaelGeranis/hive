@@ -46,13 +46,8 @@ public static class DependencyInjection
         services.AddScoped<INoteFolderRepository, NoteFolderRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SprintCapacityRepository>();
-        services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IParentRepository, ParentRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
-        services.AddScoped<IChecklistTemplateRepository, ChecklistTemplateRepository>();
-        services.AddScoped<IChecklistTemplateItemRepository, ChecklistTemplateItemRepository>();
-        services.AddScoped<IChecklistInstanceRepository, ChecklistInstanceRepository>();
-        services.AddScoped<IChecklistInstanceItemRepository, ChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, ProjectKnowledgeRepository>();
         services.AddScoped<ISentimentAnalysisCacheRepository, SentimentAnalysisCacheRepository>();
         services.AddScoped<IQuarterRepository, QuarterRepository>();
@@ -96,13 +91,8 @@ public static class DependencyInjection
         services.AddScoped<INoteFolderRepository, SqliteNoteFolderRepository>();
         services.AddScoped<ISprintRepository, SqliteSprintRepository>();
         services.AddScoped<ISprintCapacityRepository, SqliteSprintCapacityRepository>();
-        services.AddScoped<IDocumentRepository, SqliteDocumentRepository>();
         services.AddScoped<IParentRepository, SqliteParentRepository>();
         services.AddScoped<IActivityRepository, SqliteActivityRepository>();
-        services.AddScoped<IChecklistTemplateRepository, SqliteChecklistTemplateRepository>();
-        services.AddScoped<IChecklistTemplateItemRepository, SqliteChecklistTemplateItemRepository>();
-        services.AddScoped<IChecklistInstanceRepository, SqliteChecklistInstanceRepository>();
-        services.AddScoped<IChecklistInstanceItemRepository, SqliteChecklistInstanceItemRepository>();
         services.AddScoped<IProjectKnowledgeRepository, SqliteProjectKnowledgeRepository>();
         services.AddScoped<ISentimentAnalysisCacheRepository, SqliteSentimentAnalysisCacheRepository>();
         services.AddScoped<IQuarterRepository, SqliteQuarterRepository>();

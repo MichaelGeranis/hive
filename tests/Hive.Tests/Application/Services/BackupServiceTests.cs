@@ -17,7 +17,6 @@ public class BackupServiceTests
     private readonly Mock<INoteFolderRepository> _noteFolderRepositoryMock;
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
     private readonly Mock<ISprintCapacityRepository> _sprintCapacityRepositoryMock;
-    private readonly Mock<IDocumentRepository> _documentRepositoryMock;
     private readonly Mock<IActivityRepository> _activityRepositoryMock;
     private readonly Mock<ISkillRepository> _skillRepositoryMock;
     private readonly Mock<ISkillAssessmentRepository> _skillAssessmentRepositoryMock;
@@ -36,7 +35,6 @@ public class BackupServiceTests
         _noteFolderRepositoryMock = new Mock<INoteFolderRepository>();
         _sprintRepositoryMock = new Mock<ISprintRepository>();
         _sprintCapacityRepositoryMock = new Mock<ISprintCapacityRepository>();
-        _documentRepositoryMock = new Mock<IDocumentRepository>();
         _activityRepositoryMock = new Mock<IActivityRepository>();
         _skillRepositoryMock = new Mock<ISkillRepository>();
         _skillAssessmentRepositoryMock = new Mock<ISkillAssessmentRepository>();
@@ -53,7 +51,6 @@ public class BackupServiceTests
             _noteFolderRepositoryMock.Object,
             _sprintRepositoryMock.Object,
             _sprintCapacityRepositoryMock.Object,
-            _documentRepositoryMock.Object,
             _activityRepositoryMock.Object,
             _skillRepositoryMock.Object,
             _skillAssessmentRepositoryMock.Object,
@@ -89,7 +86,6 @@ public class BackupServiceTests
         result.ManagerNotes.Should().BeEmpty();
         result.Sprints.Should().BeEmpty();
         result.SprintCapacities.Should().BeEmpty();
-        result.Documents.Should().BeEmpty();
         result.Activities.Should().BeEmpty();
         result.Skills.Should().BeEmpty();
         result.SkillAssessments.Should().BeEmpty();
@@ -215,7 +211,6 @@ public class BackupServiceTests
         var managerNote = CreateManagerNote();
         var sprint = CreateSprint();
         var sprintCapacity = CreateSprintCapacity(sprint.Id);
-        var document = CreateDocument();
         var settings = CreateAppSettings();
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -236,8 +231,6 @@ public class BackupServiceTests
             .ReturnsAsync(new List<Sprint> { sprint });
         _sprintCapacityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SprintCapacity> { sprintCapacity });
-        _documentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Document> { document });
         _activityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Activity>());
         _skillRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
@@ -260,7 +253,6 @@ public class BackupServiceTests
         result.ManagerNotes.Should().HaveCount(1);
         result.Sprints.Should().HaveCount(1);
         result.SprintCapacities.Should().HaveCount(1);
-        result.Documents.Should().HaveCount(1);
         result.Activities.Should().BeEmpty();
         result.Skills.Should().BeEmpty();
         result.SkillAssessments.Should().BeEmpty();
@@ -286,7 +278,6 @@ public class BackupServiceTests
         _managerNoteRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
         _sprintRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
         _sprintCapacityRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _documentRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
         _activityRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
         _skillRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
         _skillAssessmentRepositoryMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -588,7 +579,6 @@ public class BackupServiceTests
         var managerNoteId = Guid.NewGuid();
         var sprintId = Guid.NewGuid();
         var sprintCapacityId = Guid.NewGuid();
-        var documentId = Guid.NewGuid();
 
         var backup = new BackupDto
         {
@@ -700,16 +690,6 @@ public class BackupServiceTests
                     AvailableMembers = 5
                 }
             },
-            Documents = new List<DocumentBackup>
-            {
-                new()
-                {
-                    Id = documentId,
-                    Title = "Document Title",
-                    Content = "Document Content",
-                    Tags = "doc"
-                }
-            }
         };
 
         // Setup all repositories to return null (new entities)
@@ -734,8 +714,6 @@ public class BackupServiceTests
             .ReturnsAsync((Sprint?)null);
         _sprintCapacityRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SprintCapacity?)null);
-        _documentRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Document?)null);
 
         // Setup Add methods
         _directReportRepositoryMock.Setup(r => r.AddAsync(It.IsAny<DirectReport>(), It.IsAny<CancellationToken>()))
@@ -760,8 +738,6 @@ public class BackupServiceTests
             .ReturnsAsync((Sprint s, CancellationToken _) => s);
         _sprintCapacityRepositoryMock.Setup(r => r.AddAsync(It.IsAny<SprintCapacity>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SprintCapacity sc, CancellationToken _) => sc);
-        _documentRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Document>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Document d, CancellationToken _) => d);
 
         // Act
         var result = await _service.ImportAsync(backup);
@@ -779,7 +755,6 @@ public class BackupServiceTests
         result.ManagerNotesRestored.Should().Be(1);
         result.SprintsRestored.Should().Be(1);
         result.SprintCapacitiesRestored.Should().Be(1);
-        result.DocumentsRestored.Should().Be(1);
         result.Errors.Should().BeEmpty();
         result.Warnings.Should().BeEmpty();
     }
@@ -808,8 +783,6 @@ public class BackupServiceTests
             .ReturnsAsync(new List<Sprint>());
         _sprintCapacityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SprintCapacity>());
-        _documentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Document>());
         _activityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Activity>());
         _skillRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
@@ -858,9 +831,6 @@ public class BackupServiceTests
             _sprintCapacityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<SprintCapacity>());
 
-        if (!exceptRepositories.Contains(nameof(IDocumentRepository)))
-            _documentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Document>());
 
         if (!exceptRepositories.Contains(nameof(IActivityRepository)))
             _activityRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -907,8 +877,6 @@ public class BackupServiceTests
     private static SprintCapacity CreateSprintCapacity(Guid sprintId) =>
         new(sprintId, 50, 5);
 
-    private static Document CreateDocument() =>
-        new("Document Title", "Document Content", null, "tag1");
 
     private static AppSettings CreateAppSettings() =>
         new("[]");

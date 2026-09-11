@@ -44,7 +44,6 @@ public class BackupControllerTests
             ManagerNotes = new List<ManagerNoteBackup>(),
             Sprints = new List<SprintBackup>(),
             SprintCapacities = new List<SprintCapacityBackup>(),
-            Documents = new List<DocumentBackup>(),
             Settings = null
         };
 
@@ -83,7 +82,6 @@ public class BackupControllerTests
             ManagerNotes = new List<ManagerNoteBackup>(),
             Sprints = new List<SprintBackup>(),
             SprintCapacities = new List<SprintCapacityBackup>(),
-            Documents = new List<DocumentBackup>(),
             Settings = null
         };
 

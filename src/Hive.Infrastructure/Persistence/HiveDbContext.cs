@@ -26,13 +26,8 @@ public class HiveDbContext : DbContext
     public DbSet<NoteFolder> NoteFolders => Set<NoteFolder>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintCapacity> SprintCapacities => Set<SprintCapacity>();
-    public DbSet<Document> Documents => Set<Document>();
     public DbSet<Parent> Parents => Set<Parent>();
     public DbSet<Activity> Activities => Set<Activity>();
-    public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
-    public DbSet<ChecklistTemplateItem> ChecklistTemplateItems => Set<ChecklistTemplateItem>();
-    public DbSet<ChecklistInstance> ChecklistInstances => Set<ChecklistInstance>();
-    public DbSet<ChecklistInstanceItem> ChecklistInstanceItems => Set<ChecklistInstanceItem>();
     public DbSet<ProjectKnowledge> ProjectKnowledge => Set<ProjectKnowledge>();
     public DbSet<SentimentAnalysisCache> SentimentAnalysisCache => Set<SentimentAnalysisCache>();
     public DbSet<Quarter> Quarters => Set<Quarter>();
@@ -206,17 +201,6 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.SprintId).IsUnique();
         });
 
-        // Document configuration
-        modelBuilder.Entity<Document>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
-            entity.Property(e => e.Content).HasMaxLength(4000);
-            entity.Property(e => e.Url).HasMaxLength(2000);
-            entity.Property(e => e.Tags).HasMaxLength(1000);
-            entity.HasIndex(e => e.CreatedAt);
-        });
-
         // Parent configuration
         modelBuilder.Entity<Parent>(entity =>
         {
@@ -235,54 +219,6 @@ public class HiveDbContext : DbContext
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.EntityType);
             entity.HasIndex(e => new { e.Timestamp, e.EntityType });
-        });
-
-        // ChecklistTemplate configuration
-        modelBuilder.Entity<ChecklistTemplate>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(2000);
-            entity.HasIndex(e => e.Type);
-            entity.HasIndex(e => e.IsActive);
-            entity.HasIndex(e => new { e.Type, e.IsActive });
-        });
-
-        // ChecklistTemplateItem configuration
-        modelBuilder.Entity<ChecklistTemplateItem>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Content).HasMaxLength(2000).IsRequired();
-            entity.Property(e => e.HelpText).HasMaxLength(1000);
-            entity.HasIndex(e => e.TemplateId);
-            entity.HasIndex(e => new { e.TemplateId, e.SortOrder });
-        });
-
-        // ChecklistInstance configuration
-        modelBuilder.Entity<ChecklistInstance>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).HasMaxLength(300).IsRequired();
-            entity.Property(e => e.CandidateName).HasMaxLength(200);
-            entity.Property(e => e.Position).HasMaxLength(200);
-            entity.Property(e => e.NewHireName).HasMaxLength(200);
-            entity.Property(e => e.Notes).HasMaxLength(4000);
-            entity.HasIndex(e => e.TemplateId);
-            entity.HasIndex(e => e.Type);
-            entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => new { e.Type, e.Status });
-        });
-
-        // ChecklistInstanceItem configuration
-        modelBuilder.Entity<ChecklistInstanceItem>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Content).HasMaxLength(2000).IsRequired();
-            entity.Property(e => e.Notes).HasMaxLength(4000);
-            entity.Property(e => e.Assignee).HasMaxLength(200);
-            entity.HasIndex(e => e.InstanceId);
-            entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => new { e.InstanceId, e.SortOrder });
         });
 
         // ProjectKnowledge configuration

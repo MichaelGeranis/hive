@@ -16,10 +16,8 @@ import Skills from './pages/Skills'
 import Leaves from './pages/Leaves'
 import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
-import Documents from './pages/Documents'
 import ActivityFeed from './pages/ActivityFeed'
 import Logs from './pages/Logs'
-import Checklists from './pages/Checklists'
 import QuarterlyPlanning from './pages/QuarterlyPlanning'
 import Settings from './pages/Settings'
 import Tutorials from './pages/Tutorials'
@@ -123,7 +121,6 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="team" element={<DirectReports />} />
         <Route path="reviews" element={<Reviews />} />
-        <Route path="checklists" element={<Checklists />} />
         <Route path="meetings" element={<Meetings />} />
         <Route path="projects" element={<Projects />} />
         <Route path="project-knowledge" element={<ProjectKnowledge />} />
@@ -135,7 +132,6 @@ function App() {
         <Route path="leaves" element={<Leaves />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />
-        <Route path="documents" element={<Documents />} />
         <Route path="tutorials" element={<Tutorials />} />
         <Route path="logs" element={<Logs />} />
         <Route path="quarterly-planning" element={<QuarterlyPlanning />} />

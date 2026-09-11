@@ -27,11 +27,9 @@ public static class DependencyInjection
         services.AddScoped<INoteFolderService, NoteFolderService>();
         services.AddScoped<ISprintService, SprintService>();
         services.AddScoped<ISprintCapacityService, SprintCapacityService>();
-        services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<IParentService, ParentService>();
         services.AddScoped<IActivityService, ActivityService>();
-        services.AddScoped<IChecklistService, ChecklistService>();
         services.AddScoped<IProjectKnowledgeService, ProjectKnowledgeService>();
         services.AddScoped<ISentimentAnalysisService, SentimentAnalysisService>();
         services.AddScoped<IQuarterlyPlanningService, QuarterlyPlanningService>();

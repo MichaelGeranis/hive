@@ -966,7 +966,6 @@ export interface BackupDto {
   managerNotes: any[]
   sprints: any[]
   sprintCapacities: any[]
-  documents: any[]
   settings?: any
 }
 
@@ -982,7 +981,6 @@ export interface RestoreResultDto {
   managerNotesRestored: number
   sprintsRestored: number
   sprintCapacitiesRestored: number
-  documentsRestored: number
   settingsRestored: boolean
   errors: string[]
   warnings: string[]
@@ -1145,178 +1143,6 @@ export interface Activity {
   description: string
   timestamp: string
   createdAt: string
-}
-
-// Checklists (Interview & Onboarding)
-export enum ChecklistType {
-  Interview = 0,
-  Onboarding = 1
-}
-
-export enum ChecklistItemType {
-  Question = 0,
-  Topic = 1,
-  Task = 2,
-  Document = 3,
-  Training = 4
-}
-
-export enum ChecklistItemStatus {
-  Pending = 0,
-  InProgress = 1,
-  Completed = 2,
-  Skipped = 3,
-  NotApplicable = 4
-}
-
-export enum ChecklistInstanceStatus {
-  NotStarted = 0,
-  InProgress = 1,
-  Completed = 2,
-  Cancelled = 3
-}
-
-export interface ChecklistTemplate {
-  id: string
-  name: string
-  description: string
-  type: ChecklistType
-  typeName: string
-  isActive: boolean
-  itemCount: number
-  createdAt: string
-  updatedAt?: string
-}
-
-export interface ChecklistTemplateItem {
-  id: string
-  templateId: string
-  sortOrder: number
-  content: string
-  itemType: ChecklistItemType
-  itemTypeName: string
-  isRequired: boolean
-  helpText?: string
-  estimatedMinutes?: number
-  createdAt: string
-  updatedAt?: string
-}
-
-export interface ChecklistTemplateWithItems extends ChecklistTemplate {
-  items: ChecklistTemplateItem[]
-}
-
-export interface ChecklistInstance {
-  id: string
-  templateId: string
-  templateName: string
-  type: ChecklistType
-  typeName: string
-  title: string
-  status: ChecklistInstanceStatus
-  statusName: string
-  candidateName?: string
-  position?: string
-  interviewDate?: string
-  newHireName?: string
-  startDate?: string
-  targetCompletionDate?: string
-  notes: string
-  totalItems: number
-  completedItems: number
-  progressPercent: number
-  createdAt: string
-  updatedAt?: string
-  completedAt?: string
-}
-
-export interface ChecklistInstanceItem {
-  id: string
-  instanceId: string
-  templateItemId: string
-  sortOrder: number
-  content: string
-  itemType: ChecklistItemType
-  itemTypeName: string
-  isRequired: boolean
-  status: ChecklistItemStatus
-  statusName: string
-  notes: string
-  score?: number
-  assignee?: string
-  dueDate?: string
-  isOverdue: boolean
-  completedAt?: string
-  createdAt: string
-  updatedAt?: string
-}
-
-export interface ChecklistInstanceWithItems extends ChecklistInstance {
-  items: ChecklistInstanceItem[]
-}
-
-export interface CreateChecklistTemplateDto {
-  name: string
-  description: string
-  type: ChecklistType
-}
-
-export interface UpdateChecklistTemplateDto {
-  name: string
-  description: string
-}
-
-export interface CreateChecklistTemplateItemDto {
-  content: string
-  itemType: ChecklistItemType
-  isRequired: boolean
-  helpText?: string
-  estimatedMinutes?: number
-}
-
-export interface UpdateChecklistTemplateItemDto {
-  sortOrder: number
-  content: string
-  itemType: ChecklistItemType
-  isRequired: boolean
-  helpText?: string
-  estimatedMinutes?: number
-}
-
-export interface CreateInterviewInstanceDto {
-  templateId: string
-  title: string
-  candidateName: string
-  position: string
-  interviewDate: string
-}
-
-export interface CreateOnboardingInstanceDto {
-  templateId: string
-  title: string
-  newHireName: string
-  startDate: string
-  targetCompletionDate?: string
-}
-
-export interface CompleteChecklistItemDto {
-  notes?: string
-  score?: number
-}
-
-export interface SkipChecklistItemDto {
-  notes?: string
-}
-
-export interface UpdateChecklistItemDto {
-  notes?: string
-  score?: number
-  assignee?: string
-  dueDate?: string
-}
-
-export interface ReorderItemsDto {
-  itemIds: string[]
 }
 
 // Project Knowledge

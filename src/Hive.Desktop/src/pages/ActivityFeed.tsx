@@ -9,11 +9,8 @@ import {
   FolderKanban,
   Timer,
   BarChart3,
-  FileBox,
   Award,
   Star,
-  ClipboardList,
-  ClipboardCheck,
   Network,
   BookOpen,
   Search,
@@ -121,16 +118,10 @@ const ActivityFeed = () => {
         return <Timer className="w-5 h-5 text-cyan-500" />
       case 'sprintcapacity':
         return <BarChart3 className="w-5 h-5 text-sky-500" />
-      case 'document':
-        return <FileBox className="w-5 h-5 text-slate-500" />
       case 'skill':
         return <Award className="w-5 h-5 text-yellow-500" />
       case 'skillassessment':
         return <Star className="w-5 h-5 text-yellow-600" />
-      case 'checklisttemplate':
-        return <ClipboardList className="w-5 h-5 text-emerald-500" />
-      case 'checklistinstance':
-        return <ClipboardCheck className="w-5 h-5 text-emerald-600" />
       case 'parent':
         return <Network className="w-5 h-5 text-rose-500" />
       case 'projectknowledge':
@@ -163,16 +154,10 @@ const ActivityFeed = () => {
         return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
       case 'sprintcapacity':
         return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200'
-      case 'document':
-        return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
       case 'skill':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
       case 'skillassessment':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'checklisttemplate':
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-      case 'checklistinstance':
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
       case 'parent':
         return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
       case 'projectknowledge':
