@@ -72,6 +72,24 @@ public record NotePaginationParams : PaginationParams
 }
 
 /// <summary>
+/// Parameters for paginated and filtered 1:1 queries.
+/// </summary>
+public record MeetingPaginationParams : PaginationParams
+{
+    /// <summary>
+    /// Limits the result to the 1:1s held with one person.
+    /// </summary>
+    public Guid? DirectReportId { get; init; }
+
+    /// <summary>
+    /// Limits the result to 1:1s whose tags name nobody Hive recognises.
+    /// </summary>
+    public bool UnlinkedOnly { get; init; }
+
+    public string? SearchTerm { get; init; }
+}
+
+/// <summary>
 /// Parameters for paginated and filtered activity queries.
 /// </summary>
 public record ActivityPaginationParams : PaginationParams

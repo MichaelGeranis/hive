@@ -38,6 +38,58 @@ public class OneOnOneMeetingRepository : IOneOnOneMeetingRepository
         return Task.FromResult<IReadOnlyList<OneOnOneMeeting>>(entities);
     }
 
+    public Task<(IReadOnlyList<OneOnOneMeeting> Items, int TotalCount)> GetFilteredPagedAsync(
+        int skip,
+        int take,
+        Guid? directReportId,
+        bool unlinkedOnly,
+        string? searchTerm,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.OneOnOneMeetings.Values.AsEnumerable();
+
+        if (unlinkedOnly)
+        {
+            query = query.Where(m => m.DirectReportId == null);
+        }
+        else if (directReportId.HasValue)
+        {
+            query = query.Where(m => m.DirectReportId == directReportId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLowerInvariant();
+            query = query.Where(m =>
+                m.Title.ToLowerInvariant().Contains(term) ||
+                m.Content.ToLowerInvariant().Contains(term) ||
+                m.Tags.ToLowerInvariant().Contains(term));
+        }
+
+        var ordered = query
+            .OrderByDescending(m => m.MeetingDate)
+            .ThenByDescending(m => m.UpdatedAt ?? m.CreatedAt)
+            .ToList();
+
+        var items = ordered.Skip(skip).Take(take).ToList();
+
+        return Task.FromResult<(IReadOnlyList<OneOnOneMeeting>, int)>((items, ordered.Count));
+    }
+
+    public Task<IReadOnlyList<(Guid? DirectReportId, int Count)>> GetCountsByDirectReportAsync(CancellationToken cancellationToken = default)
+    {
+        var counts = _context.OneOnOneMeetings.Values
+            .GroupBy(m => m.DirectReportId)
+            .Select(g => (DirectReportId: g.Key, Count: g.Count()))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<(Guid?, int)>>(counts);
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(_context.OneOnOneMeetings.Count);
+    }
+
     public Task<OneOnOneMeeting> AddAsync(OneOnOneMeeting meeting, CancellationToken cancellationToken = default)
     {
         if (!_context.OneOnOneMeetings.TryAdd(meeting.Id, meeting))

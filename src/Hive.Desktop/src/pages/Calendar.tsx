@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, StickyNote, Calendar as CalendarIcon, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, StickyNote, MessageSquare } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../components/Card'
-import { notesApi, meetingNotesApi } from '../services/api'
-import type { ManagerNote, MeetingNote } from '../types'
+import { meetingsApi, notesApi } from '../services/api'
+import type { ManagerNote, OneOnOneMeeting } from '../types'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
 type CalendarEvent = {
   id: string
   title: string
-  displayDate: Date  // The date to show on calendar (1 day before due)
-  dueDate: Date      // The actual due date
-  type: 'note' | 'action-item'
+  /** The day the event belongs on. Both kinds of event land on their own date. */
+  date: Date
+  type: 'note' | 'one-on-one'
   color: string
   details?: string
-  isOverdue: boolean
 }
 
 const monthNames = [
@@ -23,13 +22,12 @@ const monthNames = [
 
 const EVENT_COLORS = {
   note: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-l-4 border-amber-500',
-  'action-item': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
-  'action-item-overdue': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-l-4 border-red-500',
+  'one-on-one': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-l-4 border-purple-500',
 }
 
 const EVENT_ICONS = {
   note: StickyNote,
-  'action-item': CalendarIcon,
+  'one-on-one': MessageSquare,
 }
 
 const parseDateTag = (tags: string[]): Date | null => {
@@ -42,23 +40,6 @@ const parseDateTag = (tags: string[]): Date | null => {
   const day = Number(value.slice(6, 8))
   const date = new Date(year, month - 1, day)
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null
-}
-
-// Adjust display date to Friday if it falls on a weekend
-const adjustForWeekend = (date: Date): Date => {
-  const dayOfWeek = date.getDay()
-  if (dayOfWeek === 6) {
-    // Saturday -> move to Friday (subtract 1 day)
-    const adjusted = new Date(date)
-    adjusted.setDate(adjusted.getDate() - 1)
-    return adjusted
-  } else if (dayOfWeek === 0) {
-    // Sunday -> move to Friday (subtract 2 days)
-    const adjusted = new Date(date)
-    adjusted.setDate(adjusted.getDate() - 2)
-    return adjusted
-  }
-  return date
 }
 
 export default function Calendar() {
@@ -75,9 +56,9 @@ export default function Calendar() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const [notesResponse, actionItems] = await Promise.all([
+      const [notesResponse, meetingsResponse] = await Promise.all([
         notesApi.getAll(1, 100, 'all', undefined, undefined, undefined, 'recent'),
-        meetingNotesApi.getOpenActionItems(),  // Get open action items
+        meetingsApi.getAll(1, 100)
       ])
 
       const calendarEvents: CalendarEvent[] = []
@@ -90,54 +71,31 @@ export default function Calendar() {
         calendarEvents.push({
           id: `note-${note.id}`,
           title: note.title,
-          displayDate: date,
-          dueDate: date,
+          date,
           type: 'note',
           color: EVENT_COLORS.note,
-          details: note.content ? note.content.substring(0, 100) : undefined,
-          isOverdue: false,
+          details: note.content ? note.content.substring(0, 100) : undefined
         })
       })
 
-      // Add Action Items with due dates (show 1 day before due, adjusted for weekends)
-      actionItems.forEach((actionItem: MeetingNote) => {
-        if (actionItem.actionDueDate) {
-          const dueDate = new Date(actionItem.actionDueDate)
-          let displayDate = new Date(dueDate)
-          displayDate.setDate(displayDate.getDate() - 1)  // 1 day before due
-          displayDate = adjustForWeekend(displayDate)  // Move to Friday if on weekend
-
-          calendarEvents.push({
-            id: `action-${actionItem.id}`,
-            title: actionItem.content.substring(0, 50) + (actionItem.content.length > 50 ? '...' : ''),
-            displayDate,
-            dueDate,
-            type: 'action-item',
-            color: actionItem.isOverdue ? EVENT_COLORS['action-item-overdue'] : EVENT_COLORS['action-item'],
-            details: `1:1 with ${actionItem.directReportName}${actionItem.actionAssignee ? ` • Assigned: ${actionItem.actionAssignee}` : ''}`,
-            isOverdue: actionItem.isOverdue,
-          })
-        }
+      // A 1:1 lands on the day it happened - it is a record, not a deadline.
+      meetingsResponse.items.forEach((meeting: OneOnOneMeeting) => {
+        calendarEvents.push({
+          id: `meeting-${meeting.id}`,
+          title: meeting.directReportName ? `1:1 · ${meeting.directReportName}` : '1:1',
+          date: new Date(`${meeting.meetingDate}T00:00:00`),
+          type: 'one-on-one',
+          color: EVENT_COLORS['one-on-one'],
+          details: meeting.snippet || meeting.title
+        })
       })
 
       setEvents(calendarEvents)
     } catch (error) {
       console.error('Failed to load calendar events:', error)
+      showError(getErrorMessage(error))
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleCompleteTask = async (eventId: string) => {
-    try {
-      const actualId = eventId.replace(/^action-/, '')
-      await meetingNotesApi.completeAction(actualId)
-
-      // Remove the completed item from the list
-      setEvents(prev => prev.filter(event => event.id !== eventId))
-    } catch (err) {
-      console.error('Failed to complete task:', err)
-      showError(getErrorMessage(err))
     }
   }
 
@@ -162,7 +120,7 @@ export default function Calendar() {
     targetDate.setHours(0, 0, 0, 0)
 
     return events.filter(event => {
-      const eventDate = new Date(event.displayDate)
+      const eventDate = new Date(event.date)
       eventDate.setHours(0, 0, 0, 0)
       return eventDate.getTime() === targetDate.getTime()
     })
@@ -220,7 +178,7 @@ export default function Calendar() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Daily Planner</h1>
-          <p className="text-slate-500 dark:text-slate-400">Notes and Action Items</p>
+          <p className="text-slate-500 dark:text-slate-400">Date-tagged notes and the 1:1s you have held</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -257,11 +215,7 @@ export default function Calendar() {
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-purple-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">1:1 Action Items</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-red-500"></div>
-          <span className="text-sm text-slate-600 dark:text-slate-400">Overdue</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">1:1s</span>
         </div>
       </div>
 
@@ -310,7 +264,7 @@ export default function Calendar() {
                         <div
                           key={event.id}
                           className={`text-xs p-1 rounded ${event.color} truncate flex items-center gap-1`}
-                          title={`${event.title} (Due: ${formatDate(event.dueDate)})`}
+                          title={`${event.title} — ${formatDate(event.date)}`}
                         >
                           <Icon className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate">{event.title}</span>
@@ -356,30 +310,12 @@ export default function Calendar() {
                       <div className="flex items-start gap-2">
                         <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{event.title}</h4>
-                            {event.isOverdue && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-red-500 text-white">
-                                Overdue
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs opacity-70 mt-1">
-                            Due: {formatDate(event.dueDate)}
-                          </p>
+                          <h4 className="font-medium">{event.title}</h4>
+                          <p className="text-xs opacity-70 mt-1">{formatDate(event.date)}</p>
                           {event.details && (
                             <p className="text-sm opacity-80 mt-1">{event.details}</p>
                           )}
                         </div>
-                        {event.type === 'action-item' && (
-                          <button
-                            onClick={() => handleCompleteTask(event.id)}
-                            className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors flex-shrink-0"
-                            title="Mark as completed"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </div>
                   )

@@ -12,6 +12,7 @@ public record BackupDto
     public List<TeamTaskBackup> Tasks { get; init; } = new();
     public List<PerformanceReviewBackup> PerformanceReviews { get; init; } = new();
     public List<OneOnOneMeetingBackup> Meetings { get; init; } = new();
+    /// <summary>Legacy 1:1 notes, read on restore only. Never written by an export.</summary>
     public List<MeetingNoteBackup> MeetingNotes { get; init; } = new();
     public List<LeaveBackup> Leaves { get; init; } = new();
     public List<ManagerNoteBackup> ManagerNotes { get; init; } = new();
@@ -92,24 +93,25 @@ public record PerformanceReviewBackup
 public record OneOnOneMeetingBackup
 {
     public Guid Id { get; init; }
-    public Guid DirectReportId { get; init; }
+    public Guid? DirectReportId { get; init; }
     public DateOnly MeetingDate { get; init; }
-    public string Agenda { get; init; } = string.Empty;
+    public string Content { get; init; } = string.Empty;
+    public string Tags { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }
 
+/// <summary>
+/// A note taken inside a 1:1, from a backup written before 1:1s became single markdown
+/// notes. Only read on restore: its content is folded into its meeting's body.
+/// </summary>
 public record MeetingNoteBackup
 {
     public Guid Id { get; init; }
     public Guid MeetingId { get; init; }
     public string Content { get; init; } = string.Empty;
     public int Category { get; init; }
-    public int? ActionStatus { get; init; }
-    public DateTime? ActionDueDate { get; init; }
-    public string? ActionAssignee { get; init; }
     public DateTime CreatedAt { get; init; }
-    public DateTime? UpdatedAt { get; init; }
 }
 
 public record LeaveBackup

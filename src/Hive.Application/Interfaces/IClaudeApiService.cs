@@ -19,11 +19,10 @@ public interface IClaudeApiService
 }
 
 /// <summary>
-/// Represents a meeting note prepared for sentiment analysis.
+/// Represents the body of a 1:1 prepared for sentiment analysis.
 /// </summary>
 public record MeetingNoteForAnalysis(
     string Content,
-    string Category,
     DateOnly MeetingDate
 );
 

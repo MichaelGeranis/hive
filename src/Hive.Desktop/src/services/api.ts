@@ -8,9 +8,8 @@ import type {
   RestoreResultDto,
   PerformanceReview,
   OneOnOneMeeting,
-  MeetingNote,
-  CreateMeetingNoteDto,
-  UpdateMeetingNoteDto,
+  CreateBlankMeetingDto,
+  MeetingCount,
   Project,
   TeamTask,
   DashboardOverview,
@@ -204,32 +203,37 @@ export const reviewsApi = {
   delete: (id: string) => api.delete(`/performancereviews/${id}`)
 }
 
-// One-on-One Meetings
+// One-on-One Meetings - each 1:1 is one markdown note
 export const meetingsApi = {
-  getAll: () => api.get<OneOnOneMeeting[]>('/oneononemeetings').then(r => r.data),
+  getAll: (
+    pageNumber = 1,
+    pageSize = 100,
+    directReportId?: string | null,
+    unlinked = false,
+    search?: string
+  ) => {
+    const params = new URLSearchParams()
+    params.append('pageNumber', pageNumber.toString())
+    params.append('pageSize', pageSize.toString())
+    if (directReportId) params.append('directReportId', directReportId)
+    if (unlinked) params.append('unlinked', 'true')
+    if (search) params.append('search', search)
+    return api.get<PagedResult<OneOnOneMeeting>>(`/oneononemeetings?${params.toString()}`).then(r => r.data)
+  },
   getById: (id: string) => api.get<OneOnOneMeeting>(`/oneononemeetings/${id}`).then(r => r.data),
   getByDirectReport: (directReportId: string) =>
-    api.get<OneOnOneMeeting[]>(`/oneononemeetings/direct-report/${directReportId}`).then(r => r.data),
-  create: (data: any) => api.post<OneOnOneMeeting>('/oneononemeetings', data).then(r => r.data),
-  update: (id: string, data: any) => api.put<OneOnOneMeeting>(`/oneononemeetings/${id}`, data).then(r => r.data),
+    api.get<OneOnOneMeeting[]>(`/oneononemeetings/by-report/${directReportId}`).then(r => r.data),
+  getCount: () => api.get<number>('/oneononemeetings/count').then(r => r.data),
+  getCounts: () => api.get<MeetingCount[]>('/oneononemeetings/counts').then(r => r.data),
+  createBlank: (data: CreateBlankMeetingDto = {}) =>
+    api.post<OneOnOneMeeting>('/oneononemeetings/blank', data).then(r => r.data),
+  updateContent: (id: string, content: string) =>
+    api.put<OneOnOneMeeting>(`/oneononemeetings/${id}/content`, { content }).then(r => r.data),
+  updateTags: (id: string, tags: string) =>
+    api.put<OneOnOneMeeting>(`/oneononemeetings/${id}/tags`, { tags }).then(r => r.data),
+  updateDate: (id: string, meetingDate: string) =>
+    api.put<OneOnOneMeeting>(`/oneononemeetings/${id}/date`, { meetingDate }).then(r => r.data),
   delete: (id: string) => api.delete(`/oneononemeetings/${id}`)
-}
-
-// Meeting Notes
-export const meetingNotesApi = {
-  getByMeeting: (meetingId: string) =>
-    api.get<MeetingNote[]>(`/meetingnotes/by-meeting/${meetingId}`).then(r => r.data),
-  getOpenActionItems: () =>
-    api.get<MeetingNote[]>('/meetingnotes/action-items/open').then(r => r.data),
-  getOverdueActionItems: () =>
-    api.get<MeetingNote[]>('/meetingnotes/action-items/overdue').then(r => r.data),
-  create: (data: CreateMeetingNoteDto) =>
-    api.post<MeetingNote>('/meetingnotes', data).then(r => r.data),
-  update: (id: string, data: UpdateMeetingNoteDto) =>
-    api.put<MeetingNote>(`/meetingnotes/${id}`, data).then(r => r.data),
-  completeAction: (id: string) =>
-    api.post<MeetingNote>(`/meetingnotes/${id}/complete`).then(r => r.data),
-  delete: (id: string) => api.delete(`/meetingnotes/${id}`)
 }
 
 // Projects

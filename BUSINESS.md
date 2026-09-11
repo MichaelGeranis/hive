@@ -34,7 +34,7 @@ Hive divides the EM role into six domains. Every entity belongs to exactly one.
 | Domain | Question it answers | Core entities |
 |--------|---------------------|---------------|
 | People & Growth | Who is on the team and are they developing? | `DirectReport`, `PerformanceReview`, `Skill`, `SkillAssessment` |
-| Conversations | What have we talked about and what did we commit to? | `OneOnOneMeeting`, `MeetingNote`, `ManagerNote`, `NoteFolder` |
+| Conversations | What have we talked about? | `OneOnOneMeeting`, `ManagerNote`, `NoteFolder` |
 | Availability | Who is here, and when? | `Leave` |
 | Delivery | What is the team working on and how is it going? | `Project`, `TeamTask`, `Parent`, `Sprint`, `SprintCapacity` |
 | Planning | What are we committing to next quarter, and can we? | `Quarter`, `Initiative`, `Allocation`, `InitiativeDependency` |
@@ -122,26 +122,34 @@ The team's capability map.
   The first means "never evaluated", the second means "evaluated, has none".
 - Categories carry a `SortOrder` so the heatmap renders in a stable, meaningful order.
 
-### OneOnOneMeeting and MeetingNote
+### OneOnOneMeeting
 
-The 1:1 record.
+The 1:1 record. **A 1:1 is a single markdown note**, written while the meeting happens.
+There is no agenda field, no notes inside the note, and no action items.
 
-| Entity | Business meaning |
-|--------|------------------|
-| `OneOnOneMeeting` | A scheduled or held 1:1 with a direct report, with an agenda |
-| `MeetingNote` | One note taken during that meeting |
-
-`NoteCategory` is `Discussion`, `ActionItem`, `Feedback`, `Achievement`.
+| Property | Business meaning |
+|----------|------------------|
+| Content | What was discussed, written as markdown |
+| Title | The heading, **derived from the first line of the content** |
+| MeetingDate | The day the 1:1 happened |
+| Tags | Comma-separated tags. One names the person, one may set the date |
+| DirectReportId | The person the tags resolved to; **null when the 1:1 is not linked to anyone** |
 
 **Rules:**
-- A note's category determines what it can carry. **Only `ActionItem` notes may have an
-  assignee, a due date, or an action status** — setting those on any other category
-  throws. This is what makes "open action items" a trustworthy number.
-- `ActionItemStatus` is `Open`, `InProgress`, `Completed`, `Cancelled`. Only action items
-  can be completed.
-- Note content cannot be empty and cannot exceed 4000 characters.
-- `IsSyncedFromCalendar` marks meetings that came from a calendar rather than being
-  entered by hand, so they can be distinguished when reporting on 1:1 cadence.
+- The manager never picks a person from a list. **The person is derived from the tags**,
+  the same way the title is derived from the first line. A tag matches a direct report by
+  first name, last name, or the two joined in either order, compared on letters and digits
+  only — so `#badredin`, `#panagiotis`, `#panagiotisbadredin` and `#badredinpanagiotis` all
+  name the same person.
+- **A 1:1 whose tags name nobody, or name more than one person, is kept and shown as
+  unlinked.** Hive never guesses between two people, and never silently drops the note out
+  of the record. Re-tagging it re-resolves the link.
+- The meeting date defaults to the day the note was started. A `#YYYYMMDD` tag moves it,
+  so a 1:1 written up late still lands on the day it happened.
+- Title cannot exceed 200 characters; an empty note is titled `New 1:1`. The body is free
+  text with no length limit, and whitespace is preserved exactly as typed.
+- The 1:1 is the whole record: **sentiment analysis reads these bodies**, and the number of
+  1:1s logged is what the dashboard reports.
 
 ### ManagerNote and NoteFolder
 
@@ -535,6 +543,7 @@ records by email. Jira parents become `Parent` entities. Fields listed in a task
 | **Knowledge level** | A 1–5 rating of how well a person knows a project |
 | **Knowledge points** | Earned evidence (completed story points) that suggests a knowledge level |
 | **Note folder** | A nestable grouping of manager notes; deleting one keeps its notes |
+| **Unlinked 1:1** | A 1:1 note whose tags name nobody Hive recognises, or name two people |
 | **Parent** | A Jira parent issue or epic that groups tasks — not an organisational parent |
 | **Sprint history filter** | The dashboard control limiting analytics to the last N sprints |
 | **T-shirt size** | A coarse effort estimate on an initiative, mapped to points via settings |
@@ -556,5 +565,6 @@ These terms must be used consistently across code, comments, and variable names.
 | `Leave` | Time a person is unavailable | PTO, holiday, absence, timeoff |
 | `KnowledgePoint` | Earned evidence of project knowledge | score, xp, credit |
 | `NoteFolder` | A folder grouping manager notes | notebook, category, directory |
+| `OneOnOneMeeting` | One 1:1, written as a single markdown note | meeting note, catch-up, sync |
 | `ChecklistInstance` | One run of a checklist template | checklist, run, session |
 | `Activity` | An audit trail entry | log, event, history |

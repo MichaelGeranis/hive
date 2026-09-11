@@ -1,724 +1,475 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Calendar, MoreVertical, Edit, Trash2, ChevronDown, ChevronUp, StickyNote, Check, Search, X, Filter, Users } from 'lucide-react'
-import { Card, CardHeader, CardContent } from '../components/Card'
-import { meetingsApi, directReportsApi, meetingNotesApi } from '../services/api'
-import { NoteCategory, ActionItemStatus } from '../types'
-import type { OneOnOneMeeting, DirectReport, MeetingNote, CreateMeetingNoteDto } from '../types'
-import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertCircle, MessageSquare, Plus, Search, User, Users, X } from 'lucide-react'
+import MeetingEditor from '../components/MeetingEditor'
+import { directReportsApi, meetingsApi } from '../services/api'
+import type { DirectReport, MeetingCount, OneOnOneMeeting } from '../types'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
-const categoryColors: Record<NoteCategory, string> = {
-  [NoteCategory.Discussion]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
-  [NoteCategory.ActionItem]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  [NoteCategory.Feedback]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  [NoteCategory.Achievement]: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+type Scope = { kind: 'all' } | { kind: 'person'; directReportId: string } | { kind: 'unlinked' }
+
+const AUTOSAVE_DELAY_MS = 700
+const PAGE_SIZE = 100
+
+/** The tag that names a person without ambiguity: their first and last name joined. */
+function tagFor(report: DirectReport): string {
+  return `${report.firstName}${report.lastName}`.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
 }
 
-const categoryLabels: Record<NoteCategory, string> = {
-  [NoteCategory.Discussion]: 'Discussion',
-  [NoteCategory.ActionItem]: 'Action Item',
-  [NoteCategory.Feedback]: 'Feedback',
-  [NoteCategory.Achievement]: 'Achievement',
+function formatMeetingDate(value: string): string {
+  const date = new Date(`${value}T00:00:00`)
+  const now = new Date()
+  const sameYear = date.getFullYear() === now.getFullYear()
+  return date.toLocaleDateString(
+    [],
+    sameYear ? { month: 'short', day: 'numeric' } : { year: 'numeric', month: 'short', day: 'numeric' }
+  )
 }
 
-// All categories available for notes
-const allCategories = [
-  NoteCategory.Discussion,
-  NoteCategory.ActionItem,
-  NoteCategory.Feedback,
-  NoteCategory.Achievement,
-]
-
+/**
+ * 1:1 Meetings: the people on the left, their 1:1s in the middle, the note itself on the
+ * right. A 1:1 is written during the meeting and saved as it is typed.
+ */
 export default function Meetings() {
   const { showError } = useToast()
+
+  const [reports, setReports] = useState<DirectReport[]>([])
+  const [counts, setCounts] = useState<MeetingCount[]>([])
   const [meetings, setMeetings] = useState<OneOnOneMeeting[]>([])
-  const [directReports, setDirectReports] = useState<DirectReport[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [scope, setScope] = useState<Scope>({ kind: 'all' })
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
-  const [filterDirectReportId, setFilterDirectReportId] = useState<string>('all')
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    directReportId: '',
-    meetingDate: '',
-    agenda: ''
-  })
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [startInEditMode, setStartInEditMode] = useState(false)
 
-  // Notes state
-  const [meetingNotes, setMeetingNotes] = useState<Record<string, MeetingNote[]>>({})
-  const [showNoteForm, setShowNoteForm] = useState(false)
-  const [expandedAgendas, setExpandedAgendas] = useState<Set<string>>(new Set())
-  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
-  const [noteFormData, setNoteFormData] = useState<CreateMeetingNoteDto>({
-    meetingId: '',
-    content: '',
-    category: NoteCategory.Discussion
-  })
+  // Autosave bookkeeping: what is being written, and what has not reached the server yet.
+  const draftRef = useRef('')
+  const editingIdRef = useRef<string | null>(null)
+  const dirtyRef = useRef(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const resetForm = () => {
-    setFormData({
-      directReportId: '',
-      meetingDate: '',
-      agenda: ''
-    })
-  }
+  const selectedMeeting = useMemo(
+    () => meetings.find((meeting) => meeting.id === selectedId) ?? null,
+    [meetings, selectedId]
+  )
 
-  const resetNoteForm = () => {
-    setNoteFormData({
-      meetingId: '',
-      content: '',
-      category: NoteCategory.Discussion
-    })
-  }
+  const countFor = useCallback(
+    (directReportId: string | null) =>
+      counts.find((c) => (c.directReportId ?? null) === directReportId)?.count ?? 0,
+    [counts]
+  )
 
-  const closeModal = useCallback(() => {
-    setShowForm(false)
-    setEditingId(null)
-    resetForm()
+  const patchMeeting = useCallback((updated: OneOnOneMeeting) => {
+    setMeetings((current) => current.map((meeting) => (meeting.id === updated.id ? updated : meeting)))
   }, [])
 
-  const closeNoteModal = useCallback(() => {
-    setShowNoteForm(false)
-    resetNoteForm()
+  const loadSidebar = useCallback(async () => {
+    try {
+      const [people, meetingCounts] = await Promise.all([
+        directReportsApi.getAll(),
+        meetingsApi.getCounts()
+      ])
+      setReports(people)
+      setCounts(meetingCounts)
+    } catch (error) {
+      console.error('Failed to load 1:1 sidebar:', error)
+    }
   }, [])
 
-  useEscapeKey(closeModal, showForm)
-  useEscapeKey(closeNoteModal, showNoteForm)
+  const openMeeting = useCallback((meeting: OneOnOneMeeting | null, editing = false) => {
+    editingIdRef.current = meeting?.id ?? null
+    dirtyRef.current = false
+    draftRef.current = meeting?.content ?? ''
+    setSelectedId(meeting?.id ?? null)
+    setDraft(meeting?.content ?? '')
+    setStartInEditMode(editing)
+  }, [])
+
+  const saveDraft = useCallback(async () => {
+    const meetingId = editingIdRef.current
+    if (!meetingId || !dirtyRef.current) return
+
+    dirtyRef.current = false
+    setSaving(true)
+    try {
+      patchMeeting(await meetingsApi.updateContent(meetingId, draftRef.current))
+    } catch (error) {
+      dirtyRef.current = true
+      console.error('Failed to save 1:1:', error)
+      showError(getErrorMessage(error))
+    } finally {
+      setSaving(false)
+    }
+  }, [patchMeeting, showError])
+
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    await saveDraft()
+  }, [saveDraft])
+
+  const loadMeetings = useCallback(
+    async (currentScope: Scope, search: string, keepSelection = false) => {
+      setLoading(true)
+      try {
+        const result = await meetingsApi.getAll(
+          1,
+          PAGE_SIZE,
+          currentScope.kind === 'person' ? currentScope.directReportId : undefined,
+          currentScope.kind === 'unlinked',
+          search || undefined
+        )
+        setMeetings(result.items)
+        setTotalCount(result.totalCount)
+
+        const stillVisible = keepSelection && result.items.some((m) => m.id === editingIdRef.current)
+        if (!stillVisible) {
+          openMeeting(result.items[0] ?? null)
+        }
+      } catch (error) {
+        console.error('Failed to load 1:1s:', error)
+        showError(getErrorMessage(error))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [openMeeting, showError]
+  )
 
   useEffect(() => {
-    loadData()
+    loadSidebar()
+  }, [loadSidebar])
+
+  // The list follows the person selected and the search box, saving first so that
+  // switching away never loses a keystroke.
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      await flushPendingSave()
+      if (!cancelled) {
+        await loadMeetings(scope, searchTerm, true)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, searchTerm])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setSearchTerm(searchInput), 300)
+    return () => clearTimeout(timeoutId)
+  }, [searchInput])
+
+  // Save whatever is still unsaved when leaving the page.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      if (dirtyRef.current && editingIdRef.current) {
+        meetingsApi.updateContent(editingIdRef.current, draftRef.current).catch(() => undefined)
+      }
+    }
   }, [])
 
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      const [meetingsData, drData] = await Promise.all([
-        meetingsApi.getAll(),
-        directReportsApi.getAll()
-      ])
-      // Sort by meeting date descending
-      meetingsData.sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime())
-      setMeetings(meetingsData)
-      setDirectReports(drData)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadMeetings = async () => {
-    try {
-      const data = await meetingsApi.getAll()
-      // Sort by meeting date descending
-      data.sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime())
-      setMeetings(data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const loadMeetingNotes = async (meetingId: string) => {
-    try {
-      const notes = await meetingNotesApi.getByMeeting(meetingId)
-      setMeetingNotes(prev => ({ ...prev, [meetingId]: notes }))
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const toggleNotesExpand = async (meetingId: string) => {
-    setExpandedNotes(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(meetingId)) {
-        newSet.delete(meetingId)
-      } else {
-        newSet.add(meetingId)
-        // Load notes if not already loaded
-        if (!meetingNotes[meetingId]) {
-          loadMeetingNotes(meetingId)
-        }
+  const handleContentChange = useCallback(
+    (value: string) => {
+      setDraft(value)
+      draftRef.current = value
+      dirtyRef.current = true
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
       }
-      return newSet
-    })
-  }
+      saveTimerRef.current = setTimeout(() => {
+        saveTimerRef.current = null
+        saveDraft()
+      }, AUTOSAVE_DELAY_MS)
+    },
+    [saveDraft]
+  )
 
-  const [searchInput, setSearchInput] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'past' | 'upcoming'>('all')
-
-  const clearFilters = () => {
-    setSearchInput('')
-    setSearchQuery('')
-    setFilterDirectReportId('all')
-    setStatusFilter('all')
-  }
-
-  // Calculate status counts
-  const statusCounts = useMemo(() => {
-    const now = new Date()
-    return {
-      all: meetings.length,
-      upcoming: meetings.filter(m => new Date(m.meetingDate) >= now).length,
-      past: meetings.filter(m => new Date(m.meetingDate) < now).length,
-    }
-  }, [meetings])
-
-  const filteredMeetings = () => {
-    let result = meetings
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(m =>
-        m.directReportName.toLowerCase().includes(query) ||
-        m.agenda?.toLowerCase().includes(query)
-      )
-    }
-
-    // Apply direct report filter
-    if (filterDirectReportId !== 'all') {
-      result = result.filter(m => m.directReportId === filterDirectReportId)
-    }
-
-    // Apply status filter
-    if (statusFilter === 'past') {
-      result = result.filter(m => new Date(m.meetingDate) < new Date())
-    } else if (statusFilter === 'upcoming') {
-      result = result.filter(m => new Date(m.meetingDate) >= new Date())
-    }
-
-    return result
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleNewMeeting = useCallback(async () => {
+    await flushPendingSave()
     try {
-      if (editingId) {
-        await meetingsApi.update(editingId, formData)
-      } else {
-        await meetingsApi.create(formData)
-      }
-      setShowForm(false)
-      setEditingId(null)
-      resetForm()
-      loadMeetings()
-    } catch (err) {
-      console.error(err)
-      showError(getErrorMessage(err))
+      const person = scope.kind === 'person' ? reports.find((r) => r.id === scope.directReportId) : undefined
+      const created = await meetingsApi.createBlank({ tags: person ? tagFor(person) : undefined })
+      setMeetings((current) => [created, ...current])
+      setTotalCount((count) => count + 1)
+      openMeeting(created, true)
+      loadSidebar()
+    } catch (error) {
+      console.error('Failed to start a 1:1 note:', error)
+      showError(getErrorMessage(error))
     }
+  }, [flushPendingSave, loadSidebar, openMeeting, reports, scope, showError])
+
+  const handleSelect = async (meeting: OneOnOneMeeting) => {
+    if (meeting.id === selectedId) return
+    await flushPendingSave()
+    openMeeting(meeting)
   }
 
-  const handleEdit = (meeting: OneOnOneMeeting) => {
-    setFormData({
-      directReportId: meeting.directReportId,
-      meetingDate: meeting.meetingDate.slice(0, 10),
-      agenda: meeting.agenda || ''
-    })
-    setEditingId(meeting.id)
-    setShowForm(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this meeting?')) {
-      try {
-        await meetingsApi.delete(id)
-        loadMeetings()
-      } catch (err) {
-        console.error(err)
-        showError(getErrorMessage(err))
-      }
-    }
-  }
-
-  const handleCreateNote = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleTagsChange = async (tags: string) => {
+    if (!selectedMeeting) return
+    await flushPendingSave()
     try {
-      await meetingNotesApi.create(noteFormData)
-      await loadMeetingNotes(noteFormData.meetingId)
-      closeNoteModal()
-    } catch (err) {
-      console.error(err)
-      showError(getErrorMessage(err))
+      const updated = await meetingsApi.updateTags(selectedMeeting.id, tags)
+      patchMeeting(updated)
+      loadSidebar()
+
+      // Re-tagging can move the 1:1 out of the list being shown.
+      const leftScope =
+        (scope.kind === 'person' && updated.directReportId !== scope.directReportId) ||
+        (scope.kind === 'unlinked' && !updated.isUnlinked)
+      if (leftScope) {
+        await loadMeetings(scope, searchTerm, false)
+      }
+    } catch (error) {
+      showError(getErrorMessage(error))
     }
   }
 
-  const handleCompleteAction = async (noteId: string, meetingId: string) => {
+  const handleDateChange = async (meetingDate: string) => {
+    if (!selectedMeeting) return
     try {
-      await meetingNotesApi.completeAction(noteId)
-      await loadMeetingNotes(meetingId)
-    } catch (err) {
-      console.error(err)
-      showError(getErrorMessage(err))
+      patchMeeting(await meetingsApi.updateDate(selectedMeeting.id, meetingDate))
+    } catch (error) {
+      showError(getErrorMessage(error))
     }
   }
 
-  const handleDeleteNote = async (noteId: string, meetingId: string) => {
-    if (confirm('Are you sure you want to delete this note?')) {
-      try {
-        await meetingNotesApi.delete(noteId)
-        await loadMeetingNotes(meetingId)
-      } catch (err) {
-        console.error(err)
-        showError(getErrorMessage(err))
-      }
+  const handleDelete = async () => {
+    if (!selectedMeeting) return
+    if (!confirm(`Delete this 1:1? This cannot be undone.`)) return
+
+    const deletedId = selectedMeeting.id
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    dirtyRef.current = false
+
+    try {
+      await meetingsApi.delete(deletedId)
+      const remaining = meetings.filter((meeting) => meeting.id !== deletedId)
+      setMeetings(remaining)
+      setTotalCount((count) => Math.max(0, count - 1))
+      openMeeting(remaining[0] ?? null)
+      loadSidebar()
+    } catch (error) {
+      showError(getErrorMessage(error))
     }
   }
 
-  const openNoteForm = (meetingId: string) => {
-    setNoteFormData({
-      meetingId,
-      content: '',
-      category: NoteCategory.Discussion
-    })
-    setShowNoteForm(true)
-  }
+  const scopeTitle =
+    scope.kind === 'all'
+      ? 'All 1:1s'
+      : scope.kind === 'unlinked'
+      ? 'Unlinked'
+      : reports.find((r) => r.id === scope.directReportId)?.fullName ?? '1:1s'
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
-
-  const isPastMeeting = (meeting: OneOnOneMeeting) => {
-    return new Date(meeting.meetingDate) < new Date()
-  }
-
-  const toggleAgendaExpand = (meetingId: string) => {
-    setExpandedAgendas(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(meetingId)) {
-        newSet.delete(meetingId)
-      } else {
-        newSet.add(meetingId)
-      }
-      return newSet
-    })
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-      </div>
-    )
-  }
+  const railButton = (
+    key: string,
+    label: string,
+    count: number,
+    active: boolean,
+    icon: JSX.Element,
+    onClick: () => void
+  ) => (
+    <button
+      key={key}
+      onClick={onClick}
+      aria-label={`${label}, ${count} 1:1s`}
+      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium transition-colors ${
+        active
+          ? 'bg-purple-500 text-white'
+          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/60'
+      }`}
+    >
+      {icon}
+      <span className="flex-1 truncate">{label}</span>
+      <span className={`text-xs ${active ? 'text-purple-100' : 'text-slate-400'}`}>{count}</span>
+    </button>
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">1:1 Meetings</h1>
-          <p className="text-slate-500 dark:text-slate-400">Keep one-on-one agenda & meeting notes</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Meeting
-        </button>
-      </div>
+    <div className="flex h-[calc(100vh-5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+      {/* People */}
+      <aside className="hidden w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-900/40 lg:flex">
+        {railButton(
+          'all',
+          'All 1:1s',
+          counts.reduce((sum, c) => sum + c.count, 0),
+          scope.kind === 'all',
+          <Users className="h-4 w-4 shrink-0" />,
+          () => setScope({ kind: 'all' })
+        )}
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader title={editingId ? 'Edit Meeting' : 'Add Meeting'} />
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Team Member</label>
-                  <select
-                    value={formData.directReportId}
-                    onChange={(e) => setFormData({ ...formData, directReportId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    required
-                  >
-                    <option value="">Select team member</option>
-                    {directReports.map(dr => (
-                      <option key={dr.id} value={dr.id}>{dr.fullName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={formData.meetingDate}
-                    onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Agenda</label>
-                  <textarea
-                    value={formData.agenda}
-                    onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    rows={3}
-                    placeholder="Topics to discuss..."
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-                  >
-                    {editingId ? 'Update' : 'Add'}
-                  </button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+        <div className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          Team
         </div>
-      )}
 
-      {/* Note Form Modal */}
-      {showNoteForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader title="Add Note" />
-            <CardContent>
-              <form onSubmit={handleCreateNote} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                  <select
-                    value={noteFormData.category}
-                    onChange={(e) => setNoteFormData({ ...noteFormData, category: parseInt(e.target.value) as NoteCategory })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  >
-                    {allCategories.map((cat) => (
-                      <option key={cat} value={cat}>{categoryLabels[cat]}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content</label>
-                  <textarea
-                    value={noteFormData.content}
-                    onChange={(e) => setNoteFormData({ ...noteFormData, content: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    rows={3}
-                    required
-                    placeholder="Note content..."
-                  />
-                </div>
-                {noteFormData.category === NoteCategory.ActionItem && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assignee</label>
-                      <input
-                        type="text"
-                        value={noteFormData.actionAssignee || ''}
-                        onChange={(e) => setNoteFormData({ ...noteFormData, actionAssignee: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                        placeholder="Who's responsible?"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Due Date</label>
-                      <input
-                        type="date"
-                        value={noteFormData.actionDueDate || ''}
-                        onChange={(e) => setNoteFormData({ ...noteFormData, actionDueDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={closeNoteModal}
-                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-                  >
-                    Add Note
-                  </button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        {reports.map((report) =>
+          railButton(
+            report.id,
+            report.fullName,
+            countFor(report.id),
+            scope.kind === 'person' && scope.directReportId === report.id,
+            <User className="h-4 w-4 shrink-0" />,
+            () => setScope({ kind: 'person', directReportId: report.id })
+          )
+        )}
 
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search meetings... (press Enter)"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(searchInput) }}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-          />
-          {(searchInput || filterDirectReportId !== 'all' || statusFilter !== 'all') && (
+        {countFor(null) > 0 &&
+          railButton(
+            'unlinked',
+            'Unlinked',
+            countFor(null),
+            scope.kind === 'unlinked',
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />,
+            () => setScope({ kind: 'unlinked' })
+          )}
+      </aside>
+
+      {/* 1:1 list */}
+      <section
+        aria-label="1:1 list"
+        className="flex w-full shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 sm:w-80"
+      >
+        <div className="space-y-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-slate-900 dark:text-white">{scopeTitle}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {totalCount} {totalCount === 1 ? '1:1' : '1:1s'}
+              </p>
+            </div>
             <button
-              onClick={clearFilters}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              onClick={handleNewMeeting}
+              title="New 1:1"
+              aria-label="New 1:1"
+              className="flex items-center gap-1.5 rounded-lg bg-purple-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-600"
             >
-              <X className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
+              New
             </button>
+          </div>
+
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search 1:1s"
+              aria-label="Search 1:1s"
+              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 focus:ring-2 focus:ring-purple-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading && meetings.length === 0 ? (
+            <div className="flex h-32 items-center justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-purple-500" />
+            </div>
+          ) : meetings.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <MessageSquare className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {searchTerm ? 'No 1:1s match your search.' : 'No 1:1s here yet.'}
+              </p>
+              {!searchTerm && (
+                <button
+                  onClick={handleNewMeeting}
+                  className="mt-3 text-sm font-medium text-purple-600 hover:text-purple-700"
+                >
+                  Write the first one
+                </button>
+              )}
+            </div>
+          ) : (
+            meetings.map((meeting) => (
+              <button
+                key={meeting.id}
+                onClick={() => handleSelect(meeting)}
+                className={`w-full border-b border-slate-100 px-4 py-3 text-left transition-colors dark:border-slate-700/60 ${
+                  meeting.id === selectedId
+                    ? 'bg-purple-500/10 dark:bg-purple-500/15'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {meeting.isUnlinked && <AlertCircle className="h-3 w-3 shrink-0 text-amber-500" />}
+                  <span className="flex-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {meeting.title}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="shrink-0">{formatMeetingDate(meeting.meetingDate)}</span>
+                  {scope.kind !== 'person' && meeting.directReportName && (
+                    <span className="shrink-0 text-purple-600 dark:text-purple-400">
+                      {meeting.directReportName}
+                    </span>
+                  )}
+                  <span className="truncate">{meeting.snippet || 'Nothing written yet'}</span>
+                </div>
+              </button>
+            ))
+          )}
+          {totalCount > meetings.length && (
+            <p className="px-4 py-3 text-center text-xs text-slate-400">
+              Showing the {meetings.length} most recent of {totalCount}. Narrow the list with search.
+            </p>
           )}
         </div>
+      </section>
 
-        {/* Team Members */}
-        {directReports.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Users className="w-4 h-4 text-slate-400" />
-            {directReports.map((dr) => (
-              <button
-                key={dr.id}
-                onClick={() => setFilterDirectReportId(filterDirectReportId === dr.id ? 'all' : dr.id)}
-                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                  filterDirectReportId === dr.id
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {dr.fullName}
-              </button>
-            ))}
+      {/* Editor */}
+      <section className="hidden flex-1 sm:flex">
+        {selectedMeeting ? (
+          <div className="h-full w-full">
+            <MeetingEditor
+              meeting={selectedMeeting}
+              content={draft}
+              saving={saving}
+              startInEditMode={startInEditMode}
+              onContentChange={handleContentChange}
+              onTagsChange={handleTagsChange}
+              onDateChange={handleDateChange}
+              onDelete={handleDelete}
+            />
           </div>
-        )}
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'all', label: `All (${statusCounts.all})`, count: statusCounts.all },
-              { value: 'upcoming', label: `Upcoming (${statusCounts.upcoming})`, count: statusCounts.upcoming },
-              { value: 'past', label: `Past (${statusCounts.past})`, count: statusCounts.past },
-            ]
-              .filter((f) => f.value === 'all' || f.count > 0)
-              .map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setStatusFilter(f.value as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  statusFilter === f.value
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* All Meetings */}
-      <div className="space-y-3">
-        {filteredMeetings().length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-slate-500 dark:text-slate-400">No meetings found</p>
-            </CardContent>
-          </Card>
         ) : (
-          filteredMeetings().map((meeting) => (
-            <Card key={meeting.id}>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-400 font-semibold">
-                      {meeting.directReportName.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.directReportName}</h3>
-                      <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(meeting.meetingDate)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Show if meeting is past or upcoming */}
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      isPastMeeting(meeting)
-                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    }`}>
-                      {isPastMeeting(meeting) ? 'Past' : 'Upcoming'}
-                    </span>
-                    {/* Note count indicator */}
-                    {meeting.noteCount > 0 && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        <StickyNote className="w-3 h-3" />
-                        {meeting.noteCount}
-                      </span>
-                    )}
-                    <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                        <MoreVertical className="w-5 h-5 text-slate-400" />
-                      </button>
-                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                        <button
-                          onClick={() => handleEdit(meeting)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(meeting.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Agenda */}
-                {meeting.agenda && (
-                  <div className="mt-4 pt-4 border-t dark:border-slate-700">
-                    <button
-                      onClick={() => toggleAgendaExpand(meeting.id)}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 w-full text-left"
-                    >
-                      {expandedAgendas.has(meeting.id) ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
-                      Agenda
-                    </button>
-                    {expandedAgendas.has(meeting.id) && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 whitespace-pre-wrap ml-6">{meeting.agenda}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Notes Section */}
-                <div className="mt-4 pt-4 border-t dark:border-slate-700">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => toggleNotesExpand(meeting.id)}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
-                    >
-                      {expandedNotes.has(meeting.id) ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
-                      <StickyNote className="w-4 h-4" />
-                      Notes
-                      {meeting.noteCount > 0 && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">({meeting.noteCount})</span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => openNoteForm(meeting.id)}
-                      className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add
-                    </button>
-                  </div>
-
-                  {expandedNotes.has(meeting.id) && (
-                    <div className="mt-3 ml-6">
-                      {(() => {
-                        const notes = meetingNotes[meeting.id] || []
-                        return notes.length > 0 ? (
-                          <div className="space-y-2">
-                            {notes.map((note) => (
-                              <div
-                                key={note.id}
-                                className={`p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 ${
-                                  note.category === NoteCategory.ActionItem && note.isOverdue ? 'border-l-4 border-red-500' : ''
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[note.category]}`}>
-                                        {note.categoryName}
-                                      </span>
-                                      {note.actionStatusName && (
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                          note.actionStatus === ActionItemStatus.Completed
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                            : note.actionStatus === ActionItemStatus.InProgress
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                            : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}>
-                                          {note.actionStatusName}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300">{note.content}</p>
-                                    {note.actionDueDate && (
-                                      <p className={`text-xs mt-1 ${note.isOverdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        Due: {new Date(note.actionDueDate).toLocaleDateString()}
-                                        {note.actionAssignee && ` | Assigned: ${note.actionAssignee}`}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {note.category === NoteCategory.ActionItem && note.actionStatus !== ActionItemStatus.Completed && (
-                                      <button
-                                        onClick={() => handleCompleteAction(note.id, meeting.id)}
-                                        className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
-                                        title="Complete action"
-                                      >
-                                        <Check className="w-4 h-4" />
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => handleDeleteNote(note.id, meeting.id)}
-                                      className="p-1 text-slate-400 hover:text-red-500 rounded"
-                                      title="Delete note"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            No notes yet. Click "Add" to capture key takeaways.
-                          </p>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
+            <MessageSquare className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <p className="text-slate-500 dark:text-slate-400">Select a 1:1, or start a new one.</p>
+            <button
+              onClick={handleNewMeeting}
+              className="flex items-center gap-2 rounded-lg bg-purple-500 px-4 py-2 text-sm font-medium text-white hover:bg-purple-600"
+            >
+              <Plus className="h-4 w-4" />
+              New 1:1
+            </button>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

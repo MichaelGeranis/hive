@@ -16,7 +16,6 @@ public class ReportingServiceTests
     private readonly Mock<IDirectReportRepository> _directReportRepositoryMock;
     private readonly Mock<IPerformanceReviewRepository> _reviewRepositoryMock;
     private readonly Mock<IOneOnOneMeetingRepository> _meetingRepositoryMock;
-    private readonly Mock<IMeetingNoteRepository> _noteRepositoryMock;
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
     private readonly Mock<ISprintRepository> _sprintRepositoryMock;
@@ -34,7 +33,6 @@ public class ReportingServiceTests
         _directReportRepositoryMock = new Mock<IDirectReportRepository>();
         _reviewRepositoryMock = new Mock<IPerformanceReviewRepository>();
         _meetingRepositoryMock = new Mock<IOneOnOneMeetingRepository>();
-        _noteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
         _projectRepositoryMock = new Mock<IProjectRepository>();
         _sprintRepositoryMock = new Mock<ISprintRepository>();
@@ -47,7 +45,6 @@ public class ReportingServiceTests
             _directReportRepositoryMock.Object,
             _reviewRepositoryMock.Object,
             _meetingRepositoryMock.Object,
-            _noteRepositoryMock.Object,
             _taskRepositoryMock.Object,
             _projectRepositoryMock.Object,
             _sprintRepositoryMock.Object,
@@ -203,8 +200,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
 
         // Act
         var result = await _service.GetOneOnOnesAnalyticsAsync();
@@ -220,14 +215,14 @@ public class ReportingServiceTests
     {
         // Arrange
         var pastMeeting = new OneOnOneMeeting(
-            _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-            "Past meeting");
+            "Past meeting",
+            directReportId: _testDirectReportId);
 
         var futureMeeting = new OneOnOneMeeting(
-            _testDirectReportId,
             DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
-            "Future meeting");
+            "Future meeting",
+            directReportId: _testDirectReportId);
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { pastMeeting, futureMeeting });
@@ -235,8 +230,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting> { pastMeeting, futureMeeting });
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
 
         // Act
         var result = await _service.GetOneOnOnesAnalyticsAsync();
@@ -413,8 +406,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _taskRepositoryMock.Setup(r => r.GetByAssigneeIdAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(_testDirectReportId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
         _parentRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Parent>());
 
@@ -438,7 +429,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_ReturnsFrequencyForAllDirectReports()
     {
         // Arrange
-        var pastMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), "Past");
+        var pastMeeting = new OneOnOneMeeting(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)), "Past", directReportId: _testDirectReportId);
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
@@ -459,7 +450,7 @@ public class ReportingServiceTests
     public async Task GetOneOnOneFrequencyReportAsync_CalculatesFrequencyStatus()
     {
         // Arrange
-        var recentMeeting = new OneOnOneMeeting(_testDirectReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Recent");
+        var recentMeeting = new OneOnOneMeeting(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), "Recent", directReportId: _testDirectReportId);
 
         _directReportRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DirectReport> { _testDirectReport });
@@ -639,8 +630,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
         _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask> { matchedTask, unmatchedTask, noLabelsTask });
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -678,8 +667,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
         _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask> { task1, task2 });
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -714,8 +701,6 @@ public class ReportingServiceTests
             .ReturnsAsync(new List<OneOnOneMeeting>());
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting>());
-        _noteRepositoryMock.Setup(r => r.GetActionItemsAsync(null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote>());
         _taskRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TeamTask>());
         _projectRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))

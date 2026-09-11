@@ -77,7 +77,8 @@ public enum EntityType
     Meeting = 4,
 
     /// <summary>
-    /// Meeting note entity.
+    /// Meeting note entity. Retired when 1:1s became single markdown notes; the value is
+    /// kept so activities recorded before that still render in the feed.
     /// </summary>
     MeetingNote = 5,
 

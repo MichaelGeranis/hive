@@ -40,11 +40,6 @@ public interface IReportingService
     Task<IReadOnlyList<OneOnOneFrequencyDto>> GetOneOnOneFrequencyReportAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets action items summary.
-    /// </summary>
-    Task<ActionItemsSummaryDto> GetActionItemsSummaryAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Gets tasks by assignee report.
     /// </summary>
     Task<IReadOnlyList<TasksByAssigneeDto>> GetTasksByAssigneeReportAsync(CancellationToken cancellationToken = default);

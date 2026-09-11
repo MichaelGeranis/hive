@@ -15,7 +15,6 @@ public class ReportingService : IReportingService
     private readonly IDirectReportRepository _directReportRepository;
     private readonly IPerformanceReviewRepository _reviewRepository;
     private readonly IOneOnOneMeetingRepository _meetingRepository;
-    private readonly IMeetingNoteRepository _noteRepository;
     private readonly ITeamTaskRepository _taskRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ISprintRepository _sprintRepository;
@@ -28,7 +27,6 @@ public class ReportingService : IReportingService
         IDirectReportRepository directReportRepository,
         IPerformanceReviewRepository reviewRepository,
         IOneOnOneMeetingRepository meetingRepository,
-        IMeetingNoteRepository noteRepository,
         ITeamTaskRepository taskRepository,
         IProjectRepository projectRepository,
         ISprintRepository sprintRepository,
@@ -40,7 +38,6 @@ public class ReportingService : IReportingService
         _directReportRepository = directReportRepository;
         _reviewRepository = reviewRepository;
         _meetingRepository = meetingRepository;
-        _noteRepository = noteRepository;
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _sprintRepository = sprintRepository;
@@ -332,7 +329,6 @@ public class ReportingService : IReportingService
         var upcomingMeetings = meetings.Where(m => m.MeetingDate >= today).ToList();
 
         var frequencyByDirectReport = await GetOneOnOneFrequencyReportAsync(cancellationToken);
-        var actionItemsSummary = await GetActionItemsSummaryAsync(cancellationToken);
 
         return new OneOnOnesOverviewDto
         {
@@ -342,8 +338,7 @@ public class ReportingService : IReportingService
             CancelledMeetings = 0,  // No longer tracking cancellations
             RescheduledMeetings = 0,  // No longer tracking reschedules
             CompletionRate = meetings.Count > 0 ? Math.Round((double)pastMeetings.Count / meetings.Count * 100, 1) : 0,
-            FrequencyByDirectReport = frequencyByDirectReport,
-            ActionItemsSummary = new List<ActionItemsSummaryDto> { actionItemsSummary }
+            FrequencyByDirectReport = frequencyByDirectReport
         };
     }
 
@@ -745,10 +740,6 @@ public class ReportingService : IReportingService
         var lastMeeting = pastMeetings.FirstOrDefault();
         var nextMeeting = upcomingMeetings.FirstOrDefault();
 
-        var actionItems = await _noteRepository.GetActionItemsAsync(directReportId, cancellationToken);
-        var openActionItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.Open || a.ActionStatus == ActionItemStatus.InProgress);
-        var overdueActionItems = actionItems.Count(a => a.IsOverdue());
-
         var daysSinceLastMeeting = lastMeeting != null
             ? today.DayNumber - lastMeeting.MeetingDate.DayNumber
             : -1;
@@ -762,9 +753,7 @@ public class ReportingService : IReportingService
             LastMeetingDate = lastMeeting?.MeetingDate,
             NextScheduledDate = nextMeeting?.MeetingDate,
             DaysSinceLastMeeting = daysSinceLastMeeting,
-            AverageMeetingFrequencyDays = avgFrequency,
-            OpenActionItems = openActionItems,
-            OverdueActionItems = overdueActionItems
+            AverageMeetingFrequencyDays = avgFrequency
         };
 
         // Task analytics
@@ -850,31 +839,6 @@ public class ReportingService : IReportingService
         }
 
         return result.OrderByDescending(r => r.DaysSinceLastMeeting).ToList();
-    }
-
-    public async Task<ActionItemsSummaryDto> GetActionItemsSummaryAsync(CancellationToken cancellationToken = default)
-    {
-        var actionItems = await _noteRepository.GetActionItemsAsync(null, cancellationToken);
-
-        var openItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.Open);
-        var inProgressItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.InProgress);
-        var completedItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.Completed);
-        var cancelledItems = actionItems.Count(a => a.ActionStatus == ActionItemStatus.Cancelled);
-        var overdueItems = actionItems.Count(a => a.IsOverdue());
-
-        var total = actionItems.Count;
-        var completionRate = total > 0 ? Math.Round((double)completedItems / total * 100, 1) : 0;
-
-        return new ActionItemsSummaryDto
-        {
-            TotalActionItems = total,
-            OpenItems = openItems,
-            InProgressItems = inProgressItems,
-            CompletedItems = completedItems,
-            CancelledItems = cancelledItems,
-            OverdueItems = overdueItems,
-            CompletionRate = completionRate
-        };
     }
 
     public async Task<IReadOnlyList<TasksByAssigneeDto>> GetTasksByAssigneeReportAsync(CancellationToken cancellationToken = default)

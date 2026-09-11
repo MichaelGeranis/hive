@@ -4,7 +4,6 @@ import type {
   Leave,
   TeamTask,
   OneOnOneMeeting,
-  MeetingNote,
   Project,
   PerformanceReview,
   Sprint,
@@ -14,8 +13,6 @@ import type {
   TaskStatus,
   TaskType,
   PerformanceRating,
-  NoteCategory,
-  ActionItemStatus,
 } from '../types'
 
 let idCounter = 0
@@ -128,32 +125,19 @@ export function createProject(overrides?: Partial<Project>): Project {
   }
 }
 
-// Meeting Factory
+// 1:1 Factory - a 1:1 is a single markdown note
 export function createMeeting(overrides?: Partial<OneOnOneMeeting>): OneOnOneMeeting {
   return {
     id: overrides?.id ?? generateId(),
     directReportId: '1',
     directReportName: 'John Doe',
+    isUnlinked: false,
     meetingDate: new Date().toISOString().split('T')[0],
-    agenda: 'Weekly sync',
-    noteCount: 0,
-    openActionItemCount: 0,
-    createdAt: new Date().toISOString(),
-    ...overrides,
-  }
-}
-
-// Meeting Note Factory
-export function createMeetingNote(overrides?: Partial<MeetingNote>): MeetingNote {
-  return {
-    id: overrides?.id ?? generateId(),
-    meetingId: '1',
-    meetingDate: new Date().toISOString(),
-    directReportName: 'John Doe',
-    content: 'Test note content',
-    category: 0 as NoteCategory,
-    categoryName: 'Discussion',
-    isOverdue: false,
+    title: 'Weekly sync',
+    content: 'Weekly sync\n\n- Discussed the roadmap',
+    tags: 'johndoe',
+    tagsList: ['johndoe'],
+    snippet: '- Discussed the roadmap',
     createdAt: new Date().toISOString(),
     ...overrides,
   }
@@ -204,17 +188,6 @@ export function createSprintCapacity(overrides?: Partial<SprintCapacity>): Sprin
   }
 }
 
-// Action Item Factory (for meeting notes with action items)
-export function createActionItem(overrides?: Partial<MeetingNote>): MeetingNote {
-  return createMeetingNote({
-    category: 1 as NoteCategory,
-    categoryName: 'ActionItem',
-    actionStatus: 0 as ActionItemStatus,
-    actionStatusName: 'Open',
-    actionDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    ...overrides,
-  })
-}
 
 // Helper to create multiple items
 export function createMany<T>(

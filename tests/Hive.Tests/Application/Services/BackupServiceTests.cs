@@ -12,7 +12,6 @@ public class BackupServiceTests
     private readonly Mock<ITeamTaskRepository> _taskRepositoryMock;
     private readonly Mock<IPerformanceReviewRepository> _reviewRepositoryMock;
     private readonly Mock<IOneOnOneMeetingRepository> _meetingRepositoryMock;
-    private readonly Mock<IMeetingNoteRepository> _meetingNoteRepositoryMock;
     private readonly Mock<ILeaveRepository> _leaveRepositoryMock;
     private readonly Mock<IManagerNoteRepository> _managerNoteRepositoryMock;
     private readonly Mock<INoteFolderRepository> _noteFolderRepositoryMock;
@@ -31,7 +30,6 @@ public class BackupServiceTests
         _taskRepositoryMock = new Mock<ITeamTaskRepository>();
         _reviewRepositoryMock = new Mock<IPerformanceReviewRepository>();
         _meetingRepositoryMock = new Mock<IOneOnOneMeetingRepository>();
-        _meetingNoteRepositoryMock = new Mock<IMeetingNoteRepository>();
         _leaveRepositoryMock = new Mock<ILeaveRepository>();
         _managerNoteRepositoryMock = new Mock<IManagerNoteRepository>();
         _noteFolderRepositoryMock = new Mock<INoteFolderRepository>();
@@ -48,7 +46,6 @@ public class BackupServiceTests
             _taskRepositoryMock.Object,
             _reviewRepositoryMock.Object,
             _meetingRepositoryMock.Object,
-            _meetingNoteRepositoryMock.Object,
             _leaveRepositoryMock.Object,
             _managerNoteRepositoryMock.Object,
             _noteFolderRepositoryMock.Object,
@@ -162,28 +159,25 @@ public class BackupServiceTests
     }
 
     [Fact]
-    public async Task ExportAsync_WithMeetingsAndNotes_IncludesMeetingNotesInBackup()
+    public async Task ExportAsync_WithMeetings_IncludesTheirBodyAndTags()
     {
         // Arrange
         var meeting = CreateMeeting();
-        var meetingNote = CreateMeetingNote(meeting.Id);
 
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
-        _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote> { meetingNote });
-        SetupEmptyRepositoriesExcept(nameof(IOneOnOneMeetingRepository), nameof(IMeetingNoteRepository));
+        SetupEmptyRepositoriesExcept(nameof(IOneOnOneMeetingRepository));
 
         // Act
         var result = await _service.ExportAsync();
 
         // Assert
         result.Meetings.Should().HaveCount(1);
-        result.MeetingNotes.Should().HaveCount(1);
-        var noteBackup = result.MeetingNotes[0];
-        noteBackup.Id.Should().Be(meetingNote.Id);
-        noteBackup.MeetingId.Should().Be(meetingNote.MeetingId);
-        noteBackup.Content.Should().Be(meetingNote.Content);
+        var meetingBackup = result.Meetings[0];
+        meetingBackup.Id.Should().Be(meeting.Id);
+        meetingBackup.Content.Should().Be(meeting.Content);
+        meetingBackup.Tags.Should().Be(meeting.Tags);
+        result.MeetingNotes.Should().BeEmpty();
     }
 
     [Fact]
@@ -213,7 +207,6 @@ public class BackupServiceTests
         var task = CreateTask();
         var review = CreatePerformanceReview(directReport.Id);
         var meeting = CreateMeeting(directReport.Id);
-        var meetingNote = CreateMeetingNote(meeting.Id);
         var leave = CreateLeave(directReport.Id);
         var managerNote = CreateManagerNote();
         var sprint = CreateSprint();
@@ -230,8 +223,6 @@ public class BackupServiceTests
             .ReturnsAsync(new List<PerformanceReview> { review });
         _meetingRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
-        _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MeetingNote> { meetingNote });
         _leaveRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Leave> { leave });
         _managerNoteRepositoryMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -258,7 +249,6 @@ public class BackupServiceTests
         result.Tasks.Should().HaveCount(1);
         result.PerformanceReviews.Should().HaveCount(1);
         result.Meetings.Should().HaveCount(1);
-        result.MeetingNotes.Should().HaveCount(1);
         result.Leaves.Should().HaveCount(1);
         result.ManagerNotes.Should().HaveCount(1);
         result.Sprints.Should().HaveCount(1);
@@ -646,7 +636,7 @@ public class BackupServiceTests
                     Id = meetingId,
                     DirectReportId = directReportId,
                     MeetingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                    Agenda = "Check-in"
+                    Content = "Check-in"
                 }
             },
             MeetingNotes = new List<MeetingNoteBackup>
@@ -656,7 +646,7 @@ public class BackupServiceTests
                     Id = meetingNoteId,
                     MeetingId = meetingId,
                     Content = "Note content",
-                    Category = (int)NoteCategory.Discussion
+                    Category = 0
                 }
             },
             Leaves = new List<LeaveBackup>
@@ -711,10 +701,11 @@ public class BackupServiceTests
             .ReturnsAsync((TeamTask?)null);
         _reviewRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PerformanceReview?)null);
+        // The meeting store has to remember what it restored: legacy 1:1 notes are folded
+        // into the body of the meeting that was just added.
+        OneOnOneMeeting? restoredMeeting = null;
         _meetingRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((OneOnOneMeeting?)null);
-        _meetingNoteRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MeetingNote?)null);
+            .ReturnsAsync(() => restoredMeeting);
         _leaveRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Leave?)null);
         _managerNoteRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -734,9 +725,11 @@ public class BackupServiceTests
         _reviewRepositoryMock.Setup(r => r.AddAsync(It.IsAny<PerformanceReview>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PerformanceReview r, CancellationToken _) => r);
         _meetingRepositoryMock.Setup(r => r.AddAsync(It.IsAny<OneOnOneMeeting>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((OneOnOneMeeting m, CancellationToken _) => m);
-        _meetingNoteRepositoryMock.Setup(r => r.AddAsync(It.IsAny<MeetingNote>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MeetingNote n, CancellationToken _) => n);
+            .ReturnsAsync((OneOnOneMeeting m, CancellationToken _) =>
+            {
+                restoredMeeting = m;
+                return m;
+            });
         _leaveRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Leave>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Leave l, CancellationToken _) => l);
         _managerNoteRepositoryMock.Setup(r => r.AddAsync(It.IsAny<ManagerNote>(), It.IsAny<CancellationToken>()))
@@ -757,6 +750,7 @@ public class BackupServiceTests
         result.PerformanceReviewsRestored.Should().Be(1);
         result.MeetingsRestored.Should().Be(1);
         result.MeetingNotesRestored.Should().Be(1);
+        restoredMeeting!.Content.Should().Contain("Note content");
         result.LeavesRestored.Should().Be(1);
         result.ManagerNotesRestored.Should().Be(1);
         result.SprintsRestored.Should().Be(1);
@@ -854,9 +848,6 @@ public class BackupServiceTests
             _settingsRepositoryMock.Setup(r => r.GetAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync((AppSettings?)null);
 
-        if (!exceptRepositories.Contains(nameof(IMeetingNoteRepository)))
-            _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<MeetingNote>());
     }
 
     private static DirectReport CreateDirectReport() =>
@@ -872,10 +863,7 @@ public class BackupServiceTests
         new(directReportId ?? Guid.NewGuid(), "2024-Q1", DateTime.UtcNow);
 
     private static OneOnOneMeeting CreateMeeting(Guid? directReportId = null) =>
-        new(directReportId ?? Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow), "Check-in");
-
-    private static MeetingNote CreateMeetingNote(Guid meetingId) =>
-        new(meetingId, "Note content", NoteCategory.Discussion);
+        new(DateOnly.FromDateTime(DateTime.UtcNow), "Check-in\n\n- Went well", "johndoe", directReportId ?? Guid.NewGuid());
 
     private static Leave CreateLeave(Guid directReportId) =>
         new(directReportId, LeaveType.Vacation, DateTime.UtcNow, DateTime.UtcNow.AddDays(5), "Vacation");

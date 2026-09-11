@@ -126,7 +126,6 @@ public record OneOnOnesOverviewDto
     public int RescheduledMeetings { get; init; }
     public double CompletionRate { get; init; }
     public IReadOnlyList<OneOnOneFrequencyDto> FrequencyByDirectReport { get; init; } = [];
-    public IReadOnlyList<ActionItemsSummaryDto> ActionItemsSummary { get; init; } = [];
 }
 
 /// <summary>
@@ -143,20 +142,6 @@ public record OneOnOneFrequencyDto
     public int DaysSinceLastMeeting { get; init; }
     public double AverageFrequencyDays { get; init; }
     public string FrequencyStatus { get; init; } = string.Empty; // "On Track", "Overdue", "At Risk"
-}
-
-/// <summary>
-/// Summary of action items from one-on-ones.
-/// </summary>
-public record ActionItemsSummaryDto
-{
-    public int TotalActionItems { get; init; }
-    public int OpenItems { get; init; }
-    public int InProgressItems { get; init; }
-    public int CompletedItems { get; init; }
-    public int CancelledItems { get; init; }
-    public int OverdueItems { get; init; }
-    public double CompletionRate { get; init; }
 }
 
 /// <summary>
@@ -394,8 +379,6 @@ public record OneOnOneAnalyticsDto
     public DateOnly? NextScheduledDate { get; init; }
     public int DaysSinceLastMeeting { get; init; }
     public double AverageMeetingFrequencyDays { get; init; }
-    public int OpenActionItems { get; init; }
-    public int OverdueActionItems { get; init; }
 }
 
 /// <summary>
