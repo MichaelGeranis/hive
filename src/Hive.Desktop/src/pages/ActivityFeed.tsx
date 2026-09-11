@@ -11,8 +11,6 @@ import {
   BarChart3,
   Award,
   Star,
-  ClipboardList,
-  ClipboardCheck,
   Network,
   BookOpen,
   Search,
@@ -124,10 +122,6 @@ const ActivityFeed = () => {
         return <Award className="w-5 h-5 text-yellow-500" />
       case 'skillassessment':
         return <Star className="w-5 h-5 text-yellow-600" />
-      case 'checklisttemplate':
-        return <ClipboardList className="w-5 h-5 text-emerald-500" />
-      case 'checklistinstance':
-        return <ClipboardCheck className="w-5 h-5 text-emerald-600" />
       case 'parent':
         return <Network className="w-5 h-5 text-rose-500" />
       case 'projectknowledge':
@@ -164,10 +158,6 @@ const ActivityFeed = () => {
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
       case 'skillassessment':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'checklisttemplate':
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-      case 'checklistinstance':
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
       case 'parent':
         return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
       case 'projectknowledge':

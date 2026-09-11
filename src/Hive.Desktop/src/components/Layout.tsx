@@ -17,7 +17,6 @@ import {
   ScrollText,
   Award,
   Activity,
-  ClipboardList,
   Brain,
   Target,
   PanelLeftClose,
@@ -52,7 +51,6 @@ const navigationGroups = [
   // Resources
   [
     { name: 'Activity Feed', to: '/activity-feed', icon: Activity },
-    { name: 'Hiring', to: '/checklists', icon: ClipboardList },
     { name: 'Tutorials', to: '/tutorials', icon: BookOpen },
   ],
 ]
