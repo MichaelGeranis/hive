@@ -3,9 +3,7 @@ import { Loader2, MessageSquare, ExternalLink, X } from 'lucide-react'
 import { quarterlyPlanningApi } from '../services/api'
 import type {
   Initiative,
-  SprintGoal,
-  InitiativeMember,
-  WorkType
+  SprintGoal
 } from '../types/quarterlyPlanning'
 import type { Sprint } from '../types'
 
@@ -13,7 +11,6 @@ interface PlanningSpreadsheetProps {
   sprints: Sprint[]
   initiatives: Initiative[]
   sprintGoals: SprintGoal[]
-  initiativeMembers: InitiativeMember[]
   quarterId: string
   onDataChanged: () => void
 }
@@ -34,7 +31,6 @@ export default function PlanningSpreadsheet({
   sprints,
   initiatives,
   sprintGoals,
-  initiativeMembers,
   quarterId,
   onDataChanged
 }: PlanningSpreadsheetProps) {

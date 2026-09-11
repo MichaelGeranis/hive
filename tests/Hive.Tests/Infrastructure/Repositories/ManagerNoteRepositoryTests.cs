@@ -458,14 +458,140 @@ public class ManagerNoteRepositoryTests
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task GetPendingAsync_ExcludesNotesThatAreNotTodos()
+    {
+        // Arrange
+        CreateAndAddNote("A plain note", isTodo: false);
+        CreateAndAddNote("An open to-do");
+
+        // Act
+        var result = await _repository.GetPendingAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].Title.Should().Be("An open to-do");
+    }
+
+    [Fact]
+    public async Task GetOverdueAsync_ExcludesNotesThatAreNotTodos()
+    {
+        // Arrange
+        var yesterday = DateTime.UtcNow.AddDays(-1);
+        CreateAndAddNote("Plain note with a date", dueDate: yesterday, isTodo: false);
+        CreateAndAddNote("Late to-do", dueDate: yesterday);
+
+        // Act
+        var result = await _repository.GetOverdueAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].Title.Should().Be("Late to-do");
+    }
+
+    [Fact]
+    public async Task GetFilteredPagedAsync_WithFolderId_ReturnsOnlyThatFolder()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        CreateAndAddNote("In folder", folderId: folderId);
+        CreateAndAddNote("At root");
+
+        // Act
+        var (items, totalCount) = await _repository.GetFilteredPagedAsync(0, 20, null, null, null, folderId);
+
+        // Assert
+        totalCount.Should().Be(1);
+        items.Should().ContainSingle().Which.Title.Should().Be("In folder");
+    }
+
+    [Fact]
+    public async Task GetFilteredPagedAsync_WithoutFolderId_ReturnsNotesFromEveryFolder()
+    {
+        // Arrange
+        CreateAndAddNote("In folder", folderId: Guid.NewGuid());
+        CreateAndAddNote("At root");
+
+        // Act
+        var (_, totalCount) = await _repository.GetFilteredPagedAsync(0, 20, null, null, null);
+
+        // Assert
+        totalCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetFilteredPagedAsync_SortedByRecent_PutsPinnedNotesFirst()
+    {
+        // Arrange
+        CreateAndAddNote("Ordinary");
+        var pinned = CreateAndAddNote("Pinned");
+        pinned.Pin();
+        _context.ManagerNotes[pinned.Id] = pinned;
+
+        // Act
+        var (items, _) = await _repository.GetFilteredPagedAsync(0, 20, null, null, null, null, NoteSortOrder.Recent);
+
+        // Assert
+        items[0].Title.Should().Be("Pinned");
+    }
+
+    [Fact]
+    public async Task GetFilteredPagedAsync_PendingFilter_ExcludesNotesThatAreNotTodos()
+    {
+        // Arrange
+        CreateAndAddNote("Plain note", isTodo: false);
+        CreateAndAddNote("Open to-do");
+
+        // Act
+        var (items, _) = await _repository.GetFilteredPagedAsync(0, 20, "pending", null, null);
+
+        // Assert
+        items.Should().ContainSingle().Which.Title.Should().Be("Open to-do");
+    }
+
+    [Fact]
+    public async Task GetCountsByFolderAsync_CountsNotesPerFolder()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        CreateAndAddNote("One", folderId: folderId);
+        CreateAndAddNote("Two", folderId: folderId);
+        CreateAndAddNote("Root note");
+
+        // Act
+        var result = await _repository.GetCountsByFolderAsync();
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Single(c => c.FolderId == folderId).Count.Should().Be(2);
+        result.Single(c => c.FolderId == null).Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetByFolderAsync_ReturnsNotesInThatFolderOnly()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        CreateAndAddNote("Inside", folderId: folderId);
+        CreateAndAddNote("Outside");
+
+        // Act
+        var result = await _repository.GetByFolderAsync(folderId);
+
+        // Assert
+        result.Should().ContainSingle().Which.Title.Should().Be("Inside");
+    }
+
     private ManagerNote CreateAndAddNote(
         string title = "Test note",
         string content = "",
         NotePriority priority = NotePriority.Normal,
         DateTime? dueDate = null,
-        string? tags = null)
+        string? tags = null,
+        Guid? folderId = null,
+        bool isTodo = true)
     {
-        var note = new ManagerNote(title, content, priority, dueDate, tags);
+        var note = new ManagerNote(title, content, priority, dueDate, tags, folderId, isTodo);
         _context.ManagerNotes.TryAdd(note.Id, note);
         return note;
     }

@@ -148,16 +148,6 @@ export default function Calendar() {
     return new Date(year, month + 1, 0).getDate()
   }
 
-  const getFirstDayOfMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const dayOfWeek = new Date(year, month, 1).getDay()
-    // Convert to Monday-based (0=Monday, 4=Friday, skip weekends)
-    // Sunday (0) -> would be before Monday, so we don't show it
-    // Monday (1) -> 0, Tuesday (2) -> 1, ..., Friday (5) -> 4
-    return dayOfWeek === 0 ? 0 : dayOfWeek - 1  // Sunday becomes Monday's position
-  }
-
   // Check if a day is a weekend (Saturday=6, Sunday=0)
   const isWeekend = (day: number) => {
     const year = currentDate.getFullYear()
@@ -196,7 +186,6 @@ export default function Calendar() {
   }
 
   const daysInMonth = getDaysInMonth(currentDate)
-  const firstDay = getFirstDayOfMonth(currentDate)
   // Filter out weekend days
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1).filter(day => !isWeekend(day))
   // Calculate padding for Monday-based week (only need padding for weekdays)

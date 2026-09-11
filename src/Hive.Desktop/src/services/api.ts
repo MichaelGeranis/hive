@@ -36,6 +36,9 @@ import type {
   ManagerNote,
   CreateManagerNoteDto,
   UpdateManagerNoteDto,
+  NoteFolder,
+  CreateNoteFolderDto,
+  UpdateNoteFolderDto,
   Sprint,
   CreateSprintDto,
   UpdateSprintDto,
@@ -384,8 +387,6 @@ export const leavesApi = {
     api.get<MonthlyLeaveSummary[]>(`/leaves/monthly-trend?months=${months}`).then(r => r.data),
   getBalances: (year: number) => api.get<LeaveBalance[]>(`/leaves/balances/${year}`).then(r => r.data),
   create: (data: CreateLeaveDto) => api.post<Leave>('/leaves', data).then(r => r.data),
-  createPublicHoliday: (data: CreatePublicHolidayLeaveDto) =>
-    api.post<CreatePublicHolidayResultDto>('/leaves/public-holiday', data).then(r => r.data),
   update: (id: string, data: UpdateLeaveDto) => api.put<Leave>(`/leaves/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/leaves/${id}`)
 }
@@ -400,13 +401,23 @@ export const jiraImportApi = {
 
 // Manager Notes (TODOs)
 export const notesApi = {
-  getAll: (pageNumber = 1, pageSize = 20, filter?: string, search?: string, tag?: string) => {
+  getAll: (
+    pageNumber = 1,
+    pageSize = 20,
+    filter?: string,
+    search?: string,
+    tag?: string,
+    folderId?: string | null,
+    sort?: 'recent' | 'priority'
+  ) => {
     const params = new URLSearchParams()
     params.append('pageNumber', pageNumber.toString())
     params.append('pageSize', pageSize.toString())
     if (filter && filter !== 'all') params.append('filter', filter)
     if (search) params.append('search', search)
     if (tag) params.append('tag', tag)
+    if (folderId) params.append('folderId', folderId)
+    if (sort) params.append('sort', sort)
     return api.get<PagedResult<ManagerNote>>(`/managernotes?${params.toString()}`).then(r => r.data)
   },
   getPending: () => api.get<ManagerNote[]>('/managernotes/pending').then(r => r.data),
@@ -424,7 +435,24 @@ export const notesApi = {
   create: (data: CreateManagerNoteDto) => api.post<ManagerNote>('/managernotes', data).then(r => r.data),
   update: (id: string, data: UpdateManagerNoteDto) => api.put<ManagerNote>(`/managernotes/${id}`, data).then(r => r.data),
   toggle: (id: string) => api.post<ManagerNote>(`/managernotes/${id}/toggle`).then(r => r.data),
+  createBlank: (folderId?: string | null) =>
+    api.post<ManagerNote>('/managernotes/blank', { folderId: folderId ?? null }).then(r => r.data),
+  updateContent: (id: string, content: string) =>
+    api.put<ManagerNote>(`/managernotes/${id}/content`, { content }).then(r => r.data),
+  move: (id: string, folderId: string | null) =>
+    api.post<ManagerNote>(`/managernotes/${id}/move`, { folderId }).then(r => r.data),
+  togglePin: (id: string) => api.post<ManagerNote>(`/managernotes/${id}/pin`).then(r => r.data),
   delete: (id: string) => api.delete(`/managernotes/${id}`)
+}
+
+// Note folders
+export const noteFoldersApi = {
+  getAll: () => api.get<NoteFolder[]>('/notefolders').then(r => r.data),
+  getById: (id: string) => api.get<NoteFolder>(`/notefolders/${id}`).then(r => r.data),
+  create: (data: CreateNoteFolderDto) => api.post<NoteFolder>('/notefolders', data).then(r => r.data),
+  update: (id: string, data: UpdateNoteFolderDto) =>
+    api.put<NoteFolder>(`/notefolders/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/notefolders/${id}`)
 }
 
 // Documents

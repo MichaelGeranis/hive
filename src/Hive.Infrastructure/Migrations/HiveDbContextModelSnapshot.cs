@@ -679,7 +679,6 @@ namespace Hive.Infrastructure.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -688,7 +687,16 @@ namespace Hive.Infrastructure.Migrations
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTodo")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Priority")
@@ -711,7 +719,11 @@ namespace Hive.Infrastructure.Migrations
 
                     b.HasIndex("DueDate");
 
+                    b.HasIndex("FolderId");
+
                     b.HasIndex("IsCompleted");
+
+                    b.HasIndex("IsPinned");
 
                     b.HasIndex("Priority");
 
@@ -756,6 +768,36 @@ namespace Hive.Infrastructure.Migrations
                     b.HasIndex("MeetingId");
 
                     b.ToTable("MeetingNotes");
+                });
+
+            modelBuilder.Entity("Hive.Core.Entities.NoteFolder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentFolderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentFolderId");
+
+                    b.ToTable("NoteFolders");
                 });
 
             modelBuilder.Entity("Hive.Core.Entities.OneOnOneMeeting", b =>

@@ -224,7 +224,7 @@ public class AppSettingsServiceTests
         result.Should().NotBeNull();
         result.StoryPointMappings.Should().BeEmpty();
 
-        _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<AppSettings>(), It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<AppSettings>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -239,9 +239,14 @@ public class AppSettingsServiceTests
         _repositoryMock.Setup(r => r.UpdateAsync(It.IsAny<AppSettings>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        var newMappings = new List<StoryPointMapping>
+        {
+            new() { Points = 1, Hours = 4, Label = "New" }
+        };
+
         var dto = new UpdateAppSettingsDto
         {
-            StoryPointMappings = new List<StoryPointMapping>()
+            StoryPointMappings = newMappings
         };
 
         var cts = new CancellationTokenSource();

@@ -13,7 +13,7 @@ import {
   Globe
 } from 'lucide-react'
 import { leavesApi, directReportsApi } from '../services/api'
-import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview, CreatePublicHolidayLeaveDto } from '../types'
+import type { Leave, DirectReport, CreateLeaveDto, UpdateLeaveDto, TeamLeaveOverview } from '../types'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -47,7 +47,7 @@ interface DayHoverState {
 }
 
 export default function Leaves() {
-  const { showError, showSuccess } = useToast()
+  const { showError } = useToast()
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [directReports, setDirectReports] = useState<DirectReport[]>([])
   const [overview, setOverview] = useState<TeamLeaveOverview | null>(null)
@@ -110,22 +110,7 @@ export default function Leaves() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      if (formData.type === 'PublicHoliday') {
-        const publicHolidayDto: CreatePublicHolidayLeaveDto = {
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          name: formData.name || 'Public Holiday',
-          notes: formData.notes
-        }
-        const result = await leavesApi.createPublicHoliday(publicHolidayDto)
-        let successMessage = `Public holiday created for ${result.totalCreated} team members`
-        if (result.skippedMembers && result.skippedMembers.length > 0) {
-          successMessage += `. Skipped ${result.skippedMembers.length} members with existing leave: ${result.skippedMembers.join(', ')}`
-        }
-        showSuccess(successMessage)
-      } else {
-        await leavesApi.create(formData)
-      }
+      await leavesApi.create(formData)
       closeModal()
       loadData()
     } catch (error) {

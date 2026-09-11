@@ -1,5 +1,6 @@
 using Hive.Application.DTOs;
 using Hive.Application.Interfaces;
+using Hive.Core.Entities;
 using Hive.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,8 +33,10 @@ public class ManagerNotesController : ControllerBase
     /// <param name="filter">Status filter: all, pending, completed, overdue (default: all).</param>
     /// <param name="search">Search term to filter by title, content, or tags.</param>
     /// <param name="tag">Tag to filter by.</param>
+    /// <param name="folderId">Folder to list. Omit to list notes from every folder.</param>
+    /// <param name="sort">Ordering: recent (pinned first, latest edit first) or priority (default).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Paginated list of notes ordered by Priority desc, DueDate asc.</returns>
+    /// <returns>Paginated list of notes in the requested order.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ManagerNoteDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<ManagerNoteDto>>> GetAll(
@@ -42,10 +45,12 @@ public class ManagerNotesController : ControllerBase
         [FromQuery] string? filter = null,
         [FromQuery] string? search = null,
         [FromQuery] string? tag = null,
+        [FromQuery] Guid? folderId = null,
+        [FromQuery] string? sort = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting notes page {PageNumber} with size {PageSize}, filter: {Filter}, search: {Search}, tag: {Tag}",
-            pageNumber, pageSize, filter, search, tag);
+        _logger.LogInformation("Getting notes page {PageNumber} with size {PageSize}, filter: {Filter}, search: {Search}, tag: {Tag}, folder: {FolderId}",
+            pageNumber, pageSize, filter, search, tag, folderId);
 
         // Parse filter string to enum
         var noteFilter = filter?.ToLowerInvariant() switch
@@ -56,13 +61,21 @@ public class ManagerNotesController : ControllerBase
             _ => NoteFilter.All
         };
 
+        var noteSort = sort?.ToLowerInvariant() switch
+        {
+            "recent" => NoteSortOrder.Recent,
+            _ => NoteSortOrder.Priority
+        };
+
         var pagination = new NotePaginationParams
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
             Filter = noteFilter,
             SearchTerm = search,
-            Tag = tag
+            Tag = tag,
+            FolderId = folderId,
+            Sort = noteSort
         };
 
         var notes = await _service.GetFilteredPagedAsync(pagination, cancellationToken);
@@ -210,6 +223,85 @@ public class ManagerNotesController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Creates a blank note, ready to be written into.
+    /// </summary>
+    [HttpPost("blank")]
+    [ProducesResponseType(typeof(ManagerNoteDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<ManagerNoteDto>> CreateBlank(
+        [FromBody] CreateBlankNoteDto? dto,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Creating blank note in folder: {FolderId}", dto?.FolderId);
+        var note = await _service.CreateBlankAsync(dto ?? new CreateBlankNoteDto(), cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = note.Id }, note);
+    }
+
+    /// <summary>
+    /// Saves the body of a note. The title is derived from the first line of the content.
+    /// </summary>
+    [HttpPut("{id:guid}/content")]
+    [ProducesResponseType(typeof(ManagerNoteDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ManagerNoteDto>> UpdateContent(
+        Guid id,
+        [FromBody] UpdateNoteContentDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var note = await _service.UpdateContentAsync(id, dto, cancellationToken);
+            return Ok(note);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Files a note under a folder, or at the root when no folder is given.
+    /// </summary>
+    [HttpPost("{id:guid}/move")]
+    [ProducesResponseType(typeof(ManagerNoteDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ManagerNoteDto>> Move(
+        Guid id,
+        [FromBody] MoveNoteDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Moving note {Id} to folder {FolderId}", id, dto.FolderId);
+            var note = await _service.MoveToFolderAsync(id, dto, cancellationToken);
+            return Ok(note);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Pins or unpins a note.
+    /// </summary>
+    [HttpPost("{id:guid}/pin")]
+    [ProducesResponseType(typeof(ManagerNoteDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ManagerNoteDto>> TogglePin(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Toggling pin for note: {Id}", id);
+            var note = await _service.TogglePinAsync(id, cancellationToken);
+            return Ok(note);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
     }
 

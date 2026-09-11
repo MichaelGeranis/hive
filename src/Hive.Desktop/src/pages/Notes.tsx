@@ -1,635 +1,565 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  StickyNote,
-  Plus,
-  Check,
-  X,
-  Clock,
-  Trash2,
-  Edit2,
-  Filter,
-  Search,
-  Tag,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react'
-import { notesApi } from '../services/api'
-import type { ManagerNote, CreateManagerNoteDto, UpdateManagerNoteDto, NotePriority } from '../types'
-import { useEscapeKey } from '../hooks/useEscapeKey'
+import { Check, Clock, Pin, Plus, Search, StickyNote, X } from 'lucide-react'
+import NoteEditor from '../components/NoteEditor'
+import type { NoteMetaPatch } from '../components/NoteEditor'
+import NoteFolderTree from '../components/NoteFolderTree'
+import { noteFoldersApi, notesApi } from '../services/api'
+import type { ManagerNote, NoteFolder } from '../types'
 import { useToast, getErrorMessage } from '../contexts/ToastContext'
 
-const priorityLabels: Record<number, string> = {
-  0: 'Low',
-  1: 'Normal',
-  2: 'High',
-  3: 'Urgent'
+type NoteFilter = 'all' | 'pending' | 'completed'
+
+const AUTOSAVE_DELAY_MS = 700
+const PAGE_SIZE = 100
+
+const filterOptions: { value: NoteFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'To-dos' },
+  { value: 'completed', label: 'Done' }
+]
+
+const priorityDotColors: Record<number, string> = {
+  0: 'bg-slate-400',
+  1: 'bg-blue-500',
+  2: 'bg-orange-500',
+  3: 'bg-red-500'
 }
 
-const priorityColors: Record<number, string> = {
-  0: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
-  1: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  2: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
-  3: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+function formatListDate(note: ManagerNote): string {
+  const date = new Date(note.updatedAt || note.createdAt)
+  const now = new Date()
+  const sameDay = date.toDateString() === now.toDateString()
+  if (sameDay) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  const sameYear = date.getFullYear() === now.getFullYear()
+  return date.toLocaleDateString([], sameYear ? { month: 'short', day: 'numeric' } : { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-const priorityBorderColors: Record<number, string> = {
-  0: 'border-l-slate-400',
-  1: 'border-l-blue-500',
-  2: 'border-l-orange-500',
-  3: 'border-l-red-500'
-}
-
-type FilterType = 'all' | 'pending' | 'completed' | 'overdue'
-
+/**
+ * Notes: a folder sidebar, the notes in that folder, and the note itself. A note is
+ * created empty and saved as it is written, so there is no form and no Save button.
+ */
 export default function Notes() {
   const { showError } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
 
-  const [allNotes, setAllNotes] = useState<ManagerNote[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingNote, setEditingNote] = useState<ManagerNote | null>(null)
-  const [filter, setFilter] = useState<FilterType>(initialSearch ? 'all' : 'pending')
+  const [folders, setFolders] = useState<NoteFolder[]>([])
+  const [notes, setNotes] = useState<ManagerNote[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<NoteFilter>('all')
   const [searchInput, setSearchInput] = useState(initialSearch)
   const [searchTerm, setSearchTerm] = useState(initialSearch)
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  // Pagination state
-  const [pageNumber, setPageNumber] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
-  const [totalCount, setTotalCount] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  // Autosave bookkeeping: what is being edited, and what has not reached the server yet.
+  const draftRef = useRef('')
+  const editingNoteIdRef = useRef<string | null>(null)
+  const dirtyRef = useRef(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Clear search param from URL after initial load
+  const selectedNote = useMemo(
+    () => notes.find((note) => note.id === selectedNoteId) ?? null,
+    [notes, selectedNoteId]
+  )
+
   useEffect(() => {
     if (initialSearch) {
       setSearchParams({}, { replace: true })
     }
   }, [initialSearch, setSearchParams])
-  const [formData, setFormData] = useState<CreateManagerNoteDto>({
-    title: '',
-    content: '',
-    tags: '',
-    priority: 1 as NotePriority,
-    dueDate: undefined
-  })
 
-  const resetForm = useCallback(() => {
-    setFormData({
-      title: '',
-      content: '',
-      tags: '',
-      priority: 1 as NotePriority,
-      dueDate: undefined
-    })
-    setEditingNote(null)
+  const patchNote = useCallback((updated: ManagerNote) => {
+    setNotes((current) => current.map((note) => (note.id === updated.id ? updated : note)))
   }, [])
 
-  const closeModal = useCallback(() => {
-    setShowForm(false)
-    resetForm()
-  }, [resetForm])
-
-  useEscapeKey(closeModal, showForm)
-
-  const loadTags = async () => {
+  const loadFolders = useCallback(async () => {
     try {
-      const tags = await notesApi.getTags()
-      setAllTags(tags)
+      setFolders(await noteFoldersApi.getAll())
     } catch (error) {
-      console.error('Failed to load tags:', error)
+      console.error('Failed to load folders:', error)
     }
-  }
+  }, [])
 
-  const loadData = async (
-    page = pageNumber,
-    size = pageSize,
-    currentFilter = filter,
-    currentSearch = searchTerm,
-    currentTag = selectedTag
-  ) => {
+  const saveDraft = useCallback(async () => {
+    const noteId = editingNoteIdRef.current
+    if (!noteId || !dirtyRef.current) return
+
+    dirtyRef.current = false
+    setSaving(true)
     try {
-      setLoading(true)
-      const result = await notesApi.getAll(
-        page,
-        size,
-        currentFilter,
-        currentSearch || undefined,
-        currentTag || undefined
-      )
-      setAllNotes(result.items)
-      setTotalCount(result.totalCount)
-      setTotalPages(result.totalPages)
-      setPageNumber(result.pageNumber)
+      const updated = await notesApi.updateContent(noteId, draftRef.current)
+      patchNote(updated)
     } catch (error) {
-      console.error('Failed to load notes:', error)
+      dirtyRef.current = true
+      console.error('Failed to save note:', error)
+      showError(getErrorMessage(error))
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
-  }
+  }, [patchNote, showError])
 
-  // Load data when component mounts
-  useEffect(() => {
-    loadData(1, pageSize, filter, searchTerm, selectedTag)
-    loadTags()
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    await saveDraft()
+  }, [saveDraft])
+
+  const openNote = useCallback((note: ManagerNote | null) => {
+    editingNoteIdRef.current = note?.id ?? null
+    dirtyRef.current = false
+    draftRef.current = note?.content ?? ''
+    setSelectedNoteId(note?.id ?? null)
+    setDraft(note?.content ?? '')
   }, [])
 
-  // Reload data when filter, search, or tag changes
-  useEffect(() => {
-    loadData(1, pageSize, filter, searchTerm, selectedTag)
-  }, [filter, selectedTag])
+  const loadNotes = useCallback(
+    async (folderId: string | null, currentFilter: NoteFilter, search: string, keepSelection = false) => {
+      setLoading(true)
+      try {
+        const result = await notesApi.getAll(
+          1,
+          PAGE_SIZE,
+          currentFilter,
+          search || undefined,
+          undefined,
+          folderId,
+          'recent'
+        )
+        setNotes(result.items)
+        setTotalCount(result.totalCount)
 
-  // Debounced search - reload after user stops typing
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadData(1, pageSize, filter, searchTerm, selectedTag)
-    }, 300)
-    return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+        const stillVisible = keepSelection && result.items.some((note) => note.id === editingNoteIdRef.current)
+        if (!stillVisible) {
+          openNote(result.items[0] ?? null)
+        }
+      } catch (error) {
+        console.error('Failed to load notes:', error)
+        showError(getErrorMessage(error))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [openNote, showError]
+  )
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      loadData(newPage, pageSize, filter, searchTerm, selectedTag)
+  useEffect(() => {
+    loadFolders()
+  }, [loadFolders])
+
+  // The list follows the folder, the filter and the search box. Whatever is being
+  // written is saved first, so switching away never loses a keystroke.
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      await flushPendingSave()
+      if (!cancelled) {
+        await loadNotes(selectedFolderId, filter, searchTerm, true)
+      }
     }
-  }
+    run()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFolderId, filter, searchTerm])
 
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize)
-    setPageNumber(1)
-    loadData(1, newSize, filter, searchTerm, selectedTag)
-  }
+  // Debounced search.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setSearchTerm(searchInput), 300)
+    return () => clearTimeout(timeoutId)
+  }, [searchInput])
 
-  // Notes are now already filtered by the server
-  const notes = allNotes
+  // Save whatever is still unsaved when leaving the page.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      if (dirtyRef.current && editingNoteIdRef.current) {
+        notesApi.updateContent(editingNoteIdRef.current, draftRef.current).catch(() => undefined)
+      }
+    }
+  }, [])
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleContentChange = useCallback(
+    (value: string) => {
+      setDraft(value)
+      draftRef.current = value
+      dirtyRef.current = true
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      saveTimerRef.current = setTimeout(() => {
+        saveTimerRef.current = null
+        saveDraft()
+      }, AUTOSAVE_DELAY_MS)
+    },
+    [saveDraft]
+  )
+
+  const handleNewNote = useCallback(async () => {
+    await flushPendingSave()
     try {
-      await notesApi.create(formData)
-      closeModal()
-      loadData()
-      loadTags()
+      const created = await notesApi.createBlank(selectedFolderId)
+      setNotes((current) => [created, ...current])
+      setTotalCount((count) => count + 1)
+      openNote(created)
+      loadFolders()
     } catch (error) {
       console.error('Failed to create note:', error)
       showError(getErrorMessage(error))
     }
-  }
+  }, [flushPendingSave, loadFolders, openNote, selectedFolderId, showError])
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingNote) return
-    try {
-      const updateData: UpdateManagerNoteDto = {
-        title: formData.title,
-        content: formData.content,
-        tags: formData.tags,
-        priority: formData.priority,
-        dueDate: formData.dueDate
+  // Cmd/Ctrl+N starts a new note from anywhere on the page.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        handleNewNote()
       }
-      await notesApi.update(editingNote.id, updateData)
-      closeModal()
-      loadData()
-      loadTags()
-    } catch (error) {
-      console.error('Failed to update note:', error)
-      showError(getErrorMessage(error))
     }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleNewNote])
+
+  const handleSelectNote = async (note: ManagerNote) => {
+    if (note.id === selectedNoteId) return
+    await flushPendingSave()
+    openNote(note)
   }
 
-  const handleToggle = async (id: string) => {
-    try {
-      await notesApi.toggle(id)
-      loadData()
-    } catch (error) {
-      console.error('Failed to toggle note:', error)
-      showError(getErrorMessage(error))
-    }
-  }
+  const handleDeleteNote = async () => {
+    if (!selectedNote) return
+    if (!confirm(`Delete "${selectedNote.title}"? This cannot be undone.`)) return
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return
+    const deletedId = selectedNote.id
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    dirtyRef.current = false
+
     try {
-      await notesApi.delete(id)
-      loadData()
-      loadTags()
+      await notesApi.delete(deletedId)
+      const remaining = notes.filter((note) => note.id !== deletedId)
+      setNotes(remaining)
+      setTotalCount((count) => Math.max(0, count - 1))
+      openNote(remaining[0] ?? null)
+      loadFolders()
     } catch (error) {
       console.error('Failed to delete note:', error)
       showError(getErrorMessage(error))
     }
   }
 
-  const openEditForm = (note: ManagerNote) => {
-    setEditingNote(note)
-    setFormData({
-      title: note.title,
-      content: note.content,
-      tags: note.tags,
-      priority: note.priority,
-      dueDate: note.dueDate ? note.dueDate.split('T')[0] : undefined
-    })
-    setShowForm(true)
-  }
-
-  const handleTagClick = (tag: string) => {
-    if (selectedTag === tag) {
-      setSelectedTag(null)
-    } else {
-      setSelectedTag(tag)
+  const handleTogglePin = async () => {
+    if (!selectedNote) return
+    try {
+      patchNote(await notesApi.togglePin(selectedNote.id))
+    } catch (error) {
+      showError(getErrorMessage(error))
     }
   }
 
-  const clearFilters = () => {
-    setSearchInput('')
-    setSearchTerm('')
-    setSelectedTag(null)
-    setFilter('pending')
+  const handleToggleComplete = async () => {
+    if (!selectedNote) return
+    try {
+      patchNote(await notesApi.toggle(selectedNote.id))
+    } catch (error) {
+      showError(getErrorMessage(error))
+    }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+  const moveNote = async (noteId: string, folderId: string | null) => {
+    try {
+      const updated = await notesApi.move(noteId, folderId)
+      if (selectedFolderId !== null && folderId !== selectedFolderId) {
+        // The note has left the folder being listed.
+        const remaining = notes.filter((note) => note.id !== noteId)
+        setNotes(remaining)
+        setTotalCount((count) => Math.max(0, count - 1))
+        if (noteId === editingNoteIdRef.current) {
+          openNote(remaining[0] ?? null)
+        }
+      } else {
+        patchNote(updated)
+      }
+      loadFolders()
+    } catch (error) {
+      showError(getErrorMessage(error))
+    }
   }
 
-  const formatRelativeDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`
-    if (diffDays === 0) return 'Due today'
-    if (diffDays === 1) return 'Due tomorrow'
-    if (diffDays <= 7) return `Due in ${diffDays} days`
-    return formatDate(dateString)
+  const handleUpdateMeta = async (patch: NoteMetaPatch) => {
+    if (!selectedNote) return
+    await flushPendingSave()
+    try {
+      const updated = await notesApi.update(selectedNote.id, {
+        title: selectedNote.title,
+        content: draftRef.current,
+        tags: patch.tags ?? selectedNote.tags,
+        priority: patch.priority ?? selectedNote.priority,
+        dueDate: patch.dueDate !== undefined ? patch.dueDate || undefined : selectedNote.dueDate,
+        folderId: selectedNote.folderId ?? null,
+        isTodo: patch.isTodo ?? selectedNote.isTodo
+      })
+      patchNote(updated)
+    } catch (error) {
+      console.error('Failed to update note:', error)
+      showError(getErrorMessage(error))
+    }
   }
 
-  if (loading && allNotes.length === 0) {
+  const handleCreateFolder = async (name: string, parentFolderId: string | null) => {
+    try {
+      await noteFoldersApi.create({ name, parentFolderId })
+      await loadFolders()
+    } catch (error) {
+      showError(getErrorMessage(error))
+    }
+  }
+
+  const handleRenameFolder = async (folder: NoteFolder, name: string) => {
+    try {
+      await noteFoldersApi.update(folder.id, {
+        name,
+        parentFolderId: folder.parentFolderId ?? null,
+        sortOrder: folder.sortOrder
+      })
+      await loadFolders()
+    } catch (error) {
+      showError(getErrorMessage(error))
+    }
+  }
+
+  const handleDeleteFolder = async (folder: NoteFolder) => {
+    if (!confirm(`Delete the folder "${folder.name}"? Its notes move to the folder above it.`)) return
+    try {
+      await noteFoldersApi.delete(folder.id)
+      await loadFolders()
+      if (selectedFolderId === folder.id) {
+        setSelectedFolderId(folder.parentFolderId ?? null)
+      } else {
+        await loadNotes(selectedFolderId, filter, searchTerm, true)
+      }
+    } catch (error) {
+      showError(getErrorMessage(error))
+    }
+  }
+
+  const currentFolderName = selectedFolderId
+    ? folders.find((folder) => folder.id === selectedFolderId)?.name ?? 'Folder'
+    : 'All Notes'
+
+  const pinnedNotes = notes.filter((note) => note.isPinned)
+  const otherNotes = notes.filter((note) => !note.isPinned)
+
+  const renderNoteRow = (note: ManagerNote) => {
+    const isSelected = note.id === selectedNoteId
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-      </div>
+      <button
+        key={note.id}
+        draggable
+        onDragStart={(e) => e.dataTransfer.setData('text/hive-note-id', note.id)}
+        onClick={() => handleSelectNote(note)}
+        className={`w-full border-b border-slate-100 px-4 py-3 text-left transition-colors dark:border-slate-700/60 ${
+          isSelected ? 'bg-amber-500/10 dark:bg-amber-500/15' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          {note.isPinned && <Pin className="h-3 w-3 shrink-0 text-amber-500" />}
+          {note.isTodo && (
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${
+                note.isCompleted ? 'bg-green-500' : priorityDotColors[note.priority]
+              }`}
+            />
+          )}
+          <span
+            className={`flex-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100 ${
+              note.isCompleted ? 'line-through opacity-60' : ''
+            }`}
+          >
+            {note.title}
+          </span>
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span className="shrink-0">{formatListDate(note)}</span>
+          <span className="truncate">{note.snippet || 'No additional text'}</span>
+        </div>
+        {note.isTodo && note.dueDate && (
+          <div
+            className={`mt-1 flex items-center gap-1 text-xs ${
+              note.isOverdue && !note.isCompleted ? 'text-red-500' : 'text-slate-400'
+            }`}
+          >
+            {note.isCompleted ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {new Date(note.dueDate).toLocaleDateString()}
+          </div>
+        )}
+      </button>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">TODOs</h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Keep personal notes & action items
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            resetForm()
-            setShowForm(true)
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Note
-        </button>
-      </div>
+    <div className="flex h-[calc(100vh-5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+      {/* Folders */}
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40 lg:flex">
+        <NoteFolderTree
+          folders={folders}
+          selectedFolderId={selectedFolderId}
+          totalNoteCount={totalCount}
+          onSelect={setSelectedFolderId}
+          onCreate={handleCreateFolder}
+          onRename={handleRenameFolder}
+          onDelete={handleDeleteFolder}
+          onDropNote={moveNote}
+        />
+      </aside>
 
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search notes... (press Enter)"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') setSearchTerm(searchInput) }}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-          />
-          {(searchInput || selectedTag) && (
+      {/* Note list */}
+      <section className="flex w-full shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 sm:w-80">
+        <div className="space-y-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-slate-900 dark:text-white">{currentFolderName}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {totalCount} {totalCount === 1 ? 'note' : 'notes'}
+              </p>
+            </div>
             <button
-              onClick={clearFilters}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              onClick={handleNewNote}
+              title="New note"
+              aria-label="New note"
+              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600"
             >
-              <X className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
+              New
             </button>
+          </div>
+
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search notes"
+              aria-label="Search notes"
+              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-1">
+            {filterOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setFilter(option.value)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  filter === option.value
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading && notes.length === 0 ? (
+            <div className="flex h-32 items-center justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-amber-500" />
+            </div>
+          ) : notes.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <StickyNote className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {searchTerm ? 'No notes match your search.' : 'No notes here yet.'}
+              </p>
+              {!searchTerm && (
+                <button onClick={handleNewNote} className="mt-3 text-sm font-medium text-amber-600 hover:text-amber-700">
+                  Write the first one
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {pinnedNotes.length > 0 && (
+                <>
+                  <div className="bg-slate-50 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:bg-slate-900/40">
+                    Pinned
+                  </div>
+                  {pinnedNotes.map(renderNoteRow)}
+                  {otherNotes.length > 0 && (
+                    <div className="bg-slate-50 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:bg-slate-900/40">
+                      Notes
+                    </div>
+                  )}
+                </>
+              )}
+              {otherNotes.map(renderNoteRow)}
+              {totalCount > notes.length && (
+                <p className="px-4 py-3 text-center text-xs text-slate-400">
+                  Showing the {notes.length} most recent of {totalCount}. Narrow the list with search.
+                </p>
+              )}
+            </>
           )}
         </div>
+      </section>
 
-        {/* Tags */}
-        {allTags.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tag className="w-4 h-4 text-slate-400" />
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleTagClick(tag)}
-                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                  selectedTag === tag
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
+      {/* Editor */}
+      <section className="hidden flex-1 sm:flex">
+        {selectedNote ? (
+          <div className="h-full w-full">
+            <NoteEditor
+              note={selectedNote}
+              folders={folders}
+              content={draft}
+              saving={saving}
+              onContentChange={handleContentChange}
+              onTogglePin={handleTogglePin}
+              onToggleComplete={handleToggleComplete}
+              onDelete={handleDeleteNote}
+              onMove={(folderId) => moveNote(selectedNote.id, folderId)}
+              onUpdateMeta={handleUpdateMeta}
+            />
+          </div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
+            <StickyNote className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <p className="text-slate-500 dark:text-slate-400">Select a note, or start a new one.</p>
+            <button
+              onClick={handleNewNote}
+              className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
+            >
+              <Plus className="h-4 w-4" />
+              New Note
+            </button>
           </div>
         )}
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'all', label: 'All' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'completed', label: 'Completed' },
-              { value: 'overdue', label: 'Overdue' },
-            ].map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value as FilterType)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filter === f.value
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {f.label}{filter === f.value && totalCount > 0 ? ` (${totalCount})` : ''}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Notes List */}
-      {notes.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <StickyNote className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No notes found</h3>
-          <p className="text-slate-500 dark:text-slate-400">
-            {searchTerm || selectedTag
-              ? 'Try adjusting your search or filters'
-              : filter === 'all'
-              ? 'Create your first note to get started'
-              : `No ${filter} notes`}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className={`bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 border-l-4 ${priorityBorderColors[note.priority]} ${
-                note.isCompleted ? 'opacity-60' : ''
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {/* Checkbox */}
-                <button
-                  onClick={() => handleToggle(note.id)}
-                  className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    note.isCompleted
-                      ? 'bg-green-500 border-green-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600 hover:border-green-500'
-                  }`}
-                >
-                  {note.isCompleted && <Check className="w-3 h-3" />}
-                </button>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className={`font-medium text-slate-900 dark:text-white ${note.isCompleted ? 'line-through' : ''}`}>
-                      {note.title}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityColors[note.priority]}`}>
-                        {priorityLabels[note.priority]}
-                      </span>
-                      <button
-                        onClick={() => openEditForm(note)}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(note.id)}
-                        className="p-1 text-slate-400 hover:text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {note.content && (
-                    <p className={`mt-1 text-sm text-slate-600 dark:text-slate-400 ${note.isCompleted ? 'line-through' : ''}`}>
-                      {note.content}
-                    </p>
-                  )}
-
-                  {/* Tags */}
-                  {note.tagsList && note.tagsList.length > 0 && (
-                    <div className="mt-2 flex items-center gap-1 flex-wrap">
-                      {note.tagsList.map((tag) => (
-                        <button
-                          key={tag}
-                          onClick={() => handleTagClick(tag)}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                            selectedTag === tag
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                    {note.dueDate && (
-                      <span className={`flex items-center gap-1 ${note.isOverdue && !note.isCompleted ? 'text-red-500 font-medium' : ''}`}>
-                        <Clock className="w-3 h-3" />
-                        {formatRelativeDate(note.dueDate)}
-                      </span>
-                    )}
-                    {note.isCompleted && (
-                      <>
-                        <span>Created {formatDate(note.createdAt)}</span>
-                        {note.completedAt && (
-                          <span className="text-green-600 dark:text-green-400">
-                            Completed {formatDate(note.completedAt)}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Pagination Controls */}
-      {totalPages > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              Showing {((pageNumber - 1) * pageSize) + 1} - {Math.min(pageNumber * pageSize, totalCount)} of {totalCount} notes
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(pageNumber - 1)}
-              disabled={pageNumber <= 1}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-            <span className="px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
-              Page {pageNumber} of {totalPages}
-            </span>
-            <button
-              onClick={() => handlePageChange(pageNumber + 1)}
-              disabled={pageNumber >= totalPages}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Create/Edit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {editingNote ? 'Edit Note' : 'New Note'}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={editingNote ? handleUpdate : handleCreate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  placeholder="What needs to be done?"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Content
-                </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  placeholder="Additional details..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Tags
-                </label>
-                <input
-                  type="text"
-                  value={formData.tags || ''}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  placeholder="work, urgent, follow-up (comma separated)"
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Separate tags with commas, spaces, or semicolons
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) as NotePriority })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  >
-                    <option value={0}>Low</option>
-                    <option value={1}>Normal</option>
-                    <option value={2}>High</option>
-                    <option value={3}>Urgent</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.dueDate || ''}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value || undefined })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-                >
-                  {editingNote ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   )
 }

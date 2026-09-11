@@ -15,6 +15,7 @@ public record BackupDto
     public List<MeetingNoteBackup> MeetingNotes { get; init; } = new();
     public List<LeaveBackup> Leaves { get; init; } = new();
     public List<ManagerNoteBackup> ManagerNotes { get; init; } = new();
+    public List<NoteFolderBackup> NoteFolders { get; init; } = new();
     public List<SprintBackup> Sprints { get; init; } = new();
     public List<SprintCapacityBackup> SprintCapacities { get; init; } = new();
     public List<DocumentBackup> Documents { get; init; } = new();
@@ -131,11 +132,24 @@ public record ManagerNoteBackup
     public string Content { get; init; } = string.Empty;
     public string Tags { get; init; } = string.Empty;
     public int Priority { get; init; }
+    public Guid? FolderId { get; init; }
+    public bool IsPinned { get; init; }
+    public bool IsTodo { get; init; }
     public bool IsCompleted { get; init; }
     public DateTime? DueDate { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
+}
+
+public record NoteFolderBackup
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public Guid? ParentFolderId { get; init; }
+    public int SortOrder { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
 }
 
 public record SprintBackup
@@ -223,6 +237,7 @@ public record RestoreResultDto
     public int MeetingNotesRestored { get; init; }
     public int LeavesRestored { get; init; }
     public int ManagerNotesRestored { get; init; }
+    public int NoteFoldersRestored { get; init; }
     public int SprintsRestored { get; init; }
     public int SprintCapacitiesRestored { get; init; }
     public int DocumentsRestored { get; init; }

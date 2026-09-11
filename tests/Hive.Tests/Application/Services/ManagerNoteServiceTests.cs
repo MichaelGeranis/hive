@@ -337,4 +337,166 @@ public class ManagerNoteServiceTests
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    [Fact]
+    public async Task CreateBlankAsync_CreatesEmptyNoteInFolder()
+    {
+        // Arrange
+        var folderId = Guid.NewGuid();
+        _repositoryMock.Setup(r => r.AddAsync(It.IsAny<ManagerNote>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote note, CancellationToken _) => note);
+
+        // Act
+        var result = await _service.CreateBlankAsync(new CreateBlankNoteDto { FolderId = folderId });
+
+        // Assert
+        result.Title.Should().Be(ManagerNote.DefaultTitle);
+        result.Content.Should().BeEmpty();
+        result.FolderId.Should().Be(folderId);
+        result.IsTodo.Should().BeFalse();
+        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<ManagerNote>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateContentAsync_SavesContentAndDerivesTitle()
+    {
+        // Arrange
+        var entity = ManagerNote.CreateBlank();
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // Act
+        var result = await _service.UpdateContentAsync(entity.Id, new UpdateNoteContentDto
+        {
+            Content = "# Weekly plan\nCheck capacity"
+        });
+
+        // Assert
+        result.Title.Should().Be("Weekly plan");
+        result.Content.Should().Be("# Weekly plan\nCheck capacity");
+        result.Snippet.Should().Be("Check capacity");
+        _repositoryMock.Verify(r => r.UpdateAsync(entity, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateContentAsync_DoesNotLogAnActivityForEveryAutosave()
+    {
+        // Arrange
+        var entity = ManagerNote.CreateBlank();
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // Act
+        await _service.UpdateContentAsync(entity.Id, new UpdateNoteContentDto { Content = "typing" });
+
+        // Assert
+        _activityServiceMock.Verify(a => a.LogActivityAsync(
+            It.IsAny<ActivityType>(),
+            It.IsAny<EntityType>(),
+            It.IsAny<Guid>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateContentAsync_WhenNoteNotFound_ThrowsNotFoundException()
+    {
+        // Arrange
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote?)null);
+
+        // Act
+        var act = async () => await _service.UpdateContentAsync(Guid.NewGuid(), new UpdateNoteContentDto { Content = "x" });
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task MoveToFolderAsync_FilesNoteInFolder()
+    {
+        // Arrange
+        var entity = new ManagerNote("Note");
+        var folderId = Guid.NewGuid();
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // Act
+        var result = await _service.MoveToFolderAsync(entity.Id, new MoveNoteDto { FolderId = folderId });
+
+        // Assert
+        result.FolderId.Should().Be(folderId);
+        _repositoryMock.Verify(r => r.UpdateAsync(entity, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TogglePinAsync_FlipsPinnedState()
+    {
+        // Arrange
+        var entity = new ManagerNote("Note");
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // Act
+        var result = await _service.TogglePinAsync(entity.Id);
+
+        // Assert
+        result.IsPinned.Should().BeTrue();
+        _repositoryMock.Verify(r => r.UpdateAsync(entity, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TogglePinAsync_WhenNoteNotFound_ThrowsNotFoundException()
+    {
+        // Arrange
+        _repositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote?)null);
+
+        // Act
+        var act = async () => await _service.TogglePinAsync(Guid.NewGuid());
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithTodoFlag_TracksNoteAsTodo()
+    {
+        // Arrange
+        _repositoryMock.Setup(r => r.AddAsync(It.IsAny<ManagerNote>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagerNote note, CancellationToken _) => note);
+
+        // Act
+        var result = await _service.CreateAsync(new CreateManagerNoteDto
+        {
+            Title = "Follow up with Alice",
+            IsTodo = true
+        });
+
+        // Assert
+        result.IsTodo.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ClearingTheTodoFlag_ClearsCompletion()
+    {
+        // Arrange
+        var entity = new ManagerNote("Note", isTodo: true);
+        entity.MarkComplete();
+        _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // Act
+        var result = await _service.UpdateAsync(entity.Id, new UpdateManagerNoteDto
+        {
+            Title = "Note",
+            Content = "",
+            IsTodo = false
+        });
+
+        // Assert
+        result.IsTodo.Should().BeFalse();
+        result.IsCompleted.Should().BeFalse();
+    }
 }

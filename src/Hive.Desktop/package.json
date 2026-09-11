@@ -26,8 +26,10 @@
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^9.1.0",
     "react-router-dom": "^6.20.0",
-    "recharts": "^2.10.3"
+    "recharts": "^2.10.3",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
@@ -39,7 +41,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
+    "electron": "^28.3.3",
     "electron-builder": "^24.9.1",
     "jsdom": "^27.4.0",
     "msw": "^2.12.7",
@@ -134,5 +136,12 @@
         }
       ]
     }
+  },
+  "allowScripts": {
+    "electron@28.3.3": true,
+    "esbuild@0.21.5": true,
+    "esbuild@0.27.2": true,
+    "fsevents@2.3.3": true,
+    "msw@2.12.7": true
   }
 }

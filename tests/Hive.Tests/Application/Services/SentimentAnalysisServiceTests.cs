@@ -223,11 +223,11 @@ public class SentimentAnalysisServiceTests
             .ReturnsAsync(_testDirectReport);
 
         // Set up a meeting with a note
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), 60, "1:1");
+        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Things are going well", MeetingNoteCategory.Feedback);
+        var note = new MeetingNote(meeting.Id, "Things are going well", NoteCategory.Feedback);
         _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote> { note });
 
@@ -260,11 +260,11 @@ public class SentimentAnalysisServiceTests
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
 
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), 60, "1:1");
+        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Good progress this week", MeetingNoteCategory.Feedback);
+        var note = new MeetingNote(meeting.Id, "Good progress this week", NoteCategory.Feedback);
         _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote> { note });
 
@@ -297,11 +297,11 @@ public class SentimentAnalysisServiceTests
         _directReportRepositoryMock.Setup(r => r.GetByIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testDirectReport);
 
-        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), 60, "1:1");
+        var meeting = new OneOnOneMeeting(directReportId, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)), "1:1");
         _meetingRepositoryMock.Setup(r => r.GetByDirectReportIdAsync(directReportId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OneOnOneMeeting> { meeting });
 
-        var note = new MeetingNote(meeting.Id, "Some note content", MeetingNoteCategory.Feedback);
+        var note = new MeetingNote(meeting.Id, "Some note content", NoteCategory.Feedback);
         _meetingNoteRepositoryMock.Setup(r => r.GetByMeetingIdAsync(meeting.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeetingNote> { note });
 
