@@ -107,3 +107,6 @@ TROUBLESHOOTING.md
 src/Hive.Desktop/.env
 src/Hive.Desktop/.env.local
 src/Hive.Desktop/.env.*.local
+
+# Claude Code worktrees (local scratch checkouts, never source)
+.claude/worktrees/

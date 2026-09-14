@@ -17,6 +17,7 @@ const routerFutureFlags = {
   v7_relativeSplatPath: true,
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- test helper, not a hot-reloaded module
 function AllTheProviders({ children }: WrapperProps) {
   return (
     <ThemeProvider>

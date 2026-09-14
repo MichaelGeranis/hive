@@ -161,7 +161,7 @@ describe('logStore', () => {
       logStore.initializeLogCapture()
       console.log('Test')
 
-      logStore.getLogs()[0]
+      expect(logStore.getLogs().length).toBeGreaterThan(0)
 
       logStore.clearLogs()
 
