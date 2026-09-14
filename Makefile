@@ -1,36 +1,40 @@
 # Hive - Engineering Manager Tool
 # Common commands for development and deployment
 
-.PHONY: help install build test run dev clean backend frontend electron-dev electron-build kill-backend test-coverage coverage-report
+.PHONY: help install build test test-backend test-frontend test-coverage coverage-report dev backend-inmemory backend-sqlite frontend build-backend build-all electron-build clean check format lint kill-backend migration-add migration-remove migration-update migration-list
 
 # Default target
 help:
 	@echo "Hive - Common Commands"
 	@echo ""
 	@echo "Development:"
-	@echo "  make install        - Install all dependencies (backend + frontend)"
-	@echo "  make dev            - Run backend and frontend in development mode"
-	@echo "  make backend        - Run backend only (port 5002)"
-	@echo "  make frontend       - Run frontend only (port 5173)"
-	@echo "  make electron-dev   - Run Electron app in development mode"
+	@echo "  make install          - Install all dependencies (backend + frontend)"
+	@echo "  make dev              - Run backend (in-memory) and frontend together"
+	@echo "  make backend-inmemory - Run backend only, in-memory database (port 5002)"
+	@echo "  make backend-sqlite   - Run backend only, persistent SQLite (port 5002)"
+	@echo "  make frontend         - Run Vite dev server only (port 5173)"
 	@echo ""
 	@echo "Testing:"
-	@echo "  make test           - Run all backend tests"
-	@echo "  make test-watch     - Run tests in watch mode"
-	@echo "  make test-coverage  - Run tests with code coverage"
-	@echo "  make coverage-report - Generate HTML coverage report"
+	@echo "  make test             - Run backend and frontend tests"
+	@echo "  make test-backend     - Run backend tests only"
+	@echo "  make test-frontend    - Run frontend tests only"
+	@echo "  make test-coverage    - Run backend and frontend tests with coverage"
+	@echo "  make coverage-report  - Generate and open the backend HTML coverage report"
+	@echo ""
+	@echo "Quality:"
+	@echo "  make check            - Build (warnings as errors), typecheck, lint and test"
+	@echo "  make format           - Format C# (dotnet format) and TypeScript (eslint --fix)"
+	@echo "  make lint             - Verify formatting and lint without changing files"
 	@echo ""
 	@echo "Building:"
-	@echo "  make build          - Build backend and frontend"
-	@echo "  make build-backend  - Build backend for current platform"
-	@echo "  make build-all      - Build backend for all platforms"
-	@echo "  make electron-build - Build standalone Electron app"
+	@echo "  make build            - Build backend and frontend"
+	@echo "  make build-backend    - Publish backend for current platform"
+	@echo "  make build-all        - Publish backend for all platforms"
+	@echo "  make electron-build   - Build standalone Electron app"
 	@echo ""
 	@echo "Other:"
-	@echo "  make clean          - Clean build artifacts"
-	@echo "  make restore        - Restore NuGet packages"
-	@echo "  make reset-db       - Reset SQLite database (creates backup)"
-	@echo "  make kill-backend   - Kill process using backend port 5002"
+	@echo "  make clean            - Clean build artifacts"
+	@echo "  make kill-backend     - Kill process using backend port 5002"
 	@echo ""
 	@echo "Migrations:"
 	@echo "  make migration-add     - Create a new migration"
@@ -49,9 +53,19 @@ build:
 	cd src/Hive.Desktop && npm run build
 
 # Run all tests
-test:
+test: test-backend test-frontend
+
+test-backend:
 	dotnet test Hive.sln
+
+test-frontend:
 	cd src/Hive.Desktop && npm test
+
+# Run backend and frontend together (backend in-memory, resets on restart)
+dev:
+	cd src/Hive.Desktop && npx concurrently --kill-others --names backend,frontend --prefix-colors blue,green \
+		"cd ../.. && dotnet run --project src/Hive.Api/Hive.Api.csproj" \
+		"npm run dev"
 
 # Run backend (development mode with in-memory database)
 backend-inmemory:
@@ -87,10 +101,21 @@ clean:
 	find . -type d -name "bin" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "obj" -exec rm -rf {} + 2>/dev/null || true
 
-# Check code health
-check:
+# Check code health: build with warnings as errors, typecheck, lint, then run every test
+check: lint
 	dotnet build Hive.sln --warnaserror
 	cd src/Hive.Desktop && npx tsc --noEmit
+	$(MAKE) test
+
+# Format the code in place
+format:
+	dotnet format Hive.sln
+	cd src/Hive.Desktop && npm run lint:fix
+
+# Verify formatting and lint rules without touching files (what CI runs)
+lint:
+	dotnet format Hive.sln --verify-no-changes
+	cd src/Hive.Desktop && npm run lint
 
 # Create a new migration
 migration-add:
@@ -123,6 +148,7 @@ test-coverage:
 		/p:CoverletOutput=../../coverage/ \
 		/p:Exclude="[Hive.Tests]*%2c[*]*.Migrations.*" \
 		/p:ExcludeByFile="**/Migrations/**/*.cs%2c**/Interfaces/**/*.cs"
+	cd src/Hive.Desktop && npm run test:coverage
 
 # Generate HTML coverage report (requires reportgenerator tool)
 coverage-report: test-coverage

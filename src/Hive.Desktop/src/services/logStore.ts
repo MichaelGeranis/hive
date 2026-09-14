@@ -11,7 +11,7 @@ type LogListener = (logs: LogEntry[]) => void
 const MAX_LOGS = 1000
 let logs: LogEntry[] = []
 let logIdCounter = 0
-let listeners: Set<LogListener> = new Set()
+const listeners: Set<LogListener> = new Set()
 let initialized = false
 
 // Original console methods
