@@ -21,7 +21,16 @@ jobs:
       - name: Restore
         run: dotnet restore Hive.sln
       - name: Format check
-        run: dotnet format Hive.sln --no-restore --verify-no-changes
+        # On failure, apply the formatter and print the diff so the fix can be ported
+        # from the log even from a machine without the SDK.
+        run: |
+          if ! dotnet format Hive.sln --no-restore --verify-no-changes; then
+            dotnet format Hive.sln --no-restore
+            echo "::group::dotnet format diff"
+            git --no-pager diff
+            echo "::endgroup::"
+            exit 1
+          fi
       - name: Build
         run: dotnet build Hive.sln --no-restore --configuration Release
       - name: Test
