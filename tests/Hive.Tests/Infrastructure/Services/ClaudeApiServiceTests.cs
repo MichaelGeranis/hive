@@ -36,7 +36,10 @@ public class ClaudeApiServiceTests
 
         var request = handler.Requests.Single();
         request.Uri.AbsolutePath.Should().Be("/v1/messages");
-        request.Headers["x-api-key"].Should().Be("sk-test");
+        // Anthropic SDK 13 sends the key as a bearer token, on API version 2026-10-21
+        request.Headers["authorization"].Should().Be("Bearer sk-test");
+        request.Headers.Should().NotContainKey("x-api-key");
+        request.Headers["anthropic-version"].Should().Be("2026-10-21");
         request.Headers["anthropic-beta"].Should().Contain("server-side-fallback-2026-07-01");
 
         using var body = JsonDocument.Parse(request.Body!);

@@ -226,7 +226,7 @@ public class ClaudeApiService : IClaudeApiService
             Betas = [AnthropicBeta.ServerSideFallback2026_07_01],
             Fallbacks = new Default(),
             OutputConfig = new BetaOutputConfig { Format = new BetaJsonOutputFormat { Schema = schema } },
-            Messages = [new() { Role = Role.User, Content = prompt }],
+            Messages = [new BetaUserMessageParam { Content = prompt }],
         };
 
         var response = await SendAsync(
