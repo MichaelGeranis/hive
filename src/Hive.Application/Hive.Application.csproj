@@ -2,8 +2,6 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

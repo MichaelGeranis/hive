@@ -334,7 +334,7 @@ public class DatabaseBackupServiceTests : IDisposable
             x => x.Log(
                 level,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains(text)),
+                It.Is<It.IsAnyType>((v, _) => v != null && v.ToString()!.Contains(text)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
