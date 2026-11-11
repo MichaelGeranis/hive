@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest'
 import { server } from './mocks/server'
 
@@ -25,7 +25,7 @@ process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding, 
 
 // Start MSW server before all tests
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' })
+  server.listen({ onUnhandledFrame: 'error' })
 
   // Suppress console output during tests (less noisy output)
   console.log = vi.fn()

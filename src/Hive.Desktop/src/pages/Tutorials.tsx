@@ -1734,7 +1734,7 @@ function TutorialContent({ tutorial, onBack }: TutorialContentProps) {
     highlights[currentMatchIndex].style.fontWeight = 'normal'
 
     // Calculate new index
-    let newIndex = currentMatchIndex
+    let newIndex: number
     if (direction === 'next') {
       newIndex = (currentMatchIndex + 1) % totalMatches
     } else {

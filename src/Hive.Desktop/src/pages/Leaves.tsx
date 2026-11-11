@@ -445,7 +445,7 @@ export default function Leaves() {
                 color: 'white'
               }}
               labelFormatter={(value) => {
-                const day = parseInt(value)
+                const day = parseInt(String(value))
                 const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
                 return `${formatWeekday(date, 'short')} ${formatDate(date)}`
               }}

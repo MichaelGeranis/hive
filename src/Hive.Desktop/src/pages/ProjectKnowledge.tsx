@@ -165,7 +165,7 @@ export default function ProjectKnowledgePage() {
 
     // Sort projects
     projects.sort((a, b) => {
-      let comparison = 0
+      let comparison: number
       if (!sortByAvg) {
         comparison = a.name.localeCompare(b.name)
       } else {
@@ -190,7 +190,7 @@ export default function ProjectKnowledgePage() {
 
     // Sort direct reports
     reports.sort((a, b) => {
-      let comparison = 0
+      let comparison: number
       if (!sortByAvg) {
         comparison = a.name.localeCompare(b.name)
       } else {
@@ -432,7 +432,7 @@ export default function ProjectKnowledgePage() {
                         strokeDasharray="3 3"
                       />
                       <Tooltip
-                        formatter={(value: number, name: string) => [value, name]}
+                        formatter={(value, name) => [value, name]}
                         labelFormatter={(label) => {
                           const item = radarData.find(d => d.project === label)
                           return item?.fullName || label

@@ -272,7 +272,7 @@ function TeamSentimentWidget({ overview, badge }: TeamSentimentWidgetProps) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -436,7 +436,7 @@ function IndividualSentimentWidget({ analysis, directReportName, onRefresh, refr
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                  <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -478,7 +478,7 @@ function IndividualSentimentWidget({ analysis, directReportName, onRefresh, refr
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                    <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
                     <Legend />
                     <Line type="monotone" dataKey="positive" stroke={SENTIMENT_COLORS.positive} strokeWidth={2} dot={{ r: 3 }} name="Positive" />
                     <Line type="monotone" dataKey="neutral" stroke={SENTIMENT_COLORS.neutral} strokeWidth={2} dot={{ r: 3 }} name="Neutral" />
