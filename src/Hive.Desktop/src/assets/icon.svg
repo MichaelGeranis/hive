@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bgGrad)"/>
+
+  <!-- Three honeycomb cells, people, delivery and planning, meeting at one point; centred -->
+  <polygon points="330.5,234.5 256.0,277.5 181.5,234.5 181.5,148.5 256.0,105.5 330.5,148.5" fill="url(#hexGrad)" fill-opacity="0.18" stroke="url(#hexGrad)" stroke-width="18" stroke-linejoin="round"/>
+  <polygon points="256.0,363.5 181.5,406.5 107.0,363.5 107.0,277.5 181.5,234.5 256.0,277.5" fill="url(#hexGrad)" fill-opacity="0.18" stroke="url(#hexGrad)" stroke-width="18" stroke-linejoin="round"/>
+  <polygon points="405.0,363.5 330.5,406.5 256.0,363.5 256.0,277.5 330.5,234.5 405.0,277.5" fill="url(#hexGrad)" fill-opacity="0.18" stroke="url(#hexGrad)" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- The dot where the cells meet, cut out from them -->
+  <circle cx="256" cy="277.5" r="46" fill="#fbbf24" opacity="0.3"/>
+  <circle cx="256" cy="277.5" r="27" fill="#fcd34d" stroke="#151e30" stroke-width="16"/>
+</svg>

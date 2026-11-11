@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Core depends on nothing. No PackageReference may ever appear here. -->
+
+</Project>

@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Colours */
+:root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  color: #213547;
+  background-color: #f8fafc;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* macOS title bar drag area */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Smooth colour transitions on hover and state changes */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+/* Toast notification animations */
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+.toast-enter {
+  animation: toast-slide-in 0.3s ease forwards;
+}
+
+.toast-exit {
+  animation: toast-slide-out 0.3s ease forwards;
+}
+
+/* Hive's mark. Each cell carries its place, --i (0 top, 1 lower left, 2 lower right), so the
+   cells move one after another. */
+.hive-mark-cell,
+.hive-mark-dot,
+.hive-mark-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Arriving: the cells pop in one by one, then the dot lights */
+@keyframes hive-cell-in {
+  from { opacity: 0; transform: scale(0.4); }
+  70% { opacity: 1; transform: scale(1.08); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hive-dot-in {
+  from { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; transform: scale(1.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.hive-mark-enter .hive-mark-cell {
+  animation: hive-cell-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 0.15s) both;
+}
+
+.hive-mark-enter .hive-mark-dot,
+.hive-mark-enter .hive-mark-glow {
+  animation: hive-dot-in 0.45s ease-out 0.6s both;
+}
+
+/* Working: the cells fill in turn, then settle */
+@keyframes hive-cell-fill {
+  0%, 100% { fill-opacity: 0.15; }
+  40% { fill-opacity: 0.75; }
+}
+
+.hive-mark-busy .hive-mark-cell {
+  animation: hive-cell-fill 1.2s ease-in-out calc(var(--i) * 0.25s) infinite;
+}
+
+/* Arriving while working, as on the startup screen: pop in first, then fill */
+.hive-mark-enter.hive-mark-busy .hive-mark-cell {
+  animation:
+    hive-cell-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 0.15s) both,
+    hive-cell-fill 1.2s ease-in-out calc(0.9s + var(--i) * 0.25s) infinite;
+}
+
+/* Something needs attention: the glow around the dot breathes */
+@keyframes hive-glow-breathe {
+  0%, 100% { opacity: 0.2; transform: scale(0.85); }
+  50% { opacity: 0.45; transform: scale(1.1); }
+}
+
+.hive-mark-alert .hive-mark-glow {
+  animation: hive-glow-breathe 2.4s ease-in-out infinite;
+}
+
+.hive-mark-enter.hive-mark-alert .hive-mark-glow {
+  animation:
+    hive-dot-in 0.45s ease-out 0.6s both,
+    hive-glow-breathe 2.4s ease-in-out 1.05s infinite;
+}
+
+/* Hovered: one wave of fill runs through the cells */
+.hive-mark:not(.hive-mark-busy):hover .hive-mark-cell {
+  animation: hive-cell-fill 0.7s ease-in-out calc(var(--i) * 0.12s) 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hive-mark .hive-mark-cell,
+  .hive-mark .hive-mark-dot,
+  .hive-mark .hive-mark-glow {
+    animation: none !important;
+  }
+
+  .hive-mark-busy .hive-mark-cell {
+    fill-opacity: 0.45;
+  }
+}

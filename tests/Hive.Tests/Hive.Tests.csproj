@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <ExcludeFromCodeCoverage>true</ExcludeFromCodeCoverage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="coverlet.msbuild">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+  <!-- Coverage is collected on demand by `make test-coverage`, which passes the coverlet
+       properties on the command line; a plain `dotnet test` stays fast. Exclusions live in
+       coverage.runsettings. -->
+  <PropertyGroup>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>../../coverage/</CoverletOutput>
+    <Exclude>[Hive.Tests]*,[*]*.Migrations.*,[Hive.Infrastructure]Hive.Infrastructure.Migrations.*</Exclude>
+    <ExcludeByFile>**/Migrations/**/*.cs,**/Interfaces/**/*.cs</ExcludeByFile>
+    <ExcludeByAttribute>System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute,System.CodeDom.Compiler.GeneratedCodeAttribute</ExcludeByAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hive.Core\Hive.Core.csproj" />
+    <ProjectReference Include="..\..\src\Hive.Application\Hive.Application.csproj" />
+    <ProjectReference Include="..\..\src\Hive.Infrastructure\Hive.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Hive.Api\Hive.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+    <Using Include="Moq" />
+  </ItemGroup>
+
+</Project>

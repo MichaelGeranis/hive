@@ -1,0 +1,153 @@
+namespace Hive.Application.DTOs;
+
+/// <summary>
+/// Parameters for paginated queries.
+/// </summary>
+public record PaginationParams
+{
+    private const int MaxPageSize = 100;
+    private const int DefaultPageSize = 20;
+
+    public int PageNumber { get; init; } = 1;
+
+    private int _pageSize = DefaultPageSize;
+    public int PageSize
+    {
+        get => _pageSize;
+        init => _pageSize = value > MaxPageSize ? MaxPageSize : value < 1 ? DefaultPageSize : value;
+    }
+
+    public int Skip => (PageNumber - 1) * PageSize;
+}
+
+/// <summary>
+/// Filter options for tasks.
+/// </summary>
+public enum TaskFilter
+{
+    All,
+    Overdue,
+    Stale
+    // Individual statuses are handled via TaskStatus enum
+}
+
+/// <summary>
+/// Parameters for paginated and filtered task queries.
+/// </summary>
+public record TaskPaginationParams : PaginationParams
+{
+    public TaskFilter Filter { get; init; } = TaskFilter.All;
+    public Hive.Core.Entities.TaskStatus? Status { get; init; }
+    public string? SearchTerm { get; init; }
+    public string? Label { get; init; }
+    public string? Sprint { get; init; }
+    public string? Component { get; init; }
+
+    /// <summary>
+    /// Only tasks whose components name no product.
+    /// </summary>
+    public bool Unattributed { get; init; }
+
+    /// <summary>
+    /// Only tasks missing the story points they should have (<see cref="Hive.Core.Entities.TeamTask.FindMissingStoryPoints"/>).
+    /// </summary>
+    public bool Unestimated { get; init; }
+
+    /// <summary>
+    /// Only the upcoming tasks with no acceptance criteria (<see cref="Hive.Core.Entities.TeamTask.IsMissingAcceptanceCriteria"/>
+    /// among <see cref="Hive.Core.Entities.TaskReadiness.FindUpcoming"/>).
+    /// </summary>
+    public bool NoAcceptanceCriteria { get; init; }
+
+    public Hive.Core.Entities.TaskType? Type { get; init; }
+    public Guid? AssigneeId { get; init; }
+
+    /// <summary>
+    /// Only tasks nobody is assigned to.
+    /// </summary>
+    public bool Unassigned { get; init; }
+
+    public bool ExcludeParents { get; init; }
+}
+
+/// <summary>
+/// Parameters for paginated and filtered note queries.
+/// </summary>
+public record NotePaginationParams : PaginationParams
+{
+    public string? SearchTerm { get; init; }
+    public string? Tag { get; init; }
+
+    /// <summary>
+    /// Limits the result to one folder. Null lists every note, wherever it is filed.
+    /// </summary>
+    public Guid? FolderId { get; init; }
+}
+
+/// <summary>
+/// Parameters for paginated and filtered 1:1 queries.
+/// </summary>
+public record MeetingPaginationParams : PaginationParams
+{
+    /// <summary>
+    /// Limits the result to the 1:1s held with one person.
+    /// </summary>
+    public Guid? DirectReportId { get; init; }
+
+    /// <summary>
+    /// Limits the result to 1:1s whose tags name nobody Hive recognises.
+    /// </summary>
+    public bool UnlinkedOnly { get; init; }
+
+    public string? SearchTerm { get; init; }
+}
+
+/// <summary>
+/// Parameters for paginated and filtered activity queries.
+/// </summary>
+public record ActivityPaginationParams : PaginationParams
+{
+    private const int DefaultActivityPageSize = 50;
+
+    public ActivityPaginationParams()
+    {
+        PageSize = DefaultActivityPageSize;
+    }
+
+    public string? SearchTerm { get; init; }
+}
+
+/// <summary>
+/// Wrapper for paginated results.
+/// </summary>
+/// <typeparam name="T">The type of items in the result.</typeparam>
+public record PagedResult<T>
+{
+    public IReadOnlyList<T> Items { get; init; } = Array.Empty<T>();
+    public int TotalCount { get; init; }
+    public int PageNumber { get; init; }
+    public int PageSize { get; init; }
+
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
+
+    public static PagedResult<T> Create(IReadOnlyList<T> items, int totalCount, PaginationParams pagination)
+    {
+        return new PagedResult<T>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize
+        };
+    }
+}
+
+/// <summary>
+/// Paged result with aggregate totals for task queries.
+/// </summary>
+public record TaskPagedResult : PagedResult<TeamTaskDto>
+{
+    public int TotalStoryPoints { get; init; }
+}

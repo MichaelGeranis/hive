@@ -1,0 +1,160 @@
+namespace Hive.Core.Entities;
+
+/// <summary>
+/// Represents the type of activity that occurred in the system.
+/// </summary>
+public enum ActivityType
+{
+    /// <summary>
+    /// A new entity was created.
+    /// </summary>
+    Created = 0,
+
+    /// <summary>
+    /// An existing entity was updated.
+    /// </summary>
+    Updated = 1,
+
+    /// <summary>
+    /// An entity's status changed.
+    /// </summary>
+    StatusChanged = 2,
+
+    /// <summary>
+    /// An entity was approved.
+    /// </summary>
+    Approved = 3,
+
+    /// <summary>
+    /// An entity was rejected.
+    /// </summary>
+    Rejected = 4,
+
+    /// <summary>
+    /// An entity was completed.
+    /// </summary>
+    Completed = 5,
+
+    /// <summary>
+    /// An entity was deleted.
+    /// </summary>
+    Deleted = 6,
+
+    /// <summary>
+    /// An entity was cancelled.
+    /// </summary>
+    Cancelled = 7
+}
+
+/// <summary>
+/// Represents the type of entity that the activity is related to.
+/// </summary>
+public enum EntityType
+{
+    /// <summary>
+    /// Task entity.
+    /// </summary>
+    Task = 1,
+
+    /// <summary>
+    /// Leave entity.
+    /// </summary>
+    Leave = 2,
+
+    /// <summary>
+    /// Direct report (team member) entity.
+    /// </summary>
+    DirectReport = 3,
+
+    /// <summary>
+    /// One-on-one meeting entity.
+    /// </summary>
+    Meeting = 4,
+
+    /// <summary>
+    /// Meeting note entity. Retired when 1:1s became single markdown notes; the value is
+    /// kept so activities recorded before that still render in the feed.
+    /// </summary>
+    MeetingNote = 5,
+
+    /// <summary>
+    /// Manager note/TODO entity.
+    /// </summary>
+    ManagerNote = 6,
+
+    /// <summary>
+    /// Project entity.
+    /// </summary>
+    Project = 7,
+
+    /// <summary>
+    /// Sprint entity.
+    /// </summary>
+    Sprint = 8,
+
+    /// <summary>
+    /// Sprint capacity entity.
+    /// </summary>
+    SprintCapacity = 9,
+
+    /// <summary>
+    /// A document. Historical: the feature is gone, and the value stays so older activity
+    /// entries still read.
+    /// </summary>
+    Document = 10,
+
+    /// <summary>
+    /// A checklist template. Historical, like <see cref="Document"/>.
+    /// </summary>
+    ChecklistTemplate = 13,
+
+    /// <summary>
+    /// A running checklist. Historical, like <see cref="Document"/>.
+    /// </summary>
+    ChecklistInstance = 14,
+
+    /// <summary>
+    /// A Jira parent issue grouping tasks (not a reporting hierarchy).
+    /// </summary>
+    Parent = 15,
+
+    /// <summary>
+    /// Project knowledge assessment entity.
+    /// </summary>
+    ProjectKnowledge = 16,
+
+    /// <summary>
+    /// Planning quarter entity.
+    /// </summary>
+    Quarter = 17,
+
+    /// <summary>
+    /// Initiative entity for quarterly planning.
+    /// </summary>
+    Initiative = 18,
+
+    /// <summary>
+    /// Allocation entity for quarterly planning.
+    /// </summary>
+    Allocation = 19,
+
+    /// <summary>
+    /// Folder grouping manager notes.
+    /// </summary>
+    NoteFolder = 20,
+
+    /// <summary>
+    /// Product (Jira component) entity.
+    /// </summary>
+    Product = 21,
+
+    /// <summary>
+    /// Skill roadmap for a role.
+    /// </summary>
+    SkillRoadmap = 22,
+
+    /// <summary>
+    /// A direct report's career plan.
+    /// </summary>
+    CareerPlan = 23
+}

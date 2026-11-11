@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore Hive.sln
+      - name: Format check
+        # On failure, apply the formatter and print the diff so the fix can be ported
+        # from the log even from a machine without the SDK.
+        run: |
+          if ! dotnet format Hive.sln --no-restore --verify-no-changes; then
+            dotnet format Hive.sln --no-restore
+            echo "::group::dotnet format diff"
+            git --no-pager diff
+            echo "::endgroup::"
+            exit 1
+          fi
+      - name: Build
+        run: dotnet build Hive.sln --no-restore --configuration Release
+      - name: Test
+        run: dotnet test Hive.sln --no-build --configuration Release --logger "trx;LogFileName=results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (Desktop)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Hive.Desktop
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/Hive.Desktop/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Lint
+        run: npm run lint --if-present
+      - name: Test
+        run: npm test
+      - name: Build renderer
+        run: npx vite build
