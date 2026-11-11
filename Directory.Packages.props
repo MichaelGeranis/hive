@@ -3,7 +3,7 @@
        version from here, so the four projects can never drift apart again. -->
   <ItemGroup>
     <!-- Runtime -->
-    <PackageVersion Include="Anthropic" Version="12.50.0" />
+    <PackageVersion Include="Anthropic" Version="13.8.0" />
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
     <PackageVersion Include="Ical.Net" Version="5.2.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
