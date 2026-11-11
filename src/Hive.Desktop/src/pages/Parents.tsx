@@ -469,7 +469,7 @@ export default function Parents() {
                     </div>
                   </div>
                   <div className="relative group">
-                    <button className="p-1 hover:bg-slate-100 rounded">
+                    <button className="p-1 hover:bg-slate-100 rounded-sm">
                       <MoreVertical className="w-5 h-5 text-slate-400" />
                     </button>
                     <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">

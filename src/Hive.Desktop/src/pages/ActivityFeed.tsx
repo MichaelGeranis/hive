@@ -253,7 +253,7 @@ const ActivityFeed = () => {
             <Card key={activity.id} className="hover:shadow-md transition-shadow">
               <CardContent>
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="shrink-0 mt-1">
                     {getEntityIcon(activity.entityType)}
                   </div>
 
@@ -267,7 +267,7 @@ const ActivityFeed = () => {
                         ) : activity.entityName}
                       </p>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEntityBadgeColor(activity.entityType)}`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium ${getEntityBadgeColor(activity.entityType)}`}
                       >
                         {activity.entityTypeName}
                       </span>

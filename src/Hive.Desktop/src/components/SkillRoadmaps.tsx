@@ -29,7 +29,7 @@ function StageCounts({ counts }: { counts: SkillCountsByStage | undefined }) {
   return (
     <div className="flex flex-wrap items-center gap-1 text-xs" aria-label="Skills per stage">
       {CAREER_STAGES.map(stage => (
-        <span key={stage} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600" title={`${counts[stage] ?? 0} skills expected by ${stage}`}>
+        <span key={stage} className="px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600" title={`${counts[stage] ?? 0} skills expected by ${stage}`}>
           {stage} <span className="font-semibold text-slate-800 tabular-nums">{counts[stage] ?? 0}</span>
         </span>
       ))}
@@ -107,7 +107,7 @@ export default function SkillRoadmaps({ roadmaps, roadmapId, onOpenRoadmap, onRo
 
         {roadmaps.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-slate-500">
+            <CardContent className="text-center text-slate-500">
               No roadmaps yet. Add one from the library below, or start your own.
             </CardContent>
           </Card>

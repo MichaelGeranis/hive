@@ -119,7 +119,7 @@ export function SkillFields({
               aria-checked={form.category === category}
               onClick={() => setForm({ ...form, category })}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                form.category === category ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                form.category === category ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {category === 'Hard' ? <Cpu className="w-4 h-4" /> : <HeartHandshake className="w-4 h-4" />}
@@ -132,7 +132,7 @@ export function SkillFields({
             type="checkbox"
             checked={form.isOptional}
             onChange={e => setForm({ ...form, isOptional: e.target.checked })}
-            className="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+            className="rounded-sm border-slate-300 text-amber-500 focus:ring-amber-500"
           />
           Optional
         </label>

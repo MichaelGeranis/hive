@@ -322,12 +322,12 @@ export default function Leaves() {
               return (
                 <div
                   key={leave.id}
-                  className={`text-[10px] ${typeColors[leave.type]} text-white rounded px-1 py-0.5 truncate cursor-pointer hover:opacity-80`}
+                  className={`text-[10px] ${typeColors[leave.type]} text-white rounded-sm px-1 py-0.5 truncate cursor-pointer hover:opacity-80`}
                   title={`${leave.directReportName} - ${leave.type}`}
                   onClick={() => openEditForm(leave)}
                 >
                   <div className="flex items-center gap-0.5">
-                    <TypeIcon className="w-2.5 h-2.5 flex-shrink-0" />
+                    <TypeIcon className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{leave.directReportName.split(' ')[0]}</span>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ export default function Leaves() {
       {/* Overview Cards */}
       {overview && (
         <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CalendarIcon className="w-5 h-5 text-green-600" />
@@ -383,7 +383,7 @@ export default function Leaves() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-amber-100 rounded-lg">
                 <User className="w-5 h-5 text-amber-600" />
@@ -394,7 +394,7 @@ export default function Leaves() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-5 h-5 text-blue-600" />
@@ -405,7 +405,7 @@ export default function Leaves() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Palmtree className="w-5 h-5 text-purple-600" />
@@ -420,7 +420,7 @@ export default function Leaves() {
       )}
 
       {/* Leave Trend Chart */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl p-6 shadow-xs border border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
           People on Leave per Day - {getMonthLabel(currentMonth)}
         </h2>
@@ -429,12 +429,10 @@ export default function Leaves() {
             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
             <XAxis
               dataKey="day"
-              className="text-xs"
-              tick={{ fill: 'currentColor', className: 'text-slate-600' }}
+              tick={{ fill: 'currentColor', className: 'text-xs text-slate-600' }}
             />
             <YAxis
-              className="text-xs"
-              tick={{ fill: 'currentColor', className: 'text-slate-600' }}
+              tick={{ fill: 'currentColor', className: 'text-xs text-slate-600' }}
               allowDecimals={false}
             />
             <RechartsTooltip
@@ -464,7 +462,7 @@ export default function Leaves() {
       </div>
 
       {/* Calendar Navigation */}
-      <div className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+      <div className="flex items-center justify-between bg-white rounded-xl p-4 shadow-xs border border-slate-200">
         <button
           onClick={prevMonth}
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -491,7 +489,7 @@ export default function Leaves() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl p-6 shadow-xs border border-slate-200">
         <div className="grid grid-cols-7 gap-px bg-slate-300 rounded-lg overflow-hidden">
           {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
             <div key={day} className="bg-slate-100 px-2 py-3 text-center text-sm font-semibold text-slate-600">
@@ -521,7 +519,7 @@ export default function Leaves() {
                 const TypeIcon = typeIcons[leave.type]
                 return (
                   <div key={leave.id} className="flex items-start gap-2 text-sm">
-                    <TypeIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400" />
+                    <TypeIcon className="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">{leave.directReportName}</div>
                       <div className="text-xs text-slate-400">{leaveTypeLabels[leave.type]}</div>
@@ -541,27 +539,27 @@ export default function Leaves() {
       )}
 
       {/* Legend */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
         <h3 className="text-sm font-semibold text-slate-900 mb-3">Legend</h3>
         <div className="flex gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
             <span className="text-sm text-slate-600">Vacation</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-500 rounded"></div>
+            <div className="w-4 h-4 bg-orange-500 rounded-sm"></div>
             <span className="text-sm text-slate-600">Sick Leave</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
             <span className="text-sm text-slate-600">Other</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-purple-500 rounded"></div>
+            <div className="w-4 h-4 bg-purple-500 rounded-sm"></div>
             <span className="text-sm text-slate-600">Public Holiday</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-amber-500 bg-amber-50 rounded"></div>
+            <div className="w-4 h-4 border-2 border-amber-500 bg-amber-50 rounded-sm"></div>
             <span className="text-sm text-slate-600">Today</span>
           </div>
           <div className="flex items-center gap-2">

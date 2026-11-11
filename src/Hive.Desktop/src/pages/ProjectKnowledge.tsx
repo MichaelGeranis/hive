@@ -337,17 +337,17 @@ export default function ProjectKnowledgePage() {
           {hasActiveFilters && (
             <div className="flex flex-wrap gap-2 text-sm">
               {searchQuery && (
-                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">
+                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-sm">
                   Search: "{searchQuery}"
                 </span>
               )}
               {selectedMembers.length > 0 && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-sm">
                   {selectedMembers.length} member{selectedMembers.length > 1 ? 's' : ''} selected
                 </span>
               )}
               {sortByAvg && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-sm">
                   Sorted by Avg. Knowledge
                 </span>
               )}
@@ -406,8 +406,7 @@ export default function ProjectKnowledgePage() {
                       <PolarGrid strokeDasharray="3 3" />
                       <PolarAngleAxis
                         dataKey="project"
-                        tick={{ fontSize: 11, fill: 'currentColor' }}
-                        className="text-slate-600"
+                        tick={{ fontSize: 11, fill: 'currentColor', className: 'text-slate-600' }}
                       />
                       <PolarRadiusAxis
                         angle={90}
@@ -483,7 +482,7 @@ export default function ProjectKnowledgePage() {
               </div>
               {lowKnowledgeProjects > 0 && (
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-amber-800">Knowledge gaps detected</p>
                     <p className="text-xs text-amber-700 mt-1">

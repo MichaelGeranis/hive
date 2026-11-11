@@ -291,7 +291,7 @@ function TeamSentimentWidget({ overview, badge }: TeamSentimentWidgetProps) {
                   onMouseLeave={hideReasoning}
                   onFocus={e => showReasoning(dr, e.currentTarget)}
                   onBlur={hideReasoning}
-                  className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded cursor-help hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded-sm cursor-help hover:bg-slate-100 focus:outline-hidden focus:ring-2 focus:ring-purple-300"
                 >
                   <span className="text-slate-700 truncate flex-1">{dr.directReportName}</span>
                   <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ function TeamSentimentWidget({ overview, badge }: TeamSentimentWidgetProps) {
               {overview.commonThemes.map((theme, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs"
+                  className="px-2 py-1 bg-purple-50 text-purple-700 rounded-sm text-xs"
                 >
                   {theme}
                 </span>
@@ -456,7 +456,7 @@ function IndividualSentimentWidget({ analysis, directReportName, onRefresh, refr
                   {analysis.keyThemes.map((theme, idx) => (
                     <span
                       key={idx}
-                      className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs"
+                      className="px-2 py-1 bg-purple-50 text-purple-700 rounded-sm text-xs"
                     >
                       {theme}
                     </span>

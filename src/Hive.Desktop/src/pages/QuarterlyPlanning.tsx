@@ -231,7 +231,7 @@ export default function QuarterlyPlanning() {
                 <button
                   onClick={() => setQuarterId(quarters[index + 1]?.id ?? quarterId)}
                   disabled={index >= quarters.length - 1}
-                  className="p-1 rounded hover:bg-slate-200 disabled:opacity-40"
+                  className="p-1 rounded-sm hover:bg-slate-200 disabled:opacity-40"
                   title="Earlier quarter"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -251,7 +251,7 @@ export default function QuarterlyPlanning() {
                 <button
                   onClick={() => setQuarterId(quarters[index - 1]?.id ?? quarterId)}
                   disabled={index <= 0}
-                  className="p-1 rounded hover:bg-slate-200 disabled:opacity-40"
+                  className="p-1 rounded-sm hover:bg-slate-200 disabled:opacity-40"
                   title="Later quarter"
                 >
                   <ChevronRight className="w-5 h-5" />

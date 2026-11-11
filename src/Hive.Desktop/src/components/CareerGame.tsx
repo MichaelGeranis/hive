@@ -82,7 +82,7 @@ export function LevelToken({ level, size = 'md', celebrate = false }: { level: n
   return (
     <div
       aria-label={`Player level ${level}`}
-      className={`${sizes[size]} ${celebrate ? 'animate-bounce' : ''} flex-shrink-0 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold flex items-center justify-center shadow-sm ring-2 ring-amber-200`}
+      className={`${sizes[size]} ${celebrate ? 'animate-bounce' : ''} shrink-0 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 text-white font-bold flex items-center justify-center shadow-xs ring-2 ring-amber-200`}
     >
       {level}
     </div>
@@ -108,7 +108,7 @@ export function XpBar({ game }: { game: CareerGame }) {
         aria-valuemax={game.nextLevelXp}
         aria-valuenow={game.xp}
       >
-        <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all" style={{ width: `${percent}%` }} />
+        <div className="h-full rounded-full bg-linear-to-r from-amber-400 to-amber-500 transition-all" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
@@ -118,7 +118,7 @@ function BadgeIcon({ badge }: { badge: CareerBadge }) {
   const style = BADGE_ICONS[badge.key] ?? DEFAULT_BADGE
   const Icon = style.icon
   return (
-    <div className={`w-11 h-11 rounded-full flex items-center justify-center relative ${badge.isEarned ? `${style.bg} ring-2 ring-white shadow-sm` : 'bg-slate-100'}`}>
+    <div className={`w-11 h-11 rounded-full flex items-center justify-center relative ${badge.isEarned ? `${style.bg} ring-2 ring-white shadow-xs` : 'bg-slate-100'}`}>
       <Icon className={`w-5 h-5 ${badge.isEarned ? style.color : 'text-slate-300'}`} />
       {!badge.isEarned && (
         <Lock className="w-3 h-3 text-slate-400 absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-px" />

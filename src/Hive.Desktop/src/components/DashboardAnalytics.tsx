@@ -104,7 +104,7 @@ function Tabs<T extends string>({
           aria-selected={value === tab.key}
           onClick={() => onChange(tab.key)}
           className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-            value === tab.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            value === tab.key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           {tab.label}
@@ -210,7 +210,7 @@ function BarList({ rows, empty }: { rows: BarRow[]; empty: string }) {
           <>
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="truncate text-slate-700" title={row.label}>{row.label}</span>
-              <span className="flex-shrink-0">
+              <span className="shrink-0">
                 <span className="font-medium text-slate-900">{row.display}</span>
                 {row.note && <span className="ml-1.5 text-xs text-slate-400">{row.note}</span>}
               </span>
@@ -226,7 +226,7 @@ function BarList({ rows, empty }: { rows: BarRow[]; empty: string }) {
         return (
           <li key={row.key}>
             {row.onClick ? (
-              <button type="button" onClick={row.onClick} className="w-full text-left rounded hover:bg-slate-50">
+              <button type="button" onClick={row.onClick} className="w-full text-left rounded-sm hover:bg-slate-50">
                 {content}
               </button>
             ) : (
@@ -290,14 +290,14 @@ function WorkCategoryPie({ title, data, total, unit }: { title: string; data: Wo
                     key={d.name}
                     fill={WORK_CATEGORY_COLORS[d.name]}
                     fillOpacity={active && active.name !== d.name ? 0.35 : 1}
-                    className="cursor-default outline-none"
+                    className="cursor-default outline-hidden"
                   />
                 ))}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full w-full rounded-full border-[24px] border-slate-100" />
+          <div className="h-full w-full rounded-full border-24 border-slate-100" />
         )}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
           {active ? (
@@ -392,7 +392,7 @@ function WorkCategoryBreakdown({ categories }: { categories: WorkCategoryShare[]
           return (
             <tr key={c.categoryName} className="border-t border-slate-100">
               <td className="py-1.5 pr-3 text-slate-700 whitespace-nowrap">
-                <span className="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style={{ backgroundColor: color }} />
+                <span className="inline-block w-2.5 h-2.5 rounded-xs mr-2 align-middle" style={{ backgroundColor: color }} />
                 {c.categoryName}
               </td>
               <ShareCells value={c.taskCount} percent={c.percentageOfTasks} color={color} />
@@ -651,7 +651,7 @@ export function ProductEngagementCard({
                         <CollapsibleTags
                           items={product.projects}
                           renderItem={project => (
-                            <span key={project.id} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                            <span key={project.id} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-sm text-xs">
                               {project.name}
                             </span>
                           )}
@@ -767,7 +767,7 @@ export function WorkloadCard({ dashboard, onOpenTasks }: { dashboard: DashboardO
                         {person.assigneeName}
                       </button>
                       <div
-                        className="flex h-4 rounded overflow-hidden bg-slate-50"
+                        className="flex h-4 rounded-sm overflow-hidden bg-slate-50"
                         style={{ width: `${(person.totalTasks / max) * 100}%` }}
                         title={issues ? issues.join(', ') : undefined}
                       >
@@ -793,7 +793,7 @@ export function WorkloadCard({ dashboard, onOpenTasks }: { dashboard: DashboardO
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2 border-t border-slate-100">
               {WORKLOAD_STATUSES.map(([, status]) => (
                 <span key={status} className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATUS_COLORS[status] }} />
+                  <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: STATUS_COLORS[status] }} />
                   {STATUS_LABELS[status]}
                 </span>
               ))}
@@ -1230,7 +1230,7 @@ export function RetroSummaryCard({
           <ul aria-label="Retro warnings" className="space-y-2">
             {data.warnings.map((warning, i) => (
               <li key={i} className="flex items-start gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-800">
-                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                 {warning}
               </li>
             ))}
@@ -1476,7 +1476,7 @@ export function TaskReadinessCard({
             {error && (
               <div role="alert" className="flex items-start justify-between gap-3 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
                 <span>Could not review a task: {error}</span>
-                <button type="button" onClick={resume} className="flex-shrink-0 text-red-700 underline">Try again</button>
+                <button type="button" onClick={resume} className="shrink-0 text-red-700 underline">Try again</button>
               </div>
             )}
 
@@ -1509,7 +1509,7 @@ export function TaskReadinessCard({
                         </button>
                         <span className="text-xs text-slate-400">{task.typeName}</span>
                         {task.needsAcceptanceCriteria && !task.hasAcceptanceCriteria && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">
+                          <span className="text-xs px-1.5 py-0.5 rounded-sm bg-red-50 text-red-700 border border-red-200">
                             No acceptance criteria
                           </span>
                         )}
@@ -1533,7 +1533,7 @@ export function TaskReadinessCard({
                         disabled={reviewingTask !== null || reviewing}
                         aria-label={`Review ${task.title} again`}
                         title="Review again"
-                        className="flex-shrink-0 p-1 text-slate-400 hover:text-amber-600 disabled:opacity-40"
+                        className="shrink-0 p-1 text-slate-400 hover:text-amber-600 disabled:opacity-40"
                       >
                         {reviewingTask === task.taskId ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                       </button>

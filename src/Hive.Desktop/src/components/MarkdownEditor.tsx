@@ -211,7 +211,7 @@ export default function MarkdownEditor({
           spellCheck
           placeholder={placeholder}
           aria-label={contentLabel}
-          className="flex-1 resize-none bg-transparent px-8 py-6 font-mono text-[15px] leading-relaxed text-slate-800 outline-none placeholder:text-slate-400"
+          className="flex-1 resize-none bg-transparent px-8 py-6 font-mono text-[15px] leading-relaxed text-slate-800 outline-hidden placeholder:text-slate-400"
         />
       )}
     </div>

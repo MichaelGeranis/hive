@@ -314,7 +314,7 @@ export default function Projects() {
                     </div>
                   </div>
                   <div className="relative group">
-                    <button className="p-1 hover:bg-slate-100 rounded" aria-label={`Actions for ${project.name}`}>
+                    <button className="p-1 hover:bg-slate-100 rounded-sm" aria-label={`Actions for ${project.name}`}>
                       <MoreVertical className="w-5 h-5 text-slate-400" />
                     </button>
                     <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
@@ -341,7 +341,7 @@ export default function Projects() {
                 )}
 
                 <div className="flex items-center gap-2 mb-3" role="group" aria-label={`Products of ${project.name}`}>
-                  <Package className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <Package className="w-4 h-4 text-slate-400 shrink-0" />
                   {project.products.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       <CollapsibleTags

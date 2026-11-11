@@ -59,7 +59,7 @@ export default function OptionDrawer({ board, initiative, run, onClose }: Option
       >
         <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-start justify-between z-10">
           <div className="flex items-center gap-3">
-            <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ backgroundColor: initiative.color }}>
+            <span className="px-2 py-1 rounded-sm text-white text-xs font-semibold" style={{ backgroundColor: initiative.color }}>
               {priorityLabel(initiative)}
             </span>
             <div>
@@ -70,7 +70,7 @@ export default function OptionDrawer({ board, initiative, run, onClose }: Option
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-slate-100" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -338,10 +338,10 @@ function PeopleSection({ board, initiative, run }: { board: PlanningBoard; initi
                   {s.taskCount > 0 && `${s.taskCount} tasks · `}
                   {formatEffort(s.freeEffort)} dev-sprints free
                 </span>
-                <button onClick={() => add(s.directReportId, InitiativeRole.Lead)} className="ml-auto text-xs px-2 py-0.5 rounded border border-amber-300 text-amber-800 hover:bg-amber-50">
+                <button onClick={() => add(s.directReportId, InitiativeRole.Lead)} className="ml-auto text-xs px-2 py-0.5 rounded-sm border border-amber-300 text-amber-800 hover:bg-amber-50">
                   Lead
                 </button>
-                <button onClick={() => add(s.directReportId, InitiativeRole.Contributor)} className="text-xs px-2 py-0.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50">
+                <button onClick={() => add(s.directReportId, InitiativeRole.Contributor)} className="text-xs px-2 py-0.5 rounded-sm border border-slate-300 text-slate-700 hover:bg-slate-50">
                   Contributor
                 </button>
               </li>
@@ -385,7 +385,7 @@ function ExternalDependenciesSection({ board, initiative, run }: { board: Planni
               value={d.status}
               onChange={e => run(() => quarterlyPlanningApi.updateExternalDependency(d.id, { team: d.team, need: d.need, status: Number(e.target.value) }))}
               aria-label={`Status of ${d.team}`}
-              className="px-2 py-1 text-xs border border-slate-200 rounded bg-white"
+              className="px-2 py-1 text-xs border border-slate-200 rounded-sm bg-white"
             >
               {Object.entries(DEPENDENCY_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>

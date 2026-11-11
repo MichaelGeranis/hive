@@ -175,7 +175,7 @@ export default function AllocationGrid({ board, run, onOpen }: AllocationGridPro
                 {board.sprints.map(s => {
                   const capacity = board.capacity.sprints.find(c => c.sprintId === s.id)
                   return (
-                    <th key={s.id} className="px-2 py-2 text-left font-medium min-w-[9rem]">
+                    <th key={s.id} className="px-2 py-2 text-left font-medium min-w-36">
                       <div className="text-slate-800">{s.name}</div>
                       {s.startDate && s.endDate && <div className="font-normal text-slate-400">{formatDate(s.startDate)}–{formatDate(s.endDate)}</div>}
                       {capacity && (
@@ -183,7 +183,7 @@ export default function AllocationGrid({ board, run, onOpen }: AllocationGridPro
                           <div className="font-normal text-slate-500 mt-0.5">
                             {formatEffort(capacity.allocated)}/{formatEffort(capacity.supply)} planned
                           </div>
-                          <div className="flex h-1.5 mt-1 rounded overflow-hidden bg-slate-200">
+                          <div className="flex h-1.5 mt-1 rounded-sm overflow-hidden bg-slate-200">
                             {mixEntries(capacity.mix).map(m => m.percent > 0 && (
                               <div key={m.workType} style={{ width: `${m.percent}%`, backgroundColor: WORK_TYPE_COLORS[m.workType] }} title={`${WORK_TYPE_LABELS[m.workType]} ${m.percent}%`} />
                             ))}
@@ -221,7 +221,7 @@ export default function AllocationGrid({ board, run, onOpen }: AllocationGridPro
                         onMouseEnter={() => painting.current && paint(member.directReportId, ms.sprintId)}
                         title={ms.leaveDays ? `${ms.leaveDays} working days off: ${ms.availablePercent}% available` : undefined}
                       >
-                        <div className="flex h-10 rounded overflow-hidden bg-slate-50 border border-slate-100">
+                        <div className="flex h-10 rounded-sm overflow-hidden bg-slate-50 border border-slate-100">
                           {shares.map(s => (
                             <div
                               key={s.initiativeId}
@@ -236,7 +236,7 @@ export default function AllocationGrid({ board, run, onOpen }: AllocationGridPro
                           {total < 100 && total > 0 && <div className="flex-1" />}
                         </div>
                         {ms.availablePercent < 100 && (
-                          <span className="absolute top-0 right-0.5 text-[10px] font-semibold text-red-600 bg-white/80 rounded px-0.5">
+                          <span className="absolute top-0 right-0.5 text-[10px] font-semibold text-red-600 bg-white/80 rounded-sm px-0.5">
                             {ms.availablePercent}%
                           </span>
                         )}
@@ -255,7 +255,7 @@ export default function AllocationGrid({ board, run, onOpen }: AllocationGridPro
                       rows={2}
                       aria-label={`Notes for ${s.name}`}
                       placeholder="e.g. Euterpe BE ready"
-                      className="w-full px-1.5 py-1 text-[11px] border border-slate-200 rounded bg-white resize-y"
+                      className="w-full px-1.5 py-1 text-[11px] border border-slate-200 rounded-sm bg-white resize-y"
                     />
                   </td>
                 ))}
@@ -372,8 +372,8 @@ function ForecastRow({ option, aboveLine, onOpen }: { option: Initiative; aboveL
 function CoverageBar({ percent }: { percent: number }) {
   const color = percent >= 100 ? 'bg-green-500' : percent >= 50 ? 'bg-amber-400' : 'bg-red-400'
   return (
-    <div className="h-2 bg-slate-100 rounded" title={`${percent}%`}>
-      <div className={`h-2 rounded ${color}`} style={{ width: `${Math.min(100, percent)}%` }} />
+    <div className="h-2 bg-slate-100 rounded-sm" title={`${percent}%`}>
+      <div className={`h-2 rounded-sm ${color}`} style={{ width: `${Math.min(100, percent)}%` }} />
     </div>
   )
 }
@@ -432,7 +432,7 @@ function CellEditor({
                 value={share.percent}
                 onChange={e => setList(l => l.map(s => s.initiativeId === share.initiativeId ? { ...s, percent: Number(e.target.value) } : s))}
                 aria-label={`Share of ${initiative?.name}`}
-                className="w-16 px-2 py-1 border border-slate-300 rounded"
+                className="w-16 px-2 py-1 border border-slate-300 rounded-sm"
               />
               %
               <button onClick={() => setList(l => l.filter(s => s.initiativeId !== share.initiativeId))} aria-label={`Remove ${initiative?.name}`} className="text-slate-400 hover:text-red-600">
@@ -443,7 +443,7 @@ function CellEditor({
         })}
       </ul>
       <div className="flex gap-2 mt-3">
-        <select value={adding} onChange={e => setAdding(e.target.value)} aria-label="Add an initiative" className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded bg-white">
+        <select value={adding} onChange={e => setAdding(e.target.value)} aria-label="Add an initiative" className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-sm bg-white">
           <option value="">Add…</option>
           {options.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
@@ -453,7 +453,7 @@ function CellEditor({
             setList(l => [...l, { initiativeId: adding, percent: Math.max(5, 100 - total) }])
             setAdding('')
           }}
-          className="px-3 py-1.5 text-sm border border-slate-300 rounded disabled:opacity-40"
+          className="px-3 py-1.5 text-sm border border-slate-300 rounded-sm disabled:opacity-40"
         >
           Add
         </button>

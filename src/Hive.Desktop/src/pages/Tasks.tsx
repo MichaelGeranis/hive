@@ -921,7 +921,7 @@ export default function Tasks() {
                     id="updateExisting"
                     checked={updateExisting}
                     onChange={(e) => setUpdateExisting(e.target.checked)}
-                    className="w-4 h-4 text-amber-500 bg-white border-slate-300 rounded focus:ring-amber-500"
+                    className="w-4 h-4 text-amber-500 bg-white border-slate-300 rounded-sm focus:ring-amber-500"
                     disabled={importLoading || importing}
                   />
                   <label htmlFor="updateExisting" className="text-sm text-slate-700">
@@ -992,7 +992,7 @@ export default function Tasks() {
                   <h4 className="text-sm font-medium text-slate-700 mb-2">Detected Columns:</h4>
                   <div className="flex flex-wrap gap-2">
                     {importPreview.detectedColumns.map((col) => (
-                      <span key={col} className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">
+                      <span key={col} className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-sm">
                         {col}
                       </span>
                     ))}
@@ -1158,7 +1158,7 @@ export default function Tasks() {
                     type="checkbox"
                     checked={overrideAssigneeEnabled}
                     onChange={(e) => setOverrideAssigneeEnabled(e.target.checked)}
-                    className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                    className="w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500"
                   />
                   <span className="text-sm font-medium text-slate-700">Assignee</span>
                   {isFieldOverridden(overrideTask, 'AssigneeId') && (
@@ -1198,7 +1198,7 @@ export default function Tasks() {
                     type="checkbox"
                     checked={overrideStoryPointsEnabled}
                     onChange={(e) => setOverrideStoryPointsEnabled(e.target.checked)}
-                    className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                    className="w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500"
                   />
                   <span className="text-sm font-medium text-slate-700">Story Points</span>
                   {isFieldOverridden(overrideTask, 'StoryPoints') && (
@@ -1237,7 +1237,7 @@ export default function Tasks() {
                       type="checkbox"
                       checked={overridePreviousSPEnabled}
                       onChange={(e) => setOverridePreviousSPEnabled(e.target.checked)}
-                      className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                      className="w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500"
                     />
                     <span className="text-sm font-medium text-slate-700">Previous Sprints SP</span>
                     {isFieldOverridden(overrideTask, 'PreviousSprintsStoryPoints') && (
@@ -1284,7 +1284,7 @@ export default function Tasks() {
                     type="checkbox"
                     checked={overrideSprintEnabled}
                     onChange={(e) => setOverrideSprintEnabled(e.target.checked)}
-                    className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+                    className="w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500"
                   />
                   <span className="text-sm font-medium text-slate-700">Sprint</span>
                   {isFieldOverridden(overrideTask, 'Sprint') && (
@@ -1520,7 +1520,7 @@ export default function Tasks() {
             type="checkbox"
             checked={tasks.length > 0 && selectedIds.size === tasks.length}
             onChange={handleSelectAll}
-            className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
+            className="w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500 focus:ring-2 cursor-pointer"
           />
           <label className="text-sm text-slate-600 cursor-pointer" onClick={handleSelectAll}>
             Select All ({tasks.length})
@@ -1531,7 +1531,7 @@ export default function Tasks() {
       {/* Tasks List */}
       {tasks.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="text-center">
             <p className="text-slate-500">No tasks found</p>
           </CardContent>
         </Card>
@@ -1545,7 +1545,7 @@ export default function Tasks() {
                     type="checkbox"
                     checked={selectedIds.has(task.id)}
                     onChange={() => handleToggleSelect(task.id)}
-                    className="mt-1 w-4 h-4 text-amber-500 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
+                    className="mt-1 w-4 h-4 text-amber-500 rounded-sm focus:ring-amber-500 focus:ring-2 cursor-pointer"
                   />
                   <div className="flex items-start justify-between flex-1">
                     <div className="flex-1">
@@ -1557,7 +1557,7 @@ export default function Tasks() {
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           title={`Open ${getJiraIssueKey(task.tags)} in Jira`}
-                          className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+                          className="text-blue-500 hover:text-blue-700 shrink-0"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>
@@ -1565,12 +1565,12 @@ export default function Tasks() {
                       <h3 className="font-medium text-slate-900">{task.title}</h3>
                       {task.aiReview && <AiBeeBadge review={task.aiReview} />}
                       {task.isOverdue && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-sm">
                           Overdue
                         </span>
                       )}
                       {task.isParentTask && (
-                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded">
+                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-sm">
                           Parent
                         </span>
                       )}
@@ -1585,7 +1585,7 @@ export default function Tasks() {
                       <span className={`font-medium ${priorityColors[task.priority]}`}>
                         {task.priorityName}
                       </span>
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-sm text-xs">
                         {task.typeName}
                       </span>
                     </div>
@@ -1635,7 +1635,7 @@ export default function Tasks() {
                         <CollapsibleTags
                           items={task.labels.split(',')}
                           renderItem={(label, idx) => (
-                            <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                            <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-sm text-xs">
                               {label.trim()}
                             </span>
                           )}
@@ -1647,7 +1647,7 @@ export default function Tasks() {
                         <CollapsibleTags
                           items={task.components.split(',')}
                           renderItem={(component, idx) => (
-                            <span key={idx} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                            <span key={idx} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-sm text-xs">
                               {component.trim()}
                             </span>
                           )}

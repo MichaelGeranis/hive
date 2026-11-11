@@ -102,21 +102,21 @@ function Waterline({ board, run, onOpen }: PlanningCapacityProps) {
               return (
                 <li key={row.initiativeId}>
                   <div
-                    className="flex items-center gap-3 text-sm py-1 rounded hover:bg-slate-50 cursor-pointer"
+                    className="flex items-center gap-3 text-sm py-1 rounded-sm hover:bg-slate-50 cursor-pointer"
                     draggable={row.kind !== 1}
                     onDragStart={() => setDragged(row.initiativeId)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={() => drop(row.initiativeId)}
                     onClick={() => onOpen(row.initiativeId)}
                   >
-                    <span className="w-8 text-center text-xs font-semibold text-white rounded" style={{ backgroundColor: row.color }}>
+                    <span className="w-8 text-center text-xs font-semibold text-white rounded-sm" style={{ backgroundColor: row.color }}>
                       {priorityLabel({ kind: row.kind, rank: row.rank, arrivedOn: null })}
                     </span>
                     <span className={`w-56 truncate ${row.aboveLine ? 'text-slate-800' : 'text-slate-400'}`}>{row.name}</span>
                     <span className="w-16 text-xs text-slate-500">{row.tshirtSize ? `${row.tshirtSize} · ${formatEffort(row.effort)}` : 'not sized'}</span>
-                    <div className="relative flex-1 h-5 bg-slate-50 rounded">
+                    <div className="relative flex-1 h-5 bg-slate-50 rounded-sm">
                       <div
-                        className="absolute top-0 h-5 rounded"
+                        className="absolute top-0 h-5 rounded-sm"
                         style={{ left: `${start}%`, width: `${Math.max(width, 0.5)}%`, backgroundColor: row.color, opacity: row.aboveLine ? 0.9 : 0.35 }}
                       />
                       <div className="absolute top-[-4px] bottom-[-4px] border-l-2 border-dashed border-blue-500" style={{ left: `${linePosition}%` }} />
@@ -148,7 +148,7 @@ function MixBar({ label, mix }: { label: string; mix: MixShares }) {
   return (
     <div className="flex items-center gap-3 text-sm">
       <span className="w-28 text-slate-600">{label}</span>
-      <div className="flex-1 flex h-5 rounded overflow-hidden bg-slate-100">
+      <div className="flex-1 flex h-5 rounded-sm overflow-hidden bg-slate-100">
         {mixEntries(mix).map(entry => entry.percent > 0 && (
           <div
             key={entry.workType}
@@ -250,7 +250,7 @@ function MixCard({ board, run }: { board: PlanningBoard; run: RunChange }) {
         <div className="flex gap-3 mt-3 text-xs text-slate-500">
           {[1, 2, 0].map(t => (
             <span key={t} className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: WORK_TYPE_COLORS[t] }} />
+              <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: WORK_TYPE_COLORS[t] }} />
               {MIX_LABELS[t]}
             </span>
           ))}
@@ -298,7 +298,7 @@ function Roster({ board, run }: { board: PlanningBoard; run: RunChange }) {
                     value={member.capacityPercent}
                     onChange={e => run(() => quarterlyPlanningApi.setRosterMember(quarterId, member.directReportId, Number(e.target.value)))}
                     aria-label={`Capacity of ${member.name}`}
-                    className="px-1.5 py-1 border border-slate-200 rounded bg-white"
+                    className="px-1.5 py-1 border border-slate-200 rounded-sm bg-white"
                   >
                     {[100, 90, 80, 75, 60, 50, 40, 25, 20, 10].map(v => <option key={v} value={v}>{v}%</option>)}
                   </select>
@@ -306,7 +306,7 @@ function Roster({ board, run }: { board: PlanningBoard; run: RunChange }) {
                 {member.sprints.map(s => (
                   <td key={s.sprintId} className="px-2 py-2 text-center">
                     <span
-                      className={`text-xs px-1.5 py-0.5 rounded ${s.availablePercent < 100 ? (s.availablePercent < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800') : 'text-slate-400'}`}
+                      className={`text-xs px-1.5 py-0.5 rounded-sm ${s.availablePercent < 100 ? (s.availablePercent < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800') : 'text-slate-400'}`}
                       title={s.leaveDays ? `${s.leaveDays} working days off` : undefined}
                     >
                       {s.availablePercent}%

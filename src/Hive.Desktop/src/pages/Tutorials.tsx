@@ -55,7 +55,7 @@ function Steps({ children }: { children: ReactNode }) {
 }
 
 function Code({ children }: { children: ReactNode }) {
-  return <code className="bg-slate-200 px-1 rounded text-xs">{children}</code>
+  return <code className="bg-slate-200 px-1 rounded-sm text-xs">{children}</code>
 }
 
 const MARKDOWN_EDITOR_SECTION: TutorialSection = {
@@ -506,7 +506,7 @@ const tutorials: Tutorial[] = [
         body: (
           <>
             <p>Every sprint name follows one pattern, which is also how the Jira sync and import recognise sprints:</p>
-            <code className="block bg-slate-900 text-green-400 p-3 rounded text-xs">
+            <code className="block bg-slate-900 text-green-400 p-3 rounded-sm text-xs">
               {'{TeamName}_{Quarter}Q{YearShort}_S{SprintNumber}'}
             </code>
             <p className="text-sm">
@@ -910,7 +910,7 @@ const tutorials: Tutorial[] = [
                 { level: 5, label: 'Confident', color: 'bg-green-200 text-green-800', desc: 'Excellent comprehensive understanding, expert level' }
               ].map(({ level, label, color, desc }) => (
                 <div key={level} className="flex items-start gap-3">
-                  <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${color}`}>
+                  <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${color}`}>
                     {level}
                   </span>
                   <div className="flex-1">
@@ -1109,7 +1109,7 @@ const tutorials: Tutorial[] = [
               <strong>Import CSV</strong> adds many people at once. <strong>Download sample CSV template</strong> gives
               the format:
             </p>
-            <code className="block bg-slate-900 text-green-400 p-3 rounded text-xs overflow-x-auto">
+            <code className="block bg-slate-900 text-green-400 p-3 rounded-sm text-xs overflow-x-auto">
               FirstName,LastName,Email,JobTitle,Department,HireDate,IsDirect
             </code>
             <p className="text-sm">
@@ -1551,7 +1551,7 @@ export default function Tutorials() {
       {/* Tutorial Cards */}
       {filteredTutorials.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="text-center">
             <p className="text-slate-500">
               No tutorials match your search "{searchQuery}"
             </p>
@@ -1584,7 +1584,7 @@ export default function Tutorials() {
                         {tutorial.description}
                       </p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
                   </div>
                 </CardContent>
                 </Card>
@@ -1832,7 +1832,7 @@ function TutorialGuide({ tutorial, onBack }: TutorialContentProps) {
                   const element = document.getElementById(sectionId(index))
                   element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 rounded-sm transition-colors"
               >
                 <ChevronRight className="w-4 h-4 text-amber-500" />
                 {section.title}

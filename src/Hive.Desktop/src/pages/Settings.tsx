@@ -990,7 +990,7 @@ export default function Settings() {
                   <div className="space-y-3">
                     {tshirtMappings.map((mapping, index) => (
                       <div key={mapping.size} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-                        <div className="flex-shrink-0 w-16">
+                        <div className="shrink-0 w-16">
                           <span className="text-lg font-semibold text-slate-900">{mapping.size}</span>
                         </div>
                         <span className="text-slate-500">=</span>
@@ -1057,7 +1057,7 @@ export default function Settings() {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-sm text-slate-600">
-                    Set your Jira site URL to link tasks and parents to their issues in Jira, e.g. <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">https://yourteam.atlassian.net</code>. Issues open at <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">…/browse/MAR-128</code>.
+                    Set your Jira site URL to link tasks and parents to their issues in Jira, e.g. <code className="text-xs bg-slate-100 px-1 py-0.5 rounded-sm">https://yourteam.atlassian.net</code>. Issues open at <code className="text-xs bg-slate-100 px-1 py-0.5 rounded-sm">…/browse/MAR-128</code>.
                   </p>
 
                   <div>
@@ -1079,7 +1079,7 @@ export default function Settings() {
                     <p className="text-sm text-slate-600">
                       Used by <strong>Sync Jira</strong> to copy sprint dates from the board and to keep a parent for every
                       epic (and every other issue with sub-tasks) in the space. Hive only reads from Jira. Create an API token at{' '}
-                      <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">id.atlassian.com/manage-profile/security/api-tokens</code>.
+                      <code className="text-xs bg-slate-100 px-1 py-0.5 rounded-sm">id.atlassian.com/manage-profile/security/api-tokens</code>.
                       The token is stored in Hive's local database.
                     </p>
                   </div>
@@ -1335,7 +1335,7 @@ export default function Settings() {
                               : 'border-slate-200 bg-white hover:bg-slate-50'
                           }`}
                         >
-                          <option.icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${sentimentProvider === option.value ? 'text-purple-600' : 'text-slate-400'}`} />
+                          <option.icon className={`w-5 h-5 mt-0.5 shrink-0 ${sentimentProvider === option.value ? 'text-purple-600' : 'text-slate-400'}`} />
                           <span>
                             <span className="block text-sm font-medium text-slate-900">{option.title}</span>
                             <span className="block text-xs text-slate-500 mt-0.5">{option.body}</span>
@@ -1382,7 +1382,7 @@ export default function Settings() {
                         </button>
                         {ollamaTestResult && (
                           <div className={`flex items-center gap-2 text-sm ${ollamaTestResult.valid ? 'text-green-600' : 'text-red-600'}`}>
-                            {ollamaTestResult.valid ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <XCircle className="w-4 h-4 flex-shrink-0" />}
+                            {ollamaTestResult.valid ? <CheckCircle className="w-4 h-4 shrink-0" /> : <XCircle className="w-4 h-4 shrink-0" />}
                             {ollamaTestResult.valid ? 'Ollama is running and has the model' : ollamaTestResult.error}
                           </div>
                         )}
@@ -1392,7 +1392,7 @@ export default function Settings() {
                         <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
                           ollama.com
                         </a>
-                        , then run <code className="px-1 py-0.5 bg-slate-100 rounded">ollama pull {ollamaModel.trim() || 'llama3.1:8b'}</code>.
+                        , then run <code className="px-1 py-0.5 bg-slate-100 rounded-sm">ollama pull {ollamaModel.trim() || 'llama3.1:8b'}</code>.
                         A local model takes longer than Claude, from seconds to a few minutes a request.
                       </p>
                     </div>
@@ -1485,7 +1485,7 @@ export default function Settings() {
                   {/* Error Message */}
                   {modelError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      <XCircle className="w-4 h-4 shrink-0" />
                       {modelError}
                     </div>
                   )}
@@ -1541,7 +1541,7 @@ export default function Settings() {
                       disabled={!providerReady}
                       aria-label="Enable Sentiment Analysis"
                       aria-pressed={sentimentEnabled}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                         sentimentEnabled ? 'bg-purple-500' : 'bg-slate-300'
                       } ${!providerReady ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
@@ -1581,7 +1581,7 @@ export default function Settings() {
                   {/* Error Message */}
                   {sentimentError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      <XCircle className="w-4 h-4 shrink-0" />
                       {sentimentError}
                     </div>
                   )}
@@ -1636,7 +1636,7 @@ export default function Settings() {
                       onClick={() => setTaskReviewEnabled(!taskReviewEnabled)}
                       aria-label="Enable Task Review"
                       aria-pressed={taskReviewEnabled}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
                         taskReviewEnabled ? 'bg-purple-500' : 'bg-slate-300'
                       }`}
                     >
@@ -1656,7 +1656,7 @@ export default function Settings() {
 
                   {taskReviewError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      <XCircle className="w-4 h-4 shrink-0" />
                       {taskReviewError}
                     </div>
                   )}
@@ -1698,7 +1698,7 @@ export default function Settings() {
                       onClick={() => setRetroEnabled(!retroEnabled)}
                       aria-label="Enable Retro Summary"
                       aria-pressed={retroEnabled}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
                         retroEnabled ? 'bg-purple-500' : 'bg-slate-300'
                       }`}
                     >
@@ -1735,7 +1735,7 @@ export default function Settings() {
 
                   {retroError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      <XCircle className="w-4 h-4 shrink-0" />
                       {retroError}
                     </div>
                   )}
@@ -1808,7 +1808,7 @@ export default function Settings() {
                   {/* Error Message */}
                   {backupError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                      <XCircle className="w-4 h-4 flex-shrink-0" />
+                      <XCircle className="w-4 h-4 shrink-0" />
                       {backupError}
                     </div>
                   )}
