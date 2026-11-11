@@ -1,4 +1,5 @@
-# Weekly update PRs for every package ecosystem in the repository.
+# One pull request per ecosystem per week, with every version update in it.
+# Security updates are not grouped: each arrives on its own, as soon as it is published.
 version: 2
 updates:
   - package-ecosystem: nuget
@@ -6,24 +7,36 @@ updates:
     schedule:
       interval: weekly
     groups:
-      microsoft:
-        patterns: ["Microsoft.*", "System.*"]
+      nuget:
+        applies-to: version-updates
+        patterns: ["*"]
     ignore:
       # FluentAssertions 8 is no longer free for commercial use; stay on 6.x
       - dependency-name: FluentAssertions
         update-types: ["version-update:semver-major"]
-    open-pull-requests-limit: 5
 
   - package-ecosystem: npm
     directory: /src/Hive.Desktop
     schedule:
       interval: weekly
     groups:
-      react:
-        patterns: ["react", "react-dom", "@types/react*"]
-    open-pull-requests-limit: 5
+      npm:
+        applies-to: version-updates
+        patterns: ["*"]
+    ignore:
+      # typescript-eslint does not support TypeScript 7 yet (peer typescript <6.1.0), and
+      # one failing install would hold back the whole group. Remove once it does.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Matches the Node version Electron bundles (Electron 45: Node 24). Raise it with Electron.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns: ["*"]
