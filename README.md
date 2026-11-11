@@ -73,25 +73,25 @@ few sample team members you can delete.
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend API | ASP.NET Core (C#) | .NET 10 |
-| Desktop shell | Electron | 44 |
-| Frontend | React + TypeScript + Vite | React 18 |
-| Styling | Tailwind CSS | 3.x |
-| Database | SQLite + Entity Framework Core | EF Core 10 |
-| Charts | Recharts | 2.x |
-| AI (optional) | A local model through Ollama, or the Claude API via the official Anthropic C# SDK | Ollama 0.5+ / SDK 12.x |
-| Backend testing | xUnit + Moq + FluentAssertions | xUnit 2.6 |
-| Frontend testing | Vitest + Testing Library + MSW | Vitest 4.x |
+| Backend API | ASP.NET Core (C#) | .NET 11 |
+| Desktop shell | Electron | 45 |
+| Frontend | React + TypeScript + Vite | React 19 |
+| Styling | Tailwind CSS | 4.x |
+| Database | SQLite + Entity Framework Core | EF Core 11 |
+| Charts | Recharts | 3.x |
+| AI (optional) | A local model through Ollama, or the Claude API via the official Anthropic C# SDK | Ollama 0.5+ / SDK 13.x |
+| Backend testing | xUnit + Moq + FluentAssertions | xUnit 2.9 |
+| Frontend testing | Vitest + Testing Library + MSW | Vitest 5.x |
 
 ---
 
 ## Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js 22+](https://nodejs.org/)
+- [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0)
+- [Node.js 26](https://nodejs.org/) (the version CI uses)
 
-All projects target `net10.0`. `global.json` asks for SDK 10.0.100 or a later
-10.0 feature band.
+All projects target `net11.0`. `global.json` asks for SDK 11.0.100 or a later
+11.0 feature band.
 
 ---
 

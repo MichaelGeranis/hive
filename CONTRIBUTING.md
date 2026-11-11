@@ -17,8 +17,8 @@ opening a public issue.
 
 ## Development setup
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0),
-[Node.js 22+](https://nodejs.org/) and `make`.
+You need the [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0),
+[Node.js 26](https://nodejs.org/) and `make`.
 
 ```bash
 make install    # NuGet packages and frontend dependencies

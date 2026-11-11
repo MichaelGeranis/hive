@@ -116,7 +116,7 @@ src/
 │       └── ITeamTaskRepository.cs
 │
 ├── Hive.Application/                            — Services and DTOs, depends on Core only
-│   ├── Hive.Application.csproj                  — References Hive.Core only; packages: ClosedXML, Microsoft.Extensions.DependencyInjection.Abstractions, Microsoft.Extensions.Logging.Abstractions
+│   ├── Hive.Application.csproj                  — References Hive.Core only; packages: ClosedXML (the Microsoft.Extensions abstractions come with .NET 11)
 │   ├── DependencyInjection.cs                   — Registers all application services
 │   ├── Formatting/
 │   │   └── DisplayFormat.cs                     — dd/MM/yyyy for dates in activity text, insights and Excel
@@ -337,13 +337,12 @@ src/
 │       ├── TaskReadinessController.cs           — Task readiness: the overview, reviewing the next task, reviewing one again
 │       └── TeamTasksController.cs               — Tasks
 │
-└── Hive.Desktop/                                — Electron 44 + React 18 + TypeScript + Vite + Tailwind
+└── Hive.Desktop/                                — Electron 45 + React 19 + TypeScript + Vite + Tailwind 4
     ├── eslint.config.js                         — ESLint rules
     ├── index.html                               — Vite entry page
     ├── package.json                             — Scripts, dependencies and the electron-builder config (icons, targets)
     ├── package-lock.json                        — Locked dependency versions
-    ├── postcss.config.js                        — PostCSS for Tailwind
-    ├── tailwind.config.js                       — Tailwind theme and content paths
+    ├── postcss.config.js                        — PostCSS with the Tailwind plugin (@tailwindcss/postcss)
     ├── tsconfig.json                            — TypeScript config for the renderer
     ├── tsconfig.node.json                       — TypeScript config for Vite and the Electron main process
     ├── vite.config.ts                           — Vite build and dev server config
@@ -360,7 +359,7 @@ src/
         ├── App.tsx                              — Route table
         ├── main.tsx                             — React entry point, mounts App
         ├── global.d.ts                          — Ambient types for the preload bridge
-        ├── index.css                            — Tailwind layers, toast and Hive mark animations
+        ├── index.css                            — Tailwind import and theme (Hive colours, v3 palette), v3 compatibility rules, toast and Hive mark animations
         ├── vite-env.d.ts                        — Vite client types
         ├── assets/                              — Application icons (icns, ico, png, svg)
         ├── components/
