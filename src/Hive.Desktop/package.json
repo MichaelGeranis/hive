@@ -67,7 +67,7 @@
     "vite": "^8.3.0",
     "vite-plugin-electron": "^0.15.4",
     "vitest": "^4.0.16",
-    "wait-on": "^7.2.0"
+    "wait-on": "^9.5.1"
   },
   "build": {
     "appId": "com.hive.desktop",
