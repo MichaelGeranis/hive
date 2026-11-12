@@ -204,7 +204,7 @@ export default function CareerPlanDetail({ planId, onBack, onChanged }: CareerPl
               <ul className="divide-y divide-slate-100" aria-label="Working on now">
                 {focusSkills.map(skill => (
                   <li key={skill.id} className="flex items-start gap-3 py-2.5">
-                    <Crosshair className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                    <Crosshair className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
                       <button
                         type="button"
@@ -223,7 +223,7 @@ export default function CareerPlanDetail({ planId, onBack, onChanged }: CareerPl
                       type="button"
                       onClick={() => setFocus(skill, false)}
                       aria-label={`Done focusing on ${skill.title}`}
-                      className="flex-shrink-0 px-2 py-1 text-xs border border-slate-300 text-slate-600 rounded-md hover:bg-slate-50"
+                      className="shrink-0 px-2 py-1 text-xs border border-slate-300 text-slate-600 rounded-md hover:bg-slate-50"
                     >
                       Done focusing
                     </button>
@@ -282,7 +282,7 @@ export default function CareerPlanDetail({ planId, onBack, onChanged }: CareerPl
                   aria-selected={statusFilter === filter.key}
                   onClick={() => setStatusFilter(filter.key)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    statusFilter === filter.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    statusFilter === filter.key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   {filter.label} ({filter.count})
@@ -482,7 +482,7 @@ function SkillListCard({
                       {skill.level}{skill.expectedLevel !== null && ` · expects ${skill.expectedLevel}`}
                     </span>
                     {skill.expectedLevel === null && (
-                      <span className="px-1 rounded bg-violet-100 text-violet-800 text-[10px] font-semibold">{skill.fromStage} skill</span>
+                      <span className="px-1 rounded-sm bg-violet-100 text-violet-800 text-[10px] font-semibold">{skill.fromStage} skill</span>
                     )}
                   </button>
                 </li>
@@ -605,7 +605,7 @@ function SkillEditor({
             role="switch"
             checked={skill.isFocus}
             onChange={toggleFocus}
-            className="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+            className="rounded-sm border-slate-300 text-amber-500 focus:ring-amber-500"
           />
         </label>
 

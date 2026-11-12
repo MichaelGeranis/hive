@@ -124,7 +124,7 @@ function StageTag({ stage, inverted = false }: { stage: CareerStage; inverted?: 
   return (
     <span
       title={`Expected from ${stage} upward`}
-      className={`inline-flex items-center px-1 rounded text-[10px] font-semibold leading-4 ${inverted ? 'bg-slate-900/80 text-white' : 'bg-violet-100 text-violet-800'}`}
+      className={`inline-flex items-center px-1 rounded-sm text-[10px] font-semibold leading-4 ${inverted ? 'bg-slate-900/80 text-white' : 'bg-violet-100 text-violet-800'}`}
     >
       {stage}+
     </span>
@@ -135,12 +135,12 @@ function SectionNode({ section, showLevels, stage }: { section: TreeSection; sho
   const cleared = showLevels && section.isCleared
   return (
     <div
-      className={`relative z-10 min-w-[9rem] max-w-[14rem] px-4 py-2.5 rounded-lg border-2 text-center shadow-sm ${
+      className={`relative z-10 min-w-36 max-w-56 px-4 py-2.5 rounded-lg border-2 text-center shadow-xs ${
         cleared ? 'bg-emerald-100 border-emerald-600 text-emerald-900' : 'bg-amber-300 border-slate-800 text-slate-900'
       }`}
     >
       <div className="flex items-center justify-center gap-1.5 font-semibold text-sm leading-tight">
-        {cleared && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" aria-label="Cleared" />}
+        {cleared && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-label="Cleared" />}
         <span>{section.name}</span>
         {stage && <StageTag stage={stage} inverted />}
       </div>
@@ -180,9 +180,9 @@ function SkillChip({ skill, showLevels, onSelect, sectionStage }: { skill: TreeS
   const content = (
     <>
       {showLevels && status === 'WorkingOn'
-        ? <Crosshair className="w-3.5 h-3.5 flex-shrink-0 text-amber-700" aria-hidden="true" />
-        : <CategoryIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isSoft ? 'text-pink-500' : 'text-slate-400'}`} aria-hidden="true" />}
-      <span className="truncate max-w-[12rem]">{skill.title}</span>
+        ? <Crosshair className="w-3.5 h-3.5 shrink-0 text-amber-700" aria-hidden="true" />
+        : <CategoryIcon className={`w-3.5 h-3.5 shrink-0 ${isSoft ? 'text-pink-500' : 'text-slate-400'}`} aria-hidden="true" />}
+      <span className="truncate max-w-48">{skill.title}</span>
       {stageTag && <StageTag stage={stageTag} />}
       {showLevels && (
         <>
@@ -195,7 +195,7 @@ function SkillChip({ skill, showLevels, onSelect, sectionStage }: { skill: TreeS
     </>
   )
 
-  const className = `relative z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 border-2 ${border} ${shape} ${colour} text-xs font-medium shadow-sm`
+  const className = `relative z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 border-2 ${border} ${shape} ${colour} text-xs font-medium shadow-xs`
 
   if (!onSelect) {
     return <span className={className} title={tooltip}>{content}</span>
@@ -231,14 +231,14 @@ export function SkillTreeLegend({ showLevels = false }: { showLevels?: boolean }
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
       {showLevels && (['Has', 'WorkingOn', 'NotYet'] as CareerSkillStatus[]).map(status => (
         <span key={status} className="flex items-center gap-1">
-          <span className={`w-4 h-3 rounded-sm border-2 ${SKILL_STATUS_STYLES[status]}`} />
+          <span className={`w-4 h-3 rounded-xs border-2 ${SKILL_STATUS_STYLES[status]}`} />
           {SKILL_STATUS_LABELS[status]}
         </span>
       ))}
       {showLevels && <span className="flex items-center gap-1"><Crosshair className="w-3.5 h-3.5 text-amber-700" /> Focus</span>}
       <span className="flex items-center gap-1"><Cpu className="w-3.5 h-3.5 text-slate-400" /> Hard skill</span>
       <span className="flex items-center gap-1"><HeartHandshake className="w-3.5 h-3.5 text-pink-500" /> Soft skill</span>
-      <span className="flex items-center gap-1"><span className="w-4 h-3 border-2 border-dashed border-slate-400 rounded-sm" /> Optional</span>
+      <span className="flex items-center gap-1"><span className="w-4 h-3 border-2 border-dashed border-slate-400 rounded-xs" /> Optional</span>
     </div>
   )
 }

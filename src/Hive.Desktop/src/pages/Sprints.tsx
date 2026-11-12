@@ -265,7 +265,7 @@ export default function Sprints() {
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-700">
-                  Sprint names follow the format: <code className="font-mono bg-blue-100 px-1 rounded">TeamName_QuarterQYearShort_SSprintNumber</code>
+                  Sprint names follow the format: <code className="font-mono bg-blue-100 px-1 rounded-sm">TeamName_QuarterQYearShort_SSprintNumber</code>
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   Example: LP_4Q25_S6 (Team LP, Q4 2025, Sprint 6)
@@ -413,7 +413,7 @@ export default function Sprints() {
                   {settings?.sprintTeamFilter && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-blue-700">Active filter:</span>
-                      <span className="px-2 py-0.5 bg-blue-200 text-blue-800 rounded font-mono">
+                      <span className="px-2 py-0.5 bg-blue-200 text-blue-800 rounded-sm font-mono">
                         {settings.sprintTeamFilter}
                       </span>
                     </div>
@@ -464,7 +464,7 @@ export default function Sprints() {
                                   ...editingSprint,
                                   startDate: e.target.value
                                 })}
-                                className="flex-1 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded focus:ring-2 focus:ring-amber-500"
+                                className="flex-1 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded-sm focus:ring-2 focus:ring-amber-500"
                               />
                             </div>
                             <div className="flex items-center gap-2">
@@ -477,7 +477,7 @@ export default function Sprints() {
                                   ...editingSprint,
                                   endDate: e.target.value
                                 })}
-                                className="flex-1 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded focus:ring-2 focus:ring-amber-500"
+                                className="flex-1 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded-sm focus:ring-2 focus:ring-amber-500"
                               />
                             </div>
                             <div className="flex items-center gap-2">
@@ -490,7 +490,7 @@ export default function Sprints() {
                                   ...editingSprint,
                                   points: parseInt(e.target.value) || 0
                                 })}
-                                className="w-24 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded focus:ring-2 focus:ring-amber-500"
+                                className="w-24 px-3 py-2 text-sm border border-slate-300 bg-white text-slate-900 rounded-sm focus:ring-2 focus:ring-amber-500"
                                 min="0"
                                 placeholder="Points"
                               />
@@ -499,7 +499,7 @@ export default function Sprints() {
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-slate-400 shrink-0" />
                               <label className="text-xs text-slate-500 shrink-0">Team:</label>
-                              <span className="w-20 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded">
+                              <span className="w-20 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-sm">
                                 {editingSprint.members}
                               </span>
                               <span className="text-xs text-slate-500">people (auto)</span>
@@ -510,13 +510,13 @@ export default function Sprints() {
                             <button
                               onClick={handleSaveSprint}
                               disabled={sprintSaving}
-                              className="px-3 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
+                              className="px-3 py-2 text-sm bg-green-500 text-white rounded-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
                             >
                               {sprintSaving ? 'Saving...' : 'Save'}
                             </button>
                             <button
                               onClick={() => setEditingSprint(null)}
-                              className="px-3 py-2 text-sm border border-slate-300 text-slate-700 rounded hover:bg-slate-200 transition-colors"
+                              className="px-3 py-2 text-sm border border-slate-300 text-slate-700 rounded-sm hover:bg-slate-200 transition-colors"
                             >
                               Cancel
                             </button>
@@ -574,14 +574,14 @@ export default function Sprints() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleEditSprint(sprint)}
-                              className="p-2 text-slate-600 hover:text-amber-600 hover:bg-slate-200 rounded transition-colors"
+                              className="p-2 text-slate-600 hover:text-amber-600 hover:bg-slate-200 rounded-sm transition-colors"
                               title="Edit sprint"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteSprint(sprint.id, sprint.name)}
-                              className="p-2 text-slate-600 hover:text-red-600 hover:bg-slate-200 rounded transition-colors"
+                              className="p-2 text-slate-600 hover:text-red-600 hover:bg-slate-200 rounded-sm transition-colors"
                               title="Delete sprint"
                             >
                               <Trash2 className="w-4 h-4" />

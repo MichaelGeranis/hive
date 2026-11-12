@@ -92,13 +92,13 @@ export function AttentionCard({
         }
       />
       {warnings.length === 0 ? (
-        <CardContent className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-10">
+        <CardContent className="flex-1 flex flex-col items-center justify-center text-center gap-2">
           <CheckCircle2 className="w-8 h-8 text-green-500" />
           <p className="text-sm font-medium text-slate-700">All clear</p>
           <p className="text-xs text-slate-500">Nothing needs you right now.</p>
         </CardContent>
       ) : (
-        <ul className="flex-1 divide-y divide-slate-100 overflow-y-auto max-h-[26rem]">
+        <ul className="flex-1 divide-y divide-slate-100 overflow-y-auto max-h-104">
           {warnings.map((warning, idx) => {
             const isPeople = PEOPLE_CATEGORIES.includes(warning.category)
             return (
@@ -109,7 +109,7 @@ export function AttentionCard({
                   className="group w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3"
                 >
                   <span
-                    className={`mt-0.5 p-1.5 rounded-md flex-shrink-0 ${
+                    className={`mt-0.5 p-1.5 rounded-md shrink-0 ${
                       isPeople ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'
                     }`}
                   >
@@ -121,7 +121,7 @@ export function AttentionCard({
                       <span className="block text-xs text-slate-500 mt-0.5">{warning.detail}</span>
                     )}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 mt-1 flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 mt-1 shrink-0" />
                 </button>
               </li>
             )
@@ -152,7 +152,7 @@ export function SprintHealthCard({
     return (
       <Card className="h-full">
         <CardHeader title="Current sprint" />
-        <CardContent className="flex flex-col items-center justify-center text-center gap-2 py-10">
+        <CardContent className="flex flex-col items-center justify-center text-center gap-2">
           <p className="text-sm text-slate-500">No sprints yet. Import tasks or sync sprints from Jira.</p>
           <button type="button" onClick={onOpenSprints} className="text-sm font-medium text-amber-600 hover:text-amber-700">
             Go to Sprints
@@ -250,7 +250,7 @@ export function SprintHealthCard({
                   <span
                     key={s.statusName}
                     className={`flex items-center gap-1.5 text-xs ${
-                      alarming ? 'px-1.5 -mx-1.5 rounded bg-red-50 text-red-700 font-medium' : 'text-slate-600'
+                      alarming ? 'px-1.5 -mx-1.5 rounded-sm bg-red-50 text-red-700 font-medium' : 'text-slate-600'
                     }`}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[s.statusName] }} />
@@ -284,16 +284,16 @@ export function SprintHealthCard({
               {sprint.blockedTasks.slice(0, 5).map(task => (
                 <li key={task.id} className="px-3 py-2 flex items-center gap-2 text-sm">
                   <span className="min-w-0 flex-1 truncate text-slate-800" title={task.title}>{task.title}</span>
-                  {task.assigneeName && <span className="text-xs text-slate-500 flex-shrink-0">{task.assigneeName}</span>}
+                  {task.assigneeName && <span className="text-xs text-slate-500 shrink-0">{task.assigneeName}</span>}
                   {task.storyPoints != null && (
-                    <span className="text-xs text-slate-500 flex-shrink-0">{task.storyPoints} SP</span>
+                    <span className="text-xs text-slate-500 shrink-0">{task.storyPoints} SP</span>
                   )}
                   {task.jiraUrl && (
                     <a
                       href={task.jiraUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:underline flex-shrink-0"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:underline shrink-0"
                     >
                       {task.jiraKey}
                       <ExternalLink className="w-3 h-3" />
@@ -353,7 +353,7 @@ export function OneOnOnesCard({
               {person.isOnLeave && ' · on leave'}
             </span>
           </span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${label.className}`}>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${label.className}`}>
             {label.text}
           </span>
         </button>
@@ -420,7 +420,7 @@ export function TodosCard({ todos, onOpen }: { todos: TodoFocus; onOpen: (noteId
       />
       {todos.items.length === 0 ? (
         <CardContent className="text-sm text-slate-600 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
           {empty}
         </CardContent>
       ) : (
@@ -432,7 +432,7 @@ export function TodosCard({ todos, onOpen }: { todos: TodoFocus; onOpen: (noteId
                 onClick={() => onOpen(noteId)}
                 className="w-full text-left px-6 py-2.5 hover:bg-slate-50 transition-colors flex items-start gap-3"
               >
-                <Flame className="w-4 h-4 mt-0.5 text-orange-500 flex-shrink-0" />
+                <Flame className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" />
                 <span className="min-w-0 flex-1 text-sm text-slate-900">{item}</span>
               </button>
             </li>
@@ -453,7 +453,7 @@ function LeaveRow({ leave }: { leave: LeaveFocusItem }) {
           {sameDay ? formatDate(leave.startDate) : `${formatDate(leave.startDate)} – ${formatDate(leave.endDate)}`}
         </span>
       </span>
-      <span className="text-xs text-slate-500 flex-shrink-0">
+      <span className="text-xs text-slate-500 shrink-0">
         {leave.type === 'PublicHoliday' ? 'Public holiday' : leave.type} · {leave.businessDays}d
       </span>
     </li>
@@ -535,14 +535,14 @@ export function TenureMilestonesCard({
               onClick={() => onOpenPerson(m.directReportId)}
               className="w-full px-6 py-2.5 flex items-center gap-3 text-left hover:bg-slate-50"
             >
-              <PartyPopper className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <PartyPopper className="w-4 h-4 text-amber-500 shrink-0" />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-slate-900 truncate">{m.fullName}</span>
                 <span className="block text-xs text-slate-500">
                   {milestoneLabel(m)} on {formatDate(m.date)} · joined {formatDate(m.hireDate)}
                 </span>
               </span>
-              <span className={`text-xs flex-shrink-0 ${m.daysUntil === 0 ? 'font-semibold text-amber-600' : 'text-slate-500'}`}>
+              <span className={`text-xs shrink-0 ${m.daysUntil === 0 ? 'font-semibold text-amber-600' : 'text-slate-500'}`}>
                 {whenLabel(m.daysUntil)}
               </span>
             </button>

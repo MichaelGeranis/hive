@@ -796,6 +796,8 @@ describe('Dashboard sprint windows', () => {
     expect(await screen.findByText('Delivery')).toBeInTheDocument()
     expect(screen.queryByText('Sprint history')).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    // Let the widgets finish loading, so no request of theirs lands in the next test's handlers
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument())
   })
 
   it('should let a sprint-by-sprint widget choose its own sprints, all by default', async () => {

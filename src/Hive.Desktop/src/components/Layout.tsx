@@ -96,7 +96,7 @@ export default function Layout() {
                       }`
                     }
                   >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <item.icon className="w-5 h-5 shrink-0" />
                     {!isMenuCollapsed && item.name}
                   </NavLink>
                 ))}
@@ -122,7 +122,7 @@ export default function Layout() {
               }`
             }
           >
-            <span className="relative flex-shrink-0">
+            <span className="relative shrink-0">
               <ScrollText className="w-5 h-5" />
               {isMenuCollapsed && unseenErrors > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-slate-900" />
@@ -131,7 +131,7 @@ export default function Layout() {
             {!isMenuCollapsed && 'Logs'}
             {!isMenuCollapsed && unseenErrors > 0 && (
               <span
-                className="ml-auto px-1.5 min-w-[1.25rem] text-center rounded-full bg-red-500 text-white text-xs font-semibold tabular-nums"
+                className="ml-auto px-1.5 min-w-5 text-center rounded-full bg-red-500 text-white text-xs font-semibold tabular-nums"
                 aria-label={`${unseenErrors} new errors`}
               >
                 {unseenErrors > 99 ? '99+' : unseenErrors}
@@ -149,7 +149,7 @@ export default function Layout() {
               }`
             }
           >
-            <Settings className="w-5 h-5 flex-shrink-0" />
+            <Settings className="w-5 h-5 shrink-0" />
             {!isMenuCollapsed && 'Settings'}
           </NavLink>
           {/* Toggle button */}
@@ -159,10 +159,10 @@ export default function Layout() {
             title={isMenuCollapsed ? 'Expand menu' : 'Collapse menu'}
           >
             {isMenuCollapsed ? (
-              <PanelLeft className="w-5 h-5 flex-shrink-0" />
+              <PanelLeft className="w-5 h-5 shrink-0" />
             ) : (
               <>
-                <PanelLeftClose className="w-5 h-5 flex-shrink-0" />
+                <PanelLeftClose className="w-5 h-5 shrink-0" />
                 Collapse
               </>
             )}

@@ -312,16 +312,16 @@ export default function Calendar() {
       {/* Legend */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-amber-500"></div>
+          <div className="w-4 h-4 rounded-sm bg-amber-500"></div>
           <span className="text-sm text-slate-600">Notes</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-purple-500"></div>
+          <div className="w-4 h-4 rounded-sm bg-purple-500"></div>
           <span className="text-sm text-slate-600">1:1s</span>
         </div>
         {google?.isConfigured && (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-sky-500"></div>
+            <div className="w-4 h-4 rounded-sm bg-sky-500"></div>
             <span className="text-sm text-slate-600">Google Calendar</span>
             <span className="text-xs text-slate-400">
               {google.isLoaded && google.syncedAt
@@ -334,7 +334,7 @@ export default function Calendar() {
 
       {googleError && (
         <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>Google Calendar events could not be loaded. {googleError}</span>
         </div>
       )}
@@ -383,11 +383,11 @@ export default function Calendar() {
                       return (
                         <div
                           key={event.id}
-                          className={`text-xs p-1 rounded ${event.color} truncate flex items-center gap-1`}
+                          className={`text-xs p-1 rounded-sm ${event.color} truncate flex items-center gap-1`}
                           title={`${event.title} — ${formatDate(event.date)}${event.time ? ` ${event.time.start}–${event.time.end}` : ''}`}
                         >
-                          <Icon className="w-3 h-3 flex-shrink-0" />
-                          {event.time && <span className="flex-shrink-0 font-medium">{event.time.start}</span>}
+                          <Icon className="w-3 h-3 shrink-0" />
+                          {event.time && <span className="shrink-0 font-medium">{event.time.start}</span>}
                           <span className="truncate">{event.title}</span>
                         </div>
                       )
@@ -429,7 +429,7 @@ export default function Calendar() {
                   return (
                     <div key={event.id} className={`p-3 rounded-lg ${event.color}`}>
                       <div className="flex items-start gap-2">
-                        <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <Icon className="w-5 h-5 shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <h4 className="font-medium">{event.title}</h4>
                           <p className="text-xs opacity-70 mt-1">

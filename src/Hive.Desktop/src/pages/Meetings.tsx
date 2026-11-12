@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { formatDate } from '../utils/dateUtils'
 import { AlertCircle, MessageSquare, Plus, Search, User, Users, X } from 'lucide-react'

@@ -16,7 +16,7 @@ describe('Card Components', () => {
       const card = screen.getByTestId('card-content').closest('div')
       expect(card).toHaveClass('bg-white')
       expect(card).toHaveClass('rounded-xl')
-      expect(card).toHaveClass('shadow-sm')
+      expect(card).toHaveClass('shadow-xs')
     })
 
     it('should apply custom className', () => {

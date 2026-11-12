@@ -4,7 +4,7 @@ import { VERDICT_LABELS, VERDICT_STYLES } from '../utils/taskReadinessDisplay'
 /** A small bee: striped body, two wings, antennae. */
 export function Bee({ size = 14 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0">
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
       <ellipse cx="8.5" cy="7.5" rx="4.2" ry="3" fill="#e0f2fe" stroke="#7dd3fc" strokeWidth="0.8" transform="rotate(-30 8.5 7.5)" />
       <ellipse cx="15.5" cy="7.5" rx="4.2" ry="3" fill="#e0f2fe" stroke="#7dd3fc" strokeWidth="0.8" transform="rotate(30 15.5 7.5)" />
       <ellipse cx="12" cy="14.5" rx="5.2" ry="6.2" fill="#fbbf24" stroke="#92400e" strokeWidth="0.8" />

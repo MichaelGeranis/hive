@@ -271,7 +271,7 @@ export default function Logs() {
       {/* Health */}
       {problemCount === 0 && logs.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
           <span className="text-sm font-medium">
             No errors or warnings {isLive ? 'since' : 'in the session started'} {formatDateTime(logs[0].timestamp)}
           </span>
@@ -358,7 +358,7 @@ export default function Logs() {
                     onChange={() => setSelected(allSelected ? new Set() : new Set(groups.map(g => g.key)))}
                     disabled={groups.length === 0}
                     aria-label="Select all"
-                    className="rounded border-slate-300"
+                    className="rounded-sm border-slate-300"
                   />
                 </th>
                 <th className="w-6 py-2" />
@@ -393,7 +393,7 @@ export default function Logs() {
                             checked={selected.has(group.key)}
                             onChange={() => setSelected(toggle(selected, group.key))}
                             aria-label={`Select ${summaryLine(group.message)}`}
-                            className="rounded border-slate-300"
+                            className="rounded-sm border-slate-300"
                           />
                         </td>
                         <td className="py-2 align-top text-slate-400">
@@ -403,7 +403,7 @@ export default function Logs() {
                           {formatTimestamp(group.last.timestamp)}
                         </td>
                         <td className="py-2 pr-4 align-top">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_BADGE[group.level]}`}>
+                          <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${LEVEL_BADGE[group.level]}`}>
                             {LEVEL_TEXT[group.level]}
                           </span>
                         </td>
@@ -414,7 +414,7 @@ export default function Logs() {
                           <div className="flex items-center gap-2">
                             <span className="truncate font-mono text-xs">{summaryLine(group.message)}</span>
                             {group.reported && (
-                              <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-medium uppercase">
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-sm bg-slate-200 text-slate-600 text-[10px] font-medium uppercase">
                                 Reported
                               </span>
                             )}
@@ -441,11 +441,11 @@ export default function Logs() {
                                 {copied === group.key ? 'Copied' : 'Copy'}
                               </button>
                             </div>
-                            <pre className="whitespace-pre-wrap break-words font-mono text-xs text-slate-900 bg-white border border-slate-200 rounded-md p-3">
+                            <pre className="whitespace-pre-wrap wrap-break-word font-mono text-xs text-slate-900 bg-white border border-slate-200 rounded-md p-3">
                               {group.message}
                             </pre>
                             {group.details && (
-                              <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-slate-600 bg-white border border-slate-200 rounded-md p-3">
+                              <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap wrap-break-word font-mono text-xs text-slate-600 bg-white border border-slate-200 rounded-md p-3">
                                 {group.details}
                               </pre>
                             )}

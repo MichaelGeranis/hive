@@ -101,7 +101,7 @@ export default function NoteFolderTree({
       onChange={(e) => setDraftName(e.target.value)}
       onKeyDown={(e) => handleNameKeyDown(e, submit, cancel)}
       onBlur={submit}
-      className="w-full rounded-md border border-amber-400 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none"
+      className="w-full rounded-md border border-amber-400 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-hidden"
     />
   )
 

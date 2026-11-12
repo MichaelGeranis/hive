@@ -24,7 +24,7 @@ Ports: the backend listens on **5002**, the Vite dev server on **5173**.
          "type": "coreclr",
          "request": "launch",
          "preLaunchTask": "build",
-         "program": "${workspaceFolder}/src/Hive.Api/bin/Debug/net10.0/Hive.Api.dll",
+         "program": "${workspaceFolder}/src/Hive.Api/bin/Debug/net11.0/Hive.Api.dll",
          "args": [],
          "cwd": "${workspaceFolder}/src/Hive.Api",
          "stopAtEntry": false,

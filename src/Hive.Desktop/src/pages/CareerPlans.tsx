@@ -212,7 +212,7 @@ function PlanCard({ plan, onOpen }: { plan: CareerPlanSummary; onOpen: () => voi
             <StageChip stage={plan.currentStage} />
           </div>
           <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
-            <MapIcon className="w-3.5 h-3.5 flex-shrink-0" /> {plan.roadmapName}
+            <MapIcon className="w-3.5 h-3.5 shrink-0" /> {plan.roadmapName}
           </p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
             <span className="flex items-center gap-1">

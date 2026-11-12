@@ -141,7 +141,7 @@ in `Hive.Application`.
 
 ### Hive.Desktop — Presentation Layer
 
-- Electron 44 shell + React 18 + TypeScript + Vite + Tailwind CSS
+- Electron 45 shell + React 19 + TypeScript + Vite + Tailwind CSS 4
 - Talks to `Hive.Api` over REST via a single Axios client (`services/api.ts`)
 - **Thin presentation layer — no business logic, no authoritative validation**
 - Light theme only. Dates are shown as `dd/MM/yyyy` through `utils/dateUtils.ts`; the

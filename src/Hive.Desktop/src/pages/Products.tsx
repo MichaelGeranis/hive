@@ -234,7 +234,7 @@ export default function Products() {
                   {/* A product from Jira is edited in Jira and goes when its component does */}
                   {!product.isFromJira && (
                     <div className="relative group">
-                      <button className="p-1 hover:bg-slate-100 rounded" aria-label={`Actions for ${product.name}`}>
+                      <button className="p-1 hover:bg-slate-100 rounded-sm" aria-label={`Actions for ${product.name}`}>
                         <MoreVertical className="w-5 h-5 text-slate-400" />
                       </button>
                       <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
@@ -271,7 +271,7 @@ export default function Products() {
                     <ul className="space-y-1" aria-label={`Projects serving ${product.name}`}>
                       {product.projects.map(project => (
                         <li key={project.id} className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
                           {project.url ? (
                             <a
                               href={project.url}
@@ -280,7 +280,7 @@ export default function Products() {
                               className="text-amber-600 hover:underline truncate flex items-center gap-1"
                             >
                               {project.name}
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                              <ExternalLink className="w-3 h-3 shrink-0" />
                             </a>
                           ) : (
                             <span className="truncate">{project.name}</span>

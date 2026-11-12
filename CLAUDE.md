@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Hive is the Engineering Manager's operating system: a single-user, local-first desktop
-application for managing people, delivery and planning. .NET 10 backend in Clean
+application for managing people, delivery and planning. .NET 11 backend in Clean
 Architecture, Electron + React desktop client, SQLite for storage.
 
 # Bash commands

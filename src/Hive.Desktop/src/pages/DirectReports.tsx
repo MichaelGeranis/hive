@@ -451,7 +451,7 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
                   onChange={(e) => setFormData({ ...formData, isDirect: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                 <span className="ml-3 text-sm font-medium text-slate-700">
                   {formData.isDirect ? 'Direct Report' : 'Indirect Report'}
                 </span>
@@ -484,10 +484,10 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h4 className="text-sm font-medium text-blue-900 mb-2">CSV Format</h4>
               <p className="text-sm text-blue-700 mb-2">
-                Required columns: <code className="bg-blue-100 px-1 rounded">FirstName</code>, <code className="bg-blue-100 px-1 rounded">LastName</code>, <code className="bg-blue-100 px-1 rounded">Email</code>
+                Required columns: <code className="bg-blue-100 px-1 rounded-sm">FirstName</code>, <code className="bg-blue-100 px-1 rounded-sm">LastName</code>, <code className="bg-blue-100 px-1 rounded-sm">Email</code>
               </p>
               <p className="text-sm text-blue-700">
-                Optional columns: <code className="bg-blue-100 px-1 rounded">JobTitle</code>, <code className="bg-blue-100 px-1 rounded">Department</code>, <code className="bg-blue-100 px-1 rounded">HireDate</code>, <code className="bg-blue-100 px-1 rounded">IsDirect</code> (true/false)
+                Optional columns: <code className="bg-blue-100 px-1 rounded-sm">JobTitle</code>, <code className="bg-blue-100 px-1 rounded-sm">Department</code>, <code className="bg-blue-100 px-1 rounded-sm">HireDate</code>, <code className="bg-blue-100 px-1 rounded-sm">IsDirect</code> (true/false)
               </p>
               <button
                 onClick={downloadSampleCsv}
@@ -525,7 +525,7 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
                 id="skipDuplicates"
                 checked={skipDuplicates}
                 onChange={(e) => setSkipDuplicates(e.target.checked)}
-                className="w-4 h-4 text-amber-500 bg-white border-slate-300 rounded focus:ring-amber-500"
+                className="w-4 h-4 text-amber-500 bg-white border-slate-300 rounded-sm focus:ring-amber-500"
                 disabled={importLoading}
               />
               <label htmlFor="skipDuplicates" className="text-sm text-slate-700">
@@ -683,7 +683,7 @@ Bob,Johnson,bob.johnson@example.com,Designer,Design,2024-03-10,false`
                     </div>
                   </div>
                   <div className="relative group">
-                    <button className="p-1 hover:bg-slate-100 rounded">
+                    <button className="p-1 hover:bg-slate-100 rounded-sm">
                       <MoreVertical className="w-5 h-5 text-slate-400" />
                     </button>
                     <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">

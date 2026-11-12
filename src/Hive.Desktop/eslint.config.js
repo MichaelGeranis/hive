@@ -18,7 +18,11 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // The two rules react-hooks 5 recommended. Version 7's recommended set adds the
+      // React Compiler rules, which flag effects across many components; adopt those
+      // as their own change rather than as part of a dependency upgrade.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // Tightened to 'error' once the remaining hand-written DTO types are generated from Swagger.

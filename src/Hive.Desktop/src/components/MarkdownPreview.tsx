@@ -62,7 +62,7 @@ export default function MarkdownPreview({ content, onToggleTask, className = '' 
                 checked={!!checked}
                 onChange={() => onToggleTask?.(index)}
                 disabled={!onToggleTask}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                className="mt-1 h-4 w-4 rounded-sm border-slate-300 text-amber-500 focus:ring-amber-500"
               />
             )
           },
@@ -79,7 +79,7 @@ export default function MarkdownPreview({ content, onToggleTask, className = '' 
               )
             }
             return (
-              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-sm font-mono text-pink-600">
+              <code className="rounded-sm bg-slate-100 px-1.5 py-0.5 text-sm font-mono text-pink-600">
                 {children}
               </code>
             )

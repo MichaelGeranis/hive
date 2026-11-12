@@ -43,11 +43,11 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     <div
       className={`${TOAST_STYLES[toast.type]} ${toast.exiting ? 'toast-exit' : 'toast-enter'} flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg min-w-[320px] max-w-[480px]`}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
+      <Icon className="w-5 h-5 shrink-0" />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className={`${DISMISS_ICON_STYLES[toast.type]} flex-shrink-0 p-0.5 rounded transition-colors`}
+        className={`${DISMISS_ICON_STYLES[toast.type]} shrink-0 p-0.5 rounded-sm transition-colors`}
       >
         <X className="w-4 h-4" />
       </button>
