@@ -15,7 +15,7 @@ namespace Hive.Infrastructure.Services;
 /// </summary>
 public class ClaudeApiService : IClaudeApiService
 {
-    private const string ClaudeModel = "claude-opus-5";
+    private const string ClaudeModel = "claude-opus-5-5";
 
     // Room for adaptive thinking as well as the answer; the JSON itself is small
     private const int MaxTokens = 16000;
@@ -225,7 +225,12 @@ public class ClaudeApiService : IClaudeApiService
             // that refusal category, instead of coming back as an empty answer
             Betas = [AnthropicBeta.ServerSideFallback2026_07_01],
             Fallbacks = new Default(),
-            OutputConfig = new BetaOutputConfig { Format = new BetaJsonOutputFormat { Schema = schema } },
+            // Opus 5.5 defaults to medium effort; reviews and plans are worth the extra thought
+            OutputConfig = new BetaOutputConfig
+            {
+                Effort = Effort.High,
+                Format = new BetaJsonOutputFormat { Schema = schema },
+            },
             Messages = [new BetaUserMessageParam { Content = prompt }],
         };
 

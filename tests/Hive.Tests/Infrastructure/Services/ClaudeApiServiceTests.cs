@@ -44,12 +44,13 @@ public class ClaudeApiServiceTests
 
         using var body = JsonDocument.Parse(request.Body!);
         var root = body.RootElement;
-        root.GetProperty("model").GetString().Should().Be("claude-opus-5");
+        root.GetProperty("model").GetString().Should().Be("claude-opus-5-5");
         root.GetProperty("fallbacks").GetString().Should().Be("default");
         root.GetProperty("max_tokens").GetInt32().Should().Be(16000);
         root.GetProperty("output_config").GetProperty("format").GetProperty("type").GetString().Should().Be("json_schema");
+        root.GetProperty("output_config").GetProperty("effort").GetString().Should().Be("high");
         root.TryGetProperty("temperature", out _).Should().BeFalse();
-        root.TryGetProperty("thinking", out _).Should().BeFalse("Claude Opus 5 thinks adaptively by default");
+        root.TryGetProperty("thinking", out _).Should().BeFalse("Claude Opus 5.5 thinks adaptively by default");
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public class ClaudeApiServiceTests
     public async Task AnalyzeSentimentAsync_AfterFallback_ReadsOnlyTheSubstituteModelsAnswer()
     {
         const string fallbackBlock = """
-            {"type":"fallback","from":{"model":"claude-opus-5"},"to":{"model":"claude-opus-4-8"},
+            {"type":"fallback","from":{"model":"claude-opus-5-5"},"to":{"model":"claude-opus-4-8"},
              "trigger":{"type":"refusal","category":"cyber"}}
             """;
         var content = string.Join(",", TextBlock("{\"positive\":"), fallbackBlock, TextBlock(SentimentJson));
@@ -159,7 +160,7 @@ public class ClaudeApiServiceTests
     public async Task ValidateApiKeyAsync_WhenModelLookupSucceeds_IsValidWithoutGeneratingTokens()
     {
         var handler = new StubHandler(_ => Json(HttpStatusCode.OK, """
-            {"type":"model","id":"claude-opus-5","display_name":"Claude Opus 5","created_at":"2026-01-01T00:00:00Z"}
+            {"type":"model","id":"claude-opus-5-5","display_name":"Claude Opus 5.5","created_at":"2026-01-01T00:00:00Z"}
             """));
         var service = CreateService(handler);
 
@@ -169,7 +170,7 @@ public class ClaudeApiServiceTests
         error.Should().BeNull();
         var request = handler.Requests.Single();
         request.Method.Should().Be(HttpMethod.Get);
-        request.Uri.AbsolutePath.Should().Be("/v1/models/claude-opus-5");
+        request.Uri.AbsolutePath.Should().Be("/v1/models/claude-opus-5-5");
     }
 
     [Fact]
@@ -287,7 +288,7 @@ public class ClaudeApiServiceTests
         JsonSerializer.Serialize(new { type = "text", text });
 
     private static string Message(string content, string stopReason = "end_turn", string stopDetails = "null") =>
-        "{\"id\":\"msg_test\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"claude-opus-5\","
+        "{\"id\":\"msg_test\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"claude-opus-5-5\","
         + "\"content\":[" + content + "],\"stop_reason\":\"" + stopReason + "\",\"stop_sequence\":null,"
         + "\"stop_details\":" + stopDetails + ",\"usage\":{\"input_tokens\":100,\"output_tokens\":50}}";
 

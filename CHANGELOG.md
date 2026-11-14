@@ -17,6 +17,9 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- AI features use Claude Opus 5.5 (from Claude Opus 5), which costs less per token,
+  with effort set to high.
+
 - The desktop app gives the API a new random password on every launch instead
   of the public `admin` / `admin123`, which the backend now refuses outside
   Development.

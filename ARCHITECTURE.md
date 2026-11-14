@@ -518,8 +518,9 @@ ClaudeApiService (Infrastructure/Services)  ← registered via AddHttpClient
   connection lifetime. That `HttpClient` has an infinite timeout; the SDK applies its own
   (5 minutes) and retries rate limits, server errors and dropped connections itself.
   Never instantiate `HttpClient` directly.
-- **Model:** `claude-opus-5`, set in one constant. It thinks adaptively by default, so no
+- **Model:** `claude-opus-5-5`, set in one constant. It thinks adaptively by default, so no
   `thinking` parameter is sent, and `max_tokens` is 16,000 to leave room for that thinking.
+  Effort is set to `high` in `output_config.effort`, since Opus 5.5 defaults to `medium`.
 - **Structured outputs:** the answer's shape is enforced with a JSON schema in
   `output_config.format`, so the response is always parseable JSON. The prompt no longer
   describes the format, and nothing is scraped out of free text.
@@ -536,7 +537,7 @@ ClaudeApiService (Infrastructure/Services)  ← registered via AddHttpClient
   and passes it to `IClaudeApiService`, which does not touch persistence. This is the same
   split as the Jira client, and it lets both be tested against a stubbed
   `HttpMessageHandler`.
-- Validating a key looks up the model (`GET /v1/models/claude-opus-5`), which confirms the
+- Validating a key looks up the model (`GET /v1/models/claude-opus-5-5`), which confirms the
   key works and can use the model without generating any tokens.
 - Every failure (bad key, missing permission, rate limiting, outage, network, refusal,
   truncated answer) becomes a `ClaudeApiException` with a message the manager can act on.
