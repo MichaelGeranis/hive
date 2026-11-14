@@ -28,11 +28,14 @@ public class DatabaseBackupService
     private readonly ILogger<DatabaseBackupService> _logger;
     private readonly TimeProvider _time;
     private readonly object _gate = new();
+    private readonly string? _databaseKey;
 
-    public DatabaseBackupService(ILogger<DatabaseBackupService> logger, TimeProvider? time = null)
+    /// <param name="databaseKey">The database's key, when it is encrypted: backups are then encrypted with it too</param>
+    public DatabaseBackupService(ILogger<DatabaseBackupService> logger, TimeProvider? time = null, string? databaseKey = null)
     {
         _logger = logger;
         _time = time ?? TimeProvider.System;
+        _databaseKey = databaseKey;
     }
 
     /// <summary>
@@ -104,9 +107,11 @@ public class DatabaseBackupService
             backups.Count > 0 ? backups[0].LastWriteTimeUtc : null);
     }
 
-    private static void VacuumInto(string databasePath, string targetPath)
+    // With a key, VACUUM INTO writes the copy encrypted with the same key
+    private void VacuumInto(string databasePath, string targetPath)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Pooling = false }.ToString();
+        var connectionString = DatabaseEncryption.WithKey(
+            new SqliteConnectionStringBuilder { DataSource = databasePath, Pooling = false }.ToString(), _databaseKey);
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
         using var command = connection.CreateCommand();

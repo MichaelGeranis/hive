@@ -19,16 +19,18 @@ understood. You will be credited in the advisory unless you prefer not to be.
 
 ## Security model
 
-Hive is a single-user, local-first desktop app. Its API listens on localhost
-with HTTP Basic credentials that default to a publicly known pair, and it
-stores the optional Claude API key, Jira token and Google Calendar address in
-plain text in the local SQLite database. See the
-[Security note in the README](README.md#security-note).
+Hive is a single-user, local-first desktop app. Its API listens on localhost,
+answers only loopback host names, and, in the desktop app, accepts a random
+password made for each launch. The desktop app encrypts the SQLite database and
+its backups with a key kept in the operating system's keychain. Running from
+source uses a publicly known development password and an unencrypted database.
+See the [Security note in the README](README.md#security-note).
 
 Of particular interest:
 
 - reaching the API from another machine, or from a web page in the browser;
-- reading the stored credentials without access to the user's files;
+- reading the database, its backups or the stored credentials without the key
+  in the user's keychain;
 - the Electron shell loading remote content or exposing Node.js to the page;
 - injection through imported CSV, Jira data or calendar feeds.
 

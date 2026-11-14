@@ -77,12 +77,13 @@ import type {
 
 const API_BASE_URL = 'http://localhost:5002/api'
 
-// Admin credentials for the local backend. These match the backend's default
-// (admin/admin123) unless overridden at build time via VITE_ADMIN_USERNAME /
-// VITE_ADMIN_PASSWORD, which must match whatever the backend was configured
-// with via HIVE_ADMIN_USERNAME / HIVE_ADMIN_PASSWORD. See README.md.
-const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'admin'
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
+// Credentials for the local backend. The packaged app gets a random password for each launch
+// from the main process. Running from source, they match the backend's development default
+// (admin/admin123) unless overridden via VITE_ADMIN_USERNAME / VITE_ADMIN_PASSWORD, which must
+// match HIVE_ADMIN_USERNAME / HIVE_ADMIN_PASSWORD. See README.md.
+const launchCredentials = typeof window !== 'undefined' ? window.electronAPI?.apiCredentials : null
+const ADMIN_USERNAME = launchCredentials?.username || import.meta.env.VITE_ADMIN_USERNAME || 'admin'
+const ADMIN_PASSWORD = launchCredentials?.password || import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
 
 // Create axios instance with default config
 const api = axios.create({

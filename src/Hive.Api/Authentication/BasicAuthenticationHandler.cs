@@ -115,4 +115,31 @@ public class AdminCredentials
 {
     public string Username { get; set; } = "admin";
     public string Password { get; set; } = "admin123";
+
+    /// <summary>True while these are the public, compiled-in defaults.</summary>
+    public bool IsPublicDefault => Username == "admin" && Password == "admin123";
+
+    /// <summary>
+    /// Refuses the public defaults outside Development: the desktop app always sets a random
+    /// password, so an API started any other way with the defaults would be open to anyone who
+    /// can reach it.
+    /// </summary>
+    public void EnsureNotPublicDefault(IHostEnvironment environment, ILogger logger)
+    {
+        if (!IsPublicDefault)
+        {
+            return;
+        }
+
+        if (!environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                "Refusing to start with the public default admin/admin123 credentials outside Development. " +
+                "Start Hive from the desktop app, or set HIVE_ADMIN_PASSWORD.");
+        }
+
+        logger.LogWarning(
+            "Using the default admin/admin123 credentials. This is only acceptable for development " +
+            "from source; the desktop app sets a random password on every launch.");
+    }
 }

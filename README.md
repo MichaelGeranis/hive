@@ -356,17 +356,21 @@ Google Workspace admins turn the secret address off. See
 
 ## Security note
 
-Hive is a **single-user, local-first desktop application**. Basic Authentication against a
-single known credential pair is adequate for an API bound to localhost on the manager's
-own machine, and it is not adequate for anything else. The `admin` / `admin123` default is
-documented here precisely because it is **not** a secret: anyone who reads this repository
-knows it. Override it with `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` (and the matching
-`VITE_ADMIN_*` values for the client) before the API is reachable from anywhere else, and
-do not deploy Hive to a shared host without replacing the authentication scheme first —
-see [ARCHITECTURE.md § Authentication](ARCHITECTURE.md#authentication).
+Hive is a **single-user, local-first desktop application**.
 
-The optional Claude API key, Jira API token and Google Calendar secret address are stored
-in plain text in the local SQLite database. The API never returns them, but anyone who can read `hive.db` can.
+- **The API** listens on localhost and answers only loopback host names, so a web page cannot
+  reach it, even by pointing its own domain at your machine. The desktop app gives it a new
+  random password on every launch; the public `admin` / `admin123` default works only when
+  running from source in Development, and the backend refuses to start with it otherwise.
+- **Your data is encrypted** in the desktop app: the database, its automatic backups, and the
+  Claude key, Jira token and Google Calendar address in it, with a key kept in your operating
+  system's keychain. Copying `hive.db` to another machine or account gives nothing readable.
+  If that keychain entry is lost, so is the data: keep an **Export Backup** (Settings), which
+  is plain JSON, somewhere safe. Running from source, the database is not encrypted.
+- **Links** in notes and Jira data open in your browser only if they are web or mail links.
+
+Do not deploy Hive to a shared host without replacing the authentication scheme first — see
+[ARCHITECTURE.md § Authentication](ARCHITECTURE.md#authentication).
 
 ---
 

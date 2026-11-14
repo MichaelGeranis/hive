@@ -398,9 +398,20 @@ All API endpoints require **HTTP Basic Authentication**, implemented by
 
 - Credentials come from the `AdminCredentials` options object. Its compiled-in defaults are
   `admin` / `admin123`; the `AdminCredentials` configuration section is bound over them,
-  and `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` override both. The API logs a startup
-  warning while the default credentials are still in effect.
-- The frontend holds the credentials in `services/api.ts` and sends them on every request.
+  and `HIVE_ADMIN_USERNAME` / `HIVE_ADMIN_PASSWORD` override both.
+- **The desktop app uses a new random password on every launch.** The Electron main process
+  makes 256 random bits (`electron/secrets.ts`), passes them to the backend it spawns in
+  `HIVE_ADMIN_PASSWORD`, and hands them to the window through the preload bridge
+  (`window.electronAPI.apiCredentials`, read once by `services/api.ts`). Nothing writes the
+  password down, so no other program and no web page can know it.
+- **The public defaults are refused outside Development** (`AdminCredentials.EnsureNotPublicDefault`):
+  a backend started any other way than by the desktop app must be given a password. Running
+  from source (`make dev`) keeps the defaults, with a warning.
+- **Loopback host names only.** The API answers `localhost`, `127.0.0.1` and `[::1]` and
+  refuses any other `Host` with 400, so a web page that points its own domain at 127.0.0.1
+  (DNS rebinding) cannot reach it. This is set in `Program.cs`, not `appsettings.json`,
+  because the desktop app starts the backend from a working directory where the settings file
+  is not found.
 - `/health` is the one anonymous endpoint.
 
 **This is deliberately minimal, and it is only defensible because of what Hive is.** Hive
@@ -413,6 +424,34 @@ repository query.
 **If Hive is ever hosted**, this scheme is inadequate and must be replaced before anything
 else. Basic Auth over a shared deployment with credentials in a settings file and in
 frontend source is not a security model.
+
+### The Electron window
+
+The window runs with context isolation and without Node integration. Notes, Jira data and
+imported files can carry links, so `electron/navigation.ts` decides what happens to them:
+only `https:`, `http:` and `mailto:` links are handed to the operating system, and the window
+never navigates away from the app's own page (`will-navigate`).
+
+## Encryption at Rest
+
+The SQLite database holds 1:1 notes, career plans, sentiment analyses and the Claude, Jira and
+Google Calendar credentials, so the desktop app encrypts it, with SQLite3 Multiple Ciphers
+(`SQLite3MC.PCLRaw.bundle`, in place of the plain `e_sqlite3` bundle).
+
+- **The key.** On first launch the Electron main process creates a random 256-bit key and
+  stores it only wrapped by the operating system's keystore (`safeStorage`: Keychain on macOS,
+  DPAPI on Windows, the secret service on Linux), in `database-key` in the app's user-data
+  folder. It passes the key to the backend in `HIVE_DATABASE_KEY`.
+- **The backend** opens the database with it (`DatabaseEncryption.WithKey`, the connection
+  string's `Password`). `VACUUM INTO` writes the automatic backups encrypted with the same key.
+- **Existing databases.** On the first start with a key, `DatabaseInitializer` encrypts
+  `hive.db` and every `hive.db.backup.*` that is still plain SQLite, in place
+  (`PRAGMA rekey`), before anything else touches them.
+- **Without a key** (running from source, or no keystore on the machine) the database is plain
+  SQLite, as before; the app logs that it is unencrypted.
+- **Losing the key loses the data.** A key file that cannot be unwrapped stops the app with a
+  message rather than being replaced, since a new key could never open the database. The
+  manual JSON export (Settings → Export Backup) is not encrypted and works on any machine.
 
 ---
 
@@ -904,6 +943,7 @@ Hive keeps two backups, and both hold every table and every stored field.
 | When | When the backend starts, then every hour while it runs, if something changed (SQLite mode) | **Export Backup** on the Settings page |
 | What | A copy of `hive.db`, next to it: `hive.db.backup.<timestamp>`; the newest 24 kept, then one a day for 30 days | A JSON file, `BackupDto` format 2.0 |
 | Secrets | Included: it is the database file | Never: the Claude key, Jira token and Google Calendar address are left out |
+| Encrypted | Yes, with the database's key, in the desktop app (§ Encryption at Rest) | No: a plain JSON file, kept wherever you save it |
 | Restore | Quit Hive, replace `hive.db` with the copy | **Choose Backup File**: adds what is missing, keeps what exists, takes settings but not secrets |
 
 - **The automatic copy is SQLite's own.** `DatabaseBackupService` writes it with `VACUUM INTO`:

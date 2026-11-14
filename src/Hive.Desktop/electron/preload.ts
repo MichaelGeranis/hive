@@ -31,6 +31,11 @@ type LogCallback = (entry: LogEntry) => void
 
 let logCallback: LogCallback | null = null
 
+type ApiCredentials = { username: string; password: string }
+
+// This launch's API credentials, from the main process; null when the backend runs from source
+const apiCredentials = ipcRenderer.sendSync('auth:get-api-credentials') as ApiCredentials | null
+
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   versions: {
@@ -57,7 +62,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     readSession: (id: string): Promise<LogEntry[]> => ipcRenderer.invoke('log:read-session', id),
     openFolder: (): Promise<string> => ipcRenderer.invoke('log:open-folder')
   },
-  getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:get-info')
+  getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:get-info'),
+  apiCredentials
 })
 
 // Type declarations for the exposed API
@@ -80,6 +86,7 @@ declare global {
         openFolder: () => Promise<string>
       }
       getAppInfo: () => Promise<AppInfo>
+      apiCredentials: ApiCredentials | null
     }
   }
 }

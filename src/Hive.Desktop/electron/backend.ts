@@ -81,10 +81,18 @@ async function waitForHealth(): Promise<boolean> {
   return false
 }
 
+/** What the backend needs from the desktop app to start securely. */
+export interface BackendSecrets {
+  /** The password the API accepts for this launch only */
+  apiPassword: string
+  /** The database key from the OS keystore, or null to leave the database unencrypted */
+  databaseKey: string | null
+}
+
 /**
  * Starts the backend process
  */
-export async function startBackend(): Promise<void> {
+export async function startBackend(secrets: BackendSecrets): Promise<void> {
   const backendPath = getBackendPath()
 
   // In development, don't spawn - assume backend is running separately
@@ -115,12 +123,18 @@ export async function startBackend(): Promise<void> {
     }
   }
 
-  // Set environment variables for production mode
-  const env = {
+  // Set environment variables for production mode. The secrets go only to this child process.
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     ASPNETCORE_ENVIRONMENT: 'Production',
     UseInMemoryDatabase: 'false',
-    ASPNETCORE_URLS: `http://localhost:${BACKEND_PORT}`
+    ASPNETCORE_URLS: `http://localhost:${BACKEND_PORT}`,
+    HIVE_ADMIN_USERNAME: 'admin',
+    HIVE_ADMIN_PASSWORD: secrets.apiPassword
+  }
+  delete env.HIVE_DATABASE_KEY
+  if (secrets.databaseKey) {
+    env.HIVE_DATABASE_KEY = secrets.databaseKey
   }
 
   backendProcess = spawn(backendPath, [], {

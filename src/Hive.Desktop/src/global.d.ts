@@ -47,6 +47,8 @@ declare global {
         openFolder: () => Promise<string>
       }
       getAppInfo?: () => Promise<DesktopAppInfo>
+      // This launch's API credentials (packaged app); null or absent when the backend runs from source
+      apiCredentials?: { username: string; password: string } | null
       onBackendPort?: (callback: (port: number) => void) => void
     }
   }
