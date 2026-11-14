@@ -1,7 +1,9 @@
 using Hive.Api.Authentication;
 using Hive.Application;
 using Hive.Infrastructure;
+using Hive.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +32,12 @@ builder.Services.Configure<AdminCredentials>(options =>
     }
 });
 
+// Answer loopback host names only, so a web page that points its own domain at 127.0.0.1 (DNS
+// rebinding) is refused. Set in code: the desktop app starts the backend from an arbitrary working
+// directory, where appsettings.json is not found, and this must hold regardless.
+builder.Services.PostConfigure<HostFilteringOptions>(options =>
+    options.AllowedHosts = ["localhost", "127.0.0.1", "[::1]"]);
+
 // Configure Authentication
 builder.Services.AddAuthentication("BasicAuthentication")
     .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
@@ -50,7 +58,18 @@ if (useInMemory)
 else
 {
     var connectionString = $"Data Source={GetDatabasePath()}";
-    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: true);
+    // The desktop app passes the key from the OS keystore; without one the database is unencrypted
+    var databaseKey = Environment.GetEnvironmentVariable(DatabaseEncryption.KeyVariable);
+    if (string.IsNullOrEmpty(databaseKey))
+    {
+        databaseKey = null;
+    }
+    else if (!DatabaseEncryption.IsValidKey(databaseKey))
+    {
+        throw new InvalidOperationException($"{DatabaseEncryption.KeyVariable} must be 64 hexadecimal characters.");
+    }
+
+    builder.Services.AddSqliteInfrastructureServices(connectionString, seedData: true, databaseKey: databaseKey);
 }
 
 static string GetDatabasePath()
@@ -143,16 +162,10 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Warn loudly if the well-known default admin credentials are still active,
-// since anyone who has read the (public) source knows them.
-var adminCredentials = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdminCredentials>>().Value;
-if (adminCredentials.Username == "admin" && adminCredentials.Password == "admin123")
-{
-    app.Logger.LogWarning(
-        "Using the default admin/admin123 credentials. This is fine for a local, single-user " +
-        "instance bound to localhost, but MUST be overridden via HIVE_ADMIN_USERNAME / " +
-        "HIVE_ADMIN_PASSWORD before this API is reachable from anywhere else.");
-}
+// The well-known default admin credentials are public. The desktop app replaces them with a
+// random password on every launch, so outside Development they mean something is wrong.
+app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdminCredentials>>().Value
+    .EnsureNotPublicDefault(app.Environment, app.Logger);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -179,3 +192,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
    .AllowAnonymous();
 
 app.Run();
+
+/// <summary>The API's entry point, public so integration tests can host it.</summary>
+public partial class Program;

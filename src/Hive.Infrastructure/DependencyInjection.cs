@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Hive.Infrastructure;
 
@@ -93,14 +94,20 @@ public static class DependencyInjection
     /// <summary>
     /// Adds infrastructure services using SQLite storage (for production).
     /// </summary>
+    /// <param name="databaseKey">
+    /// The key that encrypts the database and its backups (<see cref="DatabaseEncryption"/>), or
+    /// null to keep them unencrypted.
+    /// </param>
     public static IServiceCollection AddSqliteInfrastructureServices(
         this IServiceCollection services,
         string connectionString,
-        bool seedData = true)
+        bool seedData = true,
+        string? databaseKey = null)
     {
         // Register HiveDbContext with SQLite
+        var keyedConnectionString = DatabaseEncryption.WithKey(connectionString, databaseKey);
         services.AddDbContext<HiveDbContext>(options =>
-            options.UseSqlite(connectionString));
+            options.UseSqlite(keyedConnectionString));
 
         // Register SQLite repositories
         services.AddScoped<IDirectReportRepository, SqliteDirectReportRepository>();
@@ -155,7 +162,9 @@ public static class DependencyInjection
             .RemoveAllLoggers();
 
         // Register database backup service
-        services.AddSingleton<DatabaseBackupService>();
+        services.AddSingleton(sp => new DatabaseBackupService(
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<DatabaseBackupService>>(),
+            databaseKey: databaseKey));
 
         // Extract database path from connection string
         var databasePath = ExtractDatabasePath(connectionString);
@@ -170,7 +179,7 @@ public static class DependencyInjection
 
         // Always initialize database (creates tables), optionally seed data
         services.AddSingleton<IHostedService>(sp =>
-            new DatabaseInitializer(sp, databasePath, seedData));
+            new DatabaseInitializer(sp, databasePath, seedData, databaseKey));
 
         return services;
     }
@@ -203,16 +212,29 @@ public class DatabaseInitializer : IHostedService
     private readonly IServiceProvider _serviceProvider;
     private readonly string _databasePath;
     private readonly bool _seedData;
+    private readonly string? _databaseKey;
 
-    public DatabaseInitializer(IServiceProvider serviceProvider, string databasePath, bool seedData = true)
+    public DatabaseInitializer(IServiceProvider serviceProvider, string databasePath, bool seedData = true, string? databaseKey = null)
     {
         _serviceProvider = serviceProvider;
         _databasePath = databasePath;
         _seedData = seedData;
+        _databaseKey = databaseKey;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // A database written before encryption existed, and its backups, are encrypted first
+        if (_databaseKey is not null)
+        {
+            var logger = _serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<DatabaseInitializer>>();
+            var encrypted = DatabaseEncryption.EncryptPlaintextFiles(_databasePath, _databaseKey, logger);
+            if (encrypted > 0)
+            {
+                logger.LogInformation("Encrypted {Count} database file(s) that were stored unencrypted", encrypted);
+            }
+        }
+
         // Create backup before any database operations
         var backupService = _serviceProvider.GetRequiredService<DatabaseBackupService>();
         backupService.CreateBackup(_databasePath);

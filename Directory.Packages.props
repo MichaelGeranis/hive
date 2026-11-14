@@ -8,7 +8,9 @@
     <PackageVersion Include="Ical.Net" Version="5.2.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="11.0.0" />
+    <!-- SQLite with encryption (SQLite3 Multiple Ciphers), in place of the plain e_sqlite3 bundle -->
+    <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.6.1" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="11.0.0" />
     <!-- Tests -->

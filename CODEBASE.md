@@ -214,13 +214,14 @@ src/
 │       └── WorkMix.cs                           — Work by category in tasks and story points: the Dashboard's Work mix and the planning mix's past work
 │
 ├── Hive.Infrastructure/                         — Frameworks and drivers
-│   ├── Hive.Infrastructure.csproj               — EF Core with SQLite, the Anthropic SDK, Ical.Net; references Core and Application
+│   ├── Hive.Infrastructure.csproj               — EF Core with SQLite3 Multiple Ciphers (encrypted SQLite), the Anthropic SDK, Ical.Net; references Core and Application
 │   ├── DependencyInjection.cs                   — AddInfrastructureServices (in-memory) + AddSqliteInfrastructureServices; DatabaseInitializer
 │   ├── Migrations/                              — EF Core migrations (SQLite schema history)
 │   ├── Persistence/
 │   │   ├── DatabaseBackupScheduler.cs           — Hosted service: a database backup every hour while the backend runs
 │   │   ├── DatabaseBackupService.cs             — Copies hive.db with VACUUM INTO when changed; keeps 24, then one a day for 30 days
 │   │   ├── DatabaseBackupStatus.cs              — IAutomaticBackups over the backup files beside hive.db
+│   │   ├── DatabaseEncryption.cs                — Opens hive.db with its key; encrypts a plain database and its backups in place
 │   │   ├── HiveDbContext.cs                     — EF Core context; entity mappings in OnModelCreating
 │   │   ├── HiveDbContextFactory.cs              — Design-time factory for `dotnet ef`
 │   │   ├── InMemoryDbContext.cs                 — ConcurrentDictionary store; NOT the EF in-memory provider
@@ -309,7 +310,7 @@ src/
 │   ├── Properties/
 │   │   └── launchSettings.json                  — Local run profiles: port 5002, Development environment
 │   ├── Authentication/
-│   │   └── BasicAuthenticationHandler.cs        — HTTP Basic Auth against AdminCredentials
+│   │   └── BasicAuthenticationHandler.cs        — HTTP Basic Auth against AdminCredentials; refuses the public defaults outside Development
 │   └── Controllers/
 │       ├── ActivityFeedController.cs            — Activity feed and audit trail
 │       ├── BackupController.cs                  — Export and restore
@@ -352,8 +353,12 @@ src/
     │   ├── backendOutput.ts                     — Splits the backend's console output into log entries with levels
     │   ├── backendOutput.test.ts                — Backend output parsing into levels
     │   ├── logger.ts                            — Main-process log: one session file per run in userData/logs, last 10 kept
-    │   ├── main.ts                              — Electron main process, window lifecycle, log and app-info IPC
-    │   └── preload.ts                           — Context-isolated renderer bridge
+    │   ├── main.ts                              — Electron main process, window lifecycle, log, app-info and API-credentials IPC
+    │   ├── navigation.ts                        — Which links open in the browser, and which pages the window may show
+    │   ├── navigation.test.ts                   — Allowed link schemes and in-app navigation
+    │   ├── preload.ts                           — Context-isolated renderer bridge
+    │   ├── secrets.ts                           — Per-launch API password; database key wrapped by the OS keystore
+    │   └── secrets.test.ts                      — Key creation, reuse, and refusing to replace an unreadable key
     ├── backend/                                 — Bundled backend binaries (build output, gitignored)
     └── src/
         ├── App.tsx                              — Route table
@@ -475,6 +480,7 @@ tests/
     │       SentimentAnalysis,SkillRoadmap,SprintCapacity,Sprint,TaskReadiness,TeamTask}ServiceTests.cs
     ├── Api/Authentication/
     │   └── BasicAuthenticationHandlerTests.cs   — Credential parsing and rejection
+    ├── Api/LocalhostOnlyTests.cs                — Loopback host names only; public default credentials refused outside Development
     ├── Api/Controllers/                         — Controller behaviour with mocked services
     │   └── {ActivityFeed,Backup,CareerPlans,DirectReports,
     │       GoogleCalendar,JiraImport,JiraSync,Leaves,ManagerNotes,OneOnOneMeetings,
@@ -483,6 +489,7 @@ tests/
     ├── Infrastructure/Persistence/
     │   ├── DatabaseBackupSchedulerTests.cs      — The hourly backup runs on its tick and stops with the backend
     │   ├── DatabaseBackupServiceTests.cs        — Consistent copies, skipping unchanged, WAL, retention, status
+    │   ├── DatabaseEncryptionTests.cs           — Encrypting a plain database and its backups in place; encrypted backups; no key, no data
     │   └── FixMaintenanceLanesMigrationTests.cs — The data migration that puts Maintenance lanes back, on real SQLite
     ├── Infrastructure/Services/
     │   ├── AtlassianDocumentTextTests.cs        — Rich text to Markdown

@@ -8,12 +8,22 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The desktop app encrypts the database and its automatic backups, with a key
+  kept in the operating system's keychain. An existing database, and its
+  backups, are encrypted in place on the first start of this version.
 - Installers for macOS, Windows and Linux attached to each GitHub release.
 - Apache 2.0 licence, contributing guide, security policy, code of conduct,
   issue and pull request templates, and Dependabot.
 
 ### Changed
 
+- The desktop app gives the API a new random password on every launch instead
+  of the public `admin` / `admin123`, which the backend now refuses outside
+  Development.
+- The API answers only loopback host names (`localhost`, `127.0.0.1`, `[::1]`),
+  so web pages cannot reach it through DNS rebinding.
+- Only web and mail links open outside the app, and the window cannot be
+  navigated away from Hive.
 - .NET 11 and EF Core 11, supported until November 2028 (the same month as
   .NET 10); .NET 9 support ended on 10 November 2026. The database schema is
   unchanged, and databases created by earlier builds open without a migration.
