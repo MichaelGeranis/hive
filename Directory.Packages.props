@@ -3,19 +3,19 @@
        version from here, so the four projects can never drift apart again. -->
   <ItemGroup>
     <!-- Runtime -->
-    <PackageVersion Include="Anthropic" Version="13.8.0" />
+    <PackageVersion Include="Anthropic" Version="13.10.0" />
     <PackageVersion Include="ClosedXML" Version="0.105.1" />
     <PackageVersion Include="Ical.Net" Version="5.2.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="11.0.0" />
     <!-- SQLite with encryption (SQLite3 Multiple Ciphers), in place of the plain e_sqlite3 bundle -->
-    <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.6.1" />
+    <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.7.1" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="11.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="11.0.1" />
     <!-- Tests -->
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="coverlet.msbuild" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
+    <PackageVersion Include="coverlet.msbuild" Version="10.1.1" />
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
